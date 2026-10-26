@@ -28,6 +28,8 @@
 - F10: "Skipped …" error message was cleared the moment the next song started, so it was never seen (v4.8 bug).
 - F11: Rounded buttons (including the existing Create Playlist) drew with square corners — Qt ignores a radius larger than half the button height.
 - F12: Closing the window twice could crash in VLC; shutdown is now idempotent.
+- F13: Any unexpected error inside a button/timer handler closed the whole app (PyQt6 default). Errors are now logged to `%APPDATA%\Custom Spotify Replica\error.log` and shown once; playback continues.
+- Tests now use a temporary artwork cache, so running them never overwrites or deletes your real playlist covers.
 
 **Tests:** 23 automated tests (`tests/test_playback.py`, `tests/test_library.py`), passing 3 runs in a row (Linux, headless).
 

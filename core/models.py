@@ -11,7 +11,8 @@ from mutagen.wave import WAVE
 from mutagen.oggvorbis import OggVorbis
 from PIL import Image
 
-from .paths import PLACEHOLDER_IMAGE, ALBUM_CACHE, ASSETS_FOLDER, normalise_path
+from . import paths as _paths
+from .paths import PLACEHOLDER_IMAGE, ASSETS_FOLDER, normalise_path
 
 SUPPORTED_EXTENSIONS = ('.mp3', '.wav', '.flac', '.ogg', '.m4a')
 
@@ -122,7 +123,7 @@ class Song:
 
             if image_data:
                 filename = sanitize_filename(f"{self.title}_{self.artist}.png")
-                path = os.path.join(ALBUM_CACHE, filename)
+                path = os.path.join(_paths.ALBUM_CACHE, filename)
                 if not os.path.exists(path):
                     with open(path, "wb") as f:
                         f.write(image_data)
@@ -164,7 +165,7 @@ class Playlist:
             except Exception as e:
                 print(f"Collage image error for {p}: {e}")
 
-        fname = os.path.join(ALBUM_CACHE, sanitize_filename(f"{self.name}_cover.png"))
+        fname = os.path.join(_paths.ALBUM_CACHE, sanitize_filename(f"{self.name}_cover.png"))
         try:
             collage.save(fname)
         except Exception as e:

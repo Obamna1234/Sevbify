@@ -17,6 +17,7 @@ from core.paths import (  # noqa: F401  (re-exported for older code/tests)
 from core.models import (  # noqa: F401
     Song, Playlist, SUPPORTED_EXTENSIONS, sanitize_filename, format_time, format_total
 )
+from core import paths as core_paths
 from core.library import scan_folders
 from core.storage import Storage, StoredPlaylist
 
@@ -564,7 +565,7 @@ class MainWindow(QMainWindow):
 
     def _remove_generated_cover(self, path):
         # Only delete collages we generated, never user artwork/placeholder.
-        if path and path.endswith("_cover.png") and os.path.dirname(os.path.abspath(path)) == os.path.abspath(ALBUM_CACHE):
+        if path and path.endswith("_cover.png") and os.path.dirname(os.path.abspath(path)) == os.path.abspath(core_paths.ALBUM_CACHE):
             if not any(p.cover_path == path for p in self.playlists):
                 try:
                     os.remove(path)

@@ -55,6 +55,17 @@ def wait_until(app, condition, timeout=8.0):
     return condition()
 
 
+@pytest.fixture(autouse=True)
+def isolated_cover_cache(tmp_path, monkeypatch):
+    """Keep generated artwork out of the real album_covers folder."""
+    from core import paths
+    cache = tmp_path / "album_covers"
+    cache.mkdir()
+    monkeypatch.setattr(paths, "ALBUM_CACHE", str(cache))
+    os.makedirs(cache, exist_ok=True)
+    return cache
+
+
 @pytest.fixture
 def audio_dir(tmp_path):
     audio = tmp_path / "audio"

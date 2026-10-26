@@ -1,5 +1,7 @@
 # app.py
+import os
 import sys
+import time
 import traceback
 from pathlib import Path
 
@@ -21,9 +23,40 @@ VLC_HELP = (
 )
 
 
+def install_error_guard():
+    """Log unexpected errors instead of letting them close the app.
+
+    By default PyQt6 terminates the whole program if any button/timer handler
+    raises an error. With this hook the error is written to error.log (next to
+    library.json) and shown once, and the music keeps playing.
+    """
+    from core.storage import default_data_dir
+    log_path = os.path.join(default_data_dir(), "error.log")
+    last_shown = [0.0]
+
+    def hook(exc_type, exc, tb):
+        details = "".join(traceback.format_exception(exc_type, exc, tb))
+        sys.stderr.write(details)
+        try:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n=== {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n{details}")
+        except OSError:
+            pass
+        if time.time() - last_shown[0] > 10:  # don't flood the user with pop-ups
+            last_shown[0] = time.time()
+            QMessageBox.warning(
+                None, "Something went wrong",
+                f"An unexpected error occurred, but the app is still running.\n\n"
+                f"{exc_type.__name__}: {exc}\n\nDetails were saved to:\n{log_path}")
+
+    sys.excepthook = hook
+
+
 def main():
     # 1. Create the QApplication first
     app = QApplication(sys.argv)
+    install_error_guard()
 
     # 2. Import and create the main window. Importing loads libVLC, which
     #    fails if VLC is not installed, so show a helpful message instead of
