@@ -3,7 +3,7 @@
 A Spotify-inspired desktop music player for local files, built with Python, PyQt6 and VLC.
 Windows is the first target platform.
 
-**Current version:** v4.8 (stabilised v4.7 baseline). See `CHANGELOG.md`.
+**Current version:** v4.9 — library, search, saved playlists, volume. See `CHANGELOG.md`.
 
 ## Requirements
 
@@ -41,11 +41,34 @@ python app.py
 You can also launch it from any folder, e.g. `python "C:\path\to\spotify-replica\app.py"` —
 music and artwork are found relative to the project folder.
 
+## Using the app
+
+| Where | What you can do |
+|---|---|
+| **Home** | Click a cover to play. Right-click for *Add to playlist*. |
+| **Search** | Type to filter by song, artist or album. Double-click a result to play (next/previous stay within the results). |
+| **Your Library** | Every song as a list. Click a column header to sort. **Add folder…** adds a music folder (sub-folders included); **✕** removes it (files are never deleted); **Rescan** picks up new files. |
+| **Playlists** | Click a playlist to open it; click its green ▶ to play it. **Create Playlist** to make one (songs optional). |
+| **A playlist** | Play, Rename, Delete. Right-click a song to move it up/down, remove it, or add it to another playlist. |
+| **Player bar** | Play/pause, previous (restarts the song if > 3 s in), next, seek, volume and mute. |
+
+**Keyboard:** Space = play/pause · Ctrl+→ / Ctrl+← = next / previous · Ctrl+↑ / Ctrl+↓ = volume · Ctrl+F = search · Ctrl+L = library
+
 ## Adding music
 
-Put `.mp3`, `.wav`, `.flac`, `.ogg` or `.m4a` files in the `audio` folder and restart the app.
+Either put `.mp3`, `.wav`, `.flac`, `.ogg` or `.m4a` files in the bundled `audio` folder and
+press **Rescan**, or use **Your Library → Add folder…** to add any folder on your PC.
 Artwork comes from (in order): an image in `assets` with the same name as the audio file,
 art embedded in the file's tags, or a placeholder.
+
+## Where your playlists and settings are saved
+
+`%APPDATA%\Custom Spotify Replica\library.json` (paste that into File Explorer's address bar).
+Playlists, volume and music folders are saved automatically. Songs inside the project folder are
+saved with relative paths, so moving the project folder doesn't break playlists. If a song's
+file goes missing, it stays in the playlist greyed out as "(file missing)" instead of being
+removed. If the save file is ever damaged, the app keeps a copy (`library.corrupt-<date>.json`)
+and starts fresh rather than crashing. Delete `library.json` to reset to first-run state.
 
 ## Running the automated tests
 
@@ -61,7 +84,9 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 | Path | Purpose |
 |---|---|
 | `app.py` | Entry point. Shows a clear message if VLC is missing. |
-| `ui/main_window.py` | Main window, library scan, metadata/artwork, playlists, playback |
+| `core/` | Data and logic with no UI code: `paths.py`, `models.py` (Song, Playlist), `library.py` (folder scanning), `storage.py` (save file) |
+| `ui/main_window.py` | Main window: pages, player bar, playback, playlist actions |
+| `ui/track_table.py` | Song list used by Search, Your Library and playlist pages |
 | `ui/sidebar.py` | Navigation sidebar |
 | `ui/Playlist_View.py`, `ui/Home_View.py`, `ui/player_bar.py`, `test_home.py` | **Legacy / unused** by the running app (the last three use PyQt5). Kept until a decision is made. |
 | `tests/` | Automated playback regression tests |
@@ -70,9 +95,10 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 | `album_covers/` | Generated cache (extracted art, playlist collages) — safe to delete |
 | `Folder_Structure_Scanner_v4.py` | Utility: writes a folder listing to your Desktop |
 
-## Known limitations (v4.8)
+## Known limitations (v4.9)
 
-- Search and Your Library pages are still "Coming Soon".
-- Playlists are not saved between launches; the three sample playlists are demo content.
-- No volume, shuffle or repeat controls yet.
-- The library is scanned on startup on the UI thread (fine for small libraries; will move to a background scan when folder import is added).
+- No shuffle, repeat or visible "up next" queue yet.
+- The three sample playlists (Favorites, Chill Hits, Workout Mix) are created once on first run with the same 4 songs; delete or edit them freely.
+- The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).
+- Album and artist pages don't exist yet.
+- Online "Go to Radio" is not started.

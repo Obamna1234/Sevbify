@@ -45,6 +45,23 @@ class Sidebar(QWidget):
 
         self.layout.addStretch()
 
+        self._buttons = {
+            "home": self.home_btn,
+            "search": self.search_btn,
+            "library": self.library_btn,
+            "playlists": self.playlists_btn,
+        }
+        for btn in self._buttons.values():
+            btn.setCheckable(True)
+            btn.setAutoExclusive(True)
+        self.set_active("home")
+
+    def set_active(self, name: str):
+        """Highlight the button for the page currently shown."""
+        btn = self._buttons.get(name)
+        if btn is not None:
+            btn.setChecked(True)
+
     def _style_button(self, btn: QPushButton):
         """Apply consistent style to sidebar buttons."""
         btn.setStyleSheet("""
@@ -58,6 +75,10 @@ class Sidebar(QWidget):
             }
             QPushButton:hover {
                 background-color: rgba(255, 255, 255, 0.1);
+            }
+            QPushButton:checked {
+                background-color: #282828;
+                font-weight: bold;
             }
         """)
         btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)

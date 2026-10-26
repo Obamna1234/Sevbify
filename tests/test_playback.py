@@ -1,81 +1,9 @@
-"""Automated playback regression tests.
-
-Run from the project folder:
-    python -m pytest tests -v
-
-The tests use short generated WAV files, a hidden window and VLC's silent
-"dummy" audio output, so they make no sound and don't need your music files.
-They DO need VLC (libVLC) installed, exactly like the app itself.
-"""
-import math
+"""Playback regression tests. Run: python -m pytest tests -v"""
 import os
-import shutil
-import struct
-import subprocess
-import sys
 import time
-import wave
 from pathlib import Path
 
-import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from PyQt6.QtWidgets import QApplication  # noqa: E402
-
-VLC_TEST_ARGS = ("--aout=adummy", "--no-video", "--quiet")
-
-
-@pytest.fixture(scope="session")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-def make_wav(path: Path, seconds: float = 1.0, freq: int = 440):
-    rate = 22050
-    with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(rate)
-        frames = b"".join(
-            struct.pack("<h", int(8000 * math.sin(2 * math.pi * freq * i / rate)))
-            for i in range(int(rate * seconds))
-        )
-        w.writeframes(frames)
-
-
-def wait_until(app, condition, timeout=8.0):
-    """Process Qt events until condition() is true or the timeout expires."""
-    end = time.time() + timeout
-    while time.time() < end:
-        app.processEvents()
-        if condition():
-            return True
-        time.sleep(0.02)
-    app.processEvents()
-    return condition()
-
-
-@pytest.fixture
-def window(qapp, tmp_path):
-    from ui.main_window import MainWindow
-
-    audio = tmp_path / "audio"
-    audio.mkdir()
-    make_wav(audio / "01 - first.wav", 1.0, 440)
-    make_wav(audio / "02 - second.wav", 1.0, 550)
-    make_wav(audio / "03 - third.wav", 1.0, 660)
-    w = MainWindow(audio_folder=str(audio), vlc_args=VLC_TEST_ARGS)
-    yield w
-    w.close()
-
-
-def titles(w):
-    return [s.title for s in w.queue]
+from conftest import VLC_TEST_ARGS, make_wav, wait_until
 
 
 def test_library_scanned(window):
@@ -99,32 +27,29 @@ def test_track_end_advances_exactly_once(window, qapp):
     assert window.queue_index == 1
 
 
-def test_pause_and_resume(qapp, tmp_path):
-    from ui.main_window import MainWindow
+def test_pause_and_resume(open_window, qapp, tmp_path, data_dir):
     import vlc
 
-    audio = tmp_path / "audio"
+    audio = tmp_path / "long"
     audio.mkdir()
     make_wav(audio / "long.wav", 6.0)
-    w = MainWindow(audio_folder=str(audio), vlc_args=VLC_TEST_ARGS)
-    try:
-        w.play_song(w.songs[0])
-        assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
-        w.play_pause_song()
-        assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Paused)
-        assert w.play_btn.text() == "▶️"
-        w.play_pause_song()
-        assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
-        assert w.play_btn.text() == "⏸"
-    finally:
-        w.close()
+    w = open_window(audio_folder=str(audio), data_dir=str(data_dir))
+    w.play_song(w.songs[0])
+    assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
+    w.play_pause_song()
+    assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Paused)
+    assert w.play_btn.text() == "▶️"
+    w.play_pause_song()
+    assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
+    assert w.play_btn.text() == "⏸"
 
 
 def test_missing_file_is_skipped_with_message(window, qapp):
     os.remove(window.songs[1].file_path)
     window.play_song(window.songs[1])
-    assert "Skipped" in window.status_label.text()
     assert wait_until(qapp, lambda: window.current_song is window.songs[2] and window._reached_playing)
+    # The message must still be visible after the next song has started.
+    assert "Skipped" in window.status_label.text()
 
 
 def test_corrupt_file_is_skipped_with_message(window, qapp):
@@ -151,20 +76,35 @@ def test_playlist_queue_stays_in_playlist(window, qapp):
     pl.add_song(window.songs[2])
     pl.add_song(window.songs[0])
     window.play_playlist(pl)
-    assert titles(window) == ["03 - third", "01 - first"]
+    assert [s.title for s in window.queue] == ["03 - third", "01 - first"]
     window.next_song()
     assert window.current_song is window.songs[0]
     window.next_song()
     assert window.current_song is window.songs[2]  # wraps within the playlist
 
 
-def test_finds_music_when_launched_from_another_folder(qapp, tmp_path, monkeypatch):
-    from ui import main_window
+def test_finds_music_when_launched_from_another_folder(open_window, tmp_path, data_dir, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    # No audio_folder given: uses the default (bundled audio/ folder).
+    w = open_window(data_dir=str(data_dir))
+    assert len(w.songs) > 0, "bundled audio/ folder not found from another working directory"
+    assert not (elsewhere / "album_covers").exists()
 
-    monkeypatch.chdir(tmp_path)
-    w = main_window.MainWindow(vlc_args=VLC_TEST_ARGS)
-    try:
-        assert len(w.songs) > 0, "bundled audio/ folder not found from another working directory"
-        assert not (tmp_path / "album_covers").exists()
-    finally:
-        w.close()
+
+def test_volume_and_mute(window):
+    window.volume_slider.setValue(30)
+    assert window.user_data.volume == 30
+    assert window.mute_btn.text() == "🔉"
+    window.toggle_mute()
+    assert window.user_data.muted and window.mute_btn.text() == "🔇"
+    window.volume_slider.setValue(60)  # moving the slider unmutes
+    assert not window.user_data.muted and window.mute_btn.text() == "🔊"
+
+
+def test_now_playing_highlight_in_library(window, qapp):
+    from ui.track_table import GREEN
+    window.play_song(window.songs[1])
+    row = [s.key for s in window.library_table.songs_in_view()].index(window.songs[1].key)
+    assert window.library_table.item(row, 1).foreground().color() == GREEN

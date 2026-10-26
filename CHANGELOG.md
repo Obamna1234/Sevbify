@@ -1,5 +1,36 @@
 # Changelog
 
+## v4.9 — 26 Oct 2026 — Local library & playlists
+
+**New**
+- **Saved playlists and settings**: playlists, volume/mute and music folders persist in
+  `%APPDATA%\Custom Spotify Replica\library.json` (versioned JSON, atomic writes, damaged-file
+  backup + recovery, project-relative paths, missing files kept and shown greyed out).
+- **Your Library page**: sortable list of all songs; add/remove music folders (scanned recursively); rescan.
+- **Search page**: live search across title, artist and album (all words must match, case-insensitive).
+- **Playlist page**: big header with collage, song count and total time; Play, Rename, Delete;
+  right-click to move up/down, remove, or add to another playlist.
+- **Add to playlist** from any song (right-click on Home, Search, Library); duplicates skipped;
+  playlists can now be created empty.
+- **Volume slider and mute** in the player bar (saved).
+- **Keyboard shortcuts**: Space, Ctrl+←/→, Ctrl+↑/↓, Ctrl+F, Ctrl+L.
+- **Now-playing highlight** (green) in every song list; active page highlighted in the sidebar.
+
+**Changed**
+- Library scan runs in the background: the window opens in ~0.06 s instead of ~1.1 s.
+- Clicking a playlist tile now opens it; the green ▶ on the tile plays it (Spotify behaviour).
+- Sample playlists are created only on first run, then behave like any other playlist.
+- Playlist names must be unique (case-insensitive).
+- Song/Playlist/scanning code moved from `ui/main_window.py` into a new `core/` package (no UI
+  code), as groundwork for a future mobile front end. `ui.main_window` still re-exports the old names.
+
+**Fixed**
+- F10: "Skipped …" error message was cleared the moment the next song started, so it was never seen (v4.8 bug).
+- F11: Rounded buttons (including the existing Create Playlist) drew with square corners — Qt ignores a radius larger than half the button height.
+- F12: Closing the window twice could crash in VLC; shutdown is now idempotent.
+
+**Tests:** 23 automated tests (`tests/test_playback.py`, `tests/test_library.py`), passing 3 runs in a row (Linux, headless).
+
 ## v4.8 — 26 Oct 2026 — Playback stabilisation
 
 Baseline: `v4.7 spotify media player - Copy.zip` (compared against the older
