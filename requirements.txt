@@ -1,0 +1,8 @@
+# Runtime
+PyQt6>=6.5
+python-vlc>=3.0.18122   # also needs the VLC media player itself (64-bit) installed
+mutagen>=1.47
+Pillow>=10.0
+
+# Development / tests
+pytest>=8.0

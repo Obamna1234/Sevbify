@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Generated at runtime (album art extracted from tags + playlist collages).
+# The app recreates these on startup.
+album_covers/
