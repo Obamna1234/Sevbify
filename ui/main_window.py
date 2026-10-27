@@ -1440,12 +1440,17 @@ class MainWindow(QMainWindow):
             self.show_status("That song is already in your library.", kind="info", timeout_ms=3000)
             return
         track = song.track
-        for items in self.user_data.save_for_later.values():
-            if any(OnlineTrack.from_dict(d).key == track.key for d in items):
-                self.show_status(f"\"{song.title}\" is already saved for later.", kind="info", timeout_ms=3000)
-                return
+        if not hasattr(self, "_saving_keys"):
+            self._saving_keys = set()          # saves still waiting for their genre lookup
+        already = track.key in self._saving_keys or any(
+            OnlineTrack.from_dict(d).key == track.key for items in self.user_data.save_for_later.values() for d in items)
+        if already:
+            self.show_status(f"\"{song.title}\" is already saved for later.", kind="info", timeout_ms=3000)
+            return
+        self._saving_keys.add(track.key)
 
         def add(genre):
+            self._saving_keys.discard(track.key)
             genre = (genre or "Other").strip() or "Other"
             track.genre = genre
             self.user_data.save_for_later.setdefault(genre, []).append(track.to_dict())

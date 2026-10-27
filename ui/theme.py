@@ -1,0 +1,92 @@
+"""Sevbify's look: colours, fonts and the base stylesheet (Spotify-inspired).
+
+Every screen uses these values so the app looks consistent. The font is
+Figtree (SIL Open Font License, bundled in assets/fonts), the closest free
+match to Spotify's own typeface.
+"""
+import glob
+import os
+
+from PyQt6.QtGui import QFontDatabase, QFont
+
+from core.paths import RESOURCE_ROOT
+
+# --- Colours ---------------------------------------------------------------
+BLACK = "#000000"          # window background, gaps between panels
+PANEL = "#121212"          # the three rounded panels
+ELEVATED = "#1f1f1f"       # cards / hover on panels
+HOVER = "#2a2a2a"
+SELECTED = "#333333"
+TEXT = "#ffffff"
+SUBDUED = "#b3b3b3"
+DIM = "#727272"
+GREEN = "#1ed760"
+GREEN_DARK = "#1db954"
+RED = "#f15e6c"
+RADIUS = 8
+GAP = 8
+
+FONT_FAMILY = "Figtree"
+_fonts_loaded = False
+
+
+def load_fonts():
+    """Register the bundled fonts once (safe to call many times)."""
+    global _fonts_loaded, FONT_FAMILY
+    if _fonts_loaded:
+        return FONT_FAMILY
+    found = False
+    for path in sorted(glob.glob(os.path.join(str(RESOURCE_ROOT), "assets", "fonts", "*.ttf"))):
+        if QFontDatabase.addApplicationFont(path) >= 0:
+            found = True
+    if not found:
+        FONT_FAMILY = "Segoe UI"
+    _fonts_loaded = True
+    return FONT_FAMILY
+
+
+def font(px=14, weight=400):
+    f = QFont(FONT_FAMILY)
+    f.setPixelSize(px)
+    f.setWeight(QFont.Weight(weight))
+    return f
+
+
+def base_stylesheet():
+    return f"""
+    QMainWindow, QDialog {{ background: {BLACK}; }}
+    QWidget {{ font-family: "{FONT_FAMILY}", "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: {TEXT}; }}
+    QToolTip {{ background: #282828; color: {TEXT}; border: none; padding: 6px 8px; border-radius: 4px; }}
+    QScrollBar:vertical {{ background: transparent; width: 12px; margin: 0; }}
+    QScrollBar::handle:vertical {{ background: rgba(255,255,255,0.28); border-radius: 0; min-height: 30px; }}
+    QScrollBar::handle:vertical:hover {{ background: rgba(255,255,255,0.45); }}
+    QScrollBar:horizontal {{ background: transparent; height: 12px; margin: 0; }}
+    QScrollBar::handle:horizontal {{ background: rgba(255,255,255,0.28); min-width: 30px; }}
+    QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
+    QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
+    QMenu {{ background: #282828; color: {TEXT}; border: none; padding: 4px; font-size: 14px; border-radius: 4px; }}
+    QMenu::item {{ padding: 10px 28px 10px 12px; border-radius: 2px; }}
+    QMenu::item:selected {{ background: #3e3e3e; }}
+    QMenu::item:disabled {{ color: {DIM}; }}
+    QMenu::separator {{ height: 1px; background: #3e3e3e; margin: 4px 0; }}
+    QInputDialog QLineEdit, QDialog QLineEdit {{ background: #2a2a2a; color: {TEXT}; border: 1px solid #3e3e3e;
+        border-radius: 4px; padding: 8px; }}
+    QDialog QPushButton {{ color: {TEXT}; background: transparent; border: 1px solid {DIM}; border-radius: 16px;
+        padding: 6px 18px; font-weight: 700; min-height: 20px; }}
+    QDialog QPushButton:hover {{ border-color: {TEXT}; }}
+    QMessageBox QLabel, QInputDialog QLabel {{ color: {TEXT}; }}
+    """
+
+
+def panel_style(object_name):
+    """Rounded #121212 panel; use with setObjectName(object_name)."""
+    return f"#{object_name} {{ background: {PANEL}; border-radius: {RADIUS}px; }}"
+
+
+PILL = (f"QPushButton {{ color: {TEXT}; background: transparent; border: 1px solid {DIM}; padding: 6px 16px;"
+        f" border-radius: 16px; font-weight: 700; font-size: 13px; }} QPushButton:hover {{ border-color: {TEXT}; }}")
+GREEN_PILL = (f"QPushButton {{ color: black; background: {GREEN}; padding: 8px 18px; border: none; border-radius: 18px;"
+              f" font-weight: 700; font-size: 14px; }} QPushButton:hover {{ background: #3be477; }}")
+CHIP = (f"QPushButton {{ color: {TEXT}; background: {HOVER}; border: none; border-radius: 16px; padding: 6px 12px;"
+        f" font-size: 13px; }} QPushButton:hover {{ background: {SELECTED}; }}"
+        f" QPushButton:checked {{ background: {TEXT}; color: black; }}")

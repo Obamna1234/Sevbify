@@ -142,3 +142,156 @@ def download(color=GREY, size=20):
     p.drawLine(QPointF(s * 0.66, s * 0.52), QPointF(s * 0.5, s * 0.68))
     p.end()
     return QIcon(pm)
+
+
+# ---------------------------------------------------------------------------
+# Navigation / player icons (Spotify-style shapes, drawn so they recolour)
+# ---------------------------------------------------------------------------
+def home(color=WHITE, size=24, filled=False):
+    pm, p = _canvas(size)
+    s = size
+    path = QPainterPath()
+    path.moveTo(s * 0.5, s * 0.12)
+    path.lineTo(s * 0.88, s * 0.42)
+    path.lineTo(s * 0.88, s * 0.88)
+    path.lineTo(s * 0.60, s * 0.88)
+    path.lineTo(s * 0.60, s * 0.62)
+    path.lineTo(s * 0.40, s * 0.62)
+    path.lineTo(s * 0.40, s * 0.88)
+    path.lineTo(s * 0.12, s * 0.88)
+    path.lineTo(s * 0.12, s * 0.42)
+    path.closeSubpath()
+    if filled:
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    else:
+        p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)
+
+
+def search(color=GREY, size=24):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.09)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(QPointF(s * 0.43, s * 0.43), s * 0.27, s * 0.27)
+    p.drawLine(QPointF(s * 0.63, s * 0.63), QPointF(s * 0.86, s * 0.86))
+    p.end()
+    return QIcon(pm)
+
+
+def chevron(direction="left", color=WHITE, size=24):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.1))
+    if direction == "left":
+        pts = [QPointF(s * 0.6, s * 0.25), QPointF(s * 0.36, s * 0.5), QPointF(s * 0.6, s * 0.75)]
+    else:
+        pts = [QPointF(s * 0.4, s * 0.25), QPointF(s * 0.64, s * 0.5), QPointF(s * 0.4, s * 0.75)]
+    p.drawPolyline(QPolygonF(pts))
+    p.end()
+    return QIcon(pm)
+
+
+def play(color="#000000", size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.22, s * 0.10), QPointF(s * 0.22, s * 0.90), QPointF(s * 0.92, s * 0.50)]))
+    p.end()
+    return QIcon(pm)
+
+
+def pause(color="#000000", size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    p.drawRoundedRect(QRectF(s * 0.18, s * 0.08, s * 0.22, s * 0.84), s * 0.04, s * 0.04)
+    p.drawRoundedRect(QRectF(s * 0.60, s * 0.08, s * 0.22, s * 0.84), s * 0.04, s * 0.04)
+    p.end()
+    return QIcon(pm)
+
+
+def skip(direction="next", color=GREY, size=18):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    if direction == "next":
+        p.drawPolygon(QPolygonF([QPointF(s * 0.15, s * 0.12), QPointF(s * 0.15, s * 0.88), QPointF(s * 0.72, s * 0.5)]))
+        p.drawRoundedRect(QRectF(s * 0.74, s * 0.12, s * 0.12, s * 0.76), s * 0.03, s * 0.03)
+    else:
+        p.drawPolygon(QPolygonF([QPointF(s * 0.85, s * 0.12), QPointF(s * 0.85, s * 0.88), QPointF(s * 0.28, s * 0.5)]))
+        p.drawRoundedRect(QRectF(s * 0.14, s * 0.12, s * 0.12, s * 0.76), s * 0.03, s * 0.03)
+    p.end()
+    return QIcon(pm)
+
+
+def volume(level=2, color=GREY, size=18):
+    """level 0 = muted, 1 = low, 2 = high."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.10, s * 0.38), QPointF(s * 0.28, s * 0.38), QPointF(s * 0.50, s * 0.16),
+                             QPointF(s * 0.50, s * 0.84), QPointF(s * 0.28, s * 0.62), QPointF(s * 0.10, s * 0.62)]))
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    if level == 0:
+        p.drawLine(QPointF(s * 0.64, s * 0.38), QPointF(s * 0.88, s * 0.62))
+        p.drawLine(QPointF(s * 0.88, s * 0.38), QPointF(s * 0.64, s * 0.62))
+    else:
+        p.drawArc(QRectF(s * 0.40, s * 0.30, s * 0.30, s * 0.40), -60 * 16, 120 * 16)
+        if level >= 2:
+            p.drawArc(QRectF(s * 0.36, s * 0.14, s * 0.52, s * 0.72), -60 * 16, 120 * 16)
+    p.end()
+    return QIcon(pm)
+
+
+def plus(color=GREY, size=18):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.1))
+    p.drawLine(QPointF(s * 0.5, s * 0.18), QPointF(s * 0.5, s * 0.82))
+    p.drawLine(QPointF(s * 0.18, s * 0.5), QPointF(s * 0.82, s * 0.5))
+    p.end()
+    return QIcon(pm)
+
+
+def library(color=GREY, size=24):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawLine(QPointF(s * 0.18, s * 0.15), QPointF(s * 0.18, s * 0.85))
+    p.drawLine(QPointF(s * 0.38, s * 0.15), QPointF(s * 0.38, s * 0.85))
+    p.drawLine(QPointF(s * 0.58, s * 0.18), QPointF(s * 0.84, s * 0.84))
+    p.end()
+    return QIcon(pm)
+
+
+def gear(color=GREY, size=20):
+    import math
+    pm, p = _canvas(size)
+    s = size
+    c = QPointF(s / 2, s / 2)
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(c, s * 0.14, s * 0.14)
+    path = QPainterPath()
+    teeth = 8
+    for i in range(teeth * 2):
+        r = s * (0.40 if i % 2 == 0 else 0.30)
+        a = math.pi * i / teeth
+        pt = QPointF(c.x() + r * math.cos(a), c.y() + r * math.sin(a))
+        path.moveTo(pt) if i == 0 else path.lineTo(pt)
+    path.closeSubpath()
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)
+
+
+def clock(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(QPointF(s / 2, s / 2), s * 0.38, s * 0.38)
+    p.drawLine(QPointF(s / 2, s / 2), QPointF(s / 2, s * 0.28))
+    p.drawLine(QPointF(s / 2, s / 2), QPointF(s * 0.66, s * 0.6))
+    p.end()
+    return QIcon(pm)
