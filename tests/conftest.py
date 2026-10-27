@@ -28,6 +28,10 @@ VLC_TEST_ARGS = ("--aout=adummy", "--no-video", "--quiet")
 def qapp():
     app = QApplication.instance() or QApplication([])
     yield app
+    # Let background (online) tasks finish before Python shuts down;
+    # Windows crashes if a worker thread outlives the interpreter.
+    from ui.async_tasks import wait_for_all
+    wait_for_all(15000)
 
 
 def make_wav(path: Path, seconds: float = 1.0, freq: int = 440):
@@ -101,8 +105,10 @@ def open_window(qapp):
         return w
 
     yield _open
+    from ui.async_tasks import wait_for_all
     for w in windows:
         w.close()
+    wait_for_all(10000)
 
 
 @pytest.fixture

@@ -121,7 +121,11 @@ def main():
         QTimer.singleShot(60000, timed_out)
 
     # 3. Run the application event loop
-    sys.exit(app.exec())
+    code = app.exec()
+    # Let any online request still in flight finish before Python exits.
+    from ui.async_tasks import wait_for_all
+    wait_for_all(5000)
+    sys.exit(code)
 
 
 if __name__ == "__main__":

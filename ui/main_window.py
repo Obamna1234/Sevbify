@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog
 )
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut, QDesktopServices
-from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl
+from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher
 
 from .sidebar import Sidebar
 from .track_table import TrackTable
@@ -342,6 +342,7 @@ class MainWindow(QMainWindow):
         self.sidebar.library_clicked.connect(self.show_library)
         self.sidebar.playlists_clicked.connect(self.show_playlists)
         self.sidebar.settings_clicked.connect(self.open_settings)
+        self.sidebar.saved_clicked.connect(self.show_saved)
 
         self.stack = QStackedWidget()
         self.stack.setStyleSheet("background-color: #121212;")
@@ -371,9 +372,10 @@ class MainWindow(QMainWindow):
         self.library_page = QWidget()
         self.playlists_page = QWidget()
         self.playlist_page = QWidget()
+        self.saved_page = QWidget()
 
         for page in [self.home_page, self.search_page, self.library_page,
-                     self.playlists_page, self.playlist_page]:
+                     self.playlists_page, self.playlist_page, self.saved_page]:
             self.stack.addWidget(page)
 
         self.setup_player_bar()
@@ -382,6 +384,7 @@ class MainWindow(QMainWindow):
         self.setup_library_page()
         self.setup_playlists_page()
         self.setup_playlist_page()
+        self.setup_saved_page()
         self.setup_shortcuts()
 
         self.stack.setCurrentWidget(self.home_page)
@@ -460,6 +463,8 @@ class MainWindow(QMainWindow):
             self.current_song = by_key.get(self.current_song.key, self.current_song)
 
         self.library_ready = True
+        filled = self._fill_pending_slots()
+        self._watch_music_folders()
         self.refresh_home()
         self.refresh_library_page()
         self.refresh_search_results()
@@ -471,6 +476,10 @@ class MainWindow(QMainWindow):
 
         if problems:
             self.show_status("⚠ " + problems[0] + (f" (+{len(problems) - 1} more)" if len(problems) > 1 else ""), 10000)
+        if filled:
+            names = ", ".join(f"\"{t}\"" for t in filled[:3]) + (f" and {len(filled) - 3} more" if len(filled) > 3 else "")
+            self.show_status(f"⬇ Now in your library: {names}", kind="info", timeout_ms=8000)
+            self.save_now()
         if first_load and self.user_data.is_new:
             self.save_now()
         self.library_loaded.emit()
@@ -484,11 +493,15 @@ class MainWindow(QMainWindow):
             return
         for stored in self.user_data.playlists:
             pl = Playlist(stored.name)
-            for path in stored.tracks:
-                key = normalise_path(path)
+            for entry in stored.tracks:
+                if isinstance(entry, dict):
+                    # A song added from Radio/Search that isn't downloaded yet.
+                    pl.add_song(RemoteSong(OnlineTrack.from_dict(entry["pending"])))
+                    continue
+                key = normalise_path(entry)
                 # Missing files are kept (shown greyed out) so nothing is lost
                 # if a drive is disconnected or a file was renamed.
-                pl.add_song(by_key.get(key) or Song(path))
+                pl.add_song(by_key.get(key) or Song(entry))
             pl.generate_cover()
             self.playlists.append(pl)
 
@@ -544,7 +557,8 @@ class MainWindow(QMainWindow):
         self._save_timer.stop()
         if self.library_ready:
             self.user_data.playlists = [
-                StoredPlaylist(p.name, [s.file_path for s in p.songs]) for p in self.playlists
+                StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
+                                        else s.file_path for s in p.songs]) for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
         try:
@@ -653,7 +667,8 @@ class MainWindow(QMainWindow):
         menu.setStyleSheet(MENU_STYLE)
         return menu
 
-    def build_song_menu(self, song, queue=None, playlist=None, row=None, source=""):
+    def build_song_menu(self, song, queue=None, playlist=None, row=None, source="",
+                        saved_genre=None, saved_index=None):
         menu = self._new_menu()
         play = menu.addAction("▶  Play")
         play.setEnabled(song.exists)
@@ -666,6 +681,11 @@ class MainWindow(QMainWindow):
         if not self.online_enabled:
             radio.setText("◉  Go to song radio (turn on Online features)")
         radio.triggered.connect(lambda: self.start_radio(song))
+        if getattr(song, "is_remote", False) and saved_genre is None:
+            menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
+        if saved_genre is not None and saved_index is not None:
+            menu.addAction("✕  Remove from Saved for later").triggered.connect(
+                lambda: self.remove_saved(saved_genre, saved_index))
         if has_artist:
             open_menu = menu.addMenu("↗  Open in")
             open_menu.setStyleSheet(MENU_STYLE)
@@ -1355,6 +1375,140 @@ class MainWindow(QMainWindow):
             rows = sorted(idx.row() for idx in song_list.selectedIndexes())
             self.create_playlist(name, [self.songs[r] for r in rows])
 
+    # --- Saved for later --------------------------------------------------
+    def setup_saved_page(self):
+        layout = QVBoxLayout(self.saved_page)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(8)
+        layout.addWidget(self._page_title("⬇ Saved for later"))
+        layout.addWidget(self._muted_label(
+            "Songs you found with Radio or Search and want to get later, sorted by genre so different "
+            "styles never mix. When a song appears in your music folders it leaves this list and fills "
+            "any playlist slot it was added to. Right-click a song for more."))
+        self.saved_scroll = QScrollArea()
+        self.saved_scroll.setWidgetResizable(True)
+        self.saved_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.saved_scroll.setStyleSheet("QScrollArea { border: none; background: #121212; }")
+        layout.addWidget(self.saved_scroll, 1)
+        self.refresh_saved_page()
+
+    def saved_songs(self, genre):
+        return [RemoteSong(OnlineTrack.from_dict(d)) for d in self.user_data.save_for_later.get(genre, [])]
+
+    def refresh_saved_page(self):
+        content = QWidget()
+        v = QVBoxLayout(content)
+        v.setContentsMargins(0, 0, 8, 0)
+        v.setSpacing(6)
+        genres = sorted(self.user_data.save_for_later, key=str.casefold)
+        if not genres:
+            v.addWidget(self._muted_label("Nothing saved yet. Right-click a song in Radio or web search results "
+                                          "and choose “Save for later”."))
+        all_remote = []
+        for genre in genres:
+            songs = self.saved_songs(genre)
+            all_remote += songs
+            head = QHBoxLayout()
+            lbl = self._section_label(f"{genre}  ·  {len(songs)}")
+            head.addWidget(lbl)
+            head.addStretch()
+            for text, slot in (("▶ Play", lambda _=False, g=genre: self._play_saved(g)),
+                               ("➕ Add all to playlist…", lambda _=False, g=genre: self._add_saved_to_playlist(g)),
+                               ("Export…", lambda _=False, g=genre: self.export_song_list(self.saved_songs(g), g))):
+                b = QPushButton(text)
+                b.setStyleSheet(PILL_BUTTON)
+                b.setFixedHeight(32)
+                b.setCursor(Qt.CursorShape.PointingHandCursor)
+                b.clicked.connect(slot)
+                head.addWidget(b)
+            v.addLayout(head)
+            table = TrackTable(sortable=False)
+            table.mark_pending = True
+            table.set_songs(songs)
+            table.setFixedHeight(36 + len(songs) * table.verticalHeader().defaultSectionSize() + 4)
+            table.play_requested.connect(lambda s, view, g=genre: self.play_song(s, queue=view, source=f"Saved: {g}"))
+            table.context_requested.connect(
+                lambda s, row, pos, t=table, g=genre: self._show_song_menu(
+                    s, pos, queue=t.songs_in_view(), source=f"Saved: {g}", saved_genre=g, saved_index=row))
+            v.addWidget(table)
+        v.addStretch()
+        self.saved_scroll.setWidget(content)
+        self.fetch_covers(all_remote)
+
+    def save_for_later(self, song):
+        if not getattr(song, "is_remote", False):
+            self.show_status("That song is already in your library.", kind="info", timeout_ms=3000)
+            return
+        track = song.track
+        for items in self.user_data.save_for_later.values():
+            if any(OnlineTrack.from_dict(d).key == track.key for d in items):
+                self.show_status(f"\"{song.title}\" is already saved for later.", kind="info", timeout_ms=3000)
+                return
+
+        def add(genre):
+            genre = (genre or "Other").strip() or "Other"
+            track.genre = genre
+            self.user_data.save_for_later.setdefault(genre, []).append(track.to_dict())
+            self.save_now()
+            self.refresh_saved_page()
+            self.show_status(f"⬇ Saved for later · {genre}: {song.title}", kind="info", timeout_ms=4000)
+
+        self.online_call(self.online.genre_of, track, on_done=add, on_error=lambda _e: add(track.genre or "Other"))
+
+    def remove_saved(self, genre, index):
+        items = self.user_data.save_for_later.get(genre, [])
+        if 0 <= index < len(items):
+            del items[index]
+            if not items:
+                del self.user_data.save_for_later[genre]
+            self.save_now()
+            self.refresh_saved_page()
+
+    def _play_saved(self, genre):
+        songs = self.saved_songs(genre)
+        if songs:
+            self.play_song(songs[0], queue=songs, source=f"Saved: {genre}")
+
+    def _add_saved_to_playlist(self, genre):
+        songs = self.saved_songs(genre)
+        if not songs:
+            return
+        new_label = "New playlist…"
+        names = [new_label] + [p.name for p in self.playlists]
+        choice, ok = QInputDialog.getItem(self, "Add to playlist",
+                                          f"Add {len(songs)} {genre} songs to:", names, 0, False)
+        if not ok:
+            return
+        if choice == new_label:
+            name, ok = QInputDialog.getText(self, "New playlist", "Playlist name:", text=genre)
+            if ok:
+                self.create_playlist(name, songs)
+        else:
+            pl = next(p for p in self.playlists if p.name == choice)
+            self.add_to_playlist(pl, songs)
+
+    def export_song_list(self, songs, name="songs"):
+        """Save a list as .txt ("Artist - Title" per line) or .m3u playlist."""
+        default = os.path.join(os.path.expanduser("~"), sanitize_filename(name) + ".txt")
+        path, chosen = QFileDialog.getSaveFileName(self, "Export list", default,
+                                                   "Text list (*.txt);;M3U playlist (*.m3u)")
+        if not path:
+            return None
+        return self.write_song_list(songs, path, m3u=path.lower().endswith(".m3u") or "m3u" in chosen.lower())
+
+    @staticmethod
+    def write_song_list(songs, path, m3u=False):
+        lines = ["#EXTM3U"] if m3u else []
+        for s in songs:
+            if m3u:
+                lines.append(f"#EXTINF:{int(s.duration / 1000) if s.duration else -1},{s.artist} - {s.title}")
+                lines.append(s.file_path if s.file_path else f"# not downloaded yet: {s.artist} - {s.title}")
+            else:
+                lines.append(f"{s.artist} - {s.title}")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines) + "\n")
+        return path
+
     # --- Single playlist page --------------------------------------------
     def setup_playlist_page(self):
         layout = QVBoxLayout()
@@ -1414,6 +1568,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.pl_empty)
 
         self.pl_table = TrackTable(sortable=False)
+        self.pl_table.mark_pending = True
         self.pl_table.play_requested.connect(
             lambda s, view: self.open_playlist and self.play_song(s, queue=self.open_playlist.songs,
                                                                   source=self.open_playlist.name))
@@ -1437,13 +1592,17 @@ class MainWindow(QMainWindow):
             180, 180, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
         self.pl_title.setText(pl.name)
         n = len(pl.songs)
-        missing = sum(1 for s in pl.songs if not s.exists)
+        pending = sum(1 for s in pl.songs if getattr(s, "is_remote", False))
+        missing = sum(1 for s in pl.songs if not s.exists and not getattr(s, "is_remote", False))
         meta = f"{n} song{'s' if n != 1 else ''}, {format_total(pl.total_duration)}"
+        if pending:
+            meta += f" · ⬇ {pending} not downloaded yet"
         if missing:
             meta += f" · {missing} missing"
         self.pl_meta.setText(meta)
         self.pl_table.set_songs(pl.songs)
         self.pl_table.set_current(self.current_song)
+        self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
         self.pl_table.setVisible(bool(pl.songs))
         self.pl_empty.setVisible(not pl.songs)
 
@@ -1790,6 +1949,91 @@ class MainWindow(QMainWindow):
         return run_async(self, fn, *args, on_done=done, on_error=failed)
 
     # ------------------------------------------------------------------
+    # "Not downloaded yet" slots + watching music folders
+    # ------------------------------------------------------------------
+    FRESH_FILE_SECONDS = 8   # a file this new may still be being written
+
+    def _fill_pending_slots(self):
+        """Replace online placeholders with your own files once they exist.
+        Each song keeps its exact position (e.g. #18 stays #18). Returns titles filled."""
+        import time as _time
+        index = build_match_index(self.songs)
+        filled, too_new = [], False
+
+        def local_for(song):
+            nonlocal too_new
+            if not getattr(song, "is_remote", False):
+                return None
+            match = find_local_match(song.track, self.songs, index)
+            if match is None:
+                return None
+            try:
+                if _time.time() - os.path.getmtime(match.file_path) < self.FRESH_FILE_SECONDS:
+                    too_new = True          # still downloading/copying: try again shortly
+                    return None
+            except OSError:
+                return None
+            return match
+
+        for pl in self.playlists:
+            changed = False
+            for i, s in enumerate(pl.songs):
+                m = local_for(s)
+                if m is not None:
+                    pl.songs[i] = m
+                    filled.append(m.title)
+                    changed = True
+            if changed:
+                pl.generate_cover()
+        for seq in (self.pq.items, self.pq.original, self.pq.user_queue):
+            for i, s in enumerate(seq):
+                m = local_for(s)
+                if m is not None:
+                    seq[i] = m
+        # Saved-for-later songs you now own leave the list (they're in your library).
+        for genre in list(self.user_data.save_for_later):
+            kept = []
+            for d in self.user_data.save_for_later[genre]:
+                m = find_local_match(OnlineTrack.from_dict(d), self.songs, index)
+                if m is None:
+                    kept.append(d)
+                elif m.title not in filled:
+                    filled.append(m.title)
+            if kept:
+                self.user_data.save_for_later[genre] = kept
+            else:
+                del self.user_data.save_for_later[genre]
+        if too_new:
+            QTimer.singleShot((self.FRESH_FILE_SECONDS + 4) * 1000, self.rescan_library)
+        if filled and hasattr(self, "saved_page"):
+            self.refresh_saved_page()
+        return list(dict.fromkeys(filled))
+
+    def _watch_music_folders(self):
+        """Rescan automatically when files are added to a music folder."""
+        if not hasattr(self, "_watcher"):
+            self._watcher = QFileSystemWatcher(self)
+            self._watch_timer = QTimer(self)
+            self._watch_timer.setSingleShot(True)
+            self._watch_timer.timeout.connect(self.rescan_library)
+            self._watcher.directoryChanged.connect(lambda _p: self._watch_timer.start(3000))
+        old = self._watcher.directories()
+        if old:
+            self._watcher.removePaths(old)
+        dirs = []
+        for root in self.user_data.music_folders:
+            if not os.path.isdir(root):
+                continue
+            for d, subdirs, _files in os.walk(root):
+                dirs.append(d)
+                if len(dirs) >= 1500:     # plenty for normal libraries; avoids OS limits
+                    break
+            if len(dirs) >= 1500:
+                break
+        if dirs:
+            self._watcher.addPaths(dirs)
+
+    # ------------------------------------------------------------------
     # Go to Radio
     # ------------------------------------------------------------------
     def start_radio(self, seed):
@@ -1862,6 +2106,7 @@ class MainWindow(QMainWindow):
     def _refresh_online_views(self):
         self._queue_changed()
         self.web_table.refresh_artwork()
+        self.pl_table.refresh_artwork()
         if self.current_song is not None and getattr(self.current_song, "is_remote", False):
             self.set_album_cover(self.current_song.album_cover_path)
             self.now_playing_panel.artwork.set_pixmap(load_pixmap(self.current_song.album_cover_path))
@@ -1911,6 +2156,8 @@ class MainWindow(QMainWindow):
             if self._scan_thread is not None:
                 self._scan_thread.stop()
                 self._scan_thread.wait(3000)
+            if hasattr(self, "_watcher"):
+                self._watcher.removePaths(self._watcher.directories() or [])
             self.timer.stop()
             self.player.stop()
             self.player.release()
@@ -1939,3 +2186,8 @@ class MainWindow(QMainWindow):
     def show_playlists(self):
         self.stack.setCurrentWidget(self.playlists_page)
         self.sidebar.set_active("playlists")
+
+    def show_saved(self):
+        self.refresh_saved_page()
+        self.stack.setCurrentWidget(self.saved_page)
+        self.sidebar.set_active("saved")

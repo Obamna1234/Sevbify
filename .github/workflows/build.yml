@@ -55,7 +55,15 @@ jobs:
           pip install -r requirements.txt pyinstaller
 
       - name: Run automated tests
-        run: python -m pytest tests -v
+        run: |
+          set +e
+          python -X faulthandler -m pytest tests -v -p no:cacheprovider > pytest.log 2>&1
+          code=$?
+          cat pytest.log
+          if [ $code -ne 0 ]; then
+            tail -n 60 pytest.log | python tools/annotate_tail.py "Tests exited with code $code"
+          fi
+          exit $code
 
       - name: Live online check (reports only, never fails the build)
         continue-on-error: true

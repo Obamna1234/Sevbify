@@ -31,6 +31,14 @@
   switched off.
 - **Open in ▸** Spotify / YouTube Music / YouTube / Apple Music / Bandcamp / Deezer in every song's menu.
 - Cover art thumbnails in every song list.
+- **Not-downloaded playlist slots:** add any Radio/Search song to a playlist; it keeps its exact position, shows ⬇ and
+  "N not downloaded yet", plays as a preview when online, and is **filled automatically** with your own file (same
+  position) as soon as a matching file appears in your music folders. Files still being written are waited for.
+- **Music folders are watched:** new files show up by themselves (no Rescan needed).
+- **⬇ Saved for later** page: right-click an online song → *Save for later*; lists are **sorted by genre** so different
+  styles never mix. Per genre: Play, Add all to playlist…, Export… (.txt "Artist - Title" or .m3u). Songs leave the
+  list once they're in your library.
+- Fix (Windows): background online requests could outlive the app at exit and crash it; the app now waits for them.
 
 ## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
 

@@ -103,6 +103,7 @@ class TrackTable(QTableWidget):
             header.setSortIndicator(0, Qt.SortOrder.AscendingOrder)  # start in file order
 
         self._current_key = None
+        self.mark_pending = False      # playlists: show "⬇" on songs not downloaded yet
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context)
         self.cellDoubleClicked.connect(self._on_double_click)
@@ -129,6 +130,10 @@ class TrackTable(QTableWidget):
                 self.setItem(row, col, item)
             if getattr(song, "is_remote", False):
                 tip = "Not in your library: plays as a 30-second preview" if song.is_preview else "Not in your library: plays online"
+                if self.mark_pending:
+                    title.setText(f"{song.title}   ⬇")
+                    tip = ("Not downloaded yet (needed for offline listening). It fills in here automatically "
+                           "when the song appears in your music folders.\n" + tip)
                 for item in (num, title, artist, album, dur):
                     item.setToolTip(tip)
                 dur.setText((format_time(song.duration) if song.duration else "--:--") + ("  · 30s" if song.is_preview else ""))

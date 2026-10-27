@@ -9,6 +9,7 @@ class Sidebar(QWidget):
     library_clicked = pyqtSignal()
     playlists_clicked = pyqtSignal()  # NEW signal for playlists
     settings_clicked = pyqtSignal()
+    saved_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -44,6 +45,11 @@ class Sidebar(QWidget):
         self.playlists_btn.clicked.connect(self.playlists_clicked.emit)
         self.layout.addWidget(self.playlists_btn)
 
+        self.saved_btn = QPushButton("⬇ Saved for later")
+        self._style_button(self.saved_btn)
+        self.saved_btn.clicked.connect(self.saved_clicked.emit)
+        self.layout.addWidget(self.saved_btn)
+
         self.layout.addStretch()
 
         # Online status + Settings, pinned to the bottom.
@@ -64,6 +70,7 @@ class Sidebar(QWidget):
             "search": self.search_btn,
             "library": self.library_btn,
             "playlists": self.playlists_btn,
+            "saved": self.saved_btn,
         }
         for btn in self._buttons.values():
             btn.setCheckable(True)
