@@ -1,4 +1,5 @@
 import os
+import time
 import vlc
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
@@ -491,6 +492,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             lambda _w: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
         self.settings_page.shortcuts_requested.connect(self._make_shortcuts)
         self.settings_page.import_requested.connect(self.import_playlist_dialog)
+        self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
+        self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.stack.addWidget(self.settings_page)
 
         for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
@@ -523,6 +526,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.set_right_panel(self.user_data.right_panel, save=False)
         self._update_online_indicator()
         self.rescan_library()
+        QTimer.singleShot(8000, self._auto_update_check)      # once a day, when online
 
     # --- Compatibility: older code/tests use .queue / .queue_index -------
     @property
@@ -3653,13 +3657,69 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core.version import app_version
         from core import shortcuts
         from core.startup_settings import can_start_at_login
+        from core import updates
         info = dict(version=app_version(), private_session=self.private_session,
+                    ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
+                    app_update=getattr(self, "_app_update_text", ""),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),
                     can_start_at_login=can_start_at_login(), can_make_shortcuts=shortcuts.can_create())
         self.settings_page.build(self.user_data, info)
         self.stack.setCurrentWidget(self.settings_page)
         self._set_nav("settings")
         self._refresh_storage_sizes()
+
+    # --- Updates (Sevbify and yt-dlp) ----------------------------------------------------------------------
+    def check_for_updates(self, manual=False):
+        """Ask GitHub for a newer Sevbify and yt-dlp. manual=False: the once-a-day check at start-up."""
+        from core import updates
+        if not self.online_enabled:
+            if manual:
+                self.settings_page.set_update_status(app="Turn on Online features to check for updates.")
+            return
+        self.user_data.last_update_check = time.time()
+        self.schedule_save()
+        if manual:
+            self.settings_page.set_update_status(app="Checking…")
+
+        def got_app(r):
+            if r["newer"]:
+                text = (f"Sevbify {r['latest']} is available: <a style='color:{theme.GREEN}' href='{r['page']}'>"
+                        "open the download page</a>.")
+                self.show_status(f"Sevbify {r['latest']} is available (Settings → About and updates)", kind="info",
+                                 timeout_ms=15000)
+            else:
+                text = r["message"]
+            self._app_update_text = text
+            if manual or r["newer"]:
+                self.settings_page.set_update_status(app=text)
+        self.online_call(updates.check_app, self.net, on_done=got_app,
+                         on_error=lambda e: manual and self.settings_page.set_update_status(app=f"Couldn't check ({e})."))
+
+        def got_ytdlp(r):
+            if r["newer"]:
+                self.settings_page.set_update_status(
+                    ytdlp=f"yt-dlp {r['latest']} is available (you have {r['current']}). Click Update yt-dlp.")
+                if not manual:
+                    self.show_status("A newer yt-dlp is out: update it in Settings if songs stop working.",
+                                     kind="info", timeout_ms=12000)
+            elif manual:
+                self.settings_page.set_update_status(ytdlp=f"yt-dlp {r['current']} is up to date."
+                                                     if r["latest"] else "Couldn't reach GitHub to check yt-dlp.")
+        self.online_call(updates.check_ytdlp, on_done=got_ytdlp)
+
+    def _auto_update_check(self):
+        if self.user_data.auto_update_check and time.time() - (self.user_data.last_update_check or 0) > 86400:
+            self.check_for_updates(manual=False)
+
+    def update_ytdlp(self):
+        from core import updates
+        if not self.online_enabled:
+            self.settings_page.set_update_status(ytdlp="Turn on Online features to update yt-dlp.")
+            return
+        self.settings_page.set_update_status(ytdlp="Downloading the newest yt-dlp…")
+        self.online_call(updates.update_ytdlp,
+                         on_done=lambda r: self.settings_page.set_update_status(ytdlp=r[1]),
+                         on_error=lambda e: self.settings_page.set_update_status(ytdlp=f"Couldn't update ({e})."))
 
     def _download_folder_preview(self):
         """Where downloads would go, without creating anything."""
@@ -3699,7 +3759,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         was_online = u.online_enabled
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
-                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders")
+                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

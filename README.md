@@ -85,10 +85,15 @@ music and artwork are found relative to the project folder.
 
 | Where | What you can do |
 |---|---|
-| **Home** | Click a cover to play. Right-click for *Add to playlist*. |
-| **Search** | Type to filter by song, artist or album. Double-click a result to play (next/previous stay within the results). |
-| **Your Library** | Every song as a list. Click a column header to sort. **Add folder…** adds a music folder (sub-folders included); **✕** removes it (files are never deleted); **Rescan** picks up new files. |
-| **Playlists** | Click a playlist to open it; click its green ▶ to play it. **Create Playlist** to make one (songs optional). |
+| **Home** | Chips **All / Music / Podcasts / Audiobooks**. Click a cover to play. Right-click for *Add to playlist*. |
+| **Search** | Type to search your songs and the web. With the box empty (or the ▦ button in the search bar) it shows **Browse all**: Podcasts, Audiobooks and music genres (popular songs right now). |
+| **Your Library** (left) | Chips **Playlists / Podcasts / Audiobooks / Albums / Artists / Downloaded / To download**; 🔍 to filter; **Recents ▾** to sort (Recents, Recently added, Alphabetical) and view (Compact, List, Grid); folders; click *Your Library* to shrink it to covers, ⤢ to fill the window. **+ Create** → Playlist, Folder, or **Import a playlist**. |
+| **Your Songs** | Every song in your music folders. Click a column header to sort. **Add folder…** / **✕** / **Rescan**. |
+| **Playlists** | Click to open, double-click to play. Change the cover from the playlist page. |
+| **Import a playlist** | Paste a public **Spotify** or **Apple Music** playlist/album link, or choose a file (Exportify **CSV**, **TXT** in any language/encoding, **M3U**). Same order and cover; songs already in your music folders play from your files, the rest stream and wait under To download. Your Spotify account is never signed in to. |
+| **Podcasts** | Search Apple's podcast directory, follow shows, stream or download episodes, continue where you left off. Paste a **YouTube channel** link for video podcasts: **Watch** the video or play the audio only. |
+| **Audiobooks** | Free public-domain audiobooks read by LibriVox volunteers (via the Internet Archive): stream chapters, download whole books, carry on where you stopped. |
+| **Settings** (⚙ or Ctrl+P) | Online & privacy, music folders on/off, downloads, playback (equaliser, normalise, fade, autoplay), display, Canvas, zoom, start-up and tray, storage, proxy, updates. |
 | **A playlist** | Play, Rename, Delete. Right-click a song to move it up/down, remove it, or add it to another playlist. |
 | **Player bar** | Play/pause, previous (restarts the song if > 3 s in), next, seek, volume and mute. |
 | **Songs you don't have yet** | Greyed out with **⬇** everywhere (web search results, playlists, To download). While online they **stream in full**; right-click → **Download** to keep them for offline. |
@@ -168,6 +173,16 @@ python -m pytest tests -v
 The tests generate short WAV tones and play them through VLC's silent dummy output in a
 hidden window, so they make no sound and don't touch your music. They need VLC installed.
 
+## Privacy
+
+No account, no ads, no tracking, nothing sold. With online features on, Sevbify contacts only what each feature
+needs: Deezer (search, radio, genres, previews), Wikipedia (artist info), Apple iTunes (song names, the podcast
+directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads,
+video podcasts), Spotify / Apple Music only when you import a playlist link, and GitHub (update checks; can be
+switched off). Those sites see your IP address and what you look up, like a web browser would. Sevbify only looks
+at the music folders you add; it never searches the rest of your computer. Settings → Online features off: nothing
+is contacted at all.
+
 ## Project layout
 
 | Path | Purpose |
@@ -184,6 +199,12 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 | `ui/track_table.py` | Song list used by Search, Your Library and playlist pages |
 | `ui/theme.py`, `ui/top_bar.py`, `ui/library_panel.py`, `ui/cards.py` | Spotify-style look: colours/fonts, top bar, Your Library panel, Home cards |
 | `core/streamer.py` | Finds a full-length stream for a song you don't have (Bandcamp, then YouTube) |
+| `core/importers.py` | Playlist import: Spotify / Apple Music links, CSV, TXT (any encoding), M3U |
+| `core/podcasts.py`, `core/audiobooks.py` | Podcast directory + RSS feeds + YouTube channels; LibriVox audiobooks via archive.org |
+| `core/library_index.py` | Albums and artists built from your files |
+| `core/updates.py` | Update checks for Sevbify and yt-dlp |
+| `ui/library_panel.py`, `ui/settings_page.py` | Your Library panel; the Settings page |
+| `ui/shows_page.py`, `ui/shows_controller.py`, `ui/video_page.py` | Podcasts, audiobooks, Browse and the video player |
 | `tests/` | Automated playback regression tests |
 | `audio/` | Your music (optional; kept on your PC only, not uploaded to GitHub) |
 | `assets/` | Artwork images + `album_covers/placeholder.png` |
@@ -198,10 +219,15 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 - Playback: VLC's engine, libVLC (LGPL 2.1+; some plugins GPL) by VideoLAN, via python-vlc. The ready-made Windows
   app includes libVLC and its plugins in `_internal\vlc`, with VLC's licence as `VLC-COPYING.txt`; VLC's source code
   is at https://www.videolan.org. Font: Figtree (SIL Open Font License).
+- Podcasts: Apple's public podcast directory and each show's own RSS feed. Audiobooks: LibriVox recordings (public
+  domain) hosted by the Internet Archive.
 
 ## Known limitations
 
 - The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).
-- Album and artist pages don't exist yet.
+- Updates: "Check for Sevbify updates" can't see new releases while the GitHub project is private (it says so).
+- Video podcasts (YouTube) and full songs from YouTube depend on yt-dlp keeping up with YouTube's changes: use
+  Settings → Update yt-dlp if they stop working.
+- Spotify links show up to 100 songs; for bigger playlists use an Exportify CSV.
 - Full streaming of songs you don't have depends on Bandcamp/YouTube being reachable (not in mainland China
   without a VPN, for example) and can break when YouTube changes; then the 30-second preview is used.

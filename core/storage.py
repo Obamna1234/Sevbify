@@ -102,6 +102,8 @@ class UserData:
     proxy_mode: str = 'auto'   # Settings: proxy (applies after restart)
     proxy_url: str = ''   # e.g. http://127.0.0.1:8080
     hw_accel: bool = True   # Settings: hardware acceleration (applies after restart)
+    auto_update_check: bool = True   # Settings: check GitHub once a day for a new Sevbify / yt-dlp
+    last_update_check: float = 0.0
     disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
@@ -204,6 +206,8 @@ class Storage:
                 "proxy_mode": data.proxy_mode,
                 "proxy_url": data.proxy_url,
                 "hw_accel": data.hw_accel,
+                "auto_update_check": bool(data.auto_update_check),
+                "last_update_check": float(data.last_update_check or 0),
                 "disabled_folders": [to_stored_path(p) for p in data.disabled_folders],
             },
             "playlists": [
@@ -326,6 +330,11 @@ class Storage:
             pass
         try:
             data.hw_accel = bool(settings.get('hw_accel', True))
+            data.auto_update_check = bool(settings.get("auto_update_check", True))
+            try:
+                data.last_update_check = float(settings.get("last_update_check") or 0)
+            except (TypeError, ValueError):
+                data.last_update_check = 0.0
         except (TypeError, ValueError):
             pass
         try:

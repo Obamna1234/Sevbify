@@ -2,6 +2,29 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Spotify's library, settings, import, Browse, podcasts and audiobooks (v5.0.0-beta.6):**
+- **Your Library** like Spotify: chips Playlists / Podcasts / Audiobooks / Albums / Artists / Downloaded / To download,
+  filter, sort (Recents / Recently added / Alphabetical), Compact / List / Grid, folders (Create → Folder, Move to
+  folder), collapse to covers and expand to the whole window; album and artist pages from your files.
+- **Create → Playlist** makes "My Playlist #N" straight away (drag songs in); change a playlist's cover.
+- **Settings page** in the middle like Spotify: online & privacy, music folders with on/off switches, download location
+  and source, phone playlist files, playback (equaliser with presets, normalise volume, fade between songs, autoplay
+  similar songs when a queue ends), now-playing view on play, song notifications, Canvas on/off, zoom, start with
+  Windows, close to the tray, storage (download and cache sizes), proxy, hardware acceleration, private session
+  (also in File menu), allow explicit songs.
+- **Import a playlist** (Create → Import, or Settings): a public Spotify or Apple Music link (read from the public page,
+  never signed in), or a CSV (Exportify), TXT (any encoding, including Chinese/Japanese/Korean files saved as
+  "ANSI", and "Artist-Title" with any dash) or M3U file. Same order and cover; your own files are used when found.
+- **Browse all** (empty search box, or the ▦ button): Podcasts, Audiobooks and music genres with what's popular now.
+- **Home chips**: All / Music / Podcasts / Audiobooks, with Continue listening.
+- **Podcasts**: search Apple's directory, Top podcasts, follow shows (in Your Library), episodes from each show's RSS
+  feed, stream or download, continue where you left off, mark as played. **Video podcasts**: follow a YouTube channel
+  by its link; Watch the video inside Sevbify or play the audio only.
+- **Audiobooks**: free public-domain LibriVox books (Internet Archive): search, popular, newly added, chapters in
+  order, download whole books, carry on at the first unfinished chapter.
+- Podcast and audiobook downloads go to `Sevbify downloads\Podcasts` and `\Audiobooks` and never show up as songs.
+- **About and updates** (Settings): check for a new Sevbify, update yt-dlp in one click; once-a-day check (can be off).
+
 **Fixes and polish from the first Windows test (v5.0.0-beta.5):**
 - Fixed: "wrapped C/C++ object of type LibraryRow has been deleted" when a click rebuilt a list (e.g. making a playlist
   from a song's menu). Lists now replace their rows only after the click has finished.

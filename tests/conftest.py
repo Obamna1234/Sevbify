@@ -103,6 +103,7 @@ def open_window(qapp):
         # Songs you don't have play as previews in tests (full streaming would search the real web).
         from core.online.remote_song import RemoteSong
         w.user_data.stream_full = False
+        w.user_data.auto_update_check = False          # tests never ask GitHub for updates
         RemoteSong.stream_full = False
         windows.append(w)
         assert wait_until(qapp, lambda: w.library_ready), "library scan did not finish"

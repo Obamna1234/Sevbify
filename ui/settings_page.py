@@ -49,6 +49,8 @@ class SettingsPage(QWidget):
     open_folder_requested = pyqtSignal(str)
     shortcuts_requested = pyqtSignal()
     import_requested = pyqtSignal()
+    check_updates_requested = pyqtSignal()
+    update_ytdlp_requested = pyqtSignal()
 
     def __init__(self, eq_presets=None, parent=None):
         super().__init__(parent)
@@ -236,9 +238,39 @@ class SettingsPage(QWidget):
         self._toggle("hw_accel", "Enable hardware acceleration",
                      "Turn off if the window flickers or stays black. Applies after a restart.", u.hw_accel)
 
-        self._section("About")
+        self._section("About and updates")
         self._text(f"Sevbify {info.get('version', '')}. Built with AI help. Not affiliated with Spotify, YouTube, "
                    "Bandcamp, Apple, Deezer or Sevby LLC.")
+        self._toggle("auto_update_check", "Check for updates automatically",
+                     "Once a day, when online: tells you when a new Sevbify is out and when yt-dlp needs updating.",
+                     getattr(u, "auto_update_check", True))
+        row = QHBoxLayout()
+        check = QPushButton("Check for Sevbify updates")
+        check.clicked.connect(self.check_updates_requested.emit)
+        row.addWidget(check)
+        row.addStretch()
+        v.addLayout(row)
+        self.controls["check_updates"] = check
+        self.app_update_label = QLabel(info.get("app_update", ""))
+        self.app_update_label.setObjectName("desc")
+        self.app_update_label.setWordWrap(True)
+        self.app_update_label.setOpenExternalLinks(True)
+        v.addWidget(self.app_update_label)
+        age = info.get("ytdlp_age")
+        self._text(f"yt-dlp {info.get('ytdlp', '')} finds and downloads full songs and video podcasts. YouTube "
+                   "changes often: if songs stop playing or downloading, update it."
+                   + (f" This copy is {age} days old." if age and age > 45 else ""))
+        row2 = QHBoxLayout()
+        upd = QPushButton("Update yt-dlp")
+        upd.clicked.connect(self.update_ytdlp_requested.emit)
+        row2.addWidget(upd)
+        row2.addStretch()
+        v.addLayout(row2)
+        self.controls["update_ytdlp"] = upd
+        self.ytdlp_label = QLabel(info.get("ytdlp_update", ""))
+        self.ytdlp_label.setObjectName("desc")
+        self.ytdlp_label.setWordWrap(True)
+        v.addWidget(self.ytdlp_label)
         if info.get("can_make_shortcuts"):
             sc = QPushButton("Add to Desktop and Start menu")
             sc.clicked.connect(lambda: (self.shortcuts_requested.emit()))
@@ -246,6 +278,14 @@ class SettingsPage(QWidget):
             self.controls["shortcuts"] = sc
         v.addStretch()
         theme.replace_scroll_widget(self.scroll, body)
+
+    def set_update_status(self, app=None, ytdlp=None):
+        for label, text in ((getattr(self, "app_update_label", None), app), (getattr(self, "ytdlp_label", None), ytdlp)):
+            if label is not None and text is not None:
+                try:
+                    label.setText(text)
+                except RuntimeError:
+                    pass
 
     # --- pieces -------------------------------------------------------------------------------------
     def _section(self, title):
