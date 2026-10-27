@@ -162,6 +162,13 @@ class NetClient:
         os.replace(tmp, path)
         return text
 
+    def cached_image(self, url):
+        """The already-downloaded picture for `url`, or None (never goes online)."""
+        if not url:
+            return None
+        path = self._cache_path("images", url, ".img")
+        return path if os.path.exists(path) else None
+
     def get_image(self, url, ttl=60 * 24 * 3600):
         """Download an image (cover art, artist photo) and return the local file path."""
         if not url:

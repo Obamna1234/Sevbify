@@ -23,7 +23,7 @@ MENU_STYLE = (f"QMenu {{ background: #282828; color: white; border: 1px solid #3
 
 SORTS = (("recents", "Recents"), ("added", "Recently added"), ("alpha", "Alphabetical"))
 VIEWS = (("compact", "Compact"), ("list", "List"), ("grid", "Grid"))
-CHIPS = (("playlists", "Playlists"), ("albums", "Albums"), ("artists", "Artists"), ("downloaded", "Downloaded"),
+CHIPS = (("playlists", "Playlists"), ("podcasts", "Podcasts"), ("audiobooks", "Audiobooks"), ("albums", "Albums"), ("artists", "Artists"), ("downloaded", "Downloaded"),
          ("todownload", "To download"))
 COLLAPSED_WIDTH = 72
 
@@ -244,6 +244,7 @@ class LibraryPanel(QFrame):
     open_album = pyqtSignal(object)                  # album dict
     play_album = pyqtSignal(object)
     open_artist = pyqtSignal(object)                 # artist dict
+    open_show = pyqtSignal(object)                   # followed podcast / saved audiobook (entry dict)
     play_artist = pyqtSignal(object)
     view_changed = pyqtSignal()                      # sort / view / collapsed changed (save it)
     expand_changed = pyqtSignal(bool)                # Your Library filling the window, or back
@@ -508,10 +509,11 @@ class LibraryPanel(QFrame):
         self._rebuild()
 
     # --- data ---------------------------------------------------------------------------------------
-    def set_items(self, playlists, n_songs, n_saved, playing_source="", albums=None, artists=None, folders=None):
+    def set_items(self, playlists, n_songs, n_saved, playing_source="", albums=None, artists=None, folders=None,
+                  shows=None):
         self._state.update(playlists=list(playlists), n_songs=n_songs, n_saved=n_saved,
                            playing_source=playing_source, albums=list(albums or []), artists=list(artists or []),
-                           folders=list(folders or []))
+                           folders=list(folders or []), shows=list(shows or []))
         self._rebuild()
 
     def set_active(self, key):
@@ -589,6 +591,11 @@ class LibraryPanel(QFrame):
                         for pl in self._sorted(kids, lambda p: p.name, pl_recent, pl_added):
                             out.append(self._pl_entry(pl, 16))
 
+        for show_kind in ("podcast", "audiobook"):
+            if chip in (None, show_kind + "s"):
+                shows = [e for e in self._state.get("shows", []) if e["kind"] == show_kind and match(e["title"], e["subtitle"])]
+                for e in self._sorted(shows, lambda e: e["title"], lambda e: 0, lambda e: 0):
+                    out.append(dict(kind=show_kind, title=e["title"], subtitle=e["subtitle"], obj=e, indent=0))
         if chip == "albums" or (query and chip is None):
             albums = [a for a in st["albums"] if match(a["title"], a["artist"])]
             for a in self._sorted(albums, lambda a: a["title"], lambda a: a.get("recent", 0), lambda a: a.get("added", 0)):
@@ -615,7 +622,7 @@ class LibraryPanel(QFrame):
             return folder_cover(size)
         if e["kind"] == "playlist":
             return rounded(self._cover(e["obj"].cover_path, size), size)
-        if e["kind"] == "album":
+        if e["kind"] in ("album", "podcast", "audiobook"):
             return rounded(self._cover(e["obj"]["cover_path"], size), size)
         return circle(self._cover(e["obj"]["cover_path"], size), size)
 
@@ -630,7 +637,9 @@ class LibraryPanel(QFrame):
         if e["kind"] == "album":
             return a == ("album", e["obj"]["key"])
         if e["kind"] == "artist":
-            return a == ("artist", e["obj"]["name"])
+            return a in (("artist", e["obj"].get("key")), ("artist", e["obj"]["name"]))
+        if e["kind"] in ("podcast", "audiobook"):
+            return a == ("show", e["obj"]["key"])
         return False
 
     def _is_playing(self, e):
@@ -643,8 +652,10 @@ class LibraryPanel(QFrame):
             return src == e["obj"].name
         if e["kind"] == "album":
             return src == e["obj"]["title"]
-        if e["kind"] == "artist":
+        if e["kind"] in ("artist",):
             return src == e["obj"]["name"]
+        if e["kind"] in ("podcast", "audiobook"):
+            return src == e["obj"]["title"]
         return False
 
     def _make_row(self, e, mode, tile=160):
@@ -674,6 +685,8 @@ class LibraryPanel(QFrame):
         elif kind == "artist":
             row.clicked.connect(lambda a=obj: self.open_artist.emit(a))
             row.double_clicked.connect(lambda a=obj: self.play_artist.emit(a))
+        elif kind in ("podcast", "audiobook"):
+            row.clicked.connect(lambda e=obj: self.open_show.emit(e))
         return row
 
     def toggle_folder(self, name):

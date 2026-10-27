@@ -3,6 +3,20 @@ import os
 
 from .models import Song, SUPPORTED_EXTENSIONS
 
+# A folder holding this file (and everything inside it) is never scanned for songs. Sevbify puts it in its
+# podcast and audiobook download folders, so episodes and chapters don't show up as music.
+NO_SCAN_MARKER = ".sevbify-noscan"
+
+
+def mark_no_scan(folder):
+    """Create `folder` and mark it as not music (see NO_SCAN_MARKER)."""
+    os.makedirs(folder, exist_ok=True)
+    marker = os.path.join(folder, NO_SCAN_MARKER)
+    if not os.path.exists(marker):
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write("Podcasts and audiobooks downloaded by Sevbify: not shown in Your Songs.\n")
+    return folder
+
 
 def scan_folders(folders, recursive=True, should_stop=lambda: False):
     """Return a sorted, de-duplicated list of Songs found in the given folders.
@@ -21,6 +35,9 @@ def scan_folders(folders, recursive=True, should_stop=lambda: False):
         else:
             walker = [(folder, [], os.listdir(folder))]
         for root, dirs, files in walker:
+            if NO_SCAN_MARKER in files:
+                dirs[:] = []
+                continue
             dirs.sort()
             for name in sorted(files):
                 if should_stop():

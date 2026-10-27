@@ -12,6 +12,7 @@ class TopBar(QWidget):
     home_clicked = pyqtSignal()
     settings_clicked = pyqtSignal()
     search_activated = pyqtSignal()           # search box clicked / typed into
+    browse_clicked = pyqtSignal()             # the Browse button in the search pill
     downloads_clicked = pyqtSignal()          # the download progress pill was clicked
     menu_clicked = pyqtSignal()               # the ⋯ button (File / Edit / View / Playback / Help)
 
@@ -58,6 +59,18 @@ class TopBar(QWidget):
             f" QLineEdit:focus {{ border: 2px solid {theme.TEXT}; }}")
         self.search_edit.textEdited.connect(lambda _t: self.search_activated.emit())
         self.search_edit.mousePressEvent = self._search_pressed
+        # Browse button inside the search pill (right end), like Spotify's.
+        self.browse_btn = QPushButton(self.search_edit)
+        self.browse_btn.setIcon(icons.grid(theme.SUBDUED, 20))
+        self.browse_btn.setIconSize(QSize(20, 20))
+        self.browse_btn.setFixedSize(36, 36)
+        self.browse_btn.setToolTip("Browse")
+        self.browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.browse_btn.setStyleSheet(f"QPushButton {{ background: transparent; border: none; border-left: 1px solid"
+                                      f" {theme.DIM}; border-radius: 0; }} QPushButton:hover {{ background: transparent; }}")
+        self.browse_btn.clicked.connect(self.browse_clicked.emit)
+        self.search_edit.setTextMargins(0, 0, 40, 0)
+        self.search_edit.resizeEvent = self._place_browse_button
         h.addWidget(self.search_edit, 2)
         h.addStretch(1)
 
@@ -80,6 +93,10 @@ class TopBar(QWidget):
         h.addWidget(self.settings_btn)
         self.set_online_state("unknown")
         self.set_history(False, False)
+
+    def _place_browse_button(self, event):
+        QLineEdit.resizeEvent(self.search_edit, event)
+        self.browse_btn.move(self.search_edit.width() - 44, (self.search_edit.height() - 36) // 2)
 
     def _search_pressed(self, event):
         QLineEdit.mousePressEvent(self.search_edit, event)

@@ -35,6 +35,7 @@ from core.online.models import OnlineTrack, build_match_index, find_local_match
 from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
 from .settings_page import SettingsPage
+from .shows_controller import ShowsMixin, item_key
 from .download_manager import DownloadManager
 from core import downloader, streamer, playlist_files
 from core.platform_fixes import reveal_in_file_manager
@@ -289,7 +290,7 @@ class HoverablePlaylistTile(QWidget):
             self.open_clicked.emit(self.playlist)
 
 
-class MainWindow(QMainWindow):
+class MainWindow(ShowsMixin, QMainWindow):
     library_loaded = pyqtSignal()
 
     def __init__(self, audio_folder: str = None, vlc_args=(), data_dir: str = None):
@@ -386,6 +387,7 @@ class MainWindow(QMainWindow):
         self.top_bar.forward_clicked.connect(self.go_forward)
         self.top_bar.settings_clicked.connect(self.open_settings)
         self.top_bar.search_activated.connect(lambda: self.show_search(select=False))
+        self.top_bar.browse_clicked.connect(self.show_browse)
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
         self.top_bar.menu_clicked.connect(self._show_app_menu)
         self.main_layout.addWidget(self.top_bar)
@@ -404,6 +406,7 @@ class MainWindow(QMainWindow):
         self.library_panel.open_album.connect(self.show_album)
         self.library_panel.play_album.connect(lambda a: self.play_collection(a["title"], self.album_songs(a)))
         self.library_panel.open_artist.connect(self.show_artist)
+        self.library_panel.open_show.connect(self.open_library_show)
         self.library_panel.play_artist.connect(lambda a: self.play_collection(a["name"], self.artist_songs(a)))
         self.library_panel.view_changed.connect(self._library_view_changed)
         self.library_panel.expand_changed.connect(self._library_expanded)
@@ -506,6 +509,7 @@ class MainWindow(QMainWindow):
         self.setup_saved_page()
         self.setup_radio_page()
         self.setup_collection_page()
+        self.setup_shows()
         self.setup_shortcuts()
         for table in (self.pl_table, self.web_table, self.radio_table):
             table.download_state = self.downloads.state
@@ -987,6 +991,9 @@ class MainWindow(QMainWindow):
         act(v, "Home", self.show_home)
         act(v, "Your Songs", self.show_library)
         act(v, "To download", self.show_saved)
+        act(v, "Browse", self.show_browse)
+        act(v, "Podcasts", self.show_podcasts)
+        act(v, "Audiobooks", self.show_audiobooks)
         if self._radio_songs:
             act(v, self._radio_name, self.show_radio_page)
         v.addSeparator()
@@ -1340,6 +1347,10 @@ class MainWindow(QMainWindow):
                 self._apply_volume()  # VLC can reset volume when audio output starts
             self._open_elapsed_ms = 0
             self._seen_length = max(self._seen_length, self.player.get_length())
+            if self._pending_resume is not None and state == vlc.State.Playing:
+                self.apply_pending_resume()
+            if state == vlc.State.Playing and item_key(self.current_song):
+                self.track_item_progress(self.player.get_time())
             if self.user_data.fade_seconds and state == vlc.State.Playing and not self.user_data.muted:
                 from core.audio_settings import fade_factor
                 f = fade_factor(self.player.get_time(), self.player.get_length(), self.user_data.fade_seconds * 1000)
@@ -1480,6 +1491,10 @@ class MainWindow(QMainWindow):
         loading.setContentsMargins(24, 24, 24, 24)
         theme.replace_scroll_widget(self.home_scroll, loading)
 
+    def set_home_chip(self, key):
+        self._home_chip = key
+        self.refresh_home()
+
     @staticmethod
     def _greeting():
         import datetime
@@ -1501,10 +1516,82 @@ class MainWindow(QMainWindow):
         self._home_shelves = []
         self._home_tiles = []
 
+        # Chips like Spotify's Home: All / Music / Podcasts / Audiobooks
+        chip_row = QHBoxLayout()
+        chip_row.setSpacing(8)
+        chip = getattr(self, "_home_chip", "all")
+        for key, label in (("all", "All"), ("music", "Music"), ("podcasts", "Podcasts"), ("audiobooks", "Audiobooks")):
+            b = QPushButton(label)
+            b.setCheckable(True)
+            b.setChecked(key == chip)
+            b.setFixedHeight(32)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(theme.CHIP)
+            b.clicked.connect(lambda _=False, k=key: self.set_home_chip(k))
+            chip_row.addWidget(b)
+        chip_row.addStretch()
+        v.addLayout(chip_row)
+        v.addSpacing(6)
+
         hello = QLabel(self._greeting())
         hello.setStyleSheet(f"color: {theme.TEXT}; font-size: 32px; font-weight: 800; background: transparent;")
         v.addWidget(hello)
         v.addSpacing(8)
+
+        def shelf(title, cards, all_rows=False):
+            if not cards:
+                return
+            v.addSpacing(18)
+            head = QLabel(title)
+            head.setStyleSheet(f"color: {theme.TEXT}; font-size: 22px; font-weight: 700; background: transparent;")
+            v.addWidget(head)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(4)
+            grid.setVerticalSpacing(4)
+            grid.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            v.addLayout(grid)
+            self._home_shelves.append({"grid": grid, "cards": cards, "all": all_rows, "cols": 0})
+
+        if chip in ("podcasts", "audiobooks"):
+            if chip == "podcasts":
+                shelf("Continue listening", self._continue_cards(("podcast", "youtube")))
+                shelf("Your shows", self._show_cards(self.followed_shows()), all_rows=True)
+                if self._top_shows:
+                    shelf("Top podcasts", self._show_cards(self._top_shows), all_rows=True)
+                elif self.online_enabled and self._top_shows is None:
+                    from core import podcasts as _pods
+                    from .shows_controller import country_code
+                    self._top_shows = []
+                    self.online_call(_pods.top_shows, self.net, country_code(),
+                                     on_done=lambda r: (setattr(self, "_top_shows", r), self.schedule_home_refresh()),
+                                     on_error=lambda e: setattr(self, "_top_shows", None))
+                more = ("Find podcasts", self.show_podcasts)
+            else:
+                shelf("Continue listening", self._continue_cards(("audiobook",)))
+                shelf("Your audiobooks", self._book_cards(self.saved_books()), all_rows=True)
+                if self._popular_books:
+                    shelf("Popular free audiobooks", self._book_cards(self._popular_books), all_rows=True)
+                elif self.online_enabled and self._popular_books is None:
+                    from core import audiobooks as _books
+                    self._popular_books = []
+                    self.online_call(_books.popular, self.net,
+                                     on_done=lambda r: (setattr(self, "_popular_books", r), self.schedule_home_refresh()),
+                                     on_error=lambda e: setattr(self, "_popular_books", None))
+                more = ("Find audiobooks", self.show_audiobooks)
+            if not self._home_shelves:
+                v.addWidget(self._muted_label("Nothing here yet." + ("" if self.online_enabled else
+                                              " Turn on Online features (Settings) to find shows and books.")))
+            btn = QPushButton(more[0])
+            btn.setStyleSheet(theme.PILL)
+            btn.setFixedHeight(32)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(more[1])
+            v.addSpacing(12)
+            v.addWidget(btn, alignment=Qt.AlignmentFlag.AlignLeft)
+            v.addStretch()
+            theme.replace_scroll_widget(self.home_scroll, content)
+            self._relayout_home()
+            return
 
         if not self.songs:
             folders = "\n".join(self.user_data.music_folders) or "(none)"
@@ -1535,19 +1622,9 @@ class MainWindow(QMainWindow):
         self._home_quick = quick
         v.addLayout(quick)
 
-        def shelf(title, cards, all_rows=False):
-            if not cards:
-                return
-            v.addSpacing(18)
-            head = QLabel(title)
-            head.setStyleSheet(f"color: {theme.TEXT}; font-size: 22px; font-weight: 700; background: transparent;")
-            v.addWidget(head)
-            grid = QGridLayout()
-            grid.setHorizontalSpacing(4)
-            grid.setVerticalSpacing(4)
-            grid.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            v.addLayout(grid)
-            self._home_shelves.append({"grid": grid, "cards": cards, "all": all_rows, "cols": 0})
+        if chip == "all":
+            shelf("Continue listening", self._continue_cards(("podcast", "youtube", "audiobook")))
+            shelf("Your shows and audiobooks", self._show_cards(self.followed_shows()) + self._book_cards(self.saved_books()))
 
         recent = [s for s in list(self.pq.recent)[:20] if not getattr(s, "is_remote", False)]
         rc = []
@@ -1637,6 +1714,13 @@ class MainWindow(QMainWindow):
         self.search_summary = self._muted_label("Search your library by song, artist or album.")
         layout.addWidget(self.search_summary)
 
+        # "Browse all" (shown while the search box is empty): Podcasts, Audiobooks and music genres.
+        self.browse_scroll = QScrollArea()
+        self.browse_scroll.setWidgetResizable(True)
+        self.browse_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.browse_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        layout.addWidget(self.browse_scroll, 1)
+
         src = lambda: f"Search: {self.search_input.text().strip()}"
         self.search_lib_header = self._section_label("In your library")
         layout.addWidget(self.search_lib_header)
@@ -1679,15 +1763,40 @@ class MainWindow(QMainWindow):
             return []
         return [s for s in self.songs if s.matches(query)]
 
+    def show_browse(self):
+        if self.search_input.text():
+            self.search_input.clear()
+        self.show_search(select=False)
+
+    def refresh_browse(self):
+        from .shows_page import TileGrid, section_title
+        content = QWidget()
+        content.setObjectName("browseContent")
+        content.setStyleSheet("#browseContent { background: transparent; }")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(0, 8, 0, 8)
+        v.addWidget(section_title("Browse all"))
+        v.addSpacing(8)
+        v.addWidget(TileGrid(self.browse_tiles()))
+        if self.online_enabled and not self._genres:
+            v.addWidget(self._muted_label("Loading music genres…" if self._genres == [] else ""))
+        elif not self.online_enabled:
+            v.addWidget(self._muted_label("Turn on Online features (Settings) to browse music genres."))
+        v.addStretch()
+        theme.replace_scroll_widget(self.browse_scroll, content)
+
     def refresh_search_results(self, *_):
         query = self.search_input.text().strip()
+        self.browse_scroll.setVisible(not query)
         if not query:
+            # Genres are only fetched once you actually look at Browse.
+            if self._genres is None and self.online_enabled and self.stack.currentWidget() is self.search_page:
+                self.load_genres(then=self.refresh_browse)
+            self.refresh_browse()
             for w in (self.search_lib_header, self.search_table, self.search_web_header,
                       self.search_web_status, self.web_table):
                 w.hide()
-            self.search_summary.setText("Search your library by song, artist or album."
-                                        + (" Online results appear too." if self.online_enabled else ""))
-            self.search_summary.show()
+            self.search_summary.hide()                    # Browse all is shown instead
             self._web_query_shown = None
             return
 
@@ -1868,7 +1977,7 @@ class MainWindow(QMainWindow):
         playing = self.pq.source_name if self.current_song is not None else ""
         albums, artists = self._library_collections()
         self.library_panel.set_items(self.playlists, len(self.songs), n_saved, playing, albums, artists,
-                                     self.user_data.folders)
+                                     self.user_data.folders, self.library_show_entries() if hasattr(self, "net") else [])
 
     # --- Albums and artists from your files (Your Library chips and pages) -------------------------------
     def _library_collections(self):
@@ -2735,6 +2844,9 @@ class MainWindow(QMainWindow):
         self._open_elapsed_ms = 0
 
         is_remote = getattr(song, "is_remote", False)
+        if is_remote and song.track.source in ("podcast", "audiobook", "youtube"):
+            self.start_item(song)                       # podcast episode / audiobook chapter (shows_controller)
+            return
         if is_remote:
             if not self.online_enabled:
                 self.player.stop()
@@ -2849,6 +2961,8 @@ class MainWindow(QMainWindow):
 
     def _advance_after_current(self, auto=True):
         """auto=True: the song finished by itself (repeat rules apply)."""
+        if auto and self.current_song is not None and item_key(self.current_song):
+            self.item_finished(self.current_song)
         if auto and self._sleep_at_track_end:
             # Sleep timer "End of track": stop here instead of playing the next song.
             self._sleep_at_track_end = False
@@ -3766,6 +3880,12 @@ class MainWindow(QMainWindow):
                 {"home": self.show_home, "search": lambda: self.show_search(select=False),
                  "library": self.show_library, "playlists": self.show_playlists,
                  "saved": self.show_saved, "radio": self.show_radio_page, "settings": self.open_settings,
+                 "podcasts": self.show_podcasts, "audiobooks": self.show_audiobooks,
+                 "show": lambda: (self.stack.setCurrentWidget(self.show_page) if self._show_ctx
+                                  and self._show_ctx["obj"].key == arg else self.show_home()),
+                 "genre": lambda: self.show_genre(next(g for g in self._genres if g["id"] == arg))
+                 if any(g["id"] == arg for g in (self._genres or [])) else self.show_home(),
+                 "video": self.show_home,
                  "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
                  "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]
                                                            if a["key"] == arg), None))
@@ -3786,7 +3906,7 @@ class MainWindow(QMainWindow):
         self.top_bar.set_home_active(kind == "home")
         if self.library_panel.expanded:
             self.library_panel.set_expanded(False)            # opening something leaves the expanded library
-        active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist") else kind)
+        active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist", "show") else kind)
         self.library_panel.set_active(active)
         if kind == "playlist" and arg is not None:
             import time as _time
@@ -3800,6 +3920,8 @@ class MainWindow(QMainWindow):
 
     def show_search(self, select=True):
         self.stack.setCurrentWidget(self.search_page)
+        if not self.search_input.text().strip():
+            self.refresh_search_results()                 # empty box: show Browse all
         self._set_nav("search")
         self.search_input.setFocus()
         if select:

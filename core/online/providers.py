@@ -53,6 +53,22 @@ class Deezer:
             explicit=bool(d.get("explicit_lyrics")),
         )
 
+    def genres(self):
+        """Music genres for Browse: [{"id", "name", "picture"}] (Deezer's own list, without "All")."""
+        data = self._get("/genre", ttl=7 * 24 * 3600)
+        return [{"id": g.get("id"), "name": g.get("name", ""), "picture": g.get("picture_xl") or g.get("picture_big") or ""}
+                for g in data.get("data", []) if g.get("id") and g.get("name")]
+
+    def genre_chart(self, genre_id, limit=50):
+        """Popular songs right now in a genre (Deezer's chart for it)."""
+        data = self._get(f"/chart/{genre_id}/tracks", {"limit": limit}, ttl=12 * 3600)
+        return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
+
+    def genre_artists(self, genre_id, limit=12):
+        data = self._get(f"/genre/{genre_id}/artists", {"limit": limit}, ttl=24 * 3600)
+        return [{"id": a.get("id"), "name": a.get("name", ""), "picture": a.get("picture_xl") or a.get("picture_big") or ""}
+                for a in data.get("data", []) if a.get("name")]
+
     def search(self, query, limit=25):
         data = self._get("/search", {"q": query, "limit": limit}, ttl=6 * 3600)
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]

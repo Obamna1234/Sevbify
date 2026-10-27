@@ -105,6 +105,11 @@ class UserData:
     disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
+    shows: List[dict] = field(default_factory=list)       # followed podcasts / YouTube channels (Show dicts)
+    books: List[dict] = field(default_factory=list)       # audiobooks in Your Library (Book dicts)
+    resume: Dict[str, dict] = field(default_factory=dict) # episode / chapter key -> {"ms", "t", "track", "show"}
+    finished: List[str] = field(default_factory=list)     # episode / chapter keys listened to the end
+    offline: Dict[str, str] = field(default_factory=dict) # episode / chapter key -> downloaded file
     is_new: bool = True        # True when no save file existed yet (first run)
     load_warning: str = ""     # message for the user if the file had to be reset
 
@@ -211,6 +216,11 @@ class Storage:
             ],
             "recent": [to_stored_path(t) for t in data.recent],
             "save_for_later": data.save_for_later,
+            "shows": data.shows,
+            "books": data.books,
+            "resume": data.resume,
+            "finished": data.finished[-2000:],
+            "offline": {k: to_stored_path(v) for k, v in data.offline.items()},
         }
         tmp = self.path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -323,6 +333,14 @@ class Storage:
         except (TypeError, ValueError):
             pass
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
+        data.shows = [d for d in raw.get("shows", []) or [] if isinstance(d, dict) and (d.get("feed_url") or d.get("apple_id"))]
+        data.books = [d for d in raw.get("books", []) or [] if isinstance(d, dict) and d.get("identifier")]
+        resume = raw.get("resume", {}) or {}
+        data.resume = {str(k): v for k, v in resume.items() if isinstance(v, dict) and "ms" in v} \
+            if isinstance(resume, dict) else {}
+        data.finished = [str(k) for k in raw.get("finished", []) or []]
+        offline = raw.get("offline", {}) or {}
+        data.offline = {str(k): from_stored_path(str(v)) for k, v in offline.items()} if isinstance(offline, dict) else {}
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
 
