@@ -4,15 +4,18 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
     QLabel, QScrollArea, QPushButton, QFrame, QGridLayout,
     QDialog, QLineEdit, QListWidget, QAbstractItemView,
-    QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog
+    QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog, QSizePolicy
 )
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut, QDesktopServices
 from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher
 
-from .sidebar import Sidebar
+from .top_bar import TopBar
+from .library_panel import LibraryPanel, rounded
+from .cards import Card, QuickTile
+from . import theme
 from .track_table import TrackTable
 from .queue_panel import QueuePanel
-from .now_playing_panel import NowPlayingPanel
+from .now_playing_panel import NowPlayingPanel, dominant_colour
 from . import icons
 from core.paths import (  # noqa: F401  (re-exported for older code/tests)
     PROJECT_ROOT, PLACEHOLDER_IMAGE, AUDIO_FOLDER, ALBUM_CACHE, ASSETS_FOLDER, normalise_path
@@ -40,6 +43,16 @@ PREV_RESTART_THRESHOLD_MS = 3000
 SAMPLE_PLAYLIST_NAMES = ["Favorites", "Chill Hits", "Workout Mix"]
 HOME_TILE_WIDTH = 170   # cover is 140 px; the extra room fits titles and artist names
 
+# Spotify-style slider: thin grey track, white fill; green fill + white knob on hover.
+SLIDER_STYLE = (
+    "QSlider { min-height: 16px; }"
+    "QSlider::groove:horizontal { border: none; height: 4px; background: #4d4d4d; border-radius: 2px; }"
+    "QSlider::sub-page:horizontal { background: #ffffff; border-radius: 2px; }"
+    "QSlider::sub-page:horizontal:hover { background: #1ed760; }"
+    "QSlider::handle:horizontal { background: transparent; border: none; width: 12px; height: 12px;"
+    " margin: -4px 0; border-radius: 6px; }"
+    "QSlider::handle:horizontal:hover { background: #ffffff; }")
+
 MENU_STYLE = """
 QMenu { background: #282828; color: white; border: 1px solid #3e3e3e; padding: 4px; font-size: 13px; }
 QMenu::item { padding: 8px 24px 8px 12px; border-radius: 3px; }
@@ -64,6 +77,25 @@ def load_pixmap(path: str) -> QPixmap:
         pixmap = QPixmap(300, 300)
         pixmap.fill(QColor("#282828"))
     return pixmap
+
+
+_thumb_cache = {}
+
+
+def cover_thumb(path: str, size: int) -> QPixmap:
+    """Cover art scaled down once and cached (cards and tiles never need full size)."""
+    key = (path, size)
+    pm = _thumb_cache.get(key)
+    if pm is None:
+        pm = load_pixmap(path).scaled(size * 2, size * 2, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                      Qt.TransformationMode.SmoothTransformation)
+        if len(_thumb_cache) > 1500:
+            _thumb_cache.clear()
+        _thumb_cache[key] = pm
+    return pm
+
+
+HOME_SONGS_LIMIT = 30   # Home shows a taste; Your Songs (left panel) lists everything
 
 
 def draw_play_button(button_size: int = 48) -> QPixmap:
@@ -263,17 +295,10 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
         self.setWindowTitle("Sevbify")
-        self.setGeometry(100, 100, 1200, 800)
-        # Dark, thin scrollbars everywhere (Spotify style).
-        self.setStyleSheet(
-            "QMainWindow { background-color: #121212; }"
-            "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
-            "QScrollBar::handle:vertical { background: #4d4d4d; border-radius: 5px; min-height: 30px; }"
-            "QScrollBar::handle:vertical:hover { background: #6a6a6a; }"
-            "QScrollBar:horizontal { background: transparent; height: 10px; margin: 0; }"
-            "QScrollBar::handle:horizontal { background: #4d4d4d; border-radius: 5px; min-width: 30px; }"
-            "QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }"
-            "QScrollBar::add-page, QScrollBar::sub-page { background: none; }")
+        self.setGeometry(80, 60, 1360, 860)
+        self.setMinimumSize(960, 600)
+        theme.load_fonts()
+        self.setStyleSheet(theme.base_stylesheet())
 
         self.vlc_instance = vlc.Instance(*vlc_args)
         if self.vlc_instance is None:
@@ -324,34 +349,55 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.update_progress)
         self.timer.start(100)
 
+        # --- Layout (Spotify): black window, top bar, three rounded panels, player bar
         central = QWidget()
+        central.setObjectName("central")
+        central.setStyleSheet(f"#central {{ background: {theme.BLACK}; }}")
         self.setCentralWidget(central)
-        self.main_layout = QVBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout = QVBoxLayout(central)
+        self.main_layout.setContentsMargins(8, 0, 8, 0)
         self.main_layout.setSpacing(0)
-        central.setLayout(self.main_layout)
+
+        self.top_bar = TopBar()
+        self.top_bar.home_clicked.connect(self.show_home)
+        self.top_bar.back_clicked.connect(self.go_back)
+        self.top_bar.forward_clicked.connect(self.go_forward)
+        self.top_bar.settings_clicked.connect(self.open_settings)
+        self.top_bar.search_activated.connect(lambda: self.show_search(select=False))
+        self.main_layout.addWidget(self.top_bar)
+        self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
+        self._history, self._history_pos, self._replaying = [], -1, False
 
         self.top_layout = QHBoxLayout()
-        self.top_layout.setSpacing(0)
-        self.main_layout.addLayout(self.top_layout)
+        self.top_layout.setSpacing(theme.GAP)
+        self.main_layout.addLayout(self.top_layout, 1)
 
-        self.sidebar = Sidebar()
-        self.top_layout.addWidget(self.sidebar)
-        self.sidebar.home_clicked.connect(self.show_home)
-        self.sidebar.search_clicked.connect(self.show_search)
-        self.sidebar.library_clicked.connect(self.show_library)
-        self.sidebar.playlists_clicked.connect(self.show_playlists)
-        self.sidebar.settings_clicked.connect(self.open_settings)
-        self.sidebar.saved_clicked.connect(self.show_saved)
+        self.library_panel = LibraryPanel(cover_thumb)
+        self.library_panel.create_clicked.connect(self.create_playlist_dialog)
+        self.library_panel.open_all_songs.connect(self.show_library)
+        self.library_panel.open_saved.connect(self.show_saved)
+        self.library_panel.open_playlist.connect(self.show_playlist)
+        self.library_panel.play_playlist.connect(self.play_playlist)
+        self.library_panel.playlist_menu.connect(self._playlist_context_menu)
+        self.top_layout.addWidget(self.library_panel)
 
+        self.center_panel = QFrame()
+        self.center_panel.setObjectName("centerPanel")
+        self.center_panel.setStyleSheet(theme.panel_style("centerPanel"))
+        cl = QVBoxLayout(self.center_panel)
+        cl.setContentsMargins(0, 0, 0, 0)
         self.stack = QStackedWidget()
-        self.stack.setStyleSheet("background-color: #121212;")
-        self.top_layout.addWidget(self.stack, 1)
+        self.stack.setObjectName("pages")
+        self.stack.setStyleSheet(f"#pages {{ background: transparent; }}")
+        cl.addWidget(self.stack)
+        self.top_layout.addWidget(self.center_panel, 1)
 
         # Right-hand panel (Queue / Now playing), hidden until toggled.
         self.right_panel = QStackedWidget()
         self.right_panel.setObjectName("rightPanel")
-        self.right_panel.setStyleSheet("#rightPanel { background-color: #121212; border-left: 1px solid #1f1f1f; }")
+        self.right_panel.setStyleSheet(f"#rightPanel {{ background: {theme.PANEL}; border-radius: {theme.RADIUS}px; }}")
+        self.right_panel.setMinimumWidth(300)
+        self.right_panel.setMaximumWidth(380)
         self.queue_panel = QueuePanel(load_pixmap)
         self.queue_panel.close_requested.connect(lambda: self.set_right_panel(""))
         self.queue_panel.play_upcoming.connect(self._play_upcoming)
@@ -376,6 +422,9 @@ class MainWindow(QMainWindow):
 
         for page in [self.home_page, self.search_page, self.library_page,
                      self.playlists_page, self.playlist_page, self.saved_page]:
+            page.setObjectName("page")
+            page.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            page.setStyleSheet("#page { background: transparent; }")
             self.stack.addWidget(page)
 
         self.setup_player_bar()
@@ -387,7 +436,7 @@ class MainWindow(QMainWindow):
         self.setup_saved_page()
         self.setup_shortcuts()
 
-        self.stack.setCurrentWidget(self.home_page)
+        self.show_home()
 
         if self.user_data.load_warning:
             self.show_status("⚠ " + self.user_data.load_warning, 20000)
@@ -731,114 +780,141 @@ class MainWindow(QMainWindow):
     # Player bar
     # ==================================================================
     def setup_player_bar(self):
+        """Spotify layout: song on the left, controls + progress in the middle,
+        view toggles and volume on the right."""
         self.player_bar = QFrame()
-        self.player_bar.setFixedHeight(100)
-        self.player_bar.setStyleSheet("background-color: #181818;")
+        self.player_bar.setObjectName("playerBar")
+        self.player_bar.setFixedHeight(88)
+        self.player_bar.setStyleSheet(f"#playerBar {{ background: {theme.BLACK}; }}")
+        row = QHBoxLayout(self.player_bar)
+        row.setContentsMargins(8, 8, 8, 8)
+        row.setSpacing(8)
 
-        main = QVBoxLayout()
-        main.setContentsMargins(10, 5, 10, 5)
-        main.setSpacing(5)
-        self.player_bar.setLayout(main)
-
-        top = QHBoxLayout()
-        main.addLayout(top)
-
+        # --- Left: artwork, title, artist, status --------------------------
+        left = QWidget()
+        left.setMinimumWidth(180)
+        lh = QHBoxLayout(left)
+        lh.setContentsMargins(0, 0, 0, 0)
+        lh.setSpacing(12)
         self.album_cover = QLabel()
-        self.album_cover.setFixedSize(70, 70)
+        self.album_cover.setFixedSize(56, 56)
         self.set_album_cover(PLACEHOLDER_IMAGE)
-        top.addWidget(self.album_cover)
-
-        info_col = QVBoxLayout()
-        info_col.setSpacing(2)
-        self.song_info = QLabel("No song playing")
-        self.song_info.setStyleSheet("color: white; font-size: 14px; font-weight: 600;")
-        info_col.addWidget(self.song_info)
-
+        lh.addWidget(self.album_cover)
+        info = QVBoxLayout()
+        info.setSpacing(2)
+        info.addStretch()
+        self.song_info = QLabel("No song playing")          # the title
+        self.song_info.setStyleSheet(f"color: {theme.TEXT}; font-size: 14px; font-weight: 600;")
+        self.artist_info = QLabel("")
+        self.artist_info.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
+        for lbl in (self.song_info, self.artist_info):
+            lbl.setMinimumWidth(0)
+            lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        info.addWidget(self.song_info)
+        info.addWidget(self.artist_info)
         # Small status line for errors and confirmations.
         self.status_label = QLabel("")
+        self.status_label.setMinimumWidth(0)
+        self.status_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.status_label.hide()
-        info_col.addWidget(self.status_label)
+        info.addWidget(self.status_label)
+        info.addStretch()
         self._status_timer = QTimer(self)
         self._status_timer.setSingleShot(True)
         self._status_timer.timeout.connect(self.clear_status)
+        lh.addLayout(info, 1)
+        row.addWidget(left, 3)
 
-        top.addLayout(info_col)
-        top.addStretch()
-
-        btn_style = "QPushButton { border: none; color: white; font-size: 18px; padding: 5px 10px; background: transparent; } QPushButton:hover { color: #1db954; }"
-
+        # --- Middle: controls and progress ----------------------------------
+        mid = QWidget()
+        mv = QVBoxLayout(mid)
+        mv.setContentsMargins(0, 0, 0, 0)
+        mv.setSpacing(4)
+        controls = QHBoxLayout()
+        controls.setSpacing(14)
+        controls.addStretch()
         self.shuffle_btn = self._icon_button("Shuffle (Ctrl+S)", self.toggle_shuffle)
-        top.addWidget(self.shuffle_btn)
-
-        self.prev_btn = QPushButton("⏮")
-        self.prev_btn.clicked.connect(self.prev_song)
-        self.prev_btn.setStyleSheet(btn_style)
-        self.prev_btn.setToolTip("Previous (Ctrl+Left)")
-        top.addWidget(self.prev_btn)
-
-        self.play_btn = QPushButton("▶️")
+        controls.addWidget(self.shuffle_btn)
+        self.prev_btn = self._icon_button("Previous (Ctrl+Left)", self.prev_song)
+        self.prev_btn.setIcon(icons.skip("prev", theme.SUBDUED))
+        self.prev_btn.setIconSize(QSize(16, 16))
+        controls.addWidget(self.prev_btn)
+        self.play_btn = QPushButton()
+        self.play_btn.setFixedSize(34, 34)
+        self.play_btn.setIconSize(QSize(14, 14))
+        self.play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.play_btn.setStyleSheet("QPushButton { background: white; border: none; border-radius: 17px; }"
+                                    "QPushButton:hover { background: #f0f0f0; }"
+                                    "QPushButton:pressed { background: #d0d0d0; }")
         self.play_btn.clicked.connect(self.play_pause_song)
-        self.play_btn.setStyleSheet(btn_style)
-        self.play_btn.setToolTip("Play / Pause (Space)")
-        top.addWidget(self.play_btn)
-
-        self.next_btn = QPushButton("⏭")
-        self.next_btn.clicked.connect(self.next_song)
-        self.next_btn.setStyleSheet(btn_style)
-        self.next_btn.setToolTip("Next (Ctrl+Right)")
-        top.addWidget(self.next_btn)
-
+        controls.addWidget(self.play_btn)
+        self.next_btn = self._icon_button("Next (Ctrl+Right)", self.next_song)
+        self.next_btn.setIcon(icons.skip("next", theme.SUBDUED))
+        self.next_btn.setIconSize(QSize(16, 16))
+        controls.addWidget(self.next_btn)
         self.repeat_btn = self._icon_button("Repeat (Ctrl+R)", self.cycle_repeat)
-        top.addWidget(self.repeat_btn)
-        self._update_mode_buttons()
-
-        top.addSpacing(24)
-        self.nowplaying_btn = self._icon_button("Now playing view", lambda: self.toggle_right_panel("nowplaying"))
-        top.addWidget(self.nowplaying_btn)
-        self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
-        top.addWidget(self.queue_btn)
-        top.addSpacing(6)
-
-        # --- Volume -------------------------------------------------------
-        self.mute_btn = QPushButton()
-        self.mute_btn.setStyleSheet("QPushButton { border: none; color: #b3b3b3; font-size: 16px; padding: 4px; background: transparent; } QPushButton:hover { color: white; }")
-        self.mute_btn.setToolTip("Mute / unmute")
-        self.mute_btn.clicked.connect(self.toggle_mute)
-        top.addWidget(self.mute_btn)
-
-        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
-        self.volume_slider.setRange(0, 100)
-        self.volume_slider.setFixedWidth(110)
-        self.volume_slider.setToolTip("Volume (Ctrl+Up / Ctrl+Down)")
-        self.volume_slider.setStyleSheet("QSlider::groove:horizontal { border: none; height: 4px; background: #4d4d4d; border-radius: 2px; } QSlider::handle:horizontal { background: white; border: none; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; } QSlider::sub-page:horizontal { background: #1db954; border-radius: 2px; }")
-        self.volume_slider.setValue(self.user_data.volume)
-        self.volume_slider.valueChanged.connect(self.set_volume)
-        top.addWidget(self.volume_slider)
-        self._update_mute_icon()
-        self._apply_volume()
+        controls.addWidget(self.repeat_btn)
+        controls.addStretch()
+        mv.addLayout(controls)
 
         prog = QHBoxLayout()
-        prog.setSpacing(10)
-        main.addLayout(prog)
-
+        prog.setSpacing(8)
         self.time_label = QLabel("00:00")
-        self.time_label.setStyleSheet("color: #b3b3b3; font-size: 11px;")
-        self.time_label.setFixedWidth(40)
-        prog.addWidget(self.time_label)
-
+        self.duration_label = QLabel("00:00")
+        for lbl, align in ((self.time_label, Qt.AlignmentFlag.AlignRight), (self.duration_label, Qt.AlignmentFlag.AlignLeft)):
+            lbl.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
+            lbl.setFixedWidth(42)
+            lbl.setAlignment(align | Qt.AlignmentFlag.AlignVCenter)
         self.progress_slider = QSlider(Qt.Orientation.Horizontal)
         self.progress_slider.setRange(0, 1000)
         self.progress_slider.sliderPressed.connect(self.slider_pressed)
         self.progress_slider.sliderReleased.connect(self.slider_released)
-        self.progress_slider.setStyleSheet("QSlider::groove:horizontal { border: none; height: 4px; background: #4d4d4d; border-radius: 2px; } QSlider::handle:horizontal { background: white; border: none; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; } QSlider::sub-page:horizontal { background: #1db954; border-radius: 2px; }")
-        prog.addWidget(self.progress_slider)
-
-        self.duration_label = QLabel("00:00")
-        self.duration_label.setStyleSheet("color: #b3b3b3; font-size: 11px;")
-        self.duration_label.setFixedWidth(40)
+        self.progress_slider.setStyleSheet(SLIDER_STYLE)
+        prog.addWidget(self.time_label)
+        prog.addWidget(self.progress_slider, 1)
         prog.addWidget(self.duration_label)
+        mv.addLayout(prog)
+        row.addWidget(mid, 4)
 
+        # --- Right: views and volume ---------------------------------------
+        right = QWidget()
+        right.setMinimumWidth(180)
+        rh = QHBoxLayout(right)
+        rh.setContentsMargins(0, 0, 0, 0)
+        rh.setSpacing(4)
+        rh.addStretch()
+        self.nowplaying_btn = self._icon_button("Now playing view", lambda: self.toggle_right_panel("nowplaying"))
+        rh.addWidget(self.nowplaying_btn)
+        self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
+        rh.addWidget(self.queue_btn)
+        self.mute_btn = self._icon_button("Mute / unmute", self.toggle_mute)
+        rh.addWidget(self.mute_btn)
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setFixedWidth(96)
+        self.volume_slider.setToolTip("Volume (Ctrl+Up / Ctrl+Down)")
+        self.volume_slider.setStyleSheet(SLIDER_STYLE)
+        self.volume_slider.setValue(self.user_data.volume)
+        self.volume_slider.valueChanged.connect(self.set_volume)
+        rh.addWidget(self.volume_slider)
+        row.addWidget(right, 3)
+
+        self._update_mode_buttons()
+        self._set_play_icon(False)
+        self._update_mute_icon()
+        self._apply_volume()
         self.main_layout.addWidget(self.player_bar)
+
+    def _set_play_icon(self, playing: bool):
+        """Round white button with a black play or pause symbol."""
+        self.play_btn.setIcon(icons.pause("#000000", 14) if playing else icons.play("#000000", 14))
+        self.play_btn.setToolTip("Pause (Space)" if playing else "Play (Space)")
+        self.play_btn.setProperty("state", "pause" if playing else "play")
+
+    def _set_now_playing_text(self, title, artist, note=""):
+        self.song_info.setText(self.song_info.fontMetrics().elidedText(title, Qt.TextElideMode.ElideRight, 260))
+        self.song_info.setToolTip(title)
+        self.artist_info.setText(artist + (f"  ·  {note}" if note else ""))
 
     def setup_shortcuts(self):
         def sc(keys, fn):
@@ -882,12 +958,10 @@ class MainWindow(QMainWindow):
 
     def _update_mute_icon(self):
         v = self.user_data.volume
-        if self.user_data.muted or v == 0:
-            self.mute_btn.setText("🔇")
-        elif v < 50:
-            self.mute_btn.setText("🔉")
-        else:
-            self.mute_btn.setText("🔊")
+        level = 0 if (self.user_data.muted or v == 0) else (1 if v < 50 else 2)
+        self.mute_btn.setIcon(icons.volume(level, theme.SUBDUED))
+        self.mute_btn.setProperty("level", ("muted", "low", "high")[level])
+        self.mute_btn.setToolTip("Unmute" if level == 0 else "Mute")
 
     # ------------------------------------------------------------------
     # Status / error feedback
@@ -966,20 +1040,66 @@ class MainWindow(QMainWindow):
                 self._handle_failed_track("took too long to open")
 
     def set_album_cover(self, path):
-        pixmap = load_pixmap(path).scaled(70, 70, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-        mask = QPixmap(70, 70)
-        mask.fill(Qt.GlobalColor.transparent)
-        p = QPainter(mask)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setBrush(QBrush(pixmap))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(0, 0, 70, 70)
-        p.end()
-        self.album_cover.setPixmap(mask)
+        self.album_cover.setPixmap(rounded(load_pixmap(path), 56, 4))
 
     # ==================================================================
     # Pages
     # ==================================================================
+    def _gradient_header(self, pixmap, kind, title, top_colour, play_slot, extra_buttons=()):
+        """Spotify-style page header: big artwork, kind, huge title, meta line,
+        green play button and pill buttons, over a colour gradient."""
+        frame = QFrame()
+        frame.setObjectName("gradHeader")
+        frame.setStyleSheet(
+            f"#gradHeader {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {top_colour},"
+            f" stop:0.75 {QColor(top_colour).darker(260).name()}, stop:1 {theme.PANEL});"
+            f" border-top-left-radius: {theme.RADIUS}px; border-top-right-radius: {theme.RADIUS}px; }}")
+        hv = QVBoxLayout(frame)
+        hv.setContentsMargins(24, 24, 24, 12)
+        hv.setSpacing(18)
+        row = QHBoxLayout()
+        row.setSpacing(24)
+        art = QLabel()
+        art.setFixedSize(200, 200)
+        art.setStyleSheet("background: transparent;")
+        art.setPixmap(rounded(pixmap, 200, 6))
+        row.addWidget(art)
+        info = QVBoxLayout()
+        info.addStretch()
+        k = QLabel(kind)
+        k.setStyleSheet("color: white; font-size: 14px; font-weight: 600; background: transparent;")
+        t = QLabel(title)
+        t.setStyleSheet("color: white; font-size: 56px; font-weight: 800; background: transparent;")
+        meta = QLabel("")
+        meta.setStyleSheet("color: rgba(255,255,255,0.8); font-size: 14px; font-weight: 600; background: transparent;")
+        meta.setWordWrap(True)
+        for w in (k, t, meta):
+            info.addWidget(w)
+        row.addLayout(info, 1)
+        hv.addLayout(row)
+        actions = QHBoxLayout()
+        actions.setSpacing(16)
+        play = QPushButton()
+        play.setIcon(icons.play("#000000", 22))
+        play.setIconSize(QSize(22, 22))
+        play.setFixedSize(56, 56)
+        play.setToolTip("Play")
+        play.setCursor(Qt.CursorShape.PointingHandCursor)
+        play.setStyleSheet(f"QPushButton {{ border: none; background: {theme.GREEN}; border-radius: 28px; }}"
+                           "QPushButton:hover { background: #3be477; }")
+        play.clicked.connect(play_slot)
+        actions.addWidget(play)
+        for text, slot, green in extra_buttons:
+            b = QPushButton(text)
+            b.setStyleSheet(theme.GREEN_PILL if green else theme.PILL)
+            b.setFixedHeight(36 if green else 32)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.clicked.connect(slot)
+            actions.addWidget(b)
+        actions.addStretch()
+        hv.addLayout(actions)
+        return frame, meta
+
     @staticmethod
     def _page_title(text):
         title = QLabel(text)
@@ -995,69 +1115,158 @@ class MainWindow(QMainWindow):
 
     # --- Home -------------------------------------------------------------
     def setup_home_page(self):
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        self.home_page.setLayout(layout)
-        layout.addWidget(self._page_title("🎧 Your Songs"))
-
+        layout = QVBoxLayout(self.home_page)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.home_scroll = QScrollArea()
         self.home_scroll.setWidgetResizable(True)
-        self.home_scroll.setStyleSheet("QScrollArea { border: none; background: #121212; }")
-        self.home_scroll.setWidget(self._muted_label("Loading your music…"))
         self.home_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.home_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         self.home_scroll.installEventFilter(self)
         layout.addWidget(self.home_scroll)
+        self._home_shelves = []
+        self._home_refresh_timer = QTimer(self)
+        self._home_refresh_timer.setSingleShot(True)
+        self._home_refresh_timer.timeout.connect(self.refresh_home)
+        loading = self._muted_label("Loading your music…")
+        loading.setContentsMargins(24, 24, 24, 24)
+        self.home_scroll.setWidget(loading)
+
+    @staticmethod
+    def _greeting():
+        import datetime
+        h = datetime.datetime.now().hour
+        return "Good morning" if h < 12 else ("Good afternoon" if h < 18 else "Good evening")
+
+    def schedule_home_refresh(self):
+        self._home_refresh_timer.start(300)
 
     def refresh_home(self):
+        content = QWidget()
+        content.setObjectName("homeContent")
+        # Soft gradient at the top, like Spotify's Home.
+        content.setStyleSheet("#homeContent { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+                              " stop:0 #1f2a26, stop:0.28 #121212, stop:1 #121212); }")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(24, 20, 24, 24)
+        v.setSpacing(8)
+        self._home_shelves = []
+        self._home_tiles = []
+
+        hello = QLabel(self._greeting())
+        hello.setStyleSheet(f"color: {theme.TEXT}; font-size: 32px; font-weight: 800; background: transparent;")
+        v.addWidget(hello)
+        v.addSpacing(8)
+
         if not self.songs:
             folders = "\n".join(self.user_data.music_folders) or "(none)"
-            empty = self._muted_label(
-                "No music found.\n\nAdd .mp3, .wav, .flac, .ogg or .m4a files to one of your "
-                f"music folders, or add a folder in Your Library.\n\nMusic folders:\n{folders}"
-            )
-            empty.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-            self.home_scroll.setWidget(empty)
+            v.addWidget(self._muted_label(
+                "No music found yet.\n\nAdd .mp3, .wav, .flac, .ogg or .m4a files to one of your music folders, "
+                f"or open Your Songs in Your Library and add a folder.\n\nMusic folders:\n{folders}"))
+            v.addStretch()
+            self.home_scroll.setWidget(content)
             return
 
-        content = QWidget()
-        scroll_layout = QVBoxLayout()
-        content.setLayout(scroll_layout)
+        # Quick tiles: Your Songs, Saved for later, playlists.
+        quick = QGridLayout()
+        quick.setSpacing(8)
+        tiles = [(self.library_panel._special_songs, "Your Songs", self.show_library,
+                  lambda: self.play_song(self.songs[0], queue=self.songs, source="Your Songs"), "Your Songs")]
+        if self.user_data.save_for_later:
+            tiles.append((self.library_panel._special_saved, "Saved for later", self.show_saved,
+                          lambda: self._play_saved(sorted(self.user_data.save_for_later)[0]), "Saved:"))
+        for pl in self.playlists[:8 - len(tiles)]:
+            tiles.append((cover_thumb(pl.cover_path, 64), pl.name, lambda p=pl: self.show_playlist(p),
+                          lambda p=pl: self.play_playlist(p), pl.name))
+        playing = self.pq.source_name if self.current_song is not None else ""
+        for i, (pm, name, open_fn, play_fn, src) in enumerate(tiles):
+            t = QuickTile(pm, name, playing=bool(playing) and (playing == src or playing.startswith(src)))
+            t.clicked.connect(open_fn)
+            t.play_clicked.connect(play_fn)
+            quick.addWidget(t, i // 4, i % 4)
+        self._home_quick = quick
+        v.addLayout(quick)
 
-        grid_widget = QWidget()
-        grid = QGridLayout()
-        grid.setSpacing(25)
-        grid.setContentsMargins(0, 15, 0, 15)
-        grid_widget.setLayout(grid)
+        def shelf(title, cards, all_rows=False):
+            if not cards:
+                return
+            v.addSpacing(18)
+            head = QLabel(title)
+            head.setStyleSheet(f"color: {theme.TEXT}; font-size: 22px; font-weight: 700; background: transparent;")
+            v.addWidget(head)
+            grid = QGridLayout()
+            grid.setHorizontalSpacing(4)
+            grid.setVerticalSpacing(4)
+            grid.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            v.addLayout(grid)
+            self._home_shelves.append({"grid": grid, "cards": cards, "all": all_rows, "cols": 0})
 
-        self._home_tiles = []
-        for song in self.songs:
-            tile = HoverableSongTile(song, 140)
-            tile.setFixedWidth(HOME_TILE_WIDTH)
-            tile.play_clicked.connect(lambda s: self.play_song(s, queue=self.songs, source="Your Songs"))
-            tile.context_requested.connect(lambda s, pos: self._show_song_menu(s, pos, queue=self.songs, source="Your Songs"))
-            self._home_tiles.append(tile)
-        self._home_grid = grid
-        self._home_cols = 0
+        recent = [s for s in list(self.pq.recent)[:20] if not getattr(s, "is_remote", False)]
+        rc = []
+        for song in recent:
+            c = Card(cover_thumb(song.album_cover_path, 160), song.title, song.artist)
+            c.clicked.connect(lambda s=song: self.play_song(s, queue=recent, source="Recently played"))
+            c.play_clicked.connect(lambda s=song: self.play_song(s, queue=recent, source="Recently played"))
+            c.context_requested.connect(lambda pos, s=song: self._show_song_menu(s, pos, queue=recent, source="Recently played"))
+            rc.append(c)
+        shelf("Recently played", rc)
+
+        pc = []
+        for pl in self.playlists:
+            n = len(pl.songs)
+            c = Card(cover_thumb(pl.cover_path, 160), pl.name, f"Playlist • {n} song{'s' if n != 1 else ''}")
+            c.clicked.connect(lambda p=pl: self.show_playlist(p))
+            c.play_clicked.connect(lambda p=pl: self.play_playlist(p))
+            c.context_requested.connect(lambda pos, p=pl: self._playlist_context_menu(p, pos))
+            pc.append(c)
+        shelf("Your playlists", pc)
+
+        sc = []
+        for song in self.songs[:HOME_SONGS_LIMIT]:
+            c = Card(cover_thumb(song.album_cover_path, 160), song.title, song.artist)
+            c.clicked.connect(lambda s=song: self.play_song(s, queue=self.songs, source="Your Songs"))
+            c.play_clicked.connect(lambda s=song: self.play_song(s, queue=self.songs, source="Your Songs"))
+            c.context_requested.connect(lambda pos, s=song: self._show_song_menu(s, pos, queue=self.songs, source="Your Songs"))
+            sc.append(c)
+        self._home_tiles = sc
+        shelf("Your songs", sc, all_rows=True)
+        if len(self.songs) > HOME_SONGS_LIMIT:
+            more = QPushButton(f"Show all {len(self.songs)} songs")
+            more.setStyleSheet(theme.PILL)
+            more.setFixedHeight(32)
+            more.setCursor(Qt.CursorShape.PointingHandCursor)
+            more.clicked.connect(self.show_library)
+            v.addWidget(more, alignment=Qt.AlignmentFlag.AlignLeft)
+        v.addStretch()
+        self.home_scroll.setWidget(content)
         self._relayout_home()
 
-        scroll_layout.addWidget(grid_widget, alignment=Qt.AlignmentFlag.AlignLeft)
-        scroll_layout.addStretch()
-        self.home_scroll.setWidget(content)
-
     def _relayout_home(self):
-        """Fit as many tile columns as the window width allows (like Spotify)."""
-        grid = getattr(self, "_home_grid", None)
-        if grid is None:
-            return
-        width = self.home_scroll.viewport().width() - 30
-        cols = max(1, width // (HOME_TILE_WIDTH + grid.spacing()))
-        if cols == self._home_cols:
-            return
-        self._home_cols = cols
-        for tile in self._home_tiles:
-            grid.removeWidget(tile)
-        for idx, tile in enumerate(self._home_tiles):
-            grid.addWidget(tile, idx // cols, idx % cols)
+        """Fit as many card columns as the width allows. Shelves show one row;
+        'Your songs' shows everything."""
+        width = self.home_scroll.viewport().width() - 48
+        card_w = 184 + 4
+        cols = max(1, width // card_w)
+        quick = getattr(self, "_home_quick", None)
+        if quick is not None:
+            qcols = 4 if width >= 900 else 2
+            items = [quick.itemAt(i).widget() for i in range(quick.count())]
+            for w in items:
+                quick.removeWidget(w)
+            for i, w in enumerate(items):
+                quick.addWidget(w, i // qcols, i % qcols)
+        for sh in getattr(self, "_home_shelves", []):
+            if sh["cols"] == cols:
+                continue
+            sh["cols"] = cols
+            grid = sh["grid"]
+            for c in sh["cards"]:
+                grid.removeWidget(c)
+            for i, c in enumerate(sh["cards"]):
+                if not sh["all"] and i >= cols:
+                    c.hide()
+                    continue
+                c.show()
+                grid.addWidget(c, i // cols, i % cols)
 
     def eventFilter(self, obj, event):
         if obj is getattr(self, "home_scroll", None) and event.type() == QEvent.Type.Resize:
@@ -1072,17 +1281,9 @@ class MainWindow(QMainWindow):
         layout.setSpacing(10)
         self.search_page.setLayout(layout)
 
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍  What do you want to play?")
-        self.search_input.setClearButtonEnabled(True)
-        self.search_input.setStyleSheet(
-            "QLineEdit { background: #242424; color: white; border: 1px solid #242424; "
-            "padding: 10px 16px; border-radius: 22px; font-size: 14px; } "
-            "QLineEdit:hover { border-color: #3e3e3e; } QLineEdit:focus { border-color: white; }")
-        self.search_input.setFixedHeight(44)
-        self.search_input.setMaximumWidth(480)
+        # The search box itself is the pill in the top bar.
+        self.search_input = self.top_bar.search_edit
         self.search_input.textChanged.connect(self.refresh_search_results)
-        layout.addWidget(self.search_input)
 
         self.search_summary = self._muted_label("Search your library by song, artist or album.")
         layout.addWidget(self.search_summary)
@@ -1209,35 +1410,26 @@ class MainWindow(QMainWindow):
     # --- Your Library -----------------------------------------------------
     def setup_library_page(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
         self.library_page.setLayout(layout)
 
-        top = QHBoxLayout()
-        top.addWidget(self._page_title("📚 Your Library"))
-        top.addStretch()
-        rescan_btn = QPushButton("⟳ Rescan")
-        rescan_btn.setStyleSheet(PILL_BUTTON)
-        rescan_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        rescan_btn.setFixedHeight(32)  # radius must be <= half the height or Qt draws square corners
-        rescan_btn.clicked.connect(self.rescan_library)
-        top.addWidget(rescan_btn)
-        add_btn = QPushButton("➕ Add folder…")
-        add_btn.setStyleSheet(GREEN_BUTTON)
-        add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_btn.setFixedHeight(36)
-        add_btn.clicked.connect(self._choose_music_folder)
-        top.addWidget(add_btn)
-        layout.addLayout(top)
-
-        self.library_count_label = self._muted_label("Scanning your music…")
-        layout.addWidget(self.library_count_label)
+        from .library_panel import gradient_cover
+        header, self.library_count_label = self._gradient_header(
+            gradient_cover(200, "#450af5", "#c4efd9", "♪"), "Library", "Your Songs", "#5038a0",
+            lambda: self.songs and self.play_song(self.library_table.songs_in_view()[0],
+                                                   queue=self.library_table.songs_in_view(), source="Your Library"),
+            extra_buttons=(("Add folder…", self._choose_music_folder, False),
+                           ("Rescan", self.rescan_library, False)))
+        self.library_count_label.setText("Scanning your music…")
+        layout.addWidget(header)
 
         self.folder_list_widget = QWidget()
         self.folder_list_layout = QVBoxLayout()
         self.folder_list_layout.setContentsMargins(0, 0, 0, 0)
         self.folder_list_layout.setSpacing(2)
         self.folder_list_widget.setLayout(self.folder_list_layout)
+        self.folder_list_widget.setContentsMargins(24, 0, 24, 0)
         layout.addWidget(self.folder_list_widget)
         self.refresh_folder_list()
 
@@ -1245,7 +1437,11 @@ class MainWindow(QMainWindow):
         self.library_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source="Your Library"))
         self.library_table.context_requested.connect(
             lambda s, row, pos: self._show_song_menu(s, pos, queue=self.library_table.songs_in_view(), source="Your Library"))
-        layout.addWidget(self.library_table, 1)
+        wrap = QWidget()
+        wl = QVBoxLayout(wrap)
+        wl.setContentsMargins(16, 0, 16, 8)
+        wl.addWidget(self.library_table)
+        layout.addWidget(wrap, 1)
 
     def refresh_folder_list(self):
         while self.folder_list_layout.count():
@@ -1275,7 +1471,7 @@ class MainWindow(QMainWindow):
         total = sum(s.duration for s in self.songs)
         n = len(self.songs)
         self.library_count_label.setText(
-            f"{n} song{'s' if n != 1 else ''}, {format_total(total)} · click a column to sort · double-click to play"
+            f"{n} song{'s' if n != 1 else ''}, {format_total(total)}  ·  click a column to sort  ·  double-click to play"
             if n else "No songs yet. Add a folder that contains music.")
         self.library_table.set_songs(self.songs)
         self.library_table.set_current(self.current_song)
@@ -1309,7 +1505,26 @@ class MainWindow(QMainWindow):
         scroll.setWidget(content)
         layout.addWidget(scroll)
 
+    def _refresh_library_panel(self):
+        if not hasattr(self, "library_panel"):
+            return
+        n_saved = sum(len(v) for v in self.user_data.save_for_later.values())
+        playing = self.pq.source_name if self.current_song is not None else ""
+        self.library_panel.set_items(self.playlists, len(self.songs), n_saved, playing)
+
+    def _playlist_context_menu(self, playlist, global_pos):
+        menu = self._new_menu()
+        menu.addAction("▶  Play").triggered.connect(lambda: self.play_playlist(playlist))
+        menu.addAction("Open").triggered.connect(lambda: self.show_playlist(playlist))
+        menu.addSeparator()
+        menu.addAction("Rename…").triggered.connect(lambda: self._rename_playlist_dialog(playlist))
+        menu.addAction("Delete…").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
+        menu.exec(global_pos)
+
     def display_playlists(self):
+        self._refresh_library_panel()
+        if self.library_ready:
+            self.schedule_home_refresh()
         for i in reversed(range(self.playlist_scroll_layout.count())):
             w = self.playlist_scroll_layout.itemAt(i).widget()
             if w:
@@ -1378,17 +1593,21 @@ class MainWindow(QMainWindow):
     # --- Saved for later --------------------------------------------------
     def setup_saved_page(self):
         layout = QVBoxLayout(self.saved_page)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
-        layout.addWidget(self._page_title("⬇ Saved for later"))
-        layout.addWidget(self._muted_label(
-            "Songs you found with Radio or Search and want to get later, sorted by genre so different "
-            "styles never mix. When a song appears in your music folders it leaves this list and fills "
-            "any playlist slot it was added to. Right-click a song for more."))
+        from .library_panel import gradient_cover
+        header, meta = self._gradient_header(
+            gradient_cover(200, "#1ed760", "#0b5c33", "⬇"), "To download", "Saved for later", "#137a43",
+            lambda: self.user_data.save_for_later and self._play_saved(sorted(self.user_data.save_for_later)[0]))
+        meta.setText("Songs you found with Radio or Search, sorted by genre so styles never mix. "
+                     "When a song appears in your music folders it leaves this list and fills any "
+                     "playlist slot it was added to.")
+        layout.addWidget(header)
         self.saved_scroll = QScrollArea()
         self.saved_scroll.setWidgetResizable(True)
         self.saved_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.saved_scroll.setStyleSheet("QScrollArea { border: none; background: #121212; }")
+        self.saved_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.saved_scroll.setContentsMargins(16, 0, 16, 0)
         layout.addWidget(self.saved_scroll, 1)
         self.refresh_saved_page()
 
@@ -1396,9 +1615,10 @@ class MainWindow(QMainWindow):
         return [RemoteSong(OnlineTrack.from_dict(d)) for d in self.user_data.save_for_later.get(genre, [])]
 
     def refresh_saved_page(self):
+        self._refresh_library_panel()
         content = QWidget()
         v = QVBoxLayout(content)
-        v.setContentsMargins(0, 0, 8, 0)
+        v.setContentsMargins(24, 0, 24, 12)
         v.setSpacing(6)
         genres = sorted(self.user_data.save_for_later, key=str.casefold)
         if not genres:
@@ -1517,37 +1737,47 @@ class MainWindow(QMainWindow):
     # --- Single playlist page --------------------------------------------
     def setup_playlist_page(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.playlist_page.setLayout(layout)
 
+        # Header with a colour gradient taken from the cover (set in refresh_playlist_page).
+        self.pl_header = QFrame()
+        self.pl_header.setObjectName("plHeader")
+        hv = QVBoxLayout(self.pl_header)
+        hv.setContentsMargins(24, 24, 24, 12)
+        hv.setSpacing(18)
         header = QHBoxLayout()
-        header.setSpacing(20)
+        header.setSpacing(24)
         self.pl_cover = QLabel()
-        self.pl_cover.setFixedSize(180, 180)
+        self.pl_cover.setFixedSize(220, 220)
+        self.pl_cover.setStyleSheet("background: transparent;")
         header.addWidget(self.pl_cover)
 
         info = QVBoxLayout()
         info.addStretch()
         kind = QLabel("Playlist")
-        kind.setStyleSheet("color: white; font-size: 12px;")
+        kind.setStyleSheet("color: white; font-size: 14px; font-weight: 600; background: transparent;")
         info.addWidget(kind)
         self.pl_title = QLabel()
-        self.pl_title.setStyleSheet("color: white; font-size: 40px; font-weight: 800;")
+        self.pl_title.setStyleSheet("color: white; font-size: 56px; font-weight: 800; background: transparent;")
+        self.pl_title.setMinimumWidth(0)
+        self.pl_title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         info.addWidget(self.pl_title)
         self.pl_meta = QLabel()
-        self.pl_meta.setStyleSheet("color: #b3b3b3; font-size: 13px;")
+        self.pl_meta.setStyleSheet("color: rgba(255,255,255,0.75); font-size: 14px; font-weight: 600; background: transparent;")
         info.addWidget(self.pl_meta)
         header.addLayout(info, 1)
-        layout.addLayout(header)
+        hv.addLayout(header)
 
         actions = QHBoxLayout()
-        actions.setSpacing(12)
+        actions.setSpacing(16)
         self.pl_play_btn = QPushButton()
-        self.pl_play_btn.setIcon(QIcon(draw_play_button(56)))
-        self.pl_play_btn.setIconSize(QSize(56, 56))
-        self.pl_play_btn.setFixedSize(60, 60)
-        self.pl_play_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
+        self.pl_play_btn.setIcon(icons.play("#000000", 22))
+        self.pl_play_btn.setIconSize(QSize(22, 22))
+        self.pl_play_btn.setFixedSize(56, 56)
+        self.pl_play_btn.setStyleSheet(f"QPushButton {{ border: none; background: {theme.GREEN}; border-radius: 28px; }}"
+                                       "QPushButton:hover { background: #3be477; }")
         self.pl_play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.pl_play_btn.setToolTip("Play")
         self.pl_play_btn.clicked.connect(lambda: self.open_playlist and self.play_playlist(self.open_playlist))
@@ -1565,11 +1795,13 @@ class MainWindow(QMainWindow):
         delete_btn.clicked.connect(self._confirm_delete_open_playlist)
         actions.addWidget(delete_btn)
         actions.addStretch()
-        layout.addLayout(actions)
+        hv.addLayout(actions)
+        layout.addWidget(self.pl_header)
 
         self.pl_empty = self._muted_label(
             "This playlist is empty. Right-click any song on Home, Search or Your Library and choose "
             "“Add to playlist”.")
+        self.pl_empty.setContentsMargins(24, 12, 24, 0)
         layout.addWidget(self.pl_empty)
 
         self.pl_table = TrackTable(sortable=False)
@@ -1581,20 +1813,30 @@ class MainWindow(QMainWindow):
             lambda s, row, pos: self.open_playlist and self._show_song_menu(
                 s, pos, queue=self.open_playlist.songs, playlist=self.open_playlist, row=row,
                 source=self.open_playlist.name))
-        layout.addWidget(self.pl_table, 1)
+        table_wrap = QWidget()
+        tw = QVBoxLayout(table_wrap)
+        tw.setContentsMargins(16, 0, 16, 8)
+        tw.addWidget(self.pl_table)
+        layout.addWidget(table_wrap, 1)
 
     def show_playlist(self, playlist):
         self.open_playlist = playlist
         self.refresh_playlist_page()
         self.stack.setCurrentWidget(self.playlist_page)
-        self.sidebar.set_active("playlists")
+        self._set_nav("playlist", playlist)
 
     def refresh_playlist_page(self):
         pl = self.open_playlist
         if pl is None:
             return
-        self.pl_cover.setPixmap(load_pixmap(pl.cover_path).scaled(
-            180, 180, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
+        cover = load_pixmap(pl.cover_path)
+        self.pl_cover.setPixmap(rounded(cover, 220, 6))
+        c = dominant_colour(cover)
+        top = QColor.fromHsv(c.hsvHue(), min(255, c.hsvSaturation() + 30), min(200, c.value() + 50))
+        self.pl_header.setStyleSheet(
+            f"#plHeader {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {top.name()},"
+            f" stop:0.7 {c.darker(160).name()}, stop:1 {theme.PANEL}); border-top-left-radius: {theme.RADIUS}px;"
+            f" border-top-right-radius: {theme.RADIUS}px; }}")
         self.pl_title.setText(pl.name)
         n = len(pl.songs)
         pending = sum(1 for s in pl.songs if getattr(s, "is_remote", False))
@@ -1609,7 +1851,20 @@ class MainWindow(QMainWindow):
         self.pl_table.set_current(self.current_song)
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
         self.pl_table.setVisible(bool(pl.songs))
+        self.pl_title.setText(pl.name)
         self.pl_empty.setVisible(not pl.songs)
+
+    def _rename_playlist_dialog(self, pl):
+        name, ok = QInputDialog.getText(self, "Rename playlist", "New name:", text=pl.name)
+        if ok:
+            self.rename_playlist(pl, name)
+
+    def _confirm_delete_playlist(self, pl):
+        answer = QMessageBox.question(
+            self, "Delete playlist", f"Delete \"{pl.name}\"?\n\nYour music files are not affected.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+        if answer == QMessageBox.StandardButton.Yes:
+            self.delete_playlist(pl)
 
     def _rename_open_playlist(self):
         pl = self.open_playlist
@@ -1661,10 +1916,11 @@ class MainWindow(QMainWindow):
         self.pq.record_played(song)
         self._queue_changed()
         self._update_now_playing(song)
+        self._refresh_library_panel()
         self.schedule_save(3000)
 
         # Show what we are trying to play straight away.
-        self.song_info.setText(f"{song.title} - {song.artist}")
+        self._set_now_playing_text(song.title, song.artist)
         self.set_album_cover(song.album_cover_path)
         self.time_label.setText("00:00")
         self.duration_label.setText(format_time(song.duration) if song.duration > 0 else "--:--")
@@ -1687,7 +1943,7 @@ class MainWindow(QMainWindow):
                 self._handle_failed_track("no preview available for this song")
                 return
             if song.is_preview:
-                self.song_info.setText(f"{song.title} - {song.artist}   ·   30-second preview")
+                self._set_now_playing_text(song.title, song.artist, "30-second preview")
         elif not song.exists:
             self.player.stop()
             self._track_handled = True
@@ -1708,7 +1964,7 @@ class MainWindow(QMainWindow):
 
         self._track_handled = False
         self.is_playing = True
-        self.play_btn.setText("⏸")
+        self._set_play_icon(True)
         # Note: any "Skipped …" message is left visible; it clears on its own timer.
 
     def _refresh_now_playing(self):
@@ -1719,7 +1975,7 @@ class MainWindow(QMainWindow):
         song = self.current_song
         name = song.title if song else "Track"
         self.is_playing = False
-        self.play_btn.setText("▶️")
+        self._set_play_icon(False)
         self._consecutive_failures += 1
         if self._consecutive_failures >= max(1, len(self.queue)):
             # Every song in the queue has failed: stop instead of looping forever.
@@ -1735,7 +1991,7 @@ class MainWindow(QMainWindow):
         if self.pq.advance(auto=auto) is None:
             # End of the queue with repeat off: stop, like Spotify.
             self.is_playing = False
-            self.play_btn.setText("▶️")
+            self._set_play_icon(False)
             self.progress_slider.setValue(0)
             self.time_label.setText("00:00")
             self._queue_changed()
@@ -1753,12 +2009,12 @@ class MainWindow(QMainWindow):
 
             if state == vlc.State.Playing:
                 self.player.set_pause(1)
-                self.play_btn.setText("▶️")
+                self._set_play_icon(False)
                 self.is_playing = False
                 self.now_playing_panel.set_playing(False)
             elif state == vlc.State.Paused:
                 self.player.set_pause(0)
-                self.play_btn.setText("⏸")
+                self._set_play_icon(True)
                 self.is_playing = True
                 self.now_playing_panel.set_playing(True)
             elif state in (vlc.State.Opening, vlc.State.Buffering):
@@ -1794,11 +2050,11 @@ class MainWindow(QMainWindow):
     def _icon_button(self, tooltip, slot):
         b = QPushButton()
         b.setToolTip(tooltip)
-        b.setFixedSize(34, 34)
-        b.setIconSize(QSize(20, 20))
+        b.setFixedSize(32, 32)
+        b.setIconSize(QSize(18, 18))
         b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 17px; }"
-                        "QPushButton:hover { background: #2a2a2a; }")
+        b.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 16px; }"
+                        "QPushButton:hover { background: rgba(255,255,255,0.08); }")
         b.clicked.connect(slot)
         return b
 
@@ -2123,7 +2379,7 @@ class MainWindow(QMainWindow):
             state = "offline"
         else:
             state = "online"
-        self.sidebar.set_online_state(state)
+        self.top_bar.set_online_state(state)
 
     def open_settings(self):
         dlg = SettingsDialog(self.user_data, on_clear_cache=self.net.clear_cache, parent=self)
@@ -2174,25 +2430,68 @@ class MainWindow(QMainWindow):
     # ==================================================================
     # Navigation
     # ==================================================================
+    def _record_history(self, entry):
+        if self._replaying:
+            return
+        if 0 <= self._history_pos < len(self._history) and self._history[self._history_pos] == entry:
+            return
+        del self._history[self._history_pos + 1:]
+        self._history.append(entry)
+        self._history = self._history[-50:]
+        self._history_pos = len(self._history) - 1
+        self.top_bar.set_history(self._history_pos > 0, False)
+
+    def _replay(self, pos):
+        if not (0 <= pos < len(self._history)):
+            return
+        self._history_pos = pos
+        kind, arg = self._history[pos]
+        self._replaying = True
+        try:
+            if kind == "playlist":
+                if arg in self.playlists:
+                    self.show_playlist(arg)
+                else:
+                    self.show_home()
+            else:
+                {"home": self.show_home, "search": lambda: self.show_search(select=False),
+                 "library": self.show_library, "playlists": self.show_playlists,
+                 "saved": self.show_saved}.get(kind, self.show_home)()
+        finally:
+            self._replaying = False
+        self.top_bar.set_history(pos > 0, pos < len(self._history) - 1)
+
+    def go_back(self):
+        self._replay(self._history_pos - 1)
+
+    def go_forward(self):
+        self._replay(self._history_pos + 1)
+
+    def _set_nav(self, kind, arg=None):
+        self.top_bar.set_home_active(kind == "home")
+        self.library_panel.set_active(arg if kind == "playlist" else kind)
+        self._record_history((kind, arg))
+
     def show_home(self):
         self.stack.setCurrentWidget(self.home_page)
-        self.sidebar.set_active("home")
+        self._set_nav("home")
 
-    def show_search(self):
+    def show_search(self, select=True):
         self.stack.setCurrentWidget(self.search_page)
-        self.sidebar.set_active("search")
+        self._set_nav("search")
         self.search_input.setFocus()
-        self.search_input.selectAll()
+        if select:
+            self.search_input.selectAll()
 
     def show_library(self):
         self.stack.setCurrentWidget(self.library_page)
-        self.sidebar.set_active("library")
+        self._set_nav("library")
 
     def show_playlists(self):
         self.stack.setCurrentWidget(self.playlists_page)
-        self.sidebar.set_active("playlists")
+        self._set_nav("playlists")
 
     def show_saved(self):
         self.refresh_saved_page()
         self.stack.setCurrentWidget(self.saved_page)
-        self.sidebar.set_active("saved")
+        self._set_nav("saved")

@@ -17,7 +17,7 @@ def test_play_song_does_not_block(window, qapp):
     elapsed = time.perf_counter() - start
     assert elapsed < 0.5, f"play_song blocked the UI for {elapsed:.2f}s"
     assert wait_until(qapp, lambda: window._reached_playing)
-    assert window.play_btn.text() == "⏸"
+    assert window.play_btn.property("state") == "pause"
 
 
 def test_track_end_advances_exactly_once(window, qapp):
@@ -41,10 +41,10 @@ def test_pause_and_resume(open_window, qapp, tmp_path, data_dir):
     assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
     w.play_pause_song()
     assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Paused)
-    assert w.play_btn.text() == "▶️"
+    assert w.play_btn.property("state") == "play"
     w.play_pause_song()
     assert wait_until(qapp, lambda: w.player.get_state() == vlc.State.Playing)
-    assert w.play_btn.text() == "⏸"
+    assert w.play_btn.property("state") == "pause"
 
 
 def test_missing_file_is_skipped_with_message(window, qapp):
@@ -69,7 +69,7 @@ def test_all_bad_files_stop_instead_of_looping(window, qapp):
     window.play_song(window.songs[0])
     assert wait_until(qapp, lambda: "No playable songs" in window.status_label.text(), timeout=5)
     assert time.perf_counter() - start < 5
-    assert window.play_btn.text() == "▶️"
+    assert window.play_btn.property("state") == "play"
 
 
 def test_playlist_queue_stays_in_playlist(window, qapp):
@@ -104,11 +104,11 @@ def test_finds_music_when_launched_from_another_folder(open_window, tmp_path, da
 def test_volume_and_mute(window):
     window.volume_slider.setValue(30)
     assert window.user_data.volume == 30
-    assert window.mute_btn.text() == "🔉"
+    assert window.mute_btn.property("level") == "low"
     window.toggle_mute()
-    assert window.user_data.muted and window.mute_btn.text() == "🔇"
+    assert window.user_data.muted and window.mute_btn.property("level") == "muted"
     window.volume_slider.setValue(60)  # moving the slider unmutes
-    assert not window.user_data.muted and window.mute_btn.text() == "🔊"
+    assert not window.user_data.muted and window.mute_btn.property("level") == "high"
 
 
 def test_now_playing_highlight_in_library(window, qapp):

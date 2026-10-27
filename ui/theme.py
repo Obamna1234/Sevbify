@@ -42,6 +42,14 @@ def load_fonts():
     if not found:
         FONT_FAMILY = "Segoe UI"
     _fonts_loaded = True
+    from PyQt6.QtWidgets import QApplication
+    app = QApplication.instance()
+    if app is not None:
+        f = app.font()
+        # Figtree covers Latin; these fill in Cyrillic, Greek, Japanese, etc. per system.
+        f.setFamilies([FONT_FAMILY, "Segoe UI", "Yu Gothic UI", "Helvetica Neue", "Hiragino Sans",
+                       "Noto Sans", "Noto Sans CJK JP", "DejaVu Sans"])
+        app.setFont(f)
     return FONT_FAMILY
 
 
@@ -55,7 +63,7 @@ def font(px=14, weight=400):
 def base_stylesheet():
     return f"""
     QMainWindow, QDialog {{ background: {BLACK}; }}
-    QWidget {{ font-family: "{FONT_FAMILY}", "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: {TEXT}; }}
+    QWidget {{ color: {TEXT}; }}
     QToolTip {{ background: #282828; color: {TEXT}; border: none; padding: 6px 8px; border-radius: 4px; }}
     QScrollBar:vertical {{ background: transparent; width: 12px; margin: 0; }}
     QScrollBar::handle:vertical {{ background: rgba(255,255,255,0.28); border-radius: 0; min-height: 30px; }}

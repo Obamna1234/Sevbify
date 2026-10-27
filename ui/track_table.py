@@ -17,12 +17,13 @@ GREY = QColor("#b3b3b3")
 DIM = QColor("#6a6a6a")
 
 TABLE_STYLE = """
-QTableWidget { background: #121212; color: white; border: none; font-size: 13px; outline: 0; }
+QTableWidget { background: transparent; color: white; border: none; font-size: 14px; outline: 0; }
 QTableWidget::item { padding: 6px 8px; border: none; }
-QTableWidget::item:hover { background: #2a2a2a; }
-QTableWidget::item:selected { background: #3e3e3e; color: white; }
-QHeaderView::section { background: #121212; color: #b3b3b3; border: none;
-    border-bottom: 1px solid #2a2a2a; padding: 6px 8px; font-size: 12px; text-align: left; }
+QTableWidget::item:hover { background: rgba(255,255,255,0.07); }
+QTableWidget::item:selected { background: rgba(255,255,255,0.18); color: white; }
+QHeaderView { background: transparent; }
+QHeaderView::section { background: transparent; color: #b3b3b3; border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; font-size: 13px; text-align: left; }
 QScrollBar:vertical { background: #121212; width: 10px; }
 QScrollBar::handle:vertical { background: #4d4d4d; border-radius: 5px; min-height: 30px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
@@ -65,11 +66,15 @@ class TrackTable(QTableWidget):
     play_requested = pyqtSignal(object, list)          # song, songs in current view order
     context_requested = pyqtSignal(object, int, object)  # song, row, global QPoint
 
-    COLUMNS = ["#", "Title", "Artist", "Album", "🕒"]
+    COLUMNS = ["#", "Title", "Artist", "Album", ""]
 
     def __init__(self, sortable: bool = False, parent=None):
         super().__init__(0, len(self.COLUMNS), parent)
         self.setHorizontalHeaderLabels(self.COLUMNS)
+        from . import icons
+        clock = QTableWidgetItem(icons.clock("#b3b3b3", 16), "")
+        clock.setToolTip("Duration")
+        self.setHorizontalHeaderItem(4, clock)
         self.setStyleSheet(TABLE_STYLE)
         self.setShowGrid(False)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)

@@ -125,5 +125,5 @@ def test_shuffle_repeat_and_panel_saved_across_restart(open_window, audio_dir, d
 def test_end_of_queue_stops_with_repeat_off(window, qapp):
     window.play_song(window.songs[2], queue=window.songs)
     assert wait_until(qapp, lambda: window._reached_playing)
-    assert wait_until(qapp, lambda: window.play_btn.text() == "▶️", timeout=8)
+    assert wait_until(qapp, lambda: window.play_btn.property("state") == "play", timeout=8)
     assert window.current_song is window.songs[2]

@@ -1,6 +1,19 @@
 # Changelog
 
-## v5.0 (in progress) — Queue, shuffle & repeat
+## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search
+
+**New look (Spotify desktop layout, our own code):**
+- Black window with three rounded panels: **Your Library** (left), the page (middle), Now playing / Queue (right).
+- **Top bar:** back/forward history, round Home button, centred *What do you want to play?* search pill, online status, Settings.
+- **Your Library panel:** Your Songs, Saved for later and all playlists with covers; filter chips, filter box, **+ Create**;
+  click to open, double-click to play, right-click for Play / Rename / Delete; the playing list is green.
+- **Home:** greeting, quick-play tiles, *Recently played*, *Your playlists* and *Your songs* card shelves (green play on hover).
+- **Playlist / Your Songs / Saved for later pages:** big header with a colour gradient (taken from the cover), round green
+  play button, clock column.
+- **Player bar:** song on the left; shuffle / previous / round white play / next / repeat with the progress bar centred;
+  now playing, queue and volume on the right. White sliders that turn green on hover.
+- Bundled **Figtree** font (SIL Open Font License) — the closest free match to Spotify's typeface — and drawn icons.
+
 
 - **Queue panel** (right side, toggle with the ≡ button in the player bar): *Now playing*, *Next in queue* (songs you added),
   *Next from: <source>* (Your Songs, Your Library, a playlist, search results). Click any row to jump to it; right-click to remove; *Clear*.

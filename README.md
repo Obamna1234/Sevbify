@@ -116,7 +116,8 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 | `core/` | Data and logic with no UI code: `paths.py`, `models.py` (Song, Playlist), `library.py` (folder scanning), `storage.py` (save file) |
 | `ui/main_window.py` | Main window: pages, player bar, playback, playlist actions |
 | `ui/track_table.py` | Song list used by Search, Your Library and playlist pages |
-| `ui/sidebar.py` | Navigation sidebar |
+| `ui/theme.py`, `ui/top_bar.py`, `ui/library_panel.py`, `ui/cards.py` | Spotify-style look: colours/fonts, top bar, Your Library panel, Home cards |
+| `ui/sidebar.py` | Old navigation sidebar (replaced by the Your Library panel in v5.0; kept for reference) |
 | `ui/Playlist_View.py`, `ui/Home_View.py`, `ui/player_bar.py`, `test_home.py` | **Legacy / unused** by the running app (the last three use PyQt5). Kept until a decision is made. |
 | `tests/` | Automated playback regression tests |
 | `audio/` | Your music (optional; kept on your PC only, not uploaded to GitHub) |
