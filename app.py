@@ -78,8 +78,11 @@ def _smoke_playback():
                 return False, f"ffmpeg could not make {name} for the check"
             files.append(out)
         # Serve the folder over http so web-stream playback is checked too (no internet needed).
-        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=folder)
-        handler.log_message = lambda *a: None
+        class QuietHandler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *args):       # the windowed app has no console to log to
+                pass
+
+        handler = functools.partial(QuietHandler, directory=folder)
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         files.append(f"http://127.0.0.1:{server.server_address[1]}/smoke.mp3")
