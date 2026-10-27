@@ -92,6 +92,10 @@ def open_window(qapp):
     def _open(**kwargs):
         kwargs.setdefault("vlc_args", VLC_TEST_ARGS)
         w = MainWindow(**kwargs)
+        # Tests never use the real internet: the default "web" is offline.
+        # Tests that need online data install their own FakeWeb.
+        from online_fixtures import FakeWeb
+        w.net._opener = FakeWeb(offline=True)
         windows.append(w)
         assert wait_until(qapp, lambda: w.library_ready), "library scan did not finish"
         return w

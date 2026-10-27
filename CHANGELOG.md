@@ -23,6 +23,14 @@
   folder next to your music, or `%APPDATA%\Sevbify\canvas\<Artist>.mp4` for all of an artist's songs. Plays silently
   behind the song; falls back to the animated artwork if it can't be played.
 - Fix: very short songs could be mistaken for broken files and skipped.
+- **Go to song radio** (right-click any song): 30–50 similar songs from Deezer (and Last.fm if you add a key),
+  shown as *Next from: <song> Radio*. Songs you already own play in full from your files; others play as clearly
+  labelled 30-second previews. Covers download in the background.
+- **Search the web**: the Search page now shows *In your library* and *More from the web* (Deezer's catalogue). Songs
+  you own are recognised and play in full; others are previews. Waits until you stop typing; explains when offline or
+  switched off.
+- **Open in ▸** Spotify / YouTube Music / YouTube / Apple Music / Bandcamp / Deezer in every song's menu.
+- Cover art thumbnails in every song list.
 
 ## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
 

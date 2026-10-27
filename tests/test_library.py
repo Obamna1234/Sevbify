@@ -104,9 +104,10 @@ def test_search_matches_title_artist_album_case_insensitive(window):
     assert window.search("nothing like this") == []
     window.search_input.setText("first")
     assert window.search_table.rowCount() == 1
-    assert "1 song" in window.search_summary.text()
+    assert window.search_lib_header.text().endswith("1")
+    window.apply_settings({"online_enabled": False, "lastfm_api_key": "", "jamendo_client_id": ""})
     window.search_input.setText("zzz")
-    assert "No results" in window.search_summary.text()
+    assert "No results" in window.search_summary.text() and "Online features" in window.search_summary.text()
 
 
 def test_search_queue_is_the_results(window):

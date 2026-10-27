@@ -1049,7 +1049,7 @@ class MainWindow(QMainWindow):
     def setup_search_page(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
+        layout.setSpacing(10)
         self.search_page.setLayout(layout)
 
         self.search_input = QLineEdit()
@@ -1067,15 +1067,40 @@ class MainWindow(QMainWindow):
         self.search_summary = self._muted_label("Search your library by song, artist or album.")
         layout.addWidget(self.search_summary)
 
+        src = lambda: f"Search: {self.search_input.text().strip()}"
+        self.search_lib_header = self._section_label("In your library")
+        layout.addWidget(self.search_lib_header)
         self.search_table = TrackTable(sortable=False)
-        self.search_table.play_requested.connect(
-            lambda s, view: self.play_song(s, queue=view, source=f"Search: {self.search_input.text().strip()}"))
+        self.search_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
         self.search_table.context_requested.connect(
-            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.search_table.songs_in_view(),
-                                                     source=f"Search: {self.search_input.text().strip()}"))
-        self.search_table.hide()
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.search_table.songs_in_view(), source=src()))
         layout.addWidget(self.search_table)
+
+        self.search_web_header = self._section_label("More from the web")
+        layout.addWidget(self.search_web_header)
+        self.search_web_status = self._muted_label("")
+        layout.addWidget(self.search_web_status)
+        self.web_table = TrackTable(sortable=False)
+        self.web_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
+        self.web_table.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.web_table.songs_in_view(), source=src()))
+        layout.addWidget(self.web_table, 1)
         layout.addStretch()
+
+        self._web_search_timer = QTimer(self)
+        self._web_search_timer.setSingleShot(True)
+        self._web_search_timer.timeout.connect(self._run_web_search)
+        self._web_query_shown = None
+        for w in (self.search_lib_header, self.search_table, self.search_web_header,
+                  self.search_web_status, self.web_table):
+            w.hide()
+        self._online_hooks.append(lambda: self.refresh_search_results())
+
+    @staticmethod
+    def _section_label(text):
+        lbl = QLabel(text)
+        lbl.setStyleSheet("color: white; font-size: 18px; font-weight: bold; padding-top: 6px;")
+        return lbl
 
     def search(self, query: str):
         query = query.strip()
@@ -1085,22 +1110,81 @@ class MainWindow(QMainWindow):
 
     def refresh_search_results(self, *_):
         query = self.search_input.text().strip()
-        layout = self.search_page.layout()
         if not query:
-            self.search_table.hide()
-            self.search_summary.setText("Search your library by song, artist or album.")
-            layout.setStretch(layout.indexOf(self.search_table), 0)
+            for w in (self.search_lib_header, self.search_table, self.search_web_header,
+                      self.search_web_status, self.web_table):
+                w.hide()
+            self.search_summary.setText("Search your library by song, artist or album."
+                                        + (" Online results appear too." if self.online_enabled else ""))
+            self.search_summary.show()
+            self._web_query_shown = None
             return
+
         results = self.search(query)
         self.search_table.set_songs(results)
+        self.search_table.set_current(self.current_song)
+        # Show at most ~6 library rows so web results stay visible below.
+        rows = min(len(results), 6)
+        self.search_table.setFixedHeight(36 + rows * self.search_table.verticalHeader().defaultSectionSize() + 4)
+        self.search_lib_header.setVisible(bool(results))
+        self.search_table.setVisible(bool(results))
         if results:
-            self.search_summary.setText(f"{len(results)} song{'s' if len(results) != 1 else ''} · double-click to play")
-            self.search_table.show()
-            layout.setStretch(layout.indexOf(self.search_table), 1)
-        else:
-            self.search_summary.setText(f"No results found for \"{query}\". Check the spelling or try fewer words.")
-            self.search_table.hide()
-            layout.setStretch(layout.indexOf(self.search_table), 0)
+            self.search_lib_header.setText(f"In your library  ·  {len(results)}")
+
+        if not self.online_enabled:
+            self.search_summary.setVisible(not results)
+            self.search_summary.setText(f"No results in your library for \"{query}\". "
+                                        "Turn on Online features in Settings to search the web too.")
+            for w in (self.search_web_header, self.search_web_status, self.web_table):
+                w.hide()
+            return
+
+        self.search_summary.hide()
+        self.search_web_header.show()
+        if len(query) < 2:
+            self.search_web_status.setText("Keep typing to search the web…")
+            self.search_web_status.show()
+            self.web_table.hide()
+            return
+        if query != self._web_query_shown:
+            self.search_web_status.setText("Searching…")
+            self.search_web_status.show()
+            self._web_search_timer.start(450)          # wait until typing pauses
+
+    def _run_web_search(self):
+        query = self.search_input.text().strip()
+        if len(query) < 2 or not self.online_enabled:
+            return
+
+        def done(tracks):
+            if self.search_input.text().strip() != query:
+                return                                  # user typed something else meanwhile
+            self._web_query_shown = query
+            items = self.radio_items(tracks)
+            self.web_table.set_songs(items)
+            self.web_table.set_current(self.current_song)
+            self.web_table.setVisible(bool(items))
+            if items:
+                owned = sum(1 for s in items if not getattr(s, "is_remote", False))
+                self.search_web_status.setText(
+                    f"{len(items)} songs  ·  double-click to play"
+                    + ("  ·  songs you own play in full, others as 30-second previews" if owned < len(items) else ""))
+            else:
+                self.search_web_status.setText(f"No web results for \"{query}\".")
+            self.fetch_covers(items, limit=25)
+
+        def failed(err):
+            if self.search_input.text().strip() != query:
+                return
+            self.web_table.hide()
+            if isinstance(err, OnlineDisabled):
+                self.search_web_status.setText("Online features are off (Settings).")
+            elif isinstance(err, OfflineError):
+                self.search_web_status.setText("You're offline. Showing your library only.")
+            else:
+                self.search_web_status.setText(f"Web search isn't available right now ({err}).")
+
+        self.online_call(self.online.search, query, 30, on_done=done, on_error=failed)
 
     # --- Your Library -----------------------------------------------------
     def setup_library_page(self):
@@ -1777,6 +1861,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_online_views(self):
         self._queue_changed()
+        self.web_table.refresh_artwork()
         if self.current_song is not None and getattr(self.current_song, "is_remote", False):
             self.set_album_cover(self.current_song.album_cover_path)
             self.now_playing_panel.artwork.set_pixmap(load_pixmap(self.current_song.album_cover_path))

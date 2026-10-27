@@ -3,8 +3,8 @@
 Used by the Your Library, Search and playlist pages.
 """
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView
-from PyQt6.QtGui import QColor, QBrush
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QBrush, QIcon, QPixmap
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 
 from core.models import format_time
 
@@ -27,6 +27,28 @@ QScrollBar:vertical { background: #121212; width: 10px; }
 QScrollBar::handle:vertical { background: #4d4d4d; border-radius: 5px; min-height: 30px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 """
+
+
+_thumbs = {}
+
+
+def _thumb(path, size=36):
+    """Small square cover icon, cached (tables can have thousands of rows)."""
+    key = (path, size)
+    icon = _thumbs.get(key)
+    if icon is None:
+        pm = QPixmap(path) if path else QPixmap()
+        if pm.isNull():
+            from core.paths import PLACEHOLDER_IMAGE
+            pm = QPixmap(PLACEHOLDER_IMAGE)
+        if not pm.isNull():
+            pm = pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                           Qt.TransformationMode.SmoothTransformation).copy(0, 0, size, size)
+        icon = QIcon(pm)
+        if len(_thumbs) > 3000:
+            _thumbs.clear()
+        _thumbs[key] = icon
+    return icon
 
 
 class _SortableItem(QTableWidgetItem):
@@ -55,7 +77,8 @@ class TrackTable(QTableWidget):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.verticalHeader().setVisible(False)
-        self.verticalHeader().setDefaultSectionSize(40)
+        self.verticalHeader().setDefaultSectionSize(48)
+        self.setIconSize(QSize(36, 36))
         self.setWordWrap(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -70,7 +93,7 @@ class TrackTable(QTableWidget):
         self.setColumnWidth(0, 48)
         self.setColumnWidth(2, 200)
         self.setColumnWidth(3, 220)
-        self.setColumnWidth(4, 70)
+        self.setColumnWidth(4, 96)
 
         self._sortable = sortable
         self.setSortingEnabled(False)
@@ -93,6 +116,7 @@ class TrackTable(QTableWidget):
             num.setData(SORT_ROLE, row)
             num.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             title = _SortableItem(song.title)
+            title.setIcon(_thumb(song.album_cover_path))
             title.setData(SONG_ROLE, song)
             title.setData(SORT_ROLE, song.title.casefold())
             artist = _SortableItem(song.artist)
@@ -103,7 +127,12 @@ class TrackTable(QTableWidget):
             dur.setData(SORT_ROLE, song.duration)
             for col, item in enumerate((num, title, artist, album, dur)):
                 self.setItem(row, col, item)
-            if not song.exists:
+            if getattr(song, "is_remote", False):
+                tip = "Not in your library: plays as a 30-second preview" if song.is_preview else "Not in your library: plays online"
+                for item in (num, title, artist, album, dur):
+                    item.setToolTip(tip)
+                dur.setText((format_time(song.duration) if song.duration else "--:--") + ("  · 30s" if song.is_preview else ""))
+            elif not song.exists:
                 title.setText(f"{song.title}  (file missing)")
                 for item in (num, title, artist, album, dur):
                     item.setForeground(QBrush(DIM))
@@ -111,6 +140,13 @@ class TrackTable(QTableWidget):
         if self._sortable:
             self.setSortingEnabled(True)
         self._apply_highlight()
+
+    def refresh_artwork(self):
+        """Re-apply cover icons (e.g. after online covers finished downloading)."""
+        for row in range(self.rowCount()):
+            song = self.song_at(row)
+            if song is not None:
+                self.item(row, 1).setIcon(_thumb(song.album_cover_path))
 
     def song_at(self, row):
         item = self.item(row, 1)
@@ -126,7 +162,7 @@ class TrackTable(QTableWidget):
     def _apply_highlight(self):
         for row in range(self.rowCount()):
             song = self.song_at(row)
-            if song is None or not song.exists:
+            if song is None or (not song.exists and not getattr(song, "is_remote", False)):
                 continue
             current = song.key == self._current_key
             self.item(row, 1).setForeground(QBrush(GREEN if current else WHITE))
