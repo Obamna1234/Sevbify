@@ -295,3 +295,62 @@ def clock(color=GREY, size=16):
     p.drawLine(QPointF(s / 2, s / 2), QPointF(s * 0.66, s * 0.6))
     p.end()
     return QIcon(pm)
+
+
+def expand(color=GREY, size=18, out=True):
+    """Two diagonal arrows: pointing out (expand) or in (shrink back)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.09))
+    if out:
+        p.drawLine(QPointF(s * 0.58, s * 0.42), QPointF(s * 0.84, s * 0.16))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.58, s * 0.16), QPointF(s * 0.84, s * 0.16), QPointF(s * 0.84, s * 0.42)]))
+        p.drawLine(QPointF(s * 0.42, s * 0.58), QPointF(s * 0.16, s * 0.84))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.16, s * 0.58), QPointF(s * 0.16, s * 0.84), QPointF(s * 0.42, s * 0.84)]))
+    else:
+        p.drawLine(QPointF(s * 0.84, s * 0.16), QPointF(s * 0.58, s * 0.42))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.58, s * 0.18), QPointF(s * 0.58, s * 0.42), QPointF(s * 0.82, s * 0.42)]))
+        p.drawLine(QPointF(s * 0.16, s * 0.84), QPointF(s * 0.42, s * 0.58))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.18, s * 0.58), QPointF(s * 0.42, s * 0.58), QPointF(s * 0.42, s * 0.82)]))
+    p.end()
+    return QIcon(pm)
+
+
+def sort_lines(color=GREY, size=16):
+    """Three lines getting shorter (the Recents / sort button)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.1))
+    for i, w in enumerate((0.8, 0.6, 0.4)):
+        y = s * (0.28 + i * 0.22)
+        p.drawLine(QPointF(s * 0.12, y), QPointF(s * (0.12 + w), y))
+    p.end()
+    return QIcon(pm)
+
+
+def grid(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    for x in (0.14, 0.56):
+        for y in (0.14, 0.56):
+            p.drawRoundedRect(QRectF(s * x, s * y, s * 0.3, s * 0.3), s * 0.04, s * 0.04)
+    p.end()
+    return QIcon(pm)
+
+
+def folder(color=GREY, size=24):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.07)); p.setBrush(Qt.BrushStyle.NoBrush)
+    path = QPainterPath()
+    path.moveTo(s * 0.12, s * 0.28)
+    path.lineTo(s * 0.40, s * 0.28)
+    path.lineTo(s * 0.48, s * 0.36)
+    path.lineTo(s * 0.88, s * 0.36)
+    path.lineTo(s * 0.88, s * 0.78)
+    path.lineTo(s * 0.12, s * 0.78)
+    path.closeSubpath()
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)

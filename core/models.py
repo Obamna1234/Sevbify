@@ -133,10 +133,14 @@ class Song:
 
 
 class Playlist:
-    def __init__(self, name: str):
+    def __init__(self, name: str, folder: str = "", created: float = 0.0, last_played: float = 0.0):
+        import time
         self.name = name
         self.songs = []
         self.cover_path = PLACEHOLDER_IMAGE
+        self.folder = folder                    # name of the Your Library folder it's in ("" = none)
+        self.created = created or time.time()   # for "Recently added" sorting
+        self.last_played = last_played          # for "Recents" sorting (played or opened)
 
     def add_song(self, song: Song):
         self.songs.append(song)

@@ -391,7 +391,17 @@ class MainWindow(QMainWindow):
         self.main_layout.addLayout(self.top_layout, 1)
 
         self.library_panel = LibraryPanel(cover_thumb)
-        self.library_panel.create_clicked.connect(self.create_playlist_dialog)
+        self.library_panel.create_clicked.connect(self.new_playlist)
+        self.library_panel.create_folder_clicked.connect(self.create_folder)
+        self.library_panel.folder_menu.connect(self._folder_context_menu)
+        self.library_panel.open_album.connect(self.show_album)
+        self.library_panel.play_album.connect(lambda a: self.play_collection(a["title"], self.album_songs(a)))
+        self.library_panel.open_artist.connect(self.show_artist)
+        self.library_panel.play_artist.connect(lambda a: self.play_collection(a["name"], self.artist_songs(a)))
+        self.library_panel.view_changed.connect(self._library_view_changed)
+        self.library_panel.expand_changed.connect(self._library_expanded)
+        self.library_panel.set_view_options(self.user_data.library_sort, self.user_data.library_view,
+                                            self.user_data.library_collapsed, emit=False)
         self.library_panel.open_all_songs.connect(self.show_library)
         self.library_panel.open_saved.connect(self.show_saved)
         self.library_panel.open_playlist.connect(self.show_playlist)
@@ -459,9 +469,10 @@ class MainWindow(QMainWindow):
         self.playlist_page = QWidget()
         self.saved_page = QWidget()
         self.radio_page = QWidget()
+        self.collection_page = QWidget()
 
-        for page in [self.home_page, self.search_page, self.library_page,
-                     self.playlists_page, self.playlist_page, self.saved_page, self.radio_page]:
+        for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
+                     self.playlist_page, self.saved_page, self.radio_page, self.collection_page]:
             page.setObjectName("page")
             page.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             page.setStyleSheet("#page { background: transparent; }")
@@ -475,9 +486,11 @@ class MainWindow(QMainWindow):
         self.setup_playlist_page()
         self.setup_saved_page()
         self.setup_radio_page()
+        self.setup_collection_page()
         self.setup_shortcuts()
         for table in (self.pl_table, self.web_table, self.radio_table):
             table.download_state = self.downloads.state
+        self.collection_table.download_state = self.downloads.state
 
         self.show_home()
 
@@ -589,7 +602,7 @@ class MainWindow(QMainWindow):
         if self.user_data.is_new:
             return          # first run: no playlists; people make their own
         for stored in self.user_data.playlists:
-            pl = Playlist(stored.name)
+            pl = Playlist(stored.name, stored.folder, stored.created, stored.last_played)
             for entry in stored.tracks:
                 if isinstance(entry, dict):
                     # A song added from Radio/Search that isn't downloaded yet.
@@ -642,7 +655,8 @@ class MainWindow(QMainWindow):
         if self.library_ready:
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
-                                        else s.file_path for s in p.songs]) for p in self.playlists
+                                        else s.file_path for s in p.songs], p.folder, p.created, p.last_played)
+                for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
         try:
@@ -842,9 +856,9 @@ class MainWindow(QMainWindow):
             radio.setText("◉  Go to song radio (turn on Online features)")
         radio.triggered.connect(lambda: self.start_radio(song))
         if has_artist:
-            menu.addAction("👤  Go to artist").triggered.connect(lambda: self._search_for(song.artist))
+            menu.addAction("👤  Go to artist").triggered.connect(lambda: self.go_to_artist(song.artist))
         if song.album and song.album != "Unknown Album":
-            menu.addAction("💿  Go to album").triggered.connect(lambda: self._search_for(f"{song.artist} {song.album}"))
+            menu.addAction("💿  Go to album").triggered.connect(lambda: self.go_to_album(song))
         if has_artist:
             open_menu = menu.addMenu("↗  Open in")
             open_menu.setStyleSheet(MENU_STYLE)
@@ -890,6 +904,22 @@ class MainWindow(QMainWindow):
         self._last_playlist_finder = find            # tests type into it
         return add_menu
 
+    def go_to_artist(self, name):
+        """The artist's page from your own songs, or a search when you have none of theirs."""
+        artist = self.find_artist(name)
+        if artist:
+            self.show_artist(artist)
+        else:
+            self._search_for(name)
+
+    def go_to_album(self, song):
+        main = downloader.artist_folder(song.artist) if song.artist and song.artist != "Unknown Artist" else song.artist
+        album = self.find_album(f"{song.album.casefold()}\x1f{(main or '').casefold()}")
+        if album:
+            self.show_album(album)
+        else:
+            self._search_for(f"{song.artist} {song.album}")
+
     def _search_for(self, text):
         self.search_input.setText(text)
         self.show_search(select=False)
@@ -916,7 +946,8 @@ class MainWindow(QMainWindow):
             return a
 
         f = sub("File")
-        act(f, "New Playlist", self.create_playlist_dialog, "Ctrl+N")
+        act(f, "New Playlist", self.new_playlist, "Ctrl+N")
+        act(f, "New Playlist Folder", self.create_folder, "Ctrl+Shift+N")
         act(f, "Add music folder…", self._choose_music_folder)
         f.addSeparator()
         act(f, "Exit", self.close, "Ctrl+Shift+Q")
@@ -1191,7 +1222,8 @@ class MainWindow(QMainWindow):
         sc("Ctrl+R", self.cycle_repeat)
         sc("Shift+Right", lambda: self.seek_by(5000))
         sc("Shift+Left", lambda: self.seek_by(-5000))
-        sc("Ctrl+N", self.create_playlist_dialog)
+        sc("Ctrl+N", self.new_playlist)
+        sc("Ctrl+Shift+N", self.create_folder)
         sc("Ctrl+P", self.open_settings)
         sc("Ctrl+Shift+R", self.rescan_library)
         sc("Ctrl+Shift+Q", self.close)
@@ -1803,7 +1835,190 @@ class MainWindow(QMainWindow):
             return
         n_saved = len(self.songs_to_download())
         playing = self.pq.source_name if self.current_song is not None else ""
-        self.library_panel.set_items(self.playlists, len(self.songs), n_saved, playing)
+        albums, artists = self._library_collections()
+        self.library_panel.set_items(self.playlists, len(self.songs), n_saved, playing, albums, artists,
+                                     self.user_data.folders)
+
+    # --- Albums and artists from your files (Your Library chips and pages) -------------------------------
+    def _library_collections(self):
+        """Albums and artists made from your songs. Built once per scan; "recent" comes from Recently played."""
+        if getattr(self, "_collections_for", None) is not self.songs:
+            self._collections_for = self.songs
+            albums, artists = {}, {}
+            for s in self.songs:
+                if not s.exists:
+                    continue
+                try:
+                    added = os.path.getmtime(s.file_path)
+                except OSError:
+                    added = 0
+                main = downloader.artist_folder(s.artist) if s.artist and s.artist != "Unknown Artist" else ""
+                if s.album and s.album != "Unknown Album":
+                    key = f"{s.album.casefold()}\x1f{(main or s.artist).casefold()}"
+                    a = albums.setdefault(key, dict(key=key, title=s.album, artist=main or s.artist, songs=[],
+                                                    cover_path=s.album_cover_path, added=0))
+                    a["songs"].append(s)
+                    a["added"] = max(a["added"], added)
+                if main:
+                    ar = artists.setdefault(main.casefold(), dict(key=main.casefold(), name=main, songs=[],
+                                                                  cover_path=s.album_cover_path, added=0))
+                    ar["songs"].append(s)
+                    ar["added"] = max(ar["added"], added)
+                    if ar["cover_path"] == PLACEHOLDER_IMAGE:
+                        ar["cover_path"] = s.album_cover_path
+            self._albums, self._artists = list(albums.values()), list(artists.values())
+        recent = list(self.pq.recent)
+        rank = {s.key: len(recent) - i for i, s in enumerate(recent)}
+        for col in (self._albums, self._artists):
+            for c in col:
+                c["recent"] = max([rank.get(s.key, 0) for s in c["songs"]] or [0])
+        return self._albums, self._artists
+
+    def album_songs(self, album):
+        return list(album["songs"])
+
+    def artist_songs(self, artist):
+        return list(artist["songs"])
+
+    def find_album(self, key):
+        return next((a for a in self._library_collections()[0] if a["key"] == key), None)
+
+    def find_artist(self, name):
+        key = downloader.artist_folder(name).casefold() if name else ""
+        return next((a for a in self._library_collections()[1] if a["key"] == key), None)
+
+    def play_collection(self, name, songs):
+        songs = [s for s in songs if s.exists]
+        if songs:
+            self.play_song(songs[0], queue=songs, source=name)
+
+    def show_album(self, album):
+        songs = self.album_songs(album)
+        years = ""
+        self._show_collection("Album", album["title"], songs, album["cover_path"],
+                              f"{album['artist']}  •  {len(songs)} song{'s' if len(songs) != 1 else ''}{years}",
+                              ("album", album["key"]))
+
+    def show_artist(self, artist):
+        songs = self.artist_songs(artist)
+        albums = len({s.album for s in songs if s.album and s.album != "Unknown Album"})
+        meta = f"{len(songs)} song{'s' if len(songs) != 1 else ''} on your computer" + \
+            (f"  •  {albums} album{'s' if albums != 1 else ''}" if albums else "")
+        self._show_collection("Artist", artist["name"], songs, artist["cover_path"], meta, ("artist", artist["key"]))
+
+    def setup_collection_page(self):
+        lay = QVBoxLayout(self.collection_page)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self._collection_header_box = QVBoxLayout()
+        lay.addLayout(self._collection_header_box)
+        self.collection_table = TrackTable(sortable=True)
+        self.collection_table.play_requested.connect(
+            lambda s, view: self.play_song(s, queue=view, source=self._collection_name))
+        self.collection_table.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.collection_table.songs_in_view(),
+                                                     source=self._collection_name))
+        wrap = QWidget()
+        wl = QVBoxLayout(wrap)
+        wl.setContentsMargins(16, 0, 16, 8)
+        wl.addWidget(self.collection_table)
+        lay.addWidget(wrap, 1)
+        self._collection_name = ""
+
+    def _show_collection(self, kind, title, songs, cover_path, meta_text, nav):
+        while self._collection_header_box.count():
+            item = self._collection_header_box.takeAt(0)
+            if item.widget():
+                item.widget().hide()
+                item.widget().deleteLater()
+        cover = load_pixmap(cover_path)
+        colour = dominant_colour(cover)
+        top = QColor.fromHsv(colour.hsvHue(), min(255, colour.hsvSaturation() + 40), min(210, colour.value() + 60))
+        self._collection_name = title
+        header, meta = self._gradient_header(cover, kind, title, top.name(),
+                                             lambda: self.play_collection(title, songs))
+        meta.setText(meta_text)
+        self._collection_header_box.addWidget(header)
+        self.collection_table.set_songs(songs)
+        self.collection_table.set_current(self.current_song)
+        self.stack.setCurrentWidget(self.collection_page)
+        self._set_nav(nav[0], nav[1])
+
+    # --- Folders in Your Library ----------------------------------------------------------------------
+    def create_folder(self, name="New Folder"):
+        base, n = name, 2
+        while name.casefold() in (f.casefold() for f in self.user_data.folders):
+            name, n = f"{base} {n}", n + 1
+        self.user_data.folders.append(name)
+        self.library_panel._open_folders.add(name)
+        self._playlists_changed()
+        return name
+
+    def rename_folder(self, old, new):
+        new = (new or "").strip()
+        if not new or new == old or new.casefold() in (f.casefold() for f in self.user_data.folders if f != old):
+            return False
+        self.user_data.folders = [new if f == old else f for f in self.user_data.folders]
+        for pl in self.playlists:
+            if pl.folder == old:
+                pl.folder = new
+        if old in self.library_panel._open_folders:
+            self.library_panel._open_folders.discard(old)
+            self.library_panel._open_folders.add(new)
+        self._playlists_changed()
+        return True
+
+    def delete_folder(self, name):
+        """Remove a folder; its playlists stay, outside any folder."""
+        self.user_data.folders = [f for f in self.user_data.folders if f != name]
+        for pl in self.playlists:
+            if pl.folder == name:
+                pl.folder = ""
+        self._playlists_changed()
+
+    def move_to_folder(self, playlist, folder):
+        playlist.folder = folder if folder in self.user_data.folders else ""
+        if folder:
+            self.library_panel._open_folders.add(folder)
+        self._playlists_changed(playlist)
+
+    def _folder_context_menu(self, name, global_pos):
+        menu = self._new_menu()
+        menu.addAction("Rename…").triggered.connect(lambda: self._rename_folder_dialog(name))
+        menu.addAction("Delete folder").triggered.connect(lambda: self.delete_folder(name))
+        menu.addSeparator()
+        menu.addAction("Create playlist in this folder").triggered.connect(
+            lambda: self.move_to_folder(self.new_playlist(open_it=False), name))
+        menu.exec(global_pos)
+
+    def _rename_folder_dialog(self, name):
+        new, ok = QInputDialog.getText(self, "Rename folder", "Folder name:", text=name)
+        if ok:
+            self.rename_folder(name, new)
+
+    def new_playlist(self, open_it=True):
+        """Create → Playlist: a new empty "My Playlist #N" straight away, like Spotify (rename it later)."""
+        n = len(self.playlists) + 1
+        while self._name_taken(f"My Playlist #{n}"):
+            n += 1
+        pl = self.create_playlist(f"My Playlist #{n}", [])
+        if pl is not None and open_it:
+            self.show_playlist(pl)
+        return pl
+
+    def _library_view_changed(self):
+        lp = self.library_panel
+        self.user_data.library_sort, self.user_data.library_view = lp.sort, lp.view
+        self.user_data.library_collapsed = lp.collapsed
+        self.schedule_save()
+
+    def _library_expanded(self, on):
+        """Your Library filling the window (Spotify's expand button) or back to normal."""
+        self.center_panel.setVisible(not on)
+        if on:
+            self.right_panel.hide()
+        else:
+            self.set_right_panel(self.user_data.right_panel, save=False)
 
     def _playlist_context_menu(self, playlist, global_pos):
         menu = self._new_menu()
@@ -1812,6 +2027,24 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("Rename…").triggered.connect(lambda: self._rename_playlist_dialog(playlist))
         menu.addAction("Delete…").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
+        move = menu.addMenu("Move to folder")
+        move.setStyleSheet(MENU_STYLE)
+        for f in self.user_data.folders:
+            a = move.addAction(f)
+            a.setEnabled(f != playlist.folder)
+            a.triggered.connect(lambda _=False, name=f: self.move_to_folder(playlist, name))
+        if self.user_data.folders:
+            move.addSeparator()
+        move.addAction("New folder").triggered.connect(lambda: self.move_to_folder(playlist, self.create_folder()))
+        if playlist.folder:
+            menu.addAction("Remove from folder").triggered.connect(lambda: self.move_to_folder(playlist, ""))
+        if any(s.exists and not getattr(s, "is_remote", False) for s in playlist.songs) or \
+                any(getattr(s, "is_remote", False) for s in playlist.songs):
+            menu.addSeparator()
+            pending = [s for s in playlist.songs if getattr(s, "is_remote", False)]
+            if pending:
+                menu.addAction(f"⬇  Download {len(pending)} song{'s' if len(pending) != 1 else ''}").triggered.connect(
+                    lambda: self.download_songs(playlist.songs))
         menu.exec(global_pos)
 
     def display_playlists(self):
@@ -3152,7 +3385,13 @@ class MainWindow(QMainWindow):
             else:
                 {"home": self.show_home, "search": lambda: self.show_search(select=False),
                  "library": self.show_library, "playlists": self.show_playlists,
-                 "saved": self.show_saved, "radio": self.show_radio_page}.get(kind, self.show_home)()
+                 "saved": self.show_saved, "radio": self.show_radio_page,
+                 "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
+                 "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]
+                                                           if a["key"] == arg), None))
+                                    if any(a["key"] == arg for a in self._library_collections()[1])
+                                    else self.show_home()),
+                 }.get(kind, self.show_home)()
         finally:
             self._replaying = False
         self.top_bar.set_history(pos > 0, pos < len(self._history) - 1)
@@ -3165,7 +3404,14 @@ class MainWindow(QMainWindow):
 
     def _set_nav(self, kind, arg=None):
         self.top_bar.set_home_active(kind == "home")
-        self.library_panel.set_active(arg if kind == "playlist" else kind)
+        if self.library_panel.expanded:
+            self.library_panel.set_expanded(False)            # opening something leaves the expanded library
+        active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist") else kind)
+        self.library_panel.set_active(active)
+        if kind == "playlist" and arg is not None:
+            import time as _time
+            arg.last_played = _time.time()                     # "Recents" = recently played or opened
+            self.schedule_save()
         self._record_history((kind, arg))
 
     def show_home(self):

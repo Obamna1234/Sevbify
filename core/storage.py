@@ -58,6 +58,9 @@ class StoredPlaylist:
     # Each entry is either an absolute file path (str) or, for a song that is
     # not on this computer yet, a dict like {"pending": {"title":..., "artist":...}}.
     tracks: List[Any] = field(default_factory=list)
+    folder: str = ""             # Your Library folder ("" = none)
+    created: float = 0.0
+    last_played: float = 0.0
 
 
 @dataclass
@@ -78,6 +81,10 @@ class UserData:
     download_folder: str = ""                     # Settings: where downloads go ("" = automatic)
     use_browser_cookies: bool = False             # Settings: let YouTube downloads use Chrome's sign-in
     playlist_files: bool = True                   # Settings: keep .m3u8 playlist files next to downloads
+    folders: List[str] = field(default_factory=list)   # Your Library folders, in order
+    library_sort: str = "recents"                 # "recents" | "added" | "alpha"
+    library_view: str = "list"                    # "list" | "compact" | "grid"
+    library_collapsed: bool = False               # Your Library shrunk to a strip of covers
     recent: List[str] = field(default_factory=list)       # recently played file paths
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     is_new: bool = True        # True when no save file existed yet (first run)
@@ -145,9 +152,16 @@ class Storage:
                 "download_folder": to_stored_path(data.download_folder) if data.download_folder else "",
                 "use_browser_cookies": bool(data.use_browser_cookies),
                 "playlist_files": bool(data.playlist_files),
+                "folders": list(data.folders),
+                "library_sort": data.library_sort,
+                "library_view": data.library_view,
+                "library_collapsed": bool(data.library_collapsed),
             },
             "playlists": [
-                {"name": p.name, "tracks": [_store_track(t) for t in p.tracks]}
+                {"name": p.name, "tracks": [_store_track(t) for t in p.tracks],
+                 **({"folder": p.folder} if p.folder else {}),
+                 **({"created": round(p.created, 3)} if p.created else {}),
+                 **({"last_played": round(p.last_played, 3)} if p.last_played else {})}
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
@@ -189,6 +203,12 @@ class Storage:
         data.download_folder = from_stored_path(folder) if folder else ""
         data.use_browser_cookies = bool(settings.get("use_browser_cookies", False))
         data.playlist_files = bool(settings.get("playlist_files", True))
+        data.folders = [str(f) for f in settings.get("folders", []) or [] if str(f).strip()]
+        data.library_sort = settings.get("library_sort") if settings.get("library_sort") in ("recents", "added", "alpha") \
+            else "recents"
+        data.library_view = settings.get("library_view") if settings.get("library_view") in ("list", "compact", "grid") \
+            else "list"
+        data.library_collapsed = bool(settings.get("library_collapsed", False))
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
@@ -200,7 +220,14 @@ class Storage:
                 continue
             tracks = [_load_track(t) for t in item.get("tracks", []) or []]
             tracks = [t for t in tracks if t is not None]
-            playlists.append(StoredPlaylist(name, tracks))
+            def num(key):
+                try:
+                    return float(item.get(key) or 0)
+                except (TypeError, ValueError):
+                    return 0.0
+            folder = str(item.get("folder") or "")
+            playlists.append(StoredPlaylist(name, tracks, folder if folder in data.folders else "",
+                                            num("created"), num("last_played")))
         data.playlists = playlists
         return data
 
