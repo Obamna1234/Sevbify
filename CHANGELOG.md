@@ -11,6 +11,11 @@
 - Home grid now fits the window width (fewer columns when the side panel is open); long names are shortened with "…".
 - Dark scrollbars everywhere.
 - New modules: `core/play_queue.py` (queue logic, no UI), `ui/queue_panel.py`, `ui/icons.py` (drawn icons).
+- **Settings** (⚙ in the sidebar): *Online features* on/off switch, optional Last.fm API key and Jamendo client ID,
+  *Clear online cache*. Online status shown in the sidebar (Online / Offline / Online features off).
+- Online layer (`core/online/`): network client with disk cache (works offline with last-known info, shows nothing
+  online when switched off), Deezer / Last.fm / Wikipedia providers, song matching against your library.
+- The GitHub build now runs a live check of the online services (`tools/online_check.py`), reported as notes.
 
 ## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
 

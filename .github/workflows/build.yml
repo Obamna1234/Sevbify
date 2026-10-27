@@ -57,6 +57,10 @@ jobs:
       - name: Run automated tests
         run: python -m pytest tests -v
 
+      - name: Live online check (reports only, never fails the build)
+        continue-on-error: true
+        run: python tools/online_check.py
+
       - name: Build the app
         run: |
           SEP=$(python -c "import os; print(os.pathsep)")

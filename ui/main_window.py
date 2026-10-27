@@ -23,6 +23,10 @@ from core import paths as core_paths
 from core.library import scan_folders
 from core.storage import Storage, StoredPlaylist
 from core.play_queue import PlayQueue
+from core.online.net import NetClient, OfflineError, OnlineDisabled
+from core.online.providers import OnlineMusic
+from .async_tasks import run_async
+from .settings_dialog import SettingsDialog
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
 OPEN_TIMEOUT_MS = 10000
@@ -284,6 +288,11 @@ class MainWindow(QMainWindow):
         self._save_timer.setSingleShot(True)
         self._save_timer.timeout.connect(self.save_now)
 
+        # --- Online features (all optional; see Settings) -------------------
+        self.net = NetClient(os.path.join(self.storage.data_dir, "cache"),
+                             enabled=lambda: self.user_data.online_enabled)
+        self.online = OnlineMusic(self.net, self.user_data.lastfm_api_key)
+
         # --- Library ------------------------------------------------------
         self.songs = []
         self.playlists = []
@@ -328,6 +337,7 @@ class MainWindow(QMainWindow):
         self.sidebar.search_clicked.connect(self.show_search)
         self.sidebar.library_clicked.connect(self.show_library)
         self.sidebar.playlists_clicked.connect(self.show_playlists)
+        self.sidebar.settings_clicked.connect(self.open_settings)
 
         self.stack = QStackedWidget()
         self.stack.setStyleSheet("background-color: #121212;")
@@ -370,6 +380,7 @@ class MainWindow(QMainWindow):
             self.show_status("⚠ " + self.user_data.load_warning, 20000)
 
         self.set_right_panel(self.user_data.right_panel, save=False)
+        self._update_online_indicator()
         self.rescan_library()
 
     # --- Compatibility: older code/tests use .queue / .queue_index -------
@@ -1564,6 +1575,67 @@ class MainWindow(QMainWindow):
     def toggle_right_panel(self, name):
         showing = not self.right_panel.isHidden() and self.user_data.right_panel == name
         self.set_right_panel("" if showing else name)
+
+    # ------------------------------------------------------------------
+    # Online features
+    # ------------------------------------------------------------------
+    @property
+    def online_enabled(self):
+        return bool(self.user_data.online_enabled)
+
+    def online_call(self, fn, *args, on_done=None, on_error=None):
+        """Run an online request in the background; callbacks run on the UI thread.
+        Does nothing (calls on_error with OnlineDisabled) when online features are off."""
+        if not self.online_enabled:
+            if on_error:
+                on_error(OnlineDisabled("Online features are switched off in Settings."))
+            return None
+
+        def done(result):
+            self._update_online_indicator()
+            if on_done:
+                on_done(result)
+
+        def failed(err):
+            self._update_online_indicator()
+            if not isinstance(err, OfflineError):
+                print(f"Online error: {err}\n{getattr(err, '__traceback_text__', '')}")
+            if on_error:
+                on_error(err)
+
+        return run_async(self, fn, *args, on_done=done, on_error=failed)
+
+    def _update_online_indicator(self):
+        if not self.online_enabled:
+            state = "disabled"
+        elif self.net.online is False:
+            state = "offline"
+        else:
+            state = "online"
+        self.sidebar.set_online_state(state)
+
+    def open_settings(self):
+        dlg = SettingsDialog(self.user_data, on_clear_cache=self.net.clear_cache, parent=self)
+        if dlg.exec():
+            self.apply_settings(dlg.values())
+
+    def apply_settings(self, values):
+        was_online = self.user_data.online_enabled
+        self.user_data.online_enabled = values["online_enabled"]
+        if values["lastfm_api_key"] != self.user_data.lastfm_api_key:
+            self.user_data.lastfm_api_key = values["lastfm_api_key"]
+            self.online.set_lastfm_key(values["lastfm_api_key"])
+        self.user_data.jamendo_client_id = values["jamendo_client_id"]
+        if was_online != self.user_data.online_enabled:
+            self.net.online = None
+            self._online_setting_changed()
+        self._update_online_indicator()
+        self.save_now()
+
+    def _online_setting_changed(self):
+        """Hook for pages/panels that show online content (refresh or hide it)."""
+        for hook in getattr(self, "_online_hooks", []):
+            hook()
 
     def closeEvent(self, event):
         """Save, stop audio and release VLC cleanly when the window closes."""
