@@ -116,6 +116,12 @@ jobs:
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp \
             --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" $EXTRA app.py
 
+      - name: Same playback check with the full installed VLC (diagnosis, never fails the build)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: |
+          python -c "import app; ok, d = app._smoke_playback(); print(('::notice' if ok else '::warning') + ' title=Full VLC playback check::' + d.replace(chr(10), ' / '))"
+
       - name: Check the built app starts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
