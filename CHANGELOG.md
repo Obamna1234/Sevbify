@@ -2,6 +2,11 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**All-in-one Windows app:** VLC's playback engine (libVLC + plugins) is now inside the ready-made app, so nothing
+needs installing. The build hides the machine's own VLC before starting the packaged app, and `--smoke-test` plays a
+WAV and an MP3 tone with the built-in engine. New releases are published automatically from the `VERSION` file
+(first: v5.0.0-beta.1; this change: v5.0.0-beta.2).
+
 **Downloading songs (SEVBY's engine, in the background):**
 - Songs you don't have yet are greyed out with **⬇** in web search results, playlists and Saved for later, online
   or offline. Playlist headers say how many still need downloading to play offline.

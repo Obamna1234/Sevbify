@@ -16,7 +16,7 @@ decides what it does and tests it on Windows).
 |---|---|---|
 | Operating system | Windows 10/11 (64-bit), macOS, or Linux | Windows first; macOS and Linux builds are set up and will be switched on later |
 | Python | 3.10 – 3.13, **64-bit** | https://www.python.org/downloads/ — tick "Add python.exe to PATH" |
-| VLC media player | 3.0.x, **64-bit** | https://www.videolan.org/vlc/ — must match Python's 64-bit; the app uses VLC's engine (libVLC) for playback |
+| VLC media player | 3.0.x, **64-bit** | **Only when running from source.** The ready-made Windows app has VLC's engine (libVLC) built in. From source: https://www.videolan.org/vlc/ (must match Python's 64-bit) |
 | Python packages | see `requirements.txt` | PyQt6, python-vlc, mutagen, Pillow, certifi, yt-dlp, pytest |
 | ffmpeg | nothing to install | Needed for downloading songs. Comes with the `imageio-ffmpeg` package (copied once into `%APPDATA%\Sevbify\ffmpeg` when running from source); the ready-made app has it built in. |
 
@@ -40,7 +40,8 @@ straight away, and re-installs packages automatically only when an update needs 
 
 **Ready-made app (no Python, no GitHub Desktop needed):** open the repo's **Releases** page (right-hand side of the
 repo's main page) → newest version → under **Assets** download **Sevbify-Windows.zip** → Extract All → run
-**Sevbify.exe** (VLC must be installed). The install steps are on each release page.
+**Sevbify.exe**. It's all in one: VLC's playback engine, the downloader and ffmpeg are inside, so nothing else needs
+installing. The install steps are on each release page.
 
 How releases are made: every push is built and tested on a real Windows machine by GitHub Actions (macOS and Linux
 builds are set up but switched off until later). When a version is ready, the version number in the `VERSION` file
@@ -184,7 +185,9 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 - Sevbify's own code: MIT.
 - Download engine: from SEVBY (MIT). Uses **yt-dlp** (Unlicense) and **ffmpeg** (the ready-made app
   bundles an ffmpeg build from the `imageio-ffmpeg` package, which is GPL-licensed; see https://ffmpeg.org).
-- Playback: VLC / libVLC (LGPL) via python-vlc. Font: Figtree (SIL Open Font License).
+- Playback: VLC's engine, libVLC (LGPL 2.1+; some plugins GPL) by VideoLAN, via python-vlc. The ready-made Windows
+  app includes libVLC and its plugins in `_internal\vlc`, with VLC's licence as `VLC-COPYING.txt`; VLC's source code
+  is at https://www.videolan.org. Font: Figtree (SIL Open Font License).
 
 ## Known limitations (v4.9)
 

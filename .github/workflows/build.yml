@@ -92,13 +92,26 @@ jobs:
           # A real ffmpeg program (from the imageio-ffmpeg package, GPL) is bundled so downloads work
           # without installing anything; yt-dlp is bundled as a Python package.
           FF=$(python -c "import imageio_ffmpeg,shutil,os; n='ffmpeg.exe' if os.name=='nt' else 'ffmpeg'; shutil.copy(imageio_ffmpeg.get_ffmpeg_exe(), n); print(n)")
+          # Windows: bundle VLC's playback engine (libVLC + plugins, LGPL/GPL) so nobody has to install VLC.
+          EXTRA=""
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            SRC="/c/Program Files/VideoLAN/VLC"
+            mkdir -p vlc
+            cp "$SRC/libvlc.dll" "$SRC/libvlccore.dll" vlc/
+            cp -r "$SRC/plugins" vlc/
+            cp "$SRC/COPYING.txt" vlc/VLC-COPYING.txt 2>/dev/null || true
+            du -sh vlc
+            EXTRA="--add-data vlc${SEP}vlc"
+          fi
           pyinstaller --noconfirm --windowed --name Sevbify --collect-all yt_dlp \
-            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" app.py
+            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" $EXTRA app.py
 
       - name: Check the built app starts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Hide the VLC installed on this machine: the app must play with the copy inside it.
+          Rename-Item "C:\Program Files\VideoLAN" "VideoLAN-hidden"
           $p = Start-Process -FilePath "dist\Sevbify\Sevbify.exe" -ArgumentList "--smoke-test" -PassThru -Wait
           Write-Host "Exit code: $($p.ExitCode)"
           $log = Join-Path $env:APPDATA "Sevbify\smoke-test.log"

@@ -11,6 +11,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# The ready-made app carries its own copy of VLC's playback engine; use it before anything loads VLC.
+from core.vlc_setup import use_bundled_vlc
+BUNDLED_VLC = use_bundled_vlc()
+
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import QTimer
 
@@ -46,6 +50,52 @@ def _smoke_log(text: str):
             f.write(text + "\n")
     except OSError:
         pass
+
+
+def _smoke_playback():
+    """Play a generated one-second tone (WAV, and MP3 made with the bundled ffmpeg) through libVLC's
+    silent output. A file that VLC can't read ends with length 0. Returns (ok, details)."""
+    import math, struct, subprocess, tempfile, wave
+    try:
+        import vlc
+        lib = getattr(getattr(vlc, "dll", None), "_name", "?")
+        if getattr(sys, "frozen", False) and os.name == "nt" and not BUNDLED_VLC:
+            return False, f"the app has no bundled VLC (loaded {lib})"
+        folder = tempfile.mkdtemp()
+        files = [os.path.join(folder, "smoke.wav")]
+        with wave.open(files[0], "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+            w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(i / 10))) for i in range(22050)))
+        try:
+            from core import downloader
+            ff = downloader.engine().ffmpeg_path()
+            mp3 = os.path.join(folder, "smoke.mp3")
+            subprocess.run([ff, "-y", "-loglevel", "error", "-i", files[0], mp3], timeout=60,
+                           creationflags=0x08000000 if os.name == "nt" else 0)
+            if os.path.isfile(mp3):
+                files.append(mp3)
+        except Exception:
+            pass
+        inst = vlc.Instance("--aout=adummy", "--no-video", "--quiet")
+        results = []
+        for path in files:
+            player = inst.media_player_new()
+            media = inst.media_new(path)
+            player.set_media(media)
+            player.play()
+            end = time.time() + 10
+            while time.time() < end and player.get_state() not in (vlc.State.Ended, vlc.State.Error):
+                time.sleep(0.05)
+            state, length = player.get_state(), media.get_duration()
+            player.stop(); player.release()
+            if state != vlc.State.Ended or length <= 0:
+                inst.release()
+                return False, f"{os.path.basename(path)} did not play ({state}, length {length} ms, libVLC: {lib})"
+            results.append(f"{os.path.splitext(path)[1][1:].upper()} {length} ms")
+        inst.release()
+        return True, f"played {', '.join(results)} with libVLC {vlc.libvlc_get_version().decode()} from {lib}"
+    except Exception:
+        return False, traceback.format_exc()
 
 
 def install_error_guard():
@@ -118,7 +168,14 @@ def main():
                 details = f"yt-dlp {e.ytdlp_version()}, ffmpeg at {e.ffmpeg_path()}"
             except Exception:
                 problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""
+            # Playback must work with the VLC engine inside the app (no separately installed VLC).
+            ok_play, play_details = _smoke_playback()
             window.close()
+            if not ok_play:
+                _smoke_log("FAILED: playback check: " + play_details)
+                app.exit(5)
+                return
+            _smoke_log("OK: playback check: " + play_details)
             if problems:
                 _smoke_log("FAILED: downloads would not work: " + " | ".join(problems))
                 app.exit(4)

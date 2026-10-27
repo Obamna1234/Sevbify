@@ -1,9 +1,10 @@
 ## Install (Windows)
 
-1. Install **VLC media player, 64-bit** from https://www.videolan.org/vlc/ if you don't have it (Sevbify plays music with it).
-2. Under **Assets** below, download **Sevbify-Windows.zip**.
-3. Right-click the zip → **Extract All…** → **Extract**.
-4. Open the extracted `Sevbify` folder and double-click **Sevbify.exe**.
+Everything is included (player engine, downloader, ffmpeg); nothing else to install.
+
+1. Under **Assets** below, download **Sevbify-Windows.zip**.
+2. Right-click the zip → **Extract All…** → **Extract**.
+3. Open the extracted `Sevbify` folder and double-click **Sevbify.exe**.
    If Windows says "Windows protected your PC", click **More info** → **Run anyway** (the app isn't signed yet).
 
 Your playlists and settings are kept between versions (`%APPDATA%\Sevbify`). To update, download the new zip,
@@ -22,5 +23,6 @@ See `CHANGELOG.md` inside the zip for the full list. Highlights:
 **Pre-release / beta:** built and tested automatically on GitHub's Windows machine, but downloading a real song from
 inside Sevbify hasn't been confirmed on a home PC yet. Please report anything that goes wrong.
 
-Only download music you have the right to download. Sevbify is not affiliated with YouTube, Bandcamp, Apple,
+Sevbify plays music with VLC's engine (libVLC by VideoLAN, LGPL/GPL, source at https://www.videolan.org), included
+in the app. Only download music you have the right to download. Sevbify is not affiliated with YouTube, Bandcamp, Apple,
 Spotify, Deezer or Sevby LLC (sevby.com). Built with AI help.
