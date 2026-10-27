@@ -2,6 +2,32 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Fixes and polish from the first Windows test (v5.0.0-beta.5):**
+- Fixed: "wrapped C/C++ object of type LibraryRow has been deleted" when a click rebuilt a list (e.g. making a playlist
+  from a song's menu). Lists now replace their rows only after the click has finished.
+- Fixed: downloads went into "Sevbify downloads\Sevbify downloads". The red "Folder not found" note now shows once,
+  with how to remove an old folder. Settings → Download location lets you choose the folder.
+- Fixed: a black console window flashed while downloading (ffmpeg / yt-dlp now start without a window).
+- Downloads are filed by main artist: `Sevbify downloads\Artist\Artist - Title.mp3` ("A feat. B" goes under A;
+  bands like Simon & Garfunkel or AC/DC stay whole). Playlists are also saved as `.m3u8` files in
+  `Sevbify downloads\Playlists` (same order, relative paths) so they work on a phone; a song is stored once.
+- Privacy: YouTube downloads no longer use the Chrome sign-in unless allowed in Settings; Settings lists exactly
+  which services are contacted.
+- Song lists: grey selection like Spotify (no more white rows on Windows), dark panels everywhere, ▶ on hover next to
+  the number (click to play), click empty space or press Esc to deselect.
+- Click anywhere on the progress or volume bar to jump there.
+- Drag and drop: reorder songs in a playlist, drop music files or folders from File Explorer into a playlist (also an
+  empty one), drag songs onto a playlist on the left.
+- **Show in folder** for songs on your computer.
+- **Song radio** now has its own page (cover, "Song radio", "With … and more", Play, Save as playlist, Download). Songs are
+  ordered by how close they are, artists are spread out, and songs you already have by those artists are mixed in.
+- Song menu in Spotify's order: Add to playlist ▸ (with *Find a playlist*), Add to queue, Download / Show in folder,
+  Sleep timer ▸, Play, Go to song radio, Go to artist, Go to album, Open in ▸.
+- **••• menu** (top left): File / Edit / View / Playback / Help with Spotify's shortcuts (Ctrl+L search, Ctrl+F filter,
+  Shift+←/→ seek, Ctrl+N, Ctrl+P, F1 About, Troubleshooting).
+- **Sleep timer:** 5 min to 1 hour, or end of the song.
+- Crisp drawn download icons instead of the emoji arrow.
+
 **Full songs, To download, fresh start (v5.0.0-beta.4):**
 - Songs you don't have yet now **stream in full** while online (Bandcamp first, then YouTube, matched by the song's
   real length with SEVBY's engine), instead of 30-second previews. They stay ⬇ "not downloaded" until downloaded;

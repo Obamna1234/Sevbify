@@ -208,35 +208,40 @@ class OnlineMusic:
         return card
 
     def radio(self, seed_artist, seed_title="", limit=50, rng=None):
-        """Songs similar to a seed song/artist, like Spotify's 'Go to song radio'.
+        """Songs similar to a seed song, like Spotify's 'Go to song radio'.
 
-        Uses Last.fm 'similar tracks' when a key is set, mixed with Deezer's
-        artist radio and top songs from related artists. Duplicates removed,
-        the seed artist limited to a few songs so it doesn't dominate.
+        Candidates, best first: Last.fm 'similar tracks' for this exact song (what listeners play together;
+        needs a free key), Deezer's radio for the artist, then top songs of related artists. They're ordered
+        by how close they are (with a little randomness, so each radio is a bit different), the seed artist is
+        limited to 3 songs and others to 2, and the same artist never plays twice in a row where avoidable.
         """
         rng = rng or random.Random()
-        pool = []
+        scored = []                                   # (score, track)
         if seed_title and self.lastfm.available:
             try:
-                pool += self.lastfm.similar_tracks(seed_artist, seed_title, limit=40)
+                for i, t in enumerate(self.lastfm.similar_tracks(seed_artist, seed_title, limit=40)):
+                    scored.append((3.0 - i / 40, t))
             except ServiceError:
                 pass
         artist = self.deezer.find_artist(seed_artist)
         if artist:
             aid = artist.get("id")
             try:
-                pool += self.deezer.artist_radio(aid, limit=25)
+                for i, t in enumerate(self.deezer.artist_radio(aid, limit=25)):
+                    scored.append((2.2 - i / 25, t))
             except ServiceError:
                 pass
-            for rel in self.deezer.related(aid, limit=8)[:8]:
+            for r, rel in enumerate(self.deezer.related(aid, limit=8)[:8]):
                 try:
-                    pool += self.deezer.top_tracks(rel.get("id"), limit=3)
+                    for i, t in enumerate(self.deezer.top_tracks(rel.get("id"), limit=3)):
+                        scored.append((1.9 - r / 10 - i / 6, t))
                 except ServiceError:
                     continue
+        scored = [(sc + rng.uniform(0, 0.6), t) for sc, t in scored]
+        scored.sort(key=lambda x: x[0], reverse=True)
         seen, out, per_artist = set(), [], {}
         seed_key = (seed_artist.casefold(), seed_title.casefold())
-        rng.shuffle(pool)
-        for t in pool:
+        for _sc, t in scored:
             if not t.title or not t.artist:
                 continue
             k = t.key
@@ -250,6 +255,7 @@ class OnlineMusic:
             out.append(t)
             if len(out) >= limit:
                 break
+        out = spread_artists(out, first_artist=seed_artist)
         # Last.fm suggestions only have artist + title: add cover art and a preview.
         for i, t in enumerate(out):
             if t.source != "deezer":
@@ -290,3 +296,17 @@ class OnlineMusic:
             except ServiceError:
                 pass
         return "Other"
+
+
+def spread_artists(tracks, first_artist=""):
+    """Keep the order as much as possible, but never put the same artist twice in a row (or right after the
+    seed song's artist) when another song can go there instead."""
+    rest = list(tracks)
+    out = []
+    last = (first_artist or "").casefold()
+    while rest:
+        pick = next((i for i, t in enumerate(rest) if t.artist.casefold() != last), 0)
+        t = rest.pop(pick)
+        out.append(t)
+        last = t.artist.casefold()
+    return out

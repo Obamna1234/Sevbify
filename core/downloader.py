@@ -18,6 +18,7 @@ SOURCE_YOUTUBE = "YouTube only"
 SOURCES = (SOURCE_BOTH, SOURCE_BANDCAMP, SOURCE_YOUTUBE)
 
 _engine = None
+ALLOW_BROWSER_COOKIES = False     # Settings: may YouTube downloads use the sign-in saved in Chrome? (private: no)
 
 
 def engine():
@@ -30,7 +31,40 @@ def engine():
             _ensure_ffmpeg(_engine)
         except Exception as exc:  # never stop the app over this; check_tools() will report it
             print(f"Could not set up the bundled ffmpeg: {exc}")
+        _respect_cookie_setting(_engine)
     return _engine
+
+
+def _respect_cookie_setting(e):
+    """SEVBY retries a blocked YouTube download with the sign-in cookies saved in Chrome. For privacy Sevbify
+    only does that when Settings allows it (ALLOW_BROWSER_COOKIES); the engine reads this at call time."""
+    original = e.download_youtube_mp3
+    if getattr(original, "_sevbify_cookies", False):
+        return
+
+    def download_youtube_mp3(query, out_dir, log, use_cookies=True):
+        return original(query, out_dir, log, use_cookies=use_cookies and ALLOW_BROWSER_COOKIES)
+
+    download_youtube_mp3._sevbify_cookies = True
+    e.download_youtube_mp3 = download_youtube_mp3
+
+
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+
+
+def artist_folder(artist: str) -> str:
+    """Folder name for an artist: the main artist only, so "A feat. B", "A ft. B", "A featuring B", "A x B" and
+    "A vs. B" all go under "A". Names that contain "&", "," or "/" are kept whole, because they are usually one
+    band (Simon & Garfunkel, Earth, Wind & Fire, AC/DC); the search results already list the main artist alone.
+    Safe for Windows file names."""
+    import re
+    main = re.split(r"\s+(?:feat\.?|ft\.?|featuring|x|vs\.?)\s+|\s*[\(\[](?:feat\.?|ft\.?|featuring)\b",
+                    artist or "", maxsplit=1, flags=re.I)[0].strip()
+    main = main.replace("/", "-")
+    main = re.sub(r'[<>:"\\|?*]', "", main).strip(" .")[:80] or "Unknown Artist"
+    if main.split(".")[0].upper() in _WINDOWS_RESERVED:      # "CON", "NUL", ... can't be folder names
+        main += " (artist)"
+    return main
 
 
 def _ensure_ffmpeg(e, cache_dir=None):

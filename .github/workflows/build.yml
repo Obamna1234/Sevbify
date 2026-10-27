@@ -114,7 +114,7 @@ jobs:
             *)       ICON=assets/branding/sevbify_256.png ;;
           esac
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp \
-            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" $EXTRA app.py
+            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." $EXTRA app.py
 
       - name: Check the built app starts (Windows)
         if: runner.os == 'Windows'

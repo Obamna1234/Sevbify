@@ -224,7 +224,7 @@ def test_manager_stop_cancels_waiting_songs(qapp, tmp_path):
     m.wait()
     assert finished[0]["stopped"] and finished[0]["ok"] == 0
     assert not m.is_busy() and m.failed_count() == 0
-    assert not list(folder.iterdir())                           # nothing half-finished left behind
+    assert not [p for p in folder.rglob("*") if p.is_file()]    # nothing half-finished left behind
 
 
 def test_manager_reports_missing_tools(qapp, tmp_path):
@@ -261,7 +261,7 @@ def test_download_fills_the_playlist_slot(window, audio_dir, qapp):
     assert window.download_songs(pl.songs) == 1                 # local songs are ignored
     assert wait_until(qapp, lambda: not getattr(pl.songs[1], "is_remote", False), 15)
     assert pl.songs[1].file_path.endswith("Night City (Official Spelling).wav")
-    assert os.path.dirname(pl.songs[1].file_path) == str(audio_dir / "Sevbify downloads")
+    assert os.path.dirname(pl.songs[1].file_path) == str(audio_dir / "Sevbify downloads" / "Vogel")   # artist folder
     assert len(pl.songs) == 3                                   # still in the same place
     assert wait_until(qapp, lambda: window.pl_download_btn.isHidden())
 
@@ -272,7 +272,7 @@ def test_not_downloaded_rows_show_their_state(window, qapp):
     pl = window.create_playlist("Later", [remote("Fresh", "Someone"), remote("Other", "Someone")])
     window.show_playlist(pl)
     assert window.pl_table.item(0, 1).text().endswith("⬇")
-    assert window.pl_download_btn.text() == "⬇ Download 2"
+    assert window.pl_download_btn.text() == "Download 2"
     window.download_songs(pl.songs)
     assert started.wait(5)
     assert wait_until(qapp, lambda: window.pl_table.item(0, 1).text().endswith("Downloading…"))

@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QMenu, QSizePolicy
 )
 from PyQt6.QtGui import QPixmap
+from . import theme
 from PyQt6.QtCore import Qt, pyqtSignal
 
 PANEL_STYLE = "#queuePanel { background-color: #121212; } QLabel { background: transparent; }"
@@ -69,9 +70,10 @@ class TrackRow(QFrame):
             self.setToolTip("Not on this computer")
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        left = event.button() == Qt.MouseButton.LeftButton
+        super().mouseReleaseEvent(event)      # first: the click rebuilds the queue and deletes this row
+        if left:
             self.clicked.emit()
-        super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         self.context_requested.emit(event.globalPos())
@@ -218,7 +220,7 @@ class QueuePanel(QWidget):
                 row.clicked.connect(lambda s=song: self.play_recent.emit(s))
                 v.addWidget(row)
         v.addStretch()
-        self.scroll.setWidget(content)
+        theme.replace_scroll_widget(self.scroll, content)
 
     @staticmethod
     def _muted(text):

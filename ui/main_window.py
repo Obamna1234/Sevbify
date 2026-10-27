@@ -14,6 +14,7 @@ from .library_panel import LibraryPanel, rounded
 from .cards import Card, QuickTile
 from . import theme
 from .track_table import TrackTable
+from .click_slider import ClickSlider
 from .queue_panel import QueuePanel
 from .now_playing_panel import NowPlayingPanel, dominant_colour
 from . import icons
@@ -35,7 +36,8 @@ from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
 from .settings_dialog import SettingsDialog
 from .download_manager import DownloadManager
-from core import downloader, streamer
+from core import downloader, streamer, playlist_files
+from core.platform_fixes import reveal_in_file_manager
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
 OPEN_TIMEOUT_MS = 10000
@@ -204,9 +206,10 @@ class HoverableSongTile(QWidget):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        left = event.button() == Qt.MouseButton.LeftButton
+        super().mousePressEvent(event)        # first: the click may rebuild the page and delete this card
+        if left:
             self.play_clicked.emit(self.song)
-        super().mousePressEvent(event)
 
     def contextMenuEvent(self, event):
         self.context_requested.emit(self.song, event.globalPos())
@@ -276,13 +279,14 @@ class HoverablePlaylistTile(QWidget):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            pos = self.container.mapFrom(self, event.position().toPoint())
-            if self.play_button.geometry().contains(pos):
-                self.play_clicked.emit(self.playlist)
-            else:
-                self.open_clicked.emit(self.playlist)
-        super().mousePressEvent(event)
+        left = event.button() == Qt.MouseButton.LeftButton
+        on_play = left and self.play_button.geometry().contains(
+            self.container.mapFrom(self, event.position().toPoint()))
+        super().mousePressEvent(event)        # first: the click may rebuild the page and delete this card
+        if on_play:
+            self.play_clicked.emit(self.playlist)
+        elif left:
+            self.open_clicked.emit(self.playlist)
 
 
 class MainWindow(QMainWindow):
@@ -299,6 +303,8 @@ class MainWindow(QMainWindow):
         self.setGeometry(80, 60, 1360, 860)
         self.setMinimumSize(960, 600)
         theme.load_fonts()
+        from PyQt6.QtWidgets import QApplication
+        theme.apply_dark_palette(QApplication.instance())
         self.setStyleSheet(theme.base_stylesheet())
 
         # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
@@ -331,6 +337,7 @@ class MainWindow(QMainWindow):
         self.library_ready = False
         self._scan_thread = None
         self._rescan_pending = False
+        self._reported_problems = set()
         self.open_playlist = None   # playlist shown on the playlist page
         self.slider_being_moved = False
 
@@ -348,6 +355,11 @@ class MainWindow(QMainWindow):
         self._seen_length = 0           # longest length VLC reported for it (a broken file stays 0)
         self._open_elapsed_ms = 0       # time spent waiting for the track to start
         self._consecutive_failures = 0  # stops endless skipping if every file is bad
+
+        self._sleep_timer = QTimer(self)
+        self._sleep_timer.setSingleShot(True)
+        self._sleep_timer.timeout.connect(lambda: self._sleep_now())
+        self._sleep_at_track_end = False
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_progress)
@@ -369,6 +381,7 @@ class MainWindow(QMainWindow):
         self.top_bar.settings_clicked.connect(self.open_settings)
         self.top_bar.search_activated.connect(lambda: self.show_search(select=False))
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
+        self.top_bar.menu_clicked.connect(self._show_app_menu)
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
         self._history, self._history_pos, self._replaying = [], -1, False
@@ -384,6 +397,8 @@ class MainWindow(QMainWindow):
         self.library_panel.open_playlist.connect(self.show_playlist)
         self.library_panel.play_playlist.connect(self.play_playlist)
         self.library_panel.playlist_menu.connect(self._playlist_context_menu)
+        self.library_panel.songs_dropped.connect(lambda pl, songs: self.add_to_playlist(pl, songs))
+        self.library_panel.files_dropped.connect(lambda pl, paths: self.add_files_to_playlist(pl, paths))
         self.top_layout.addWidget(self.library_panel)
 
         self.center_panel = QFrame()
@@ -430,6 +445,10 @@ class MainWindow(QMainWindow):
         self.downloads.song_done.connect(self._on_song_downloaded)
         self.downloads.run_finished.connect(self._on_downloads_finished)
         self.downloads.problem.connect(lambda text: self.show_status("⚠ Can't download: " + text, 15000))
+        downloader.ALLOW_BROWSER_COOKIES = self.user_data.use_browser_cookies
+        self._playlist_files_timer = QTimer(self)
+        self._playlist_files_timer.setSingleShot(True)
+        self._playlist_files_timer.timeout.connect(self.write_playlist_files)
         self.right_panel.hide()
         self.top_layout.addWidget(self.right_panel)
 
@@ -439,9 +458,10 @@ class MainWindow(QMainWindow):
         self.playlists_page = QWidget()
         self.playlist_page = QWidget()
         self.saved_page = QWidget()
+        self.radio_page = QWidget()
 
         for page in [self.home_page, self.search_page, self.library_page,
-                     self.playlists_page, self.playlist_page, self.saved_page]:
+                     self.playlists_page, self.playlist_page, self.saved_page, self.radio_page]:
             page.setObjectName("page")
             page.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             page.setStyleSheet("#page { background: transparent; }")
@@ -454,8 +474,9 @@ class MainWindow(QMainWindow):
         self.setup_playlists_page()
         self.setup_playlist_page()
         self.setup_saved_page()
+        self.setup_radio_page()
         self.setup_shortcuts()
-        for table in (self.pl_table, self.web_table):
+        for table in (self.pl_table, self.web_table, self.radio_table):
             table.download_state = self.downloads.state
 
         self.show_home()
@@ -545,9 +566,17 @@ class MainWindow(QMainWindow):
         self._refresh_now_playing()
         self._queue_changed()
 
-        if problems:
-            self.show_status("⚠ " + problems[0] + (f" (+{len(problems) - 1} more)" if len(problems) > 1 else ""), 10000)
+        # Report each problem once per session (not on every rescan). A missing music folder is usually an old
+        # location (moved drive, renamed folder); it can be removed with ✕ on the Your Songs page.
+        new = [p for p in problems if p not in self._reported_problems]
+        self._reported_problems.update(new)
+        if new:
+            text = new[0]
+            if text.startswith("Folder not found"):
+                text += " (remove it with ✕ on Your Songs if it's gone)"
+            self.show_status("⚠ " + text + (f" (+{len(new) - 1} more)" if len(new) > 1 else ""), 10000)
         if filled:
+            self._schedule_playlist_files()
             names = ", ".join(f"\"{t}\"" for t in filled[:3]) + (f" and {len(filled) - 3} more" if len(filled) > 3 else "")
             self.show_status(f"⬇ Now in your library: {names}", kind="info", timeout_ms=8000)
             self.save_now()
@@ -690,6 +719,53 @@ class MainWindow(QMainWindow):
             playlist.generate_cover()
             self._playlists_changed(playlist)
 
+    def move_song(self, playlist, src: int, dst: int):
+        """Drag-and-drop reordering: move the song at `src` to position `dst`."""
+        songs = playlist.songs
+        if not (0 <= src < len(songs)) or src == dst:
+            return
+        dst = max(0, min(dst, len(songs) - 1))
+        songs.insert(dst, songs.pop(src))
+        if min(src, dst) < 4:
+            playlist.generate_cover()
+        self._playlists_changed(playlist)
+
+    def add_files_to_playlist(self, playlist, paths, index=None):
+        """Music files or folders dropped from File Explorer. Folders add their music files (sub-folders
+        included, in name order). Songs already in the playlist are skipped. Returns the number added."""
+        from core.models import SUPPORTED_EXTENSIONS
+        files = []
+        for p in paths:
+            if os.path.isdir(p):
+                for root, dirs, names in os.walk(p):
+                    dirs.sort(key=str.casefold)
+                    files += [os.path.join(root, n) for n in sorted(names, key=str.casefold)
+                              if n.lower().endswith(SUPPORTED_EXTENSIONS)]
+            elif p.lower().endswith(SUPPORTED_EXTENSIONS) and os.path.isfile(p):
+                files.append(p)
+        by_key = {s.key: s for s in self.songs}
+        existing = {s.key for s in playlist.songs}
+        index = len(playlist.songs) if index is None else max(0, min(index, len(playlist.songs)))
+        added = 0
+        for f in files:
+            key = normalise_path(f)
+            if key in existing:
+                continue
+            song = by_key.get(key) or Song(f)
+            playlist.songs.insert(index + added, song)
+            existing.add(key)
+            added += 1
+        if added:
+            playlist.generate_cover()
+            self._playlists_changed(playlist)
+            self.show_status(f"Added {added} song{'s' if added != 1 else ''} to {playlist.name}",
+                             kind="info", timeout_ms=3000)
+        elif files:
+            self.show_status(f"Already in {playlist.name}", kind="info", timeout_ms=3000)
+        else:
+            self.show_status("Those aren't music files Sevbify can play (MP3, WAV, FLAC, OGG, M4A).", 6000)
+        return added
+
     def move_in_playlist(self, playlist, index: int, delta: int):
         new = index + delta
         if 0 <= index < len(playlist.songs) and 0 <= new < len(playlist.songs):
@@ -701,6 +777,7 @@ class MainWindow(QMainWindow):
 
     def _playlists_changed(self, playlist=None):
         self.save_now()
+        self._schedule_playlist_files()
         self.display_playlists()
         self._refresh_library_panel()
         if self.open_playlist is not None and (playlist is None or playlist is self.open_playlist):
@@ -727,19 +804,14 @@ class MainWindow(QMainWindow):
 
     def build_song_menu(self, song, queue=None, playlist=None, row=None, source="",
                         saved_genre=None, saved_index=None):
+        """Right-click menu for a song, in Spotify's order."""
         menu = self._new_menu()
-        play = menu.addAction("▶  Play")
-        play.setEnabled(song.exists)
-        play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
-        add_q = menu.addAction("≡  Add to queue")
-        add_q.triggered.connect(lambda: self.add_to_queue(song))
-        radio = menu.addAction("◉  Go to song radio")
+        is_remote = getattr(song, "is_remote", False)
         has_artist = bool(song.artist) and song.artist != "Unknown Artist"
-        radio.setEnabled(self.online_enabled and has_artist)
-        if not self.online_enabled:
-            radio.setText("◉  Go to song radio (turn on Online features)")
-        radio.triggered.connect(lambda: self.start_radio(song))
-        if getattr(song, "is_remote", False):
+
+        self._add_playlist_submenu(menu, [song], skip=playlist)
+        menu.addAction("≡  Add to queue").triggered.connect(lambda: self.add_to_queue(song))
+        if is_remote:
             state, _note = self.downloads.state(song.track.key)
             if state in ("queued", "downloading"):
                 act = menu.addAction("⬇  Downloading…" if state == "downloading" else "⬇  Queued to download")
@@ -748,29 +820,37 @@ class MainWindow(QMainWindow):
             else:
                 text = "⬇  Retry download" if state == "failed" else "⬇  Download"
                 menu.addAction(text).triggered.connect(lambda: self.download_songs([song]))
-        if getattr(song, "is_remote", False) and saved_genre is None:
-            menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
+            if saved_genre is None:
+                menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
+        elif song.exists:
+            menu.addAction("📂  Show in folder").triggered.connect(lambda: reveal_in_file_manager(song.file_path))
         if saved_genre is not None and saved_index is not None:
             menu.addAction("✕  Remove from To download").triggered.connect(
                 lambda: self.remove_saved(saved_genre, saved_index))
+        if playlist is not None and row is not None:
+            menu.addAction("✕  Remove from this playlist").triggered.connect(
+                lambda: self.remove_from_playlist(playlist, row))
+        self._add_sleep_timer_menu(menu)
+
+        menu.addSeparator()
+        play = menu.addAction("▶  Play")
+        play.setEnabled(song.exists or is_remote)
+        play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
+        radio = menu.addAction("◉  Go to song radio")
+        radio.setEnabled(self.online_enabled and has_artist)
+        if not self.online_enabled:
+            radio.setText("◉  Go to song radio (turn on Online features)")
+        radio.triggered.connect(lambda: self.start_radio(song))
+        if has_artist:
+            menu.addAction("👤  Go to artist").triggered.connect(lambda: self._search_for(song.artist))
+        if song.album and song.album != "Unknown Album":
+            menu.addAction("💿  Go to album").triggered.connect(lambda: self._search_for(f"{song.artist} {song.album}"))
         if has_artist:
             open_menu = menu.addMenu("↗  Open in")
             open_menu.setStyleSheet(MENU_STYLE)
-            track = song.track if getattr(song, "is_remote", False) else OnlineTrack(song.title, song.artist)
+            track = song.track if is_remote else OnlineTrack(song.title, song.artist)
             for label, url in track.links().items():
                 open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
-
-        add_menu = menu.addMenu("➕  Add to playlist")
-        add_menu.setStyleSheet(MENU_STYLE)
-        new_action = add_menu.addAction("New playlist…")
-        new_action.triggered.connect(lambda: self._new_playlist_with(song))
-        if self.playlists:
-            add_menu.addSeparator()
-        for pl in self.playlists:
-            if pl is playlist:
-                continue
-            act = add_menu.addAction(pl.name)
-            act.triggered.connect(lambda _=False, p=pl: self.add_to_playlist(p, [song]))
 
         if playlist is not None and row is not None:
             menu.addSeparator()
@@ -780,9 +860,169 @@ class MainWindow(QMainWindow):
             down = menu.addAction("↓  Move down")
             down.setEnabled(row < len(playlist.songs) - 1)
             down.triggered.connect(lambda: self.move_in_playlist(playlist, row, 1))
-            remove = menu.addAction("✕  Remove from this playlist")
-            remove.triggered.connect(lambda: self.remove_from_playlist(playlist, row))
         return menu
+
+    def _add_playlist_submenu(self, menu, songs, skip=None):
+        """"Add to playlist ▸" with a Find-a-playlist box at the top, like Spotify."""
+        from PyQt6.QtWidgets import QWidgetAction, QLineEdit
+        add_menu = menu.addMenu("＋  Add to playlist")
+        add_menu.setStyleSheet(MENU_STYLE)
+        find = QLineEdit()
+        find.setPlaceholderText("Find a playlist")
+        find.setClearButtonEnabled(True)
+        find.setStyleSheet(f"QLineEdit {{ background: #3e3e3e; color: white; border: none; border-radius: 4px;"
+                           f" padding: 6px 8px; margin: 4px; font-size: 13px; min-width: 200px; }}")
+        holder = QWidgetAction(add_menu)
+        holder.setDefaultWidget(find)
+        add_menu.addAction(holder)
+        add_menu.addAction("＋  New playlist").triggered.connect(lambda: self._new_playlist_with(songs[0]))
+        add_menu.addSeparator()
+        entries = []
+        for pl in self.playlists:
+            if pl is skip:
+                continue
+            act = add_menu.addAction(pl.name)
+            act.triggered.connect(lambda _=False, p=pl: self.add_to_playlist(p, songs))
+            entries.append(act)
+        find.textChanged.connect(
+            lambda text: [a.setVisible(text.casefold() in a.text().casefold()) for a in entries])
+        add_menu.aboutToShow.connect(lambda: (find.clear(), find.setFocus()))
+        self._last_playlist_finder = find            # tests type into it
+        return add_menu
+
+    def _search_for(self, text):
+        self.search_input.setText(text)
+        self.show_search(select=False)
+
+    # --- ⋯ menu (File / Edit / View / Playback / Help), like Spotify's -----------------------------------------
+    def build_app_menu(self):
+        menu = self._new_menu()
+
+        def sub(title):
+            m = menu.addMenu(title)
+            m.setStyleSheet(MENU_STYLE)
+            return m
+
+        def act(m, text, slot, keys=None, enabled=True, checked=None):
+            a = m.addAction(text)
+            if keys:
+                a.setShortcut(QKeySequence(keys))
+                a.setShortcutVisibleInContextMenu(True)
+            if checked is not None:
+                a.setCheckable(True)
+                a.setChecked(checked)
+            a.setEnabled(enabled)
+            a.triggered.connect(lambda _=False: slot())
+            return a
+
+        f = sub("File")
+        act(f, "New Playlist", self.create_playlist_dialog, "Ctrl+N")
+        act(f, "Add music folder…", self._choose_music_folder)
+        f.addSeparator()
+        act(f, "Exit", self.close, "Ctrl+Shift+Q")
+
+        e = sub("Edit")
+        act(e, "Search", self.show_search, "Ctrl+L")
+        act(e, "Filter Your Library", self.focus_library_filter, "Ctrl+F")
+        e.addSeparator()
+        act(e, "Preferences…", self.open_settings, "Ctrl+P")
+
+        v = sub("View")
+        act(v, "Home", self.show_home)
+        act(v, "Your Songs", self.show_library)
+        act(v, "To download", self.show_saved)
+        if self._radio_songs:
+            act(v, self._radio_name, self.show_radio_page)
+        v.addSeparator()
+        act(v, "Now playing view", lambda: self.toggle_right_panel("nowplaying"),
+            checked=self.user_data.right_panel == "nowplaying")
+        act(v, "Queue", lambda: self.toggle_right_panel("queue"), checked=self.user_data.right_panel == "queue")
+
+        pb = sub("Playback")
+        playing = self.player.get_state() == vlc.State.Playing
+        act(pb, "Pause" if playing else "Play", self.play_pause_song, "Space")
+        pb.addSeparator()
+        act(pb, "Next", self.next_song, "Ctrl+Right")
+        act(pb, "Previous", self.prev_song, "Ctrl+Left")
+        act(pb, "Seek Forward", lambda: self.seek_by(5000), "Shift+Right")
+        act(pb, "Seek Backward", lambda: self.seek_by(-5000), "Shift+Left")
+        pb.addSeparator()
+        act(pb, "Shuffle", self.toggle_shuffle, "Ctrl+S", checked=self.pq.shuffle)
+        act(pb, "Repeat", self.cycle_repeat, "Ctrl+R", checked=self.pq.repeat != "off")
+        pb.addSeparator()
+        act(pb, "Volume Up", lambda: self.volume_slider.setValue(self.volume_slider.value() + 5), "Ctrl+Up")
+        act(pb, "Volume Down", lambda: self.volume_slider.setValue(self.volume_slider.value() - 5), "Ctrl+Down")
+        self._add_sleep_timer_menu(pb)
+
+        h = sub("Help")
+        act(h, "About Sevbify", self.show_about, "F1")
+        act(h, "Open Sevbify's data folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.storage.data_dir)))
+        log = os.path.join(self.storage.data_dir, "error.log")
+        act(h, "Show error log", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log)), enabled=os.path.exists(log))
+        t = h.addMenu("Troubleshooting")
+        t.setStyleSheet(MENU_STYLE)
+        act(t, "Rescan your music", self.rescan_library, "Ctrl+Shift+R")
+        act(t, "Clear online cache", self.net.clear_cache)
+        return menu
+
+    def _show_app_menu(self):
+        btn = self.top_bar.menu_btn
+        self.build_app_menu().exec(btn.mapToGlobal(btn.rect().bottomLeft()))
+
+    def focus_library_filter(self):
+        self.library_panel.filter_edit.setFocus()
+        self.library_panel.filter_edit.selectAll()
+
+    def seek_by(self, ms):
+        if self.player.get_state() in (vlc.State.Playing, vlc.State.Paused):
+            length = self.player.get_length()
+            pos = max(0, self.player.get_time() + ms)
+            self.player.set_time(int(min(pos, length - 500) if length > 0 else pos))
+
+    def show_about(self):
+        from core.version import app_version
+        QMessageBox.about(
+            self, "About Sevbify",
+            f"<h3>Sevbify {app_version()}</h3>"
+            "<p>A music player for your own files, with full songs streamed while online and downloads "
+            "from Bandcamp and YouTube (SEVBY's engine).</p>"
+            "<p>No account, no ads, no tracking. Built with AI help (Anthropic's Claude).</p>"
+            "<p>Uses VLC (libVLC, LGPL), yt-dlp (Unlicense), ffmpeg (GPL), PyQt6, the Figtree font (OFL), "
+            "and data from Deezer, Wikipedia, Apple iTunes and Last.fm.</p>"
+            "<p>Not affiliated with Spotify, YouTube, Bandcamp, Apple, Deezer or Sevby LLC.</p>")
+
+    # --- Sleep timer ---------------------------------------------------------------------------------------
+    SLEEP_CHOICES = ((5, "5 minutes"), (10, "10 minutes"), (15, "15 minutes"), (30, "30 minutes"),
+                     (45, "45 minutes"), (60, "1 hour"))
+
+    def _add_sleep_timer_menu(self, menu):
+        sub = menu.addMenu("☾  Sleep timer")
+        sub.setStyleSheet(MENU_STYLE)
+        for minutes, label in self.SLEEP_CHOICES:
+            sub.addAction(label).triggered.connect(lambda _=False, m=minutes: self.set_sleep_timer(m))
+        sub.addAction("End of track").triggered.connect(lambda: self.set_sleep_timer("track"))
+        if self._sleep_timer.isActive() or self._sleep_at_track_end:
+            sub.addSeparator()
+            sub.addAction("Turn off timer").triggered.connect(lambda: self.set_sleep_timer(None))
+        return sub
+
+    def set_sleep_timer(self, minutes):
+        """minutes: a number, "track" (stop when this song ends) or None (off)."""
+        self._sleep_timer.stop()
+        self._sleep_at_track_end = minutes == "track"
+        if isinstance(minutes, (int, float)) and minutes > 0:
+            self._sleep_timer.start(int(minutes * 60 * 1000))
+            self.show_status(f"☾ Sleep timer: music stops in {minutes} min", kind="info", timeout_ms=4000)
+        elif self._sleep_at_track_end:
+            self.show_status("☾ Sleep timer: music stops at the end of this song", kind="info", timeout_ms=4000)
+        else:
+            self.show_status("Sleep timer off", kind="info", timeout_ms=3000)
+
+    def _sleep_now(self):
+        self._sleep_at_track_end = False
+        if self.player.get_state() == vlc.State.Playing:
+            self.play_pause_song()
+        self.show_status("☾ Sleep timer: music paused", kind="info", timeout_ms=10000)
 
     def _show_song_menu(self, song, global_pos, queue=None, playlist=None, row=None, source=""):
         self.build_song_menu(song, queue, playlist, row, source).exec(global_pos)
@@ -883,7 +1123,7 @@ class MainWindow(QMainWindow):
             lbl.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
             lbl.setFixedWidth(42)
             lbl.setAlignment(align | Qt.AlignmentFlag.AlignVCenter)
-        self.progress_slider = QSlider(Qt.Orientation.Horizontal)
+        self.progress_slider = ClickSlider(Qt.Orientation.Horizontal)
         self.progress_slider.setRange(0, 1000)
         self.progress_slider.sliderPressed.connect(self.slider_pressed)
         self.progress_slider.sliderReleased.connect(self.slider_released)
@@ -907,7 +1147,7 @@ class MainWindow(QMainWindow):
         rh.addWidget(self.queue_btn)
         self.mute_btn = self._icon_button("Mute / unmute", self.toggle_mute)
         rh.addWidget(self.mute_btn)
-        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider = ClickSlider(Qt.Orientation.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setFixedWidth(96)
         self.volume_slider.setToolTip("Volume (Ctrl+Up / Ctrl+Down)")
@@ -945,10 +1185,17 @@ class MainWindow(QMainWindow):
         sc("Ctrl+Left", self.prev_song)
         sc("Ctrl+Up", lambda: self.volume_slider.setValue(self.volume_slider.value() + 5))
         sc("Ctrl+Down", lambda: self.volume_slider.setValue(self.volume_slider.value() - 5))
-        sc("Ctrl+F", self.show_search)
-        sc("Ctrl+L", self.show_library)
+        sc("Ctrl+L", self.show_search)                 # Spotify: Ctrl+L = search
+        sc("Ctrl+F", self.focus_library_filter)        # Spotify: Ctrl+F = filter Your Library
         sc("Ctrl+S", self.toggle_shuffle)
         sc("Ctrl+R", self.cycle_repeat)
+        sc("Shift+Right", lambda: self.seek_by(5000))
+        sc("Shift+Left", lambda: self.seek_by(-5000))
+        sc("Ctrl+N", self.create_playlist_dialog)
+        sc("Ctrl+P", self.open_settings)
+        sc("Ctrl+Shift+R", self.rescan_library)
+        sc("Ctrl+Shift+Q", self.close)
+        sc("F1", self.show_about)
 
     # ------------------------------------------------------------------
     # Volume
@@ -1126,6 +1373,10 @@ class MainWindow(QMainWindow):
         actions.addWidget(play)
         for text, slot, green in extra_buttons:
             b = QPushButton(text)
+            if text.startswith("⬇ "):                  # crisp drawn icon instead of the emoji arrow
+                b.setText(text[2:])
+                b.setIcon(icons.download("#000000" if green else theme.TEXT, 18))
+                b.setIconSize(QSize(18, 18))
             b.setStyleSheet(theme.GREEN_PILL if green else theme.PILL)
             b.setFixedHeight(36 if green else 32)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1164,7 +1415,7 @@ class MainWindow(QMainWindow):
         self._home_refresh_timer.timeout.connect(self.refresh_home)
         loading = self._muted_label("Loading your music…")
         loading.setContentsMargins(24, 24, 24, 24)
-        self.home_scroll.setWidget(loading)
+        theme.replace_scroll_widget(self.home_scroll, loading)
 
     @staticmethod
     def _greeting():
@@ -1198,7 +1449,7 @@ class MainWindow(QMainWindow):
                 "No music found yet.\n\nAdd .mp3, .wav, .flac, .ogg or .m4a files to one of your music folders, "
                 f"or open Your Songs in Your Library and add a folder.\n\nMusic folders:\n{folders}"))
             v.addStretch()
-            self.home_scroll.setWidget(content)
+            theme.replace_scroll_widget(self.home_scroll, content)
             return
 
         # Quick tiles: Your Songs, To download, playlists.
@@ -1272,7 +1523,7 @@ class MainWindow(QMainWindow):
             more.clicked.connect(self.show_library)
             v.addWidget(more, alignment=Qt.AlignmentFlag.AlignLeft)
         v.addStretch()
-        self.home_scroll.setWidget(content)
+        theme.replace_scroll_widget(self.home_scroll, content)
         self._relayout_home()
 
     def _relayout_home(self):
@@ -1672,7 +1923,9 @@ class MainWindow(QMainWindow):
             top.addWidget(self._muted_label(
                 f"{len(everything)} song{'s' if len(everything) != 1 else ''} to download. Each one fills its "
                 "place in its playlist when it arrives."), 1)
-            all_btn = QPushButton(f"⬇ Download all {len(everything)}" if len(everything) > 1 else "⬇ Download")
+            all_btn = QPushButton(f"Download all {len(everything)}" if len(everything) > 1 else "Download")
+            all_btn.setIcon(icons.download("#000000", 18))
+            all_btn.setIconSize(QSize(18, 18))
             all_btn.setStyleSheet(GREEN_BUTTON)
             all_btn.setFixedHeight(36)
             all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1706,11 +1959,17 @@ class MainWindow(QMainWindow):
             lbl = self._section_label(f"{genre}  ·  {len(songs)}")
             head.addWidget(lbl)
             head.addStretch()
-            for text, slot in (("▶ Play", lambda _=False, g=genre: self._play_saved(g)),
-                               ("⬇ Download all", lambda _=False, g=genre: self.download_songs(self.saved_songs(g))),
-                               ("➕ Add all to playlist…", lambda _=False, g=genre: self._add_saved_to_playlist(g)),
-                               ("Export…", lambda _=False, g=genre: self.export_song_list(self.saved_songs(g), g))):
+            for text, slot, icon in (
+                    ("Play", lambda _=False, g=genre: self._play_saved(g), icons.play(theme.TEXT, 14)),
+                    ("Download all", lambda _=False, g=genre: self.download_songs(self.saved_songs(g)),
+                     icons.download(theme.TEXT, 18)),
+                    ("Add all to playlist…", lambda _=False, g=genre: self._add_saved_to_playlist(g),
+                     icons.plus(theme.TEXT, 16)),
+                    ("Export…", lambda _=False, g=genre: self.export_song_list(self.saved_songs(g), g), None)):
                 b = QPushButton(text)
+                if icon is not None:
+                    b.setIcon(icon)
+                    b.setIconSize(QSize(16, 16))
                 b.setStyleSheet(PILL_BUTTON)
                 b.setFixedHeight(32)
                 b.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1728,7 +1987,7 @@ class MainWindow(QMainWindow):
                     s, pos, queue=t.songs_in_view(), source=f"Saved: {g}", saved_genre=g, saved_index=row))
             v.addWidget(table)
         v.addStretch()
-        self.saved_scroll.setWidget(content)
+        theme.replace_scroll_widget(self.saved_scroll, content)
         self.fetch_covers(all_remote)
 
     def save_for_later(self, song):
@@ -1870,7 +2129,9 @@ class MainWindow(QMainWindow):
         delete_btn.setFixedHeight(32)
         delete_btn.clicked.connect(self._confirm_delete_open_playlist)
         actions.addWidget(delete_btn)
-        self.pl_download_btn = QPushButton("⬇ Download")
+        self.pl_download_btn = QPushButton("Download")
+        self.pl_download_btn.setIcon(icons.download(theme.TEXT, 18))
+        self.pl_download_btn.setIconSize(QSize(18, 18))
         self.pl_download_btn.setStyleSheet(PILL_BUTTON)
         self.pl_download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.pl_download_btn.setFixedHeight(32)
@@ -1884,13 +2145,18 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.pl_header)
 
         self.pl_empty = self._muted_label(
-            "This playlist is empty. Right-click any song on Home, Search or Your Library and choose "
-            "“Add to playlist”.")
+            "This playlist is empty. Drag songs here (or onto the playlist on the left), drop music files or "
+            "folders from File Explorer, or right-click any song and choose “Add to playlist”.")
         self.pl_empty.setContentsMargins(24, 12, 24, 0)
         layout.addWidget(self.pl_empty)
 
         self.pl_table = TrackTable(sortable=False)
         self.pl_table.mark_pending = True
+        self.pl_table.reorder_enabled = True
+        self.pl_table.accept_files = True
+        self.pl_table.rows_moved.connect(lambda a, b: self.open_playlist and self.move_song(self.open_playlist, a, b))
+        self.pl_table.files_dropped.connect(
+            lambda paths, row: self.open_playlist and self.add_files_to_playlist(self.open_playlist, paths, row))
         self.pl_table.play_requested.connect(
             lambda s, view: self.open_playlist and self.play_song(s, queue=self.open_playlist.songs,
                                                                   source=self.open_playlist.name))
@@ -1937,7 +2203,7 @@ class MainWindow(QMainWindow):
         self.pl_table.set_songs(pl.songs)
         self.pl_table.set_current(self.current_song)
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
-        self.pl_table.setVisible(bool(pl.songs))
+        self.pl_table.setVisible(True)               # stays visible so songs and files can be dropped in
         self.pl_title.setText(pl.name)
         self.pl_empty.setVisible(not pl.songs)
 
@@ -2113,7 +2379,7 @@ class MainWindow(QMainWindow):
         return True
 
     def _refresh_now_playing(self):
-        for table in (self.library_table, self.search_table, self.pl_table):
+        for table in (self.library_table, self.search_table, self.pl_table, self.radio_table):
             table.set_current(self.current_song)
 
     def _handle_failed_track(self, reason: str):
@@ -2133,6 +2399,13 @@ class MainWindow(QMainWindow):
 
     def _advance_after_current(self, auto=True):
         """auto=True: the song finished by itself (repeat rules apply)."""
+        if auto and self._sleep_at_track_end:
+            # Sleep timer "End of track": stop here instead of playing the next song.
+            self._sleep_at_track_end = False
+            self.is_playing = False
+            self._set_play_icon(False)
+            self.show_status("☾ Sleep timer: music stopped", kind="info", timeout_ms=10000)
+            return
         if self.pq.advance(auto=auto) is None:
             # End of the queue with repeat off: stop, like Spotify.
             self.is_playing = False
@@ -2473,11 +2746,23 @@ class MainWindow(QMainWindow):
         return out
 
     def download_folder(self):
-        """Downloads go into a "Sevbify downloads" folder inside the first music folder, so the
-        library already scans them. Without any music folder, ~/Music/Sevbify downloads is added."""
-        for f in self.user_data.music_folders:
-            if os.path.isdir(f):
-                return os.path.join(f, self.DOWNLOAD_SUBFOLDER)
+        """Where downloads go (songs are filed in Artist sub-folders inside it):
+        1. the folder chosen in Settings, else
+        2. a music folder that already is a "Sevbify downloads" folder (never nest a second one inside it), else
+        3. "Sevbify downloads" inside the first music folder that exists, else
+        4. ~/Music/Sevbify downloads, added to your music folders."""
+        chosen = self.user_data.download_folder
+        if chosen:
+            os.makedirs(chosen, exist_ok=True)
+            if not any(normalise_path(chosen).startswith(normalise_path(f)) for f in self.user_data.music_folders):
+                self.add_music_folder(chosen)
+            return chosen
+        existing = [f for f in self.user_data.music_folders if os.path.isdir(f)]
+        for f in existing:
+            if os.path.basename(os.path.normpath(f)) == self.DOWNLOAD_SUBFOLDER:
+                return f
+        for f in existing:
+            return os.path.join(f, self.DOWNLOAD_SUBFOLDER)
         folder = os.path.join(os.path.expanduser("~"), "Music", self.DOWNLOAD_SUBFOLDER)
         os.makedirs(folder, exist_ok=True)
         self.add_music_folder(folder)
@@ -2511,6 +2796,25 @@ class MainWindow(QMainWindow):
             self.show_status("Already downloading.", kind="info", timeout_ms=3000)
         return added
 
+    def _schedule_playlist_files(self, delay_ms=2000):
+        self._playlist_files_timer.start(delay_ms)
+
+    def write_playlist_files(self):
+        """Keep <download folder>/Playlists/*.m3u8 in step with your playlists (Settings can turn it off).
+        Only when the download folder already exists: nothing is created just for this."""
+        if not self.user_data.playlist_files:
+            return []
+        try:
+            folder = self.user_data.download_folder or next(
+                (os.path.join(f, self.DOWNLOAD_SUBFOLDER) if os.path.basename(os.path.normpath(f)) != self.DOWNLOAD_SUBFOLDER
+                 else f for f in self.user_data.music_folders if os.path.isdir(f)), "")
+            if not folder or not os.path.isdir(folder):
+                return []
+            return playlist_files.write_playlist_files(folder, self.playlists)
+        except OSError as e:
+            print(f"Could not write playlist files: {e}")
+            return []
+
     def _on_song_downloaded(self, key, path, title):
         if path:
             self._downloaded_paths[key] = normalise_path(path)
@@ -2541,9 +2845,10 @@ class MainWindow(QMainWindow):
             self._update_playlist_download_button()
             self.pl_table.set_songs(self.open_playlist.songs)
             self.pl_table.set_current(self.current_song)
-        if self.web_table.rowCount():
-            self.web_table.set_songs(self.web_table.songs_in_view())
-            self.web_table.set_current(self.current_song)
+        for table in (self.web_table, self.radio_table):
+            if table.rowCount():
+                table.set_songs(table.songs_in_view())
+                table.set_current(self.current_song)
         if self.user_data.save_for_later and self.stack.currentWidget() is self.saved_page:
             self.refresh_saved_page()
 
@@ -2551,7 +2856,7 @@ class MainWindow(QMainWindow):
         pl = self.open_playlist
         waiting = [s for s in (pl.songs if pl else []) if getattr(s, "is_remote", False)
                    and self.downloads.state(s.track.key)[0] not in ("queued", "downloading")]
-        self.pl_download_btn.setText(f"⬇ Download {len(waiting)}" if len(waiting) > 1 else "⬇ Download")
+        self.pl_download_btn.setText(f"Download {len(waiting)}" if len(waiting) > 1 else "Download")
         self.pl_download_btn.setVisible(bool(waiting))
 
     def _show_downloads_menu(self):
@@ -2587,7 +2892,9 @@ class MainWindow(QMainWindow):
                 return
             items = self.radio_items(tracks)
             playing_seed = self.current_song is not None and self.current_song == seed and self.is_playing
-            self.pq.set_context([seed] + [s for s in items if s != seed], seed, name)
+            radio_songs = self._mix_in_your_songs([seed] + [s for s in items if s != seed], seed)
+            self.pq.set_context(radio_songs, seed, name)
+            self.show_radio_page(name, radio_songs, seed)
             if playing_seed:
                 self._queue_changed()
             else:
@@ -2609,13 +2916,68 @@ class MainWindow(QMainWindow):
 
         self.online_call(self.online.radio, seed.artist, seed.title, on_done=done, on_error=failed)
 
-    def save_queue_as_playlist(self):
-        """Keep the current Radio (or any queue source) as a normal playlist. Songs you don't have yet
-        stay as "not downloaded" slots and show up under To download."""
-        songs = list(self.pq.original)
+    # --- Radio page: makes it obvious you're listening to a radio ---------------------------------------------
+    def setup_radio_page(self):
+        lay = QVBoxLayout(self.radio_page)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self._radio_header_box = QVBoxLayout()
+        self._radio_header_box.setContentsMargins(0, 0, 0, 0)
+        lay.addLayout(self._radio_header_box)
+        self.radio_table = TrackTable(sortable=False)
+        self.radio_table.mark_pending = True
+        self.radio_table.play_requested.connect(
+            lambda s, view: self.play_song(s, queue=self._radio_songs, source=self._radio_name))
+        self.radio_table.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self._radio_songs, source=self._radio_name))
+        wrap = QWidget()
+        wl = QVBoxLayout(wrap)
+        wl.setContentsMargins(16, 0, 16, 8)
+        wl.addWidget(self.radio_table)
+        lay.addWidget(wrap, 1)
+        self._radio_songs, self._radio_name, self._radio_seed = [], "", None
+
+    def show_radio_page(self, name=None, songs=None, seed=None):
+        """Show a radio (the last one when called without arguments, e.g. from Back/Forward)."""
+        if name is not None:
+            self._radio_name, self._radio_songs, self._radio_seed = name, list(songs), seed
+        if not self._radio_songs:
+            self.show_home()
+            return
+        while self._radio_header_box.count():
+            item = self._radio_header_box.takeAt(0)
+            if item.widget():
+                item.widget().hide()
+                item.widget().deleteLater()
+        seed = self._radio_seed or self._radio_songs[0]
+        cover = load_pixmap(seed.album_cover_path)
+        colour = dominant_colour(cover)
+        top = QColor.fromHsv(colour.hsvHue(), min(255, colour.hsvSaturation() + 40), min(210, colour.value() + 60))
+        songs = self._radio_songs
+        header, meta = self._gradient_header(
+            cover, "Song radio", self._radio_name, top.name(),
+            lambda: self.play_song(songs[0], queue=songs, source=self._radio_name),
+            extra_buttons=[("Save as playlist", lambda: self.save_songs_as_playlist(self._radio_name, songs), False),
+                           ("⬇ Download", lambda: self.download_songs(songs), False)])
+        artists = list(dict.fromkeys(s.artist for s in songs if s.artist and s.artist != seed.artist))
+        with_text = ("With " + ", ".join(artists[:3]) + (" and more" if len(artists) > 3 else "")) if artists else ""
+        pending = sum(1 for s in songs if getattr(s, "is_remote", False))
+        parts = [p for p in (with_text, f"{len(songs)} songs",
+                             f"⬇ {pending} not downloaded yet" if pending else "") if p]
+        meta.setText("  •  ".join(parts))
+        self._radio_header_box.addWidget(header)
+        self.radio_table.set_songs(songs)
+        self.radio_table.set_current(self.current_song)
+        self.fetch_covers(songs)
+        self.stack.setCurrentWidget(self.radio_page)
+        self._set_nav("radio")
+
+    def save_songs_as_playlist(self, base, songs):
+        """Keep a list of songs (a Radio) as a normal playlist; songs you don't have stay ⬇ slots."""
+        songs = list(songs)
         if not songs:
             return None
-        base = self.pq.source_name or "New playlist"
+        base = base or "New playlist"
         name, n = base, 2
         while self._name_taken(name):
             name, n = f"{base} {n}", n + 1
@@ -2625,6 +2987,31 @@ class MainWindow(QMainWindow):
             self.show_status(f"Saved “{pl.name}”" + (f" · {pending} to download" if pending else ""),
                              kind="info", timeout_ms=5000)
         return pl
+
+    def save_queue_as_playlist(self):
+        """Keep the current Radio (or any queue source) as a normal playlist. Songs you don't have yet
+        stay as "not downloaded" slots and show up under To download."""
+        return self.save_songs_as_playlist(self.pq.source_name, self.pq.original)
+
+    def _mix_in_your_songs(self, radio_songs, seed, rng=None):
+        """Like Spotify, sprinkle in songs you already have by the radio's artists (about 1 in 8, never
+        two together, never in the first few)."""
+        import random
+        rng = rng or random.Random()
+        artists = {s.artist.casefold() for s in radio_songs if s.artist}
+        present = {s.key for s in radio_songs}
+        yours = [s for s in self.songs if s.exists and s.artist and s.artist.casefold() in artists
+                 and s.key not in present and s != seed]
+        if not yours:
+            return radio_songs
+        rng.shuffle(yours)
+        yours = yours[:max(2, len(radio_songs) // 8)]
+        out = list(radio_songs)
+        pos = 4
+        for song in yours:
+            out.insert(min(pos, len(out)), song)
+            pos += rng.randint(5, 8)
+        return out
 
     def radio_items(self, tracks):
         """Turn online tracks into queue items: your own file if you have the song,
@@ -2687,6 +3074,13 @@ class MainWindow(QMainWindow):
             self.user_data.lastfm_api_key = values["lastfm_api_key"]
             self.online.set_lastfm_key(values["lastfm_api_key"])
         self.user_data.jamendo_client_id = values["jamendo_client_id"]
+        if "download_folder" in values:
+            self.user_data.download_folder = values["download_folder"]
+        if "use_browser_cookies" in values:
+            self.user_data.use_browser_cookies = bool(values["use_browser_cookies"])
+            downloader.ALLOW_BROWSER_COOKIES = self.user_data.use_browser_cookies
+        if "playlist_files" in values:
+            self.user_data.playlist_files = bool(values["playlist_files"])
         if values.get("download_source") in downloader.SOURCES:
             self.user_data.download_source = values["download_source"]
         if "stream_full" in values:
@@ -2758,7 +3152,7 @@ class MainWindow(QMainWindow):
             else:
                 {"home": self.show_home, "search": lambda: self.show_search(select=False),
                  "library": self.show_library, "playlists": self.show_playlists,
-                 "saved": self.show_saved}.get(kind, self.show_home)()
+                 "saved": self.show_saved, "radio": self.show_radio_page}.get(kind, self.show_home)()
         finally:
             self._replaying = False
         self.top_bar.set_history(pos > 0, pos < len(self._history) - 1)

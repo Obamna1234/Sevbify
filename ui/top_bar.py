@@ -13,6 +13,7 @@ class TopBar(QWidget):
     settings_clicked = pyqtSignal()
     search_activated = pyqtSignal()           # search box clicked / typed into
     downloads_clicked = pyqtSignal()          # the download progress pill was clicked
+    menu_clicked = pyqtSignal()               # the ⋯ button (File / Edit / View / Playback / Help)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,6 +22,15 @@ class TopBar(QWidget):
         h.setContentsMargins(8, 8, 8, 8)
         h.setSpacing(8)
 
+        self.menu_btn = QPushButton("•••")
+        self.menu_btn.setToolTip("Menu")
+        self.menu_btn.setFixedSize(40, 32)
+        self.menu_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.menu_btn.setStyleSheet(f"QPushButton {{ color: {theme.SUBDUED}; background: transparent; border: none;"
+                                    f" font-size: 14px; font-weight: 800; letter-spacing: 1px; }}"
+                                    f" QPushButton:hover {{ color: {theme.TEXT}; }}")
+        self.menu_btn.clicked.connect(self.menu_clicked.emit)
+        h.addWidget(self.menu_btn)
         self.back_btn = self._round(icons.chevron("left", theme.TEXT), "Go back", 32, "transparent")
         self.forward_btn = self._round(icons.chevron("right", theme.TEXT), "Go forward", 32, "transparent")
         self.back_btn.clicked.connect(self.back_clicked.emit)
@@ -102,8 +112,10 @@ class TopBar(QWidget):
         if not text:
             self.downloads_btn.hide()
             return
+        text = text[2:] if text.startswith("⬇ ") else text     # the drawn icon replaces the emoji arrow
+        self.downloads_btn.setIcon(icons.download(theme.RED if failed else theme.TEXT, 16))
         metrics = self.downloads_btn.fontMetrics()
-        self.downloads_btn.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, 250))
+        self.downloads_btn.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, 230))
         self.downloads_btn.setToolTip(tip or text)
         self.downloads_btn.setStyleSheet(self._pill_style(theme.RED if failed else theme.TEXT))
         self.downloads_btn.show()

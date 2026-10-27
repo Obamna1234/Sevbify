@@ -23,6 +23,10 @@ See `CHANGELOG.md` inside the zip for the full list. Highlights:
   **⬇ Download** on a playlist, or **⬇ Download all** on To download. Each song fills its own place in the playlist.
   Radio → **Save as playlist** in the queue panel.
 - New users start with no playlists.
+- **New in beta.5:** fixes from the first Windows test (crash when making a playlist, downloads folder inside itself,
+  flashing console window, white selected rows). Downloads are filed per artist with phone-ready playlist files.
+  Grey selection, ▶ on hover, click-to-seek, drag and drop, Show in folder, a proper Song radio page, Spotify's song
+  menu, the ••• menu with Spotify's shortcuts, and a sleep timer.
 
 **Pre-release / beta:** built and tested automatically on GitHub's Windows machine, but downloading a real song from
 inside Sevbify hasn't been confirmed on a home PC yet. Please report anything that goes wrong.

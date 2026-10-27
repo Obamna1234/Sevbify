@@ -17,6 +17,8 @@ PANEL = "#121212"          # the three rounded panels
 ELEVATED = "#1f1f1f"       # cards / hover on panels
 HOVER = "#2a2a2a"
 SELECTED = "#333333"
+ROW_HOVER = "#2a2a2a"       # song list row under the mouse (Spotify grey)
+ROW_SELECTED = "#3e3e3e"    # selected song row
 TEXT = "#ffffff"
 SUBDUED = "#b3b3b3"
 DIM = "#727272"
@@ -64,6 +66,7 @@ def base_stylesheet():
     return f"""
     QMainWindow, QDialog {{ background: {BLACK}; }}
     QWidget {{ color: {TEXT}; }}
+    QAbstractScrollArea, QWidget#qt_scrollarea_viewport {{ background: transparent; }}
     QToolTip {{ background: #282828; color: {TEXT}; border: none; padding: 6px 8px; border-radius: 4px; }}
     QScrollBar:vertical {{ background: transparent; width: 12px; margin: 0; }}
     QScrollBar::handle:vertical {{ background: rgba(255,255,255,0.28); border-radius: 0; min-height: 30px; }}
@@ -86,6 +89,27 @@ def base_stylesheet():
     """
 
 
+def apply_dark_palette(app):
+    """Dark colours for every widget, including the parts Windows would otherwise draw in its light system
+    colours (scroll-area backgrounds, selected rows, menus)."""
+    from PyQt6.QtGui import QPalette, QColor
+    pal = app.palette()
+    roles = {
+        QPalette.ColorRole.Window: PANEL, QPalette.ColorRole.Base: PANEL, QPalette.ColorRole.AlternateBase: ELEVATED,
+        QPalette.ColorRole.WindowText: TEXT, QPalette.ColorRole.Text: TEXT, QPalette.ColorRole.ButtonText: TEXT,
+        QPalette.ColorRole.Button: ELEVATED, QPalette.ColorRole.ToolTipBase: "#282828",
+        QPalette.ColorRole.ToolTipText: TEXT, QPalette.ColorRole.PlaceholderText: DIM,
+        QPalette.ColorRole.Highlight: ROW_SELECTED, QPalette.ColorRole.HighlightedText: TEXT,
+        QPalette.ColorRole.Link: GREEN,
+    }
+    for group in (QPalette.ColorGroup.Active, QPalette.ColorGroup.Inactive):
+        for role, colour in roles.items():
+            pal.setColor(group, role, QColor(colour))
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(DIM))
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(DIM))
+    app.setPalette(pal)
+
+
 def panel_style(object_name):
     """Rounded #121212 panel; use with setObjectName(object_name)."""
     return f"#{object_name} {{ background: {PANEL}; border-radius: {RADIUS}px; }}"
@@ -98,3 +122,13 @@ GREEN_PILL = (f"QPushButton {{ color: black; background: {GREEN}; padding: 8px 1
 CHIP = (f"QPushButton {{ color: {TEXT}; background: {HOVER}; border: none; border-radius: 16px; padding: 6px 12px;"
         f" font-size: 13px; }} QPushButton:hover {{ background: {SELECTED}; }}"
         f" QPushButton:checked {{ background: {TEXT}; color: black; }}")
+
+
+def replace_scroll_widget(scroll, widget):
+    """Put new content in a scroll area. The old content is deleted later, after the current click or key
+    press has finished: deleting it straight away crashes when the click came from a widget inside it."""
+    old = scroll.takeWidget()
+    scroll.setWidget(widget)
+    if old is not None:
+        old.hide()
+        old.deleteLater()

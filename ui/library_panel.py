@@ -52,6 +52,9 @@ class LibraryRow(QFrame):
     clicked = pyqtSignal()
     double_clicked = pyqtSignal()
     context_requested = pyqtSignal(object)
+    songs_dropped = pyqtSignal(list)          # songs dragged from a song list onto this playlist
+    files_dropped = pyqtSignal(list)          # files / folders dragged from Explorer onto this playlist
+    accepts_drops = False
 
     def __init__(self, pixmap, title, subtitle, active=False, playing=False):
         super().__init__()
@@ -85,17 +88,52 @@ class LibraryRow(QFrame):
             note.setStyleSheet(f"color: {theme.GREEN}; font-size: 16px; background: transparent;")
             h.addWidget(note)
 
+    # Qt finishes its own handling first, then we tell the app: the app may rebuild the list and delete this
+    # row, and touching a deleted row would raise "wrapped C/C++ object ... has been deleted".
     def mouseReleaseEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
+        left = e.button() == Qt.MouseButton.LeftButton
         super().mouseReleaseEvent(e)
+        if left:
+            self.clicked.emit()
 
     def mouseDoubleClickEvent(self, e):
-        self.double_clicked.emit()
         super().mouseDoubleClickEvent(e)
+        self.double_clicked.emit()
 
     def contextMenuEvent(self, e):
         self.context_requested.emit(e.globalPos())
+
+    # Drop songs or files on a playlist in the list, like Spotify.
+    def enable_drops(self):
+        self.accepts_drops = True
+        self.setAcceptDrops(True)
+
+    def _wanted(self, mime):
+        from .track_table import SONGS_MIME
+        return self.accepts_drops and (mime.hasFormat(SONGS_MIME) or mime.hasUrls())
+
+    def dragEnterEvent(self, e):
+        if self._wanted(e.mimeData()):
+            e.acceptProposedAction()
+            self.setStyleSheet(self.styleSheet() + f" #libRow {{ border: 1px solid {theme.GREEN}; }}")
+        else:
+            e.ignore()
+
+    def dragLeaveEvent(self, e):
+        self.setStyleSheet(self.styleSheet().replace(f" #libRow {{ border: 1px solid {theme.GREEN}; }}", ""))
+
+    def dropEvent(self, e):
+        from . import track_table
+        self.dragLeaveEvent(e)
+        mime = e.mimeData()
+        if not self._wanted(mime):
+            e.ignore()
+            return
+        e.acceptProposedAction()
+        if mime.hasFormat(track_table.SONGS_MIME):
+            self.songs_dropped.emit(list(track_table.dragged_songs))
+        else:
+            self.files_dropped.emit([u.toLocalFile() for u in mime.urls() if u.isLocalFile()])
 
 
 class LibraryPanel(QFrame):
@@ -105,6 +143,8 @@ class LibraryPanel(QFrame):
     open_playlist = pyqtSignal(object)
     play_playlist = pyqtSignal(object)
     playlist_menu = pyqtSignal(object, object)       # playlist, global pos
+    songs_dropped = pyqtSignal(object, list)         # playlist, songs
+    files_dropped = pyqtSignal(object, list)         # playlist, file paths
     settings_clicked = pyqtSignal()
 
     def __init__(self, cover_loader, parent=None):
@@ -232,6 +272,9 @@ class LibraryPanel(QFrame):
                 row.clicked.connect(lambda p=pl: self.open_playlist.emit(p))
                 row.double_clicked.connect(lambda p=pl: self.play_playlist.emit(p))
                 row.context_requested.connect(lambda pos, p=pl: self.playlist_menu.emit(p, pos))
+                row.enable_drops()
+                row.songs_dropped.connect(lambda songs, p=pl: self.songs_dropped.emit(p, songs))
+                row.files_dropped.connect(lambda paths, p=pl: self.files_dropped.emit(p, paths))
                 v.addWidget(row)
         if v.count() == 0:
             empty = QLabel("Nothing matches." if query else "Create your first playlist with + Create.")
@@ -239,4 +282,4 @@ class LibraryPanel(QFrame):
             empty.setWordWrap(True)
             v.addWidget(empty)
         v.addStretch()
-        self.scroll.setWidget(content)
+        theme.replace_scroll_widget(self.scroll, content)

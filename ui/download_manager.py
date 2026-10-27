@@ -7,6 +7,7 @@ and the slot fills in with the new file.
 
 Only download music you have the right to download.
 """
+import os
 import threading
 from collections import deque
 
@@ -72,7 +73,7 @@ class DownloadManager(QObject):
         return {"total": 0, "done": 0, "ok": 0, "failed": [], "titles": [], "stopped": False}
 
     # --- asking -----------------------------------------------------------------------------------
-    def request(self, tracks, folder, source=downloader.SOURCE_BOTH) -> int:
+    def request(self, tracks, folder, source=downloader.SOURCE_BOTH, by_artist=True) -> int:
         """Queue OnlineTrack objects for download into `folder`. Returns how many were added
         (songs already queued or downloading are skipped)."""
         added = 0
@@ -82,7 +83,9 @@ class DownloadManager(QObject):
                 if self._states.get(key, {}).get("state") in (QUEUED, DOWNLOADING):
                     continue
                 self._states[key] = {"state": QUEUED, "title": t.title, "artist": t.artist, "note": ""}
-                self._queue.append((key, downloader.song_line(t.artist, t.title), folder, source))
+                # Filed by main artist: <download folder>/<Artist>/<Artist - Title>.mp3
+                out_dir = os.path.join(folder, downloader.artist_folder(t.artist)) if by_artist else folder
+                self._queue.append((key, downloader.song_line(t.artist, t.title), out_dir, source))
                 added += 1
             if added:
                 self._batch["total"] += added

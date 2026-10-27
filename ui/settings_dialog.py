@@ -1,6 +1,7 @@
 """Settings window: online features switch, optional service keys and where downloads come from."""
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QFrame, QComboBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QFrame, QComboBox, QScrollArea,
+    QWidget
 )
 from PyQt6.QtCore import Qt
 
@@ -30,7 +31,19 @@ class SettingsDialog(QDialog):
         self.setStyleSheet(STYLE)
         self.setMinimumWidth(520)
         self.user_data = user_data
-        v = QVBoxLayout(self)
+        self.resize(600, 720)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("QScrollArea { border: none; background: #181818; }")
+        body = QWidget()
+        body.setObjectName("settingsBody")
+        body.setStyleSheet("#settingsBody { background: #181818; }")
+        scroll.setWidget(body)
+        outer.addWidget(scroll)
+        v = QVBoxLayout(body)
         v.setContentsMargins(24, 20, 24, 20)
         v.setSpacing(10)
 
@@ -83,6 +96,35 @@ class SettingsDialog(QDialog):
         self.download_source.setCurrentText(user_data.download_source)
         v.addWidget(self.download_source)
 
+        v.addWidget(self._sub("Download location (songs are filed in a folder per artist). Empty = automatic."))
+        folder_row = QHBoxLayout()
+        self.download_folder = QLineEdit(user_data.download_folder)
+        self.download_folder.setPlaceholderText("Automatic: a “Sevbify downloads” folder in your first music folder")
+        folder_row.addWidget(self.download_folder, 1)
+        browse = QPushButton("Change…")
+        browse.clicked.connect(self._choose_download_folder)
+        folder_row.addWidget(browse)
+        v.addLayout(folder_row)
+
+        self.playlist_files = QCheckBox("Save playlist files for phones and other players")
+        self.playlist_files.setChecked(user_data.playlist_files)
+        v.addWidget(self.playlist_files)
+        v.addWidget(self._sub("Keeps a “Playlists” folder of .m3u8 files next to your downloads, in your order, so "
+                              "copying the folder to a phone keeps your playlists."))
+
+        v.addWidget(self._line())
+        v.addWidget(self._label("Privacy"))
+        v.addWidget(self._sub(
+            "Sevbify has no account, ads or tracking. When online features are on it contacts only: Deezer (search, "
+            "radio, previews), Wikipedia (artist info), Apple iTunes (official song names), Bandcamp and YouTube "
+            "(full songs and downloads), and Last.fm / Jamendo if you add a key. Those sites see your IP address and "
+            "what you look up, like a browser would. Turn Online features off and nothing is contacted."))
+        self.browser_cookies = QCheckBox("Let YouTube downloads use my Chrome sign-in when YouTube blocks them")
+        self.browser_cookies.setChecked(user_data.use_browser_cookies)
+        v.addWidget(self.browser_cookies)
+        v.addWidget(self._sub("Off by default. When on, a blocked download is retried with the YouTube sign-in "
+                              "saved in Chrome, which tells YouTube who you are."))
+
         from core import shortcuts
         if shortcuts.can_create():
             v.addWidget(self._line())
@@ -127,6 +169,12 @@ class SettingsDialog(QDialog):
         f = QFrame(); f.setObjectName("line"); f.setFrameShape(QFrame.Shape.HLine)
         return f
 
+    def _choose_download_folder(self):
+        from PyQt6.QtWidgets import QFileDialog
+        folder = QFileDialog.getExistingDirectory(self, "Download location", self.download_folder.text())
+        if folder:
+            self.download_folder.setText(folder)
+
     def values(self):
         return {
             "online_enabled": self.online.isChecked(),
@@ -134,4 +182,7 @@ class SettingsDialog(QDialog):
             "jamendo_client_id": self.jamendo.text().strip(),
             "download_source": self.download_source.currentText(),
             "stream_full": self.stream_full.isChecked(),
+            "download_folder": self.download_folder.text().strip(),
+            "playlist_files": self.playlist_files.isChecked(),
+            "use_browser_cookies": self.browser_cookies.isChecked(),
         }

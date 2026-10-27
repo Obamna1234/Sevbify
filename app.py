@@ -227,6 +227,9 @@ def set_app_identity(app):
 
 
 def main():
+    # No black console windows flashing when ffmpeg / yt-dlp run in the background (Windows).
+    from core.platform_fixes import hide_console_windows
+    hide_console_windows()
     # 1. Create the QApplication first
     app = QApplication(sys.argv)
     icon_path = set_app_identity(app)

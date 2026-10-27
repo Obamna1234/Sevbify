@@ -66,9 +66,10 @@ class Card(QFrame):
         self._style(False); self.play.hide(); super().leaveEvent(e)
 
     def mouseReleaseEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton and not self.play.underMouse():
+        go = e.button() == Qt.MouseButton.LeftButton and not self.play.underMouse()
+        super().mouseReleaseEvent(e)          # first: the click may rebuild the page and delete this card
+        if go:
             self.clicked.emit()
-        super().mouseReleaseEvent(e)
 
     def contextMenuEvent(self, e):
         self.context_requested.emit(e.globalPos())
@@ -117,6 +118,7 @@ class QuickTile(QFrame):
         self._style(False); self.play.hide(); super().leaveEvent(e)
 
     def mouseReleaseEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton and not self.play.underMouse():
+        go = e.button() == Qt.MouseButton.LeftButton and not self.play.underMouse()
+        super().mouseReleaseEvent(e)          # first: the click may rebuild the page and delete this card
+        if go:
             self.clicked.emit()
-        super().mouseReleaseEvent(e)

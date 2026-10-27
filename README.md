@@ -96,7 +96,9 @@ music and artwork are found relative to the project folder.
 | **To download** (left panel) | Every song waiting to be downloaded: all ⬇ slots in your playlists plus songs you chose *Save for later* on, with **⬇ Download all**. |
 | **⬇ pill in the top bar** | Shows download progress ("⬇ 2 of 5 · Song"). Click it to stop, or to retry songs that failed. |
 
-**Keyboard:** Space = play/pause · Ctrl+→ / Ctrl+← = next / previous · Ctrl+↑ / Ctrl+↓ = volume · Ctrl+F = search · Ctrl+L = library
+**Keyboard (same as Spotify):** Space = play/pause · Ctrl+→ / Ctrl+← = next / previous · Shift+→ / Shift+← = seek 5 s ·
+Ctrl+↑ / Ctrl+↓ = volume · Ctrl+S = shuffle · Ctrl+R = repeat · Ctrl+L = search · Ctrl+F = filter Your Library ·
+Ctrl+N = new playlist · Ctrl+P = settings · Ctrl+Shift+R = rescan · F1 = about. All are also in the **•••** menu (top left).
 
 ## Adding music
 
