@@ -98,14 +98,36 @@ def _smoke_playback():
             label = "web stream" if path.startswith("http") else os.path.splitext(path)[1][1:].upper()
             if state != vlc.State.Ended or length <= 0:
                 inst.release()
+                why = _vlc_log_for(vlc, path)
                 server.shutdown()
-                return False, f"{label} did not play ({state}, length {length} ms, libVLC: {lib})"
+                return False, f"{label} did not play ({state}, length {length} ms, libVLC: {lib}). VLC said: {why}"
             results.append(f"{label} {length} ms")
         inst.release()
         server.shutdown()
         return True, f"played {', '.join(results)} with libVLC {vlc.libvlc_get_version().decode()} from {lib}"
     except Exception:
         return False, traceback.format_exc()
+
+
+def _vlc_log_for(vlc, path):
+    """Try `path` again with VLC's own log switched on and return the important lines (for diagnosis)."""
+    import tempfile
+    log = os.path.join(tempfile.mkdtemp(), "vlc.log")
+    try:
+        inst = vlc.Instance("--aout=adummy", "--no-video", "--verbose=2", "--file-logging", f"--logfile={log}",
+                            "--logmode=text")
+        player = inst.media_player_new()
+        player.set_media(inst.media_new(path))
+        player.play()
+        end = time.time() + 10
+        while time.time() < end and player.get_state() not in (vlc.State.Ended, vlc.State.Error):
+            time.sleep(0.05)
+        player.stop(); player.release(); inst.release()
+        lines = open(log, encoding="utf-8", errors="replace").read().splitlines()
+        keep = [l for l in lines if any(k in l.lower() for k in ("error", "warning", "access", "http", "cannot", "no "))]
+        return " | ".join((keep or lines)[-25:])[:3000]
+    except Exception as e:
+        return f"(no VLC log: {e})"
 
 
 def _smoke_canvas(window):
