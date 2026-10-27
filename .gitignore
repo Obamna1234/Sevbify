@@ -10,3 +10,12 @@ venv/
 # Generated at runtime (album art extracted from tags + playlist collages).
 # The app recreates these on startup.
 album_covers/
+
+# Your music stays on your PC (personal files, too large for GitHub).
+# Copy your songs into this folder locally, or use Your Library -> Add folder.
+audio/
+
+# Windows build output
+build/
+dist/
+*.spec

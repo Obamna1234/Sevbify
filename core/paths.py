@@ -5,12 +5,44 @@ app.py), never from the current working directory.
 """
 import os
 from pathlib import Path
+import sys
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLACEHOLDER_IMAGE = str(PROJECT_ROOT / "assets" / "album_covers" / "placeholder.png")
-AUDIO_FOLDER = str(PROJECT_ROOT / "audio")
-ALBUM_CACHE = str(PROJECT_ROOT / "album_covers")
-ASSETS_FOLDER = str(PROJECT_ROOT / "assets")
+# True when running as the packaged "Spotify Replica.exe" (built by PyInstaller).
+FROZEN = getattr(sys, "frozen", False)
+
+if FROZEN:
+    # PROJECT_ROOT = folder containing the .exe; bundled read-only files
+    # (artwork, placeholder) live in PyInstaller's _internal folder.
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+    RESOURCE_ROOT = Path(getattr(sys, "_MEIPASS", PROJECT_ROOT))
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    RESOURCE_ROOT = PROJECT_ROOT
+
+
+def _user_data_dir() -> Path:
+    # Same location as core.storage.default_data_dir() (kept here to avoid an import cycle).
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return Path(base) / "Custom Spotify Replica"
+
+
+PLACEHOLDER_IMAGE = str(RESOURCE_ROOT / "assets" / "album_covers" / "placeholder.png")
+ASSETS_FOLDER = str(RESOURCE_ROOT / "assets")
+
+# Default music folder: an "audio" folder next to app.py / the .exe if there is
+# one, otherwise the user's Windows "Music" folder. More folders can be added
+# in the app (Your Library -> Add folder).
+_local_audio = PROJECT_ROOT / "audio"
+AUDIO_FOLDER = str(_local_audio if _local_audio.is_dir() else Path.home() / "Music")
+
+# Generated artwork cache. The packaged app may live in a read-only folder
+# (e.g. Program Files), so it keeps its cache in the user's app-data folder.
+ALBUM_CACHE = str(_user_data_dir() / "album_covers" if FROZEN else PROJECT_ROOT / "album_covers")
 
 os.makedirs(ALBUM_CACHE, exist_ok=True)
 

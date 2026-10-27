@@ -84,12 +84,17 @@ def test_playlist_queue_stays_in_playlist(window, qapp):
 
 
 def test_finds_music_when_launched_from_another_folder(open_window, tmp_path, data_dir, monkeypatch):
+    from core import paths
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
     monkeypatch.chdir(elsewhere)
-    # No audio_folder given: uses the default (bundled audio/ folder).
+    # Paths must not depend on the current working directory.
+    assert os.path.isfile(paths.PLACEHOLDER_IMAGE)
+    assert os.path.isabs(paths.AUDIO_FOLDER)
+    # No audio_folder given: uses the default music folder.
     w = open_window(data_dir=str(data_dir))
-    assert len(w.songs) > 0, "bundled audio/ folder not found from another working directory"
+    if os.path.isdir(os.path.join(paths.PROJECT_ROOT, "audio")):
+        assert len(w.songs) > 0, "bundled audio/ folder not found from another working directory"
     assert not (elsewhere / "album_covers").exists()
 
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.9.1 — 27 Oct 2026 — GitHub workflow
+
+- Private GitHub repo with automatic **Windows tests + .exe build** on every push (`.github/workflows/windows-build.yml`).
+- `Run Spotify Replica.bat`: one-click launcher (creates `.venv`, installs/updates packages only when needed).
+- `Run Tests.bat`, `pytest.ini` (only `tests/` is collected, not the legacy `test_home.py`).
+- Packaged-app support: bundled artwork inside the `.exe`, artwork cache in `%APPDATA%`, no crash when a windowed `.exe` has no console.
+- Default music folder: `audio/` next to the app if present, otherwise your Windows *Music* folder.
+- `app.py --smoke-test` for automated start-up checks.
+- Music (`audio/`) and the generated `album_covers/` cache are no longer stored in git.
+
 ## v4.9 — 26 Oct 2026 — Local library & playlists
 
 **New**

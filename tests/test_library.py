@@ -54,8 +54,8 @@ def test_corrupt_save_file_is_kept_and_defaults_loaded(open_window, audio_dir, d
 
 
 def test_project_files_saved_with_relative_paths(tmp_path):
-    from core.paths import AUDIO_FOLDER, to_stored_path, from_stored_path
-    inside = os.path.join(AUDIO_FOLDER, "x.mp3")
+    from core.paths import PROJECT_ROOT, to_stored_path, from_stored_path
+    inside = os.path.join(PROJECT_ROOT, "audio", "x.mp3")
     assert to_stored_path(inside) == "audio/x.mp3"
     assert os.path.normcase(from_stored_path("audio/x.mp3")) == os.path.normcase(inside)
     outside = str(tmp_path / "y.mp3")
