@@ -11,7 +11,7 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
-from typing import List
+from typing import Any, Dict, List
 
 from .paths import AUDIO_FOLDER, to_stored_path, from_stored_path
 
@@ -55,7 +55,9 @@ def migrate_legacy_data(new_dir: str) -> bool:
 @dataclass
 class StoredPlaylist:
     name: str
-    tracks: List[str] = field(default_factory=list)  # absolute file paths
+    # Each entry is either an absolute file path (str) or, for a song that is
+    # not on this computer yet, a dict like {"pending": {"title":..., "artist":...}}.
+    tracks: List[Any] = field(default_factory=list)
 
 
 @dataclass
@@ -64,8 +66,28 @@ class UserData:
     muted: bool = False
     music_folders: List[str] = field(default_factory=lambda: [AUDIO_FOLDER])
     playlists: List[StoredPlaylist] = field(default_factory=list)
+    shuffle: bool = False
+    repeat: str = "off"                 # "off" | "all" | "one"
+    right_panel: str = ""               # "" | "queue" | "nowplaying"
+    online_enabled: bool = True         # Settings -> Online features
+    lastfm_api_key: str = ""
+    jamendo_client_id: str = ""
+    recent: List[str] = field(default_factory=list)       # recently played file paths
+    save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     is_new: bool = True        # True when no save file existed yet (first run)
     load_warning: str = ""     # message for the user if the file had to be reset
+
+
+def _store_track(t):
+    if isinstance(t, dict):
+        return t
+    return to_stored_path(t)
+
+
+def _load_track(t):
+    if isinstance(t, dict):
+        return t if isinstance(t.get("pending"), dict) else None
+    return from_stored_path(str(t))
 
 
 class Storage:
@@ -105,11 +127,19 @@ class Storage:
                 "volume": int(data.volume),
                 "muted": bool(data.muted),
                 "music_folders": [to_stored_path(p) for p in data.music_folders],
+                "shuffle": bool(data.shuffle),
+                "repeat": data.repeat if data.repeat in ("off", "all", "one") else "off",
+                "right_panel": data.right_panel,
+                "online_enabled": bool(data.online_enabled),
+                "lastfm_api_key": data.lastfm_api_key,
+                "jamendo_client_id": data.jamendo_client_id,
             },
             "playlists": [
-                {"name": p.name, "tracks": [to_stored_path(t) for t in p.tracks]}
+                {"name": p.name, "tracks": [_store_track(t) for t in p.tracks]}
                 for p in data.playlists
             ],
+            "recent": [to_stored_path(t) for t in data.recent],
+            "save_for_later": data.save_for_later,
         }
         tmp = self.path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -133,13 +163,23 @@ class Storage:
         folders = settings.get("music_folders")
         if isinstance(folders, list):
             data.music_folders = [from_stored_path(str(p)) for p in folders]
+        data.shuffle = bool(settings.get("shuffle", False))
+        data.repeat = settings.get("repeat", "off") if settings.get("repeat") in ("off", "all", "one") else "off"
+        data.right_panel = settings.get("right_panel", "") if settings.get("right_panel") in ("", "queue", "nowplaying") else ""
+        data.online_enabled = bool(settings.get("online_enabled", True))
+        data.lastfm_api_key = str(settings.get("lastfm_api_key", "") or "")
+        data.jamendo_client_id = str(settings.get("jamendo_client_id", "") or "")
+        data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
+        sfl = raw.get("save_for_later", {}) or {}
+        data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
 
         playlists = []
         for item in raw.get("playlists", []) or []:
             name = str(item.get("name", "")).strip()
             if not name:
                 continue
-            tracks = [from_stored_path(str(t)) for t in item.get("tracks", []) or []]
+            tracks = [_load_track(t) for t in item.get("tracks", []) or []]
+            tracks = [t for t in tracks if t is not None]
             playlists.append(StoredPlaylist(name, tracks))
         data.playlists = playlists
         return data

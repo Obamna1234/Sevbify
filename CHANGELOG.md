@@ -1,5 +1,17 @@
 # Changelog
 
+## v5.0 (in progress) — Queue, shuffle & repeat
+
+- **Queue panel** (right side, toggle with the ≡ button in the player bar): *Now playing*, *Next in queue* (songs you added),
+  *Next from: <source>* (Your Songs, Your Library, a playlist, search results). Click any row to jump to it; right-click to remove; *Clear*.
+- **Recently played** tab (last 50 songs, remembered between launches).
+- **Add to queue** in every song's right-click menu.
+- **Shuffle** (Ctrl+S) and **Repeat** off / all / one (Ctrl+R), remembered between launches. With repeat off, playback now
+  stops at the end of the queue (like Spotify); Next still wraps around.
+- Home grid now fits the window width (fewer columns when the side panel is open); long names are shortened with "…".
+- Dark scrollbars everywhere.
+- New modules: `core/play_queue.py` (queue logic, no UI), `ui/queue_panel.py`, `ui/icons.py` (drawn icons).
+
 ## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
 
 - The app is now called **Sevbify** (window title, `Sevbify.exe` / `Sevbify.app`, `Run Sevbify.bat`, GitHub repo `Obamna1234/Sevbify`).

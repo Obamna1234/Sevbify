@@ -7,10 +7,12 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog
 )
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut
-from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread
+from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent
 
 from .sidebar import Sidebar
 from .track_table import TrackTable
+from .queue_panel import QueuePanel
+from . import icons
 from core.paths import (  # noqa: F401  (re-exported for older code/tests)
     PROJECT_ROOT, PLACEHOLDER_IMAGE, AUDIO_FOLDER, ALBUM_CACHE, ASSETS_FOLDER, normalise_path
 )
@@ -20,6 +22,7 @@ from core.models import (  # noqa: F401
 from core import paths as core_paths
 from core.library import scan_folders
 from core.storage import Storage, StoredPlaylist
+from core.play_queue import PlayQueue
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
 OPEN_TIMEOUT_MS = 10000
@@ -27,6 +30,7 @@ OPEN_TIMEOUT_MS = 10000
 # (same behaviour as Spotify).
 PREV_RESTART_THRESHOLD_MS = 3000
 SAMPLE_PLAYLIST_NAMES = ["Favorites", "Chill Hits", "Workout Mix"]
+HOME_TILE_WIDTH = 170   # cover is 140 px; the extra room fits titles and artist names
 
 MENU_STYLE = """
 QMenu { background: #282828; color: white; border: 1px solid #3e3e3e; padding: 4px; font-size: 13px; }
@@ -137,10 +141,11 @@ class HoverableSongTile(QWidget):
         artist = QLabel(song.artist)
         artist.setStyleSheet("color: #b3b3b3; font-size: 10pt;")
         artist.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        artist.setText(artist.fontMetrics().elidedText(song.artist, Qt.TextElideMode.ElideRight, HOME_TILE_WIDTH - 6))
         layout.addWidget(artist)
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setToolTip("Click to play · Right-click for more options")
+        self.setToolTip(f"{song.title} — {song.artist}\nClick to play · Right-click for more options")
 
     def update_play_button(self):
         self.play_button.setPixmap(draw_play_button(48))
@@ -251,7 +256,16 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Sevbify")
         self.setGeometry(100, 100, 1200, 800)
-        self.setStyleSheet("background-color: #121212;")
+        # Dark, thin scrollbars everywhere (Spotify style).
+        self.setStyleSheet(
+            "QMainWindow { background-color: #121212; }"
+            "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
+            "QScrollBar::handle:vertical { background: #4d4d4d; border-radius: 5px; min-height: 30px; }"
+            "QScrollBar::handle:vertical:hover { background: #6a6a6a; }"
+            "QScrollBar:horizontal { background: transparent; height: 10px; margin: 0; }"
+            "QScrollBar::handle:horizontal { background: #4d4d4d; border-radius: 5px; min-width: 30px; }"
+            "QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }"
+            "QScrollBar::add-page, QScrollBar::sub-page { background: none; }")
 
         self.vlc_instance = vlc.Instance(*vlc_args)
         if self.vlc_instance is None:
@@ -280,11 +294,12 @@ class MainWindow(QMainWindow):
         self.slider_being_moved = False
 
         # --- Playback state (single source of truth) ---------------------
-        # The queue is the list of songs that next/previous/auto-advance walk
-        # through. Home/Library queue the whole library, Search queues the
-        # results, a playlist queues itself.
-        self.queue = []
-        self.queue_index = 0
+        # PlayQueue (core/play_queue.py) decides what plays next: the context
+        # (library, playlist, search results, radio), "Add to queue" songs,
+        # shuffle, repeat and recently played.
+        self.pq = PlayQueue()
+        self.pq.shuffle = self.user_data.shuffle
+        self.pq.repeat = self.user_data.repeat
         self.current_song = None
         self.is_playing = False
         self._track_handled = True      # end/error of current track already processed?
@@ -316,7 +331,20 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self.stack.setStyleSheet("background-color: #121212;")
-        self.top_layout.addWidget(self.stack)
+        self.top_layout.addWidget(self.stack, 1)
+
+        # Right-hand panel (Queue / Now playing), hidden until toggled.
+        self.right_panel = QStackedWidget()
+        self.right_panel.setStyleSheet("background-color: #121212; border-left: 1px solid #1f1f1f;")
+        self.queue_panel = QueuePanel(load_pixmap)
+        self.queue_panel.close_requested.connect(lambda: self.set_right_panel(""))
+        self.queue_panel.play_upcoming.connect(self._play_upcoming)
+        self.queue_panel.play_recent.connect(lambda s: self.play_song(s, queue=list(self.pq.recent), source="Recently played"))
+        self.queue_panel.remove_from_queue.connect(self._remove_from_user_queue)
+        self.queue_panel.clear_user_queue.connect(self._clear_user_queue)
+        self.right_panel.addWidget(self.queue_panel)
+        self.right_panel.hide()
+        self.top_layout.addWidget(self.right_panel)
 
         self.home_page = QWidget()
         self.search_page = QWidget()
@@ -341,9 +369,26 @@ class MainWindow(QMainWindow):
         if self.user_data.load_warning:
             self.show_status("⚠ " + self.user_data.load_warning, 20000)
 
+        self.set_right_panel(self.user_data.right_panel, save=False)
         self.rescan_library()
 
-    # Kept for backwards compatibility with older code that used current_index.
+    # --- Compatibility: older code/tests use .queue / .queue_index -------
+    @property
+    def queue(self):
+        return self.pq.items
+
+    @queue.setter
+    def queue(self, songs):
+        self.pq.replace_items(songs)
+
+    @property
+    def queue_index(self):
+        return self.pq.index
+
+    @queue_index.setter
+    def queue_index(self, value):
+        self.pq.index = value
+
     @property
     def current_index(self):
         return self.queue_index
@@ -384,7 +429,12 @@ class MainWindow(QMainWindow):
             for pl in self.playlists:
                 pl.songs = [by_key.get(s.key, s) for s in pl.songs]
 
-        self.queue = [by_key.get(s.key, s) for s in self.queue] if self.queue else list(songs)
+        self.pq.rebind(by_key)
+        if first_load:
+            for path in reversed(self.user_data.recent):
+                song = by_key.get(normalise_path(path))
+                if song is not None:
+                    self.pq.record_played(song)
         if self.current_song is not None:
             self.current_song = by_key.get(self.current_song.key, self.current_song)
 
@@ -396,6 +446,7 @@ class MainWindow(QMainWindow):
         if self.open_playlist is not None:
             self.refresh_playlist_page()
         self._refresh_now_playing()
+        self._queue_changed()
 
         if problems:
             self.show_status("⚠ " + problems[0] + (f" (+{len(problems) - 1} more)" if len(problems) > 1 else ""), 10000)
@@ -474,6 +525,7 @@ class MainWindow(QMainWindow):
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [s.file_path for s in p.songs]) for p in self.playlists
             ]
+            self.user_data.recent = [s.file_path for s in self.pq.recent]
         try:
             self.storage.save(self.user_data)
         except Exception as e:
@@ -580,11 +632,13 @@ class MainWindow(QMainWindow):
         menu.setStyleSheet(MENU_STYLE)
         return menu
 
-    def build_song_menu(self, song, queue=None, playlist=None, row=None):
+    def build_song_menu(self, song, queue=None, playlist=None, row=None, source=""):
         menu = self._new_menu()
         play = menu.addAction("▶  Play")
         play.setEnabled(song.exists)
-        play.triggered.connect(lambda: self.play_song(song, queue=queue))
+        play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
+        add_q = menu.addAction("≡  Add to queue")
+        add_q.triggered.connect(lambda: self.add_to_queue(song))
 
         add_menu = menu.addMenu("➕  Add to playlist")
         add_menu.setStyleSheet(MENU_STYLE)
@@ -610,8 +664,8 @@ class MainWindow(QMainWindow):
             remove.triggered.connect(lambda: self.remove_from_playlist(playlist, row))
         return menu
 
-    def _show_song_menu(self, song, global_pos, queue=None, playlist=None, row=None):
-        self.build_song_menu(song, queue, playlist, row).exec(global_pos)
+    def _show_song_menu(self, song, global_pos, queue=None, playlist=None, row=None, source=""):
+        self.build_song_menu(song, queue, playlist, row, source).exec(global_pos)
 
     def _new_playlist_with(self, song):
         name, ok = QInputDialog.getText(self, "New playlist", "Playlist name:")
@@ -660,6 +714,9 @@ class MainWindow(QMainWindow):
 
         btn_style = "QPushButton { border: none; color: white; font-size: 18px; padding: 5px 10px; background: transparent; } QPushButton:hover { color: #1db954; }"
 
+        self.shuffle_btn = self._icon_button("Shuffle (Ctrl+S)", self.toggle_shuffle)
+        top.addWidget(self.shuffle_btn)
+
         self.prev_btn = QPushButton("⏮")
         self.prev_btn.clicked.connect(self.prev_song)
         self.prev_btn.setStyleSheet(btn_style)
@@ -678,7 +735,14 @@ class MainWindow(QMainWindow):
         self.next_btn.setToolTip("Next (Ctrl+Right)")
         top.addWidget(self.next_btn)
 
-        top.addSpacing(30)
+        self.repeat_btn = self._icon_button("Repeat (Ctrl+R)", self.cycle_repeat)
+        top.addWidget(self.repeat_btn)
+        self._update_mode_buttons()
+
+        top.addSpacing(24)
+        self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
+        top.addWidget(self.queue_btn)
+        top.addSpacing(6)
 
         # --- Volume -------------------------------------------------------
         self.mute_btn = QPushButton()
@@ -734,6 +798,8 @@ class MainWindow(QMainWindow):
         sc("Ctrl+Down", lambda: self.volume_slider.setValue(self.volume_slider.value() - 5))
         sc("Ctrl+F", self.show_search)
         sc("Ctrl+L", self.show_library)
+        sc("Ctrl+S", self.toggle_shuffle)
+        sc("Ctrl+R", self.cycle_repeat)
 
     # ------------------------------------------------------------------
     # Volume
@@ -878,6 +944,8 @@ class MainWindow(QMainWindow):
         self.home_scroll.setWidgetResizable(True)
         self.home_scroll.setStyleSheet("QScrollArea { border: none; background: #121212; }")
         self.home_scroll.setWidget(self._muted_label("Loading your music…"))
+        self.home_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.home_scroll.installEventFilter(self)
         layout.addWidget(self.home_scroll)
 
     def refresh_home(self):
@@ -901,15 +969,41 @@ class MainWindow(QMainWindow):
         grid.setContentsMargins(0, 15, 0, 15)
         grid_widget.setLayout(grid)
 
-        for idx, song in enumerate(self.songs):
+        self._home_tiles = []
+        for song in self.songs:
             tile = HoverableSongTile(song, 140)
-            tile.play_clicked.connect(lambda s: self.play_song(s, queue=self.songs))
-            tile.context_requested.connect(lambda s, pos: self._show_song_menu(s, pos, queue=self.songs))
-            grid.addWidget(tile, idx // 5, idx % 5)
+            tile.setFixedWidth(HOME_TILE_WIDTH)
+            tile.play_clicked.connect(lambda s: self.play_song(s, queue=self.songs, source="Your Songs"))
+            tile.context_requested.connect(lambda s, pos: self._show_song_menu(s, pos, queue=self.songs, source="Your Songs"))
+            self._home_tiles.append(tile)
+        self._home_grid = grid
+        self._home_cols = 0
+        self._relayout_home()
 
-        scroll_layout.addWidget(grid_widget)
+        scroll_layout.addWidget(grid_widget, alignment=Qt.AlignmentFlag.AlignLeft)
         scroll_layout.addStretch()
         self.home_scroll.setWidget(content)
+
+    def _relayout_home(self):
+        """Fit as many tile columns as the window width allows (like Spotify)."""
+        grid = getattr(self, "_home_grid", None)
+        if grid is None:
+            return
+        width = self.home_scroll.viewport().width() - 30
+        cols = max(1, width // (HOME_TILE_WIDTH + grid.spacing()))
+        if cols == self._home_cols:
+            return
+        self._home_cols = cols
+        for tile in self._home_tiles:
+            grid.removeWidget(tile)
+        for idx, tile in enumerate(self._home_tiles):
+            grid.addWidget(tile, idx // cols, idx % cols)
+
+    def eventFilter(self, obj, event):
+        if obj is getattr(self, "home_scroll", None) and event.type() == QEvent.Type.Resize:
+            # The inner viewport is resized just after this event; measure it then.
+            QTimer.singleShot(0, self._relayout_home)
+        return super().eventFilter(obj, event)
 
     # --- Search -----------------------------------------------------------
     def setup_search_page(self):
@@ -934,9 +1028,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.search_summary)
 
         self.search_table = TrackTable(sortable=False)
-        self.search_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view))
+        self.search_table.play_requested.connect(
+            lambda s, view: self.play_song(s, queue=view, source=f"Search: {self.search_input.text().strip()}"))
         self.search_table.context_requested.connect(
-            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.search_table.songs_in_view()))
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.search_table.songs_in_view(),
+                                                     source=f"Search: {self.search_input.text().strip()}"))
         self.search_table.hide()
         layout.addWidget(self.search_table)
         layout.addStretch()
@@ -1002,9 +1098,9 @@ class MainWindow(QMainWindow):
         self.refresh_folder_list()
 
         self.library_table = TrackTable(sortable=True)
-        self.library_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view))
+        self.library_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source="Your Library"))
         self.library_table.context_requested.connect(
-            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.library_table.songs_in_view()))
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.library_table.songs_in_view(), source="Your Library"))
         layout.addWidget(self.library_table, 1)
 
     def refresh_folder_list(self):
@@ -1088,7 +1184,7 @@ class MainWindow(QMainWindow):
 
     def play_playlist(self, playlist):
         if playlist.songs:
-            self.play_song(playlist.songs[0], queue=playlist.songs)
+            self.play_song(playlist.songs[0], queue=playlist.songs, source=playlist.name)
         else:
             self.show_status(f"\"{playlist.name}\" is empty.", kind="info")
 
@@ -1195,10 +1291,12 @@ class MainWindow(QMainWindow):
 
         self.pl_table = TrackTable(sortable=False)
         self.pl_table.play_requested.connect(
-            lambda s, view: self.open_playlist and self.play_song(s, queue=self.open_playlist.songs))
+            lambda s, view: self.open_playlist and self.play_song(s, queue=self.open_playlist.songs,
+                                                                  source=self.open_playlist.name))
         self.pl_table.context_requested.connect(
             lambda s, row, pos: self.open_playlist and self._show_song_menu(
-                s, pos, queue=self.open_playlist.songs, playlist=self.open_playlist, row=row))
+                s, pos, queue=self.open_playlist.songs, playlist=self.open_playlist, row=row,
+                source=self.open_playlist.name))
         layout.addWidget(self.pl_table, 1)
 
     def show_playlist(self, playlist):
@@ -1248,30 +1346,33 @@ class MainWindow(QMainWindow):
     # ==================================================================
     # Playback
     # ==================================================================
-    def play_song(self, song: Song, queue=None):
+    def play_song(self, song: Song, queue=None, source=None):
         """Start playing a song. Never blocks the UI.
 
-        queue: the list of songs next/previous should walk through. If omitted,
-        the current queue is kept when it contains the song, otherwise the
-        whole library is used.
+        queue:  the list of songs to continue with (the "context"). If omitted,
+                the current context is kept when it contains the song,
+                otherwise the whole library is used.
+        source: name shown as "Next from: <source>" in the queue panel.
         """
         if queue is not None:
-            self.queue = list(queue)
-        elif song not in self.queue:
-            self.queue = list(self.songs)
-        try:
-            self.queue_index = self.queue.index(song)
-        except ValueError:
-            self.queue = [song]
-            self.queue_index = 0
+            self.pq.set_context(queue, song, source if source is not None else self.pq.source_name)
+        elif song in self.pq.items:
+            self.pq.index = self.pq.items.index(song)
+        else:
+            self.pq.set_context(self.songs, song, source or "Your Songs")
         self._consecutive_failures = 0
         self._start_current()
 
     def _start_current(self):
         if getattr(self, "_shut_down", False) or not self.queue:
             return
-        song = self.queue[self.queue_index]
+        song = self.pq.current
+        if song is None:
+            return
         self.current_song = song
+        self.pq.record_played(song)
+        self._queue_changed()
+        self.schedule_save(3000)
 
         # Show what we are trying to play straight away.
         self.song_info.setText(f"{song.title} - {song.artist}")
@@ -1324,21 +1425,26 @@ class MainWindow(QMainWindow):
             return
         self.show_status(f"⚠ Skipped \"{name}\": {reason}")
         # Skip on the next event-loop turn so the UI stays responsive.
-        QTimer.singleShot(0, self._advance_after_current)
+        QTimer.singleShot(0, lambda: self._advance_after_current(auto=False))
 
-    def _advance_after_current(self):
-        if not self.queue:
+    def _advance_after_current(self, auto=True):
+        """auto=True: the song finished by itself (repeat rules apply)."""
+        if self.pq.advance(auto=auto) is None:
+            # End of the queue with repeat off: stop, like Spotify.
+            self.is_playing = False
+            self.play_btn.setText("▶️")
+            self.progress_slider.setValue(0)
+            self.time_label.setText("00:00")
+            self._queue_changed()
             return
-        self.queue_index = (self.queue_index + 1) % len(self.queue)
         self._start_current()
 
     def play_pause_song(self):
         try:
-            if not self.queue:
+            if not self.pq.items:
                 if not self.songs:
                     return
-                self.queue = list(self.songs)
-                self.queue_index = 0
+                self.pq.set_context(self.songs, self.songs[0], "Your Songs")
 
             state = self.player.get_state()
 
@@ -1360,10 +1466,10 @@ class MainWindow(QMainWindow):
             self.show_status(f"⚠ Play/Pause error: {e}")
 
     def next_song(self):
-        if self.queue:
+        if self.pq.items or self.pq.user_queue:
             self._consecutive_failures = 0
-            self.queue_index = (self.queue_index + 1) % len(self.queue)
-            self._start_current()
+            if self.pq.advance(auto=False) is not None:
+                self._start_current()
 
     def prev_song(self):
         if not self.queue:
@@ -1374,8 +1480,90 @@ class MainWindow(QMainWindow):
             # Like Spotify: restart the current song if we're a few seconds in.
             self.player.set_time(0)
             return
-        self.queue_index = (self.queue_index - 1) % len(self.queue)
+        self.pq.previous()
         self._start_current()
+
+    # ------------------------------------------------------------------
+    # Queue, shuffle, repeat, right panel
+    # ------------------------------------------------------------------
+    def _icon_button(self, tooltip, slot):
+        b = QPushButton()
+        b.setToolTip(tooltip)
+        b.setFixedSize(34, 34)
+        b.setIconSize(QSize(20, 20))
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 17px; }"
+                        "QPushButton:hover { background: #2a2a2a; }")
+        b.clicked.connect(slot)
+        return b
+
+    def _update_mode_buttons(self):
+        on = self.pq.shuffle
+        self.shuffle_btn.setIcon(icons.shuffle(icons.GREEN if on else icons.GREY, dot=on))
+        self.shuffle_btn.setToolTip(f"Shuffle: {'on' if on else 'off'} (Ctrl+S)")
+        mode = self.pq.repeat
+        self.repeat_btn.setIcon(icons.repeat(icons.GREY if mode == "off" else icons.GREEN,
+                                             one=(mode == "one"), dot=(mode != "off")))
+        label = {"off": "off", "all": "all songs", "one": "this song"}[mode]
+        self.repeat_btn.setToolTip(f"Repeat: {label} (Ctrl+R)")
+        if hasattr(self, "queue_btn"):
+            active = not self.right_panel.isHidden() and self.right_panel.currentWidget() is self.queue_panel
+            self.queue_btn.setIcon(icons.queue(icons.GREEN if active else icons.GREY, dot=active))
+
+    def toggle_shuffle(self):
+        self.pq.set_shuffle(not self.pq.shuffle)
+        self.user_data.shuffle = self.pq.shuffle
+        self._update_mode_buttons()
+        self._queue_changed()
+        self.schedule_save()
+
+    def cycle_repeat(self):
+        self.user_data.repeat = self.pq.cycle_repeat()
+        self._update_mode_buttons()
+        self._queue_changed()
+        self.schedule_save()
+
+    def add_to_queue(self, song):
+        self.pq.add_to_queue(song)
+        self._queue_changed()
+        self.show_status(f"Added to queue: {song.title}", kind="info", timeout_ms=2500)
+
+    def _remove_from_user_queue(self, position):
+        self.pq.remove_from_user_queue(position)
+        self._queue_changed()
+
+    def _clear_user_queue(self):
+        self.pq.user_queue.clear()
+        self._queue_changed()
+
+    def _play_upcoming(self, position):
+        if self.pq.jump_to_upcoming(position) is not None:
+            self._consecutive_failures = 0
+            self._start_current()
+
+    def _queue_changed(self):
+        if not self.right_panel.isHidden() and self.right_panel.currentWidget() is self.queue_panel:
+            user, upcoming = self.pq.upcoming(limit=QueuePanel.MAX_ROWS)
+            self.queue_panel.refresh(self.current_song, user, upcoming, self.pq.source_name, list(self.pq.recent))
+
+    def set_right_panel(self, name, save=True):
+        """name: "" (hidden), "queue" or "nowplaying"."""
+        widget = {"queue": self.queue_panel}.get(name)
+        if widget is None:
+            self.right_panel.hide()
+            name = ""
+        else:
+            self.right_panel.setCurrentWidget(widget)
+            self.right_panel.show()
+        self.user_data.right_panel = name
+        self._update_mode_buttons()
+        self._queue_changed()
+        if save:
+            self.schedule_save()
+
+    def toggle_right_panel(self, name):
+        showing = not self.right_panel.isHidden() and self.user_data.right_panel == name
+        self.set_right_panel("" if showing else name)
 
     def closeEvent(self, event):
         """Save, stop audio and release VLC cleanly when the window closes."""
