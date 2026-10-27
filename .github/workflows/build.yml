@@ -3,7 +3,9 @@ name: Build & test
 # On every push: runs the automated tests on real Windows (macOS/Linux ready,
 # switched off for now — see the matrix below) machines (with VLC installed), builds the app for each, checks the built app
 # actually starts and loads a library, and uploads a download for each system.
-# Pushing a tag like v5.0 also publishes a GitHub Release with all three.
+# Releases: when the VERSION file holds a version that has no release yet (and the push is to main),
+# a green build publishes it as a GitHub Release tagged v<VERSION>, with RELEASE_NOTES.md as its text.
+# Pushing a tag like v5.0 by hand does the same.
 on:
   push:
   workflow_dispatch:
@@ -33,6 +35,17 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+
+      - name: Is this a new version to release?
+        id: version
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "Will publish release v$V if everything passes."
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"; echo "No new version (v$V already released, or not main)."
+          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -123,14 +136,16 @@ jobs:
             Sevbify-*.tar.gz
           retention-days: 30
 
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish release (new VERSION or a pushed tag)
+        if: matrix.name == 'Windows' && (startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true')
         uses: softprops/action-gh-release@v2
         with:
-          name: Sevbify ${{ github.ref_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          target_commitish: ${{ github.sha }}
+          name: Sevbify ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
           body_path: RELEASE_NOTES.md
-          # Tags with a dash (v5.0.0-beta.1) are test versions: marked "Pre-release".
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          # Versions with a dash (5.0.0-beta.1) are test versions: marked "Pre-release".
+          prerelease: ${{ contains(steps.version.outputs.version, '-') || contains(github.ref_name, '-') }}
           files: |
             Sevbify-*.zip
             Sevbify-*.tar.gz

@@ -43,9 +43,10 @@ repo's main page) → newest version → under **Assets** download **Sevbify-Win
 **Sevbify.exe** (VLC must be installed). The install steps are on each release page.
 
 How releases are made: every push is built and tested on a real Windows machine by GitHub Actions (macOS and Linux
-builds are set up but switched off until later). When a version is ready, a tag like `v5.0.0-beta.1` is pushed and
-the same build is published as a Release automatically, with `RELEASE_NOTES.md` as its description. Tags with a dash
-are marked *Pre-release*. In-between builds are also downloadable from the **Actions** tab → latest *Build & test*
+builds are set up but switched off until later). When a version is ready, the version number in the `VERSION` file
+is changed (e.g. `5.0.0-beta.1`). If every test and check passes, that build is published as a Release tagged
+`v5.0.0-beta.1` automatically, with `RELEASE_NOTES.md` as its description. Versions with a dash are marked
+*Pre-release*. In-between builds are also downloadable from the **Actions** tab → latest *Build & test*
 run → **Sevbify-Windows** (kept for 30 days).
 - **macOS:** the app isn't signed by Apple yet, so the first time, right-click `Sevbify.app` → **Open** → **Open**.
 - **Linux:** extract with `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager (e.g. `sudo apt install vlc`).
