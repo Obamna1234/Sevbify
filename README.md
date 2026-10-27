@@ -1,16 +1,16 @@
-# Aurvo — Local Music Player
+# Sevbify — Local Music Player
 
-Aurvo is an ad-free desktop music player for your own music files, with a familiar dark,
+Sevbify is an ad-free desktop music player for your own music files, with a familiar dark,
 streaming-app-style interface. Built with Python, PyQt6 and VLC.
 Windows is the first target platform.
 
-**Current version:** v4.9.2 — library, search, saved playlists, volume. See `CHANGELOG.md`.
+**Current version:** v4.9.3 — library, search, saved playlists, volume. See `CHANGELOG.md`.
 
 ## Requirements
 
 | What | Version | Notes |
 |---|---|---|
-| Windows | 10 or 11, 64-bit | |
+| Operating system | Windows 10/11 (64-bit), macOS, or Linux | Windows first; macOS and Linux builds are set up and will be switched on later |
 | Python | 3.10 – 3.13, **64-bit** | https://www.python.org/downloads/ — tick "Add python.exe to PATH" |
 | VLC media player | 3.0.x, **64-bit** | https://www.videolan.org/vlc/ — must match Python's 64-bit; the app uses VLC's engine (libVLC) for playback |
 | Python packages | see `requirements.txt` | PyQt6, python-vlc, mutagen, Pillow, pytest |
@@ -20,22 +20,24 @@ Windows is the first target platform.
 **One-time setup**
 1. Install **64-bit Python 3.12** (https://www.python.org/downloads/, tick *Add python.exe to PATH*)
    and **64-bit VLC** (https://www.videolan.org/vlc/).
-2. In GitHub Desktop: **File → Clone repository → Aurvo**.
+2. In GitHub Desktop: **File → Clone repository → Sevbify**.
 3. Optional: copy your music into the clone's `audio` folder (it stays on your PC and is never
    uploaded), or skip this and use **Your Library → Add folder…** in the app.
    With no `audio` folder, the app uses your Windows *Music* folder.
 
 **Every time there's an update**
 1. GitHub Desktop → **Fetch origin** → **Pull origin**.
-2. Double-click **`Run Aurvo.bat`**.
+2. Double-click **`Run Sevbify.bat`**.
 
 The first run sets up a private Python environment (about a minute). After that it starts
 straight away, and re-installs packages automatically only when an update needs it.
 `Run Tests.bat` runs the automated tests.
 
-**Ready-made .exe (no Python needed):** every push is built and tested on a real Windows machine
-by GitHub Actions. Open the repo's **Actions** tab → latest *Windows build & tests* run →
-download **Aurvo-Windows** → unzip → run `Aurvo.exe` (VLC must be installed).
+**Ready-made app (no Python needed):** every push is built and tested on a real Windows machine by GitHub Actions
+(macOS and Linux builds are set up but switched off until later). Open the repo's **Actions** tab → latest *Build & test* run →
+download **Sevbify-Windows**, **Sevbify-macOS** or **Sevbify-Linux** → unzip → run it (VLC must be installed).
+- **macOS:** the app isn't signed by Apple yet, so the first time, right-click `Sevbify.app` → **Open** → **Open**.
+- **Linux:** extract with `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager (e.g. `sudo apt install vlc`).
 
 ## Manual setup (Windows, PowerShell)
 
@@ -61,7 +63,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 python app.py
 ```
 
-You can also launch it from any folder, e.g. `python "C:\path\to\Aurvo\app.py"` —
+You can also launch it from any folder, e.g. `python "C:\path\to\Sevbify\app.py"` —
 music and artwork are found relative to the project folder.
 
 ## Using the app
@@ -86,8 +88,8 @@ art embedded in the file's tags, or a placeholder.
 
 ## Where your playlists and settings are saved
 
-`%APPDATA%\Aurvo\library.json` (paste that into File Explorer's address bar). Playlists saved
-under the app's old name (`%APPDATA%\Custom Spotify Replica`) are copied across automatically on first launch.
+`%APPDATA%\Sevbify\library.json` (paste that into File Explorer's address bar). Playlists saved
+under the app's earlier names (`%APPDATA%\Aurvo` or `%APPDATA%\Custom Spotify Replica`) are copied across automatically on first launch.
 Playlists, volume and music folders are saved automatically. Songs inside the project folder are
 saved with relative paths, so moving the project folder doesn't break playlists. If a song's
 file goes missing, it stays in the playlist greyed out as "(file missing)" instead of being
@@ -107,9 +109,9 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 
 | Path | Purpose |
 |---|---|
-| `Run Aurvo.bat` | One-click launcher (sets up Python packages automatically) |
+| `Run Sevbify.bat` | One-click launcher (sets up Python packages automatically) |
 | `Run Tests.bat` | Runs the automated tests |
-| `.github/workflows/windows-build.yml` | Automatic Windows tests + `.exe` build on every push |
+| `.github/workflows/build.yml` | Automatic tests + app builds for Windows, macOS and Linux on every push |
 | `app.py` | Entry point. Shows a clear message if VLC is missing. `--smoke-test` starts, loads the library and exits (used by the automatic build). |
 | `core/` | Data and logic with no UI code: `paths.py`, `models.py` (Song, Playlist), `library.py` (folder scanning), `storage.py` (save file) |
 | `ui/main_window.py` | Main window: pages, player bar, playback, playlist actions |

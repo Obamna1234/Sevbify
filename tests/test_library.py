@@ -139,7 +139,7 @@ def test_rescan_keeps_playlists_linked(window, qapp, audio_dir):
 def test_playlists_migrate_from_old_app_name(tmp_path):
     from core.storage import Storage, UserData, StoredPlaylist, migrate_legacy_data
     old_dir = tmp_path / "Custom Spotify Replica"
-    new_dir = tmp_path / "Aurvo"
+    new_dir = tmp_path / "Sevbify"
     data = UserData(volume=33, playlists=[StoredPlaylist("Old faves", ["/music/a.mp3"])])
     Storage(str(old_dir)).save(data)
     assert migrate_legacy_data(str(new_dir))

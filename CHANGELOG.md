@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
+
+- The app is now called **Sevbify** (window title, `Sevbify.exe` / `Sevbify.app`, `Run Sevbify.bat`, GitHub repo `Obamna1234/Sevbify`).
+- Saved data lives in `%APPDATA%\Sevbify\` (macOS: `~/Library/Application Support/Sevbify`, Linux: `~/.local/share/Sevbify`).
+  Data from `Aurvo` or `Custom Spotify Replica` folders is copied across automatically on first launch; old folders are kept.
+- GitHub Actions workflow (`build.yml`) can build, test and start-up-check Windows, macOS and Linux. Only Windows runs for now; macOS/Linux are switched off until the Windows app is finished (saves Actions minutes).
+
 ## v4.9.2 — 27 Oct 2026 — Renamed to Aurvo
 
 - The app is now called **Aurvo** (window title, `Aurvo.exe`, `Run Aurvo.bat`, GitHub repo).

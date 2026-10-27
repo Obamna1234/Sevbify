@@ -1,6 +1,6 @@
 """Saving and loading user data (playlists + settings) as a versioned JSON file.
 
-File location (Windows): %APPDATA%\\Aurvo\\library.json
+File location (Windows): %APPDATA%\\Sevbify\\library.json
 The file is written atomically (temp file + rename) so a crash or power cut
 while saving can't leave a half-written file. If the file is unreadable it is
 renamed to library.corrupt-<timestamp>.json and the app starts with defaults,
@@ -15,9 +15,9 @@ from typing import List
 
 from .paths import AUDIO_FOLDER, to_stored_path, from_stored_path
 
-APP_DIR_NAME = "Aurvo"
-# Folder used before the app was named Aurvo; data is copied from it once.
-LEGACY_APP_DIR_NAMES = ["Custom Spotify Replica"]
+APP_DIR_NAME = "Sevbify"
+# Folders used under the app's earlier names; data is copied from the newest one once.
+LEGACY_APP_DIR_NAMES = ["Aurvo", "Custom Spotify Replica"]  # newest first
 SCHEMA_VERSION = 1
 DATA_FILE_NAME = "library.json"
 
