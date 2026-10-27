@@ -6,8 +6,8 @@ from PyQt6.QtWidgets import (
     QDialog, QLineEdit, QListWidget, QAbstractItemView,
     QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog
 )
-from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut
-from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent
+from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut, QDesktopServices
+from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl
 
 from .sidebar import Sidebar
 from .track_table import TrackTable
@@ -27,6 +27,8 @@ from core.play_queue import PlayQueue
 from core.canvas import find_canvas
 from core.online.net import NetClient, OfflineError, OnlineDisabled
 from core.online.providers import OnlineMusic
+from core.online.models import OnlineTrack, build_match_index, find_local_match
+from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
 from .settings_dialog import SettingsDialog
 
@@ -544,7 +546,7 @@ class MainWindow(QMainWindow):
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [s.file_path for s in p.songs]) for p in self.playlists
             ]
-            self.user_data.recent = [s.file_path for s in self.pq.recent]
+            self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
         try:
             self.storage.save(self.user_data)
         except Exception as e:
@@ -658,6 +660,18 @@ class MainWindow(QMainWindow):
         play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
         add_q = menu.addAction("≡  Add to queue")
         add_q.triggered.connect(lambda: self.add_to_queue(song))
+        radio = menu.addAction("◉  Go to song radio")
+        has_artist = bool(song.artist) and song.artist != "Unknown Artist"
+        radio.setEnabled(self.online_enabled and has_artist)
+        if not self.online_enabled:
+            radio.setText("◉  Go to song radio (turn on Online features)")
+        radio.triggered.connect(lambda: self.start_radio(song))
+        if has_artist:
+            open_menu = menu.addMenu("↗  Open in")
+            open_menu.setStyleSheet(MENU_STYLE)
+            track = song.track if getattr(song, "is_remote", False) else OnlineTrack(song.title, song.artist)
+            for label, url in track.links().items():
+                open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
 
         add_menu = menu.addMenu("➕  Add to playlist")
         add_menu.setStyleSheet(MENU_STYLE)
@@ -1412,7 +1426,21 @@ class MainWindow(QMainWindow):
         self._reached_playing = False
         self._open_elapsed_ms = 0
 
-        if not song.exists:
+        is_remote = getattr(song, "is_remote", False)
+        if is_remote:
+            if not self.online_enabled:
+                self.player.stop()
+                self._track_handled = True
+                self._handle_failed_track("online features are switched off")
+                return
+            if not song.playable_url:
+                self.player.stop()
+                self._track_handled = True
+                self._handle_failed_track("no preview available for this song")
+                return
+            if song.is_preview:
+                self.song_info.setText(f"{song.title} - {song.artist}   ·   30-second preview")
+        elif not song.exists:
             self.player.stop()
             self._track_handled = True
             self._handle_failed_track("file not found (moved or deleted?)")
@@ -1420,7 +1448,7 @@ class MainWindow(QMainWindow):
 
         try:
             self.player.stop()
-            media = self.vlc_instance.media_new(song.file_path)
+            media = self.vlc_instance.media_new(song.playable_url if is_remote else song.file_path)
             self.player.set_media(media)
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
@@ -1574,7 +1602,8 @@ class MainWindow(QMainWindow):
             self._start_current()
 
     def _update_now_playing(self, song):
-        canvas = find_canvas(song, self.storage.data_dir) if song is not None else None
+        canvas = (find_canvas(song, self.storage.data_dir)
+                  if song is not None and not getattr(song, "is_remote", False) else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
         self._refresh_artist_card()
 
@@ -1675,6 +1704,82 @@ class MainWindow(QMainWindow):
                 on_error(err)
 
         return run_async(self, fn, *args, on_done=done, on_error=failed)
+
+    # ------------------------------------------------------------------
+    # Go to Radio
+    # ------------------------------------------------------------------
+    def start_radio(self, seed):
+        """Build a radio station from a song (online) and continue playing from it."""
+        if not self.online_enabled:
+            self.show_status("⚠ Radio needs Online features (Settings).")
+            return
+        name = f"{seed.title} Radio"
+        self.show_status(f"Starting {name}…", kind="info", timeout_ms=15000)
+
+        def done(tracks):
+            if not tracks:
+                self.show_status(f"⚠ Couldn't find songs similar to \"{seed.title}\".")
+                return
+            items = self.radio_items(tracks)
+            playing_seed = self.current_song is not None and self.current_song == seed and self.is_playing
+            self.pq.set_context([seed] + [s for s in items if s != seed], seed, name)
+            if playing_seed:
+                self._queue_changed()
+            else:
+                self._consecutive_failures = 0
+                self._start_current()
+            local = sum(1 for s in items if not getattr(s, "is_remote", False))
+            self.show_status(f"{name}: {len(items)} songs ({local} from your library, others as previews)",
+                             kind="info", timeout_ms=6000)
+            if self.user_data.right_panel == "":
+                self.set_right_panel("queue")
+            self.fetch_covers(items)
+
+        def failed(err):
+            if isinstance(err, OfflineError):
+                self.show_status("⚠ You're offline, so Radio can't find new songs right now.")
+            else:
+                self.show_status(f"⚠ Radio couldn't start: {err}")
+
+        self.online_call(self.online.radio, seed.artist, seed.title, on_done=done, on_error=failed)
+
+    def radio_items(self, tracks):
+        """Turn online tracks into queue items: your own file if you have the song,
+        otherwise an online (preview) song."""
+        index = build_match_index(self.songs)
+        out = []
+        for t in tracks:
+            local = find_local_match(t, self.songs, index)
+            if local is not None:
+                out.append(local)
+            elif t.stream_url or t.preview_url:
+                out.append(RemoteSong(t))
+            # else: nothing we're allowed to play here, so leave it out
+        return out
+
+    def fetch_covers(self, songs, limit=40):
+        """Download cover art for online songs in the background, then refresh views."""
+        pending = [s for s in songs if getattr(s, "is_remote", False) and s.track.cover_url
+                   and s.album_cover_path == PLACEHOLDER_IMAGE][:limit]
+        for s in pending:
+            def done(path, song=s):
+                if path:
+                    song.album_cover_path = path
+                    self._schedule_view_refresh()
+            self.online_call(self.net.get_image, s.track.cover_url, on_done=done)
+
+    def _schedule_view_refresh(self):
+        if not hasattr(self, "_view_refresh_timer"):
+            self._view_refresh_timer = QTimer(self)
+            self._view_refresh_timer.setSingleShot(True)
+            self._view_refresh_timer.timeout.connect(self._refresh_online_views)
+        self._view_refresh_timer.start(250)
+
+    def _refresh_online_views(self):
+        self._queue_changed()
+        if self.current_song is not None and getattr(self.current_song, "is_remote", False):
+            self.set_album_cover(self.current_song.album_cover_path)
+            self.now_playing_panel.artwork.set_pixmap(load_pixmap(self.current_song.album_cover_path))
 
     def _update_online_indicator(self):
         if not self.online_enabled:

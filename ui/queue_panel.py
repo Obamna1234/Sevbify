@@ -59,7 +59,12 @@ class TrackRow(QFrame):
         text.addWidget(title)
         text.addWidget(artist)
         h.addLayout(text, 1)
-        if not song.exists:
+        if getattr(song, "is_remote", False):
+            kind = "preview" if song.is_preview else "online"
+            artist.setText(artist.fontMetrics().elidedText(f"{song.artist}  ·  {kind}", Qt.TextElideMode.ElideRight, 200))
+            self.setToolTip("Not in your library: plays as a 30-second preview" if song.is_preview
+                            else "Not in your library: plays online")
+        elif not song.exists:
             title.setStyleSheet("color: #6a6a6a; font-size: 14px; font-weight: 600;")
             self.setToolTip("Not on this computer")
 

@@ -250,6 +250,13 @@ class OnlineMusic:
             out.append(t)
             if len(out) >= limit:
                 break
+        # Last.fm suggestions only have artist + title: add cover art and a preview.
+        for i, t in enumerate(out):
+            if t.source != "deezer":
+                try:
+                    out[i] = self.enrich(t)
+                except ServiceError:
+                    pass
         return out
 
     def enrich(self, track):
@@ -258,7 +265,8 @@ class OnlineMusic:
         if track.source == "deezer" and track.cover_url:
             return track
         found = self.deezer.find_track(track.artist, track.title)
-        if found:
+        # Only accept the same song: search engines happily return "close" ones.
+        if found and found.key == track.key:
             found.genre = found.genre or track.genre
             return found
         return track
