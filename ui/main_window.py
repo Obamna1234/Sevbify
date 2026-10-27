@@ -1027,6 +1027,18 @@ class MainWindow(QMainWindow):
                 new_pos = (self.progress_slider.value() / 1000) * duration
                 self.player.set_time(int(new_pos))
 
+    def _known_length(self):
+        """The longest length VLC has given for the current track, from the player or the file itself.
+        A real song always has one by the time it ends; a file VLC can't read stays at 0."""
+        lengths = [self._seen_length, self.player.get_length()]
+        try:
+            media = self.player.get_media()
+            if media is not None:
+                lengths.append(media.get_duration())
+        except Exception:
+            pass
+        return max(lengths)
+
     def update_progress(self):
         """Runs every 100 ms on the UI thread. Only uses non-blocking VLC calls."""
         if self.current_song is None:
@@ -1052,12 +1064,12 @@ class MainWindow(QMainWindow):
         if self._track_handled:
             return
 
-        if state == vlc.State.Ended and not self._reached_playing and self.player.get_length() > 0:
+        if state == vlc.State.Ended and not self._reached_playing and self._known_length() > 0:
             # A very short song can start and finish between two progress checks.
             # VLC knew its length, so it really played (a broken file has length 0).
             self._reached_playing = True
 
-        if state == vlc.State.Ended and self._reached_playing and max(self._seen_length, self.player.get_length()) <= 0:
+        if state == vlc.State.Ended and self._reached_playing and self._known_length() <= 0:
             # VLC can say "Playing" for a moment on a file it can't read, then "Ended" with no length.
             self._reached_playing = False
 

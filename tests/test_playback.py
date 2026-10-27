@@ -59,7 +59,10 @@ def test_corrupt_file_is_skipped_with_message(window, qapp):
     Path(window.songs[0].file_path).write_bytes(b"this is not audio")
     window.play_song(window.songs[0])
     assert wait_until(qapp, lambda: "Skipped" in window.status_label.text())
-    assert wait_until(qapp, lambda: window.current_song is window.songs[1] and window._reached_playing)
+    # The next song starts and plays. (With the silent test output VLC plays faster than real time, so a
+    # 1-second song can finish between two checks; it is then in Recently played and the queue moved on.)
+    assert wait_until(qapp, lambda: window.songs[1] in window.pq.recent and window._reached_playing
+                      and window.current_song is not window.songs[0])
 
 
 def test_all_bad_files_stop_instead_of_looping(window, qapp):
