@@ -38,9 +38,15 @@ The first run sets up a private Python environment (about a minute). After that 
 straight away, and re-installs packages automatically only when an update needs it.
 `Run Tests.bat` runs the automated tests.
 
-**Ready-made app (no Python needed):** every push is built and tested on a real Windows machine by GitHub Actions
-(macOS and Linux builds are set up but switched off until later). Open the repo's **Actions** tab → latest *Build & test* run →
-download **Sevbify-Windows**, **Sevbify-macOS** or **Sevbify-Linux** → unzip → run it (VLC must be installed).
+**Ready-made app (no Python, no GitHub Desktop needed):** open the repo's **Releases** page (right-hand side of the
+repo's main page) → newest version → under **Assets** download **Sevbify-Windows.zip** → Extract All → run
+**Sevbify.exe** (VLC must be installed). The install steps are on each release page.
+
+How releases are made: every push is built and tested on a real Windows machine by GitHub Actions (macOS and Linux
+builds are set up but switched off until later). When a version is ready, a tag like `v5.0.0-beta.1` is pushed and
+the same build is published as a Release automatically, with `RELEASE_NOTES.md` as its description. Tags with a dash
+are marked *Pre-release*. In-between builds are also downloadable from the **Actions** tab → latest *Build & test*
+run → **Sevbify-Windows** (kept for 30 days).
 - **macOS:** the app isn't signed by Apple yet, so the first time, right-click `Sevbify.app` → **Open** → **Open**.
 - **Linux:** extract with `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager (e.g. `sudo apt install vlc`).
 

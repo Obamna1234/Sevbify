@@ -127,7 +127,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: Sevbify ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          # Tags with a dash (v5.0.0-beta.1) are test versions: marked "Pre-release".
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             Sevbify-*.zip
             Sevbify-*.tar.gz
-          generate_release_notes: true
