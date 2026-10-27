@@ -50,6 +50,7 @@ class Deezer:
             artist_id=str(artist.get("id", "")),
             page_url=d.get("link") or "",
             genre=genre,
+            explicit=bool(d.get("explicit_lyrics")),
         )
 
     def search(self, query, limit=25):

@@ -34,7 +34,7 @@ from core.online.providers import OnlineMusic
 from core.online.models import OnlineTrack, build_match_index, find_local_match
 from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
-from .settings_dialog import SettingsDialog
+from .settings_page import SettingsPage
 from .download_manager import DownloadManager
 from core import downloader, streamer, playlist_files
 from core.platform_fixes import reveal_in_file_manager
@@ -307,18 +307,24 @@ class MainWindow(QMainWindow):
         theme.apply_dark_palette(QApplication.instance())
         self.setStyleSheet(theme.base_stylesheet())
 
+        # --- Saved user data ---------------------------------------------
+        self.storage = Storage(data_dir)
+        self.user_data = self.storage.load()
+
         # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
-        self.vlc_instance = vlc.Instance("--no-video", *vlc_args)
+        # Settings → Normalize volume adds VLC's volume normaliser (applies after a restart).
+        extra = ["--audio-filter=normvol"] if self.user_data.normalize else []
+        self.vlc_instance = vlc.Instance("--no-video", *extra, *vlc_args)
         if self.vlc_instance is None:
             raise RuntimeError(
                 "libVLC could not be initialised. Make sure the 64-bit VLC media "
                 "player is installed (https://www.videolan.org/vlc/)."
             )
         self.player = self.vlc_instance.media_player_new()
-
-        # --- Saved user data ---------------------------------------------
-        self.storage = Storage(data_dir)
-        self.user_data = self.storage.load()
+        self.private_session = False
+        self._quitting = False
+        self._eq = None
+        self._apply_equalizer()
         RemoteSong.stream_full = self.user_data.stream_full
         if audio_folder is not None:
             self.user_data.music_folders = [str(audio_folder)]
@@ -470,6 +476,17 @@ class MainWindow(QMainWindow):
         self.saved_page = QWidget()
         self.radio_page = QWidget()
         self.collection_page = QWidget()
+        from core.audio_settings import presets as eq_presets
+        self.settings_page = SettingsPage(eq_presets(vlc))
+        self.settings_page.changed.connect(self.apply_settings)
+        self.settings_page.add_folder_requested.connect(lambda: (self._choose_music_folder(), self.open_settings()))
+        self.settings_page.remove_folder_requested.connect(lambda f: (self.remove_music_folder(f), self.open_settings()))
+        self.settings_page.restart_requested.connect(self.restart_app)
+        self.settings_page.clear_cache_requested.connect(lambda: (self.net.clear_cache(), self._refresh_storage_sizes()))
+        self.settings_page.open_folder_requested.connect(
+            lambda _w: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
+        self.settings_page.shortcuts_requested.connect(self._make_shortcuts)
+        self.stack.addWidget(self.settings_page)
 
         for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
                      self.playlist_page, self.saved_page, self.radio_page, self.collection_page]:
@@ -536,7 +553,7 @@ class MainWindow(QMainWindow):
             self._rescan_pending = True
             return
         self.library_count_label.setText("Scanning your music…")
-        self._scan_thread = ScanThread(self.user_data.music_folders, self)
+        self._scan_thread = ScanThread(self.active_music_folders(), self)
         self._scan_thread.scanned.connect(self._on_scan_finished)
         self._scan_thread.finished.connect(self._on_scan_thread_done)
         self._scan_thread.start()
@@ -950,7 +967,10 @@ class MainWindow(QMainWindow):
         act(f, "New Playlist Folder", self.create_folder, "Ctrl+Shift+N")
         act(f, "Add music folder…", self._choose_music_folder)
         f.addSeparator()
-        act(f, "Exit", self.close, "Ctrl+Shift+Q")
+        act(f, "Private Session", lambda: self.apply_settings({"private_session": not self.private_session}),
+            checked=self.private_session)
+        f.addSeparator()
+        act(f, "Exit", self.quit_app, "Ctrl+Shift+Q")
 
         e = sub("Edit")
         act(e, "Search", self.show_search, "Ctrl+L")
@@ -1226,7 +1246,7 @@ class MainWindow(QMainWindow):
         sc("Ctrl+Shift+N", self.create_folder)
         sc("Ctrl+P", self.open_settings)
         sc("Ctrl+Shift+R", self.rescan_library)
-        sc("Ctrl+Shift+Q", self.close)
+        sc("Ctrl+Shift+Q", self.quit_app)
         sc("F1", self.show_about)
 
     # ------------------------------------------------------------------
@@ -1315,6 +1335,12 @@ class MainWindow(QMainWindow):
                 self._apply_volume()  # VLC can reset volume when audio output starts
             self._open_elapsed_ms = 0
             self._seen_length = max(self._seen_length, self.player.get_length())
+            if self.user_data.fade_seconds and state == vlc.State.Playing and not self.user_data.muted:
+                from core.audio_settings import fade_factor
+                f = fade_factor(self.player.get_time(), self.player.get_length(), self.user_data.fade_seconds * 1000)
+                target = int(self.user_data.volume * f)
+                if self.player.audio_get_volume() != target:
+                    self.player.audio_set_volume(target)
             if not self.slider_being_moved:
                 current_time = self.player.get_time()
                 duration = self.player.get_length()
@@ -1700,7 +1726,7 @@ class MainWindow(QMainWindow):
             if self.search_input.text().strip() != query:
                 return                                  # user typed something else meanwhile
             self._web_query_shown = query
-            items = self.radio_items(tracks)
+            items = self.radio_items(self._allowed(tracks))
             # Songs already listed under "In your library" aren't repeated; any other song you own
             # comes first, then the ones you'd still need to download.
             shown = {s.key for s in self.search_table.songs_in_view()}
@@ -2490,6 +2516,9 @@ class MainWindow(QMainWindow):
         else:
             self.pq.set_context(self.songs, song, source or "Your Songs")
         self._consecutive_failures = 0
+        if self.user_data.np_on_play and not self.right_panel.isVisible() and not self.library_panel.expanded \
+                and self.isVisible():
+            self.set_right_panel("nowplaying")
         self._start_current()
 
     def _start_current(self):
@@ -2499,7 +2528,9 @@ class MainWindow(QMainWindow):
         if song is None:
             return
         self.current_song = song
-        self.pq.record_played(song)
+        if not self.private_session:
+            self.pq.record_played(song)
+        self._notify_track(song)
         self._queue_changed()
         self._update_now_playing(song)
         self._refresh_library_panel()
@@ -2640,6 +2671,11 @@ class MainWindow(QMainWindow):
             self.show_status("☾ Sleep timer: music stopped", kind="info", timeout_ms=10000)
             return
         if self.pq.advance(auto=auto) is None:
+            last = self.current_song
+            if auto and self.user_data.autoplay and self.online_enabled and last is not None \
+                    and last.artist and last.artist != "Unknown Artist":
+                self.start_radio(last, autoplay=True)        # keep playing similar songs, like Spotify
+                return
             # End of the queue with repeat off: stop, like Spotify.
             self.is_playing = False
             self._set_play_icon(False)
@@ -2758,7 +2794,8 @@ class MainWindow(QMainWindow):
 
     def _update_now_playing(self, song):
         canvas = (find_canvas(song, self.storage.data_dir)
-                  if song is not None and not getattr(song, "is_remote", False) else None)
+                  if song is not None and not getattr(song, "is_remote", False) and self.user_data.canvas_enabled
+                  else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
         self._refresh_artist_card()
 
@@ -2940,7 +2977,7 @@ class MainWindow(QMainWindow):
         if old:
             self._watcher.removePaths(old)
         dirs = []
-        for root in self.user_data.music_folders:
+        for root in self.active_music_folders():
             if not os.path.isdir(root):
                 continue
             for d, subdirs, _files in os.walk(root):
@@ -3111,7 +3148,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Go to Radio
     # ------------------------------------------------------------------
-    def start_radio(self, seed):
+    def start_radio(self, seed, autoplay=False):
         """Build a radio station from a song (online) and continue playing from it."""
         if not self.online_enabled:
             self.show_status("⚠ Radio needs Online features (Settings).")
@@ -3120,12 +3157,22 @@ class MainWindow(QMainWindow):
         self.show_status(f"Starting {name}…", kind="info", timeout_ms=15000)
 
         def done(tracks):
+            tracks = self._allowed(tracks)
             if not tracks:
                 self.show_status(f"⚠ Couldn't find songs similar to \"{seed.title}\".")
                 return
             items = self.radio_items(tracks)
             playing_seed = self.current_song is not None and self.current_song == seed and self.is_playing
             radio_songs = self._mix_in_your_songs([seed] + [s for s in items if s != seed], seed)
+            if autoplay:
+                # The queue ended: carry on with the radio's next song, without changing the page.
+                start = radio_songs[1] if len(radio_songs) > 1 else seed
+                self.pq.set_context(radio_songs, start, name)
+                self._radio_name, self._radio_songs, self._radio_seed = name, radio_songs, seed
+                self._consecutive_failures = 0
+                self._start_current()
+                self.show_status(f"Autoplay: {name}", kind="info", timeout_ms=4000)
+                return
             self.pq.set_context(radio_songs, seed, name)
             self.show_radio_page(name, radio_songs, seed)
             if playing_seed:
@@ -3221,6 +3268,12 @@ class MainWindow(QMainWindow):
                              kind="info", timeout_ms=5000)
         return pl
 
+    def _allowed(self, tracks):
+        """Settings → Allow explicit content off: leave out online songs marked explicit."""
+        if self.user_data.explicit_ok:
+            return list(tracks)
+        return [t for t in tracks if not getattr(t, "explicit", False)]
+
     def save_queue_as_playlist(self):
         """Keep the current Radio (or any queue source) as a normal playlist. Songs you don't have yet
         stay as "not downloaded" slots and show up under To download."""
@@ -3296,34 +3349,167 @@ class MainWindow(QMainWindow):
         self.top_bar.set_online_state(state)
 
     def open_settings(self):
-        dlg = SettingsDialog(self.user_data, on_clear_cache=self.net.clear_cache, parent=self)
-        if dlg.exec():
-            self.apply_settings(dlg.values())
+        """Settings as a page in the middle, like Spotify."""
+        from core.version import app_version
+        from core import shortcuts
+        from core.startup_settings import can_start_at_login
+        info = dict(version=app_version(), private_session=self.private_session,
+                    download_folder=self.user_data.download_folder or self._download_folder_preview(),
+                    can_start_at_login=can_start_at_login(), can_make_shortcuts=shortcuts.can_create())
+        self.settings_page.build(self.user_data, info)
+        self.stack.setCurrentWidget(self.settings_page)
+        self._set_nav("settings")
+        self._refresh_storage_sizes()
+
+    def _download_folder_preview(self):
+        """Where downloads would go, without creating anything."""
+        for f in self.user_data.music_folders:
+            if os.path.isdir(f):
+                return f if os.path.basename(os.path.normpath(f)) == self.DOWNLOAD_SUBFOLDER \
+                    else os.path.join(f, self.DOWNLOAD_SUBFOLDER)
+        return os.path.join(os.path.expanduser("~"), "Music", self.DOWNLOAD_SUBFOLDER)
+
+    def _refresh_storage_sizes(self):
+        def size_of(path):
+            total = 0
+            for root, _dirs, files in os.walk(path):
+                for f in files:
+                    try:
+                        total += os.path.getsize(os.path.join(root, f))
+                    except OSError:
+                        pass
+            return total
+
+        def nice(n):
+            return f"{n / 1048576:.0f} MB" if n >= 1048576 else f"{n / 1024:.0f} KB"
+
+        def work():
+            return (nice(size_of(self.user_data.download_folder or self._download_folder_preview())),
+                    nice(size_of(os.path.join(self.storage.data_dir, "cache"))))
+        run_async(self, work, on_done=lambda r: self.settings_page.set_sizes(*r))
+
+    def _make_shortcuts(self):
+        from core import shortcuts
+        ok, msg = shortcuts.create_windows_shortcuts()
+        self.show_status(msg, kind="info" if ok else "error", timeout_ms=6000)
 
     def apply_settings(self, values):
-        was_online = self.user_data.online_enabled
-        self.user_data.online_enabled = values["online_enabled"]
-        if values["lastfm_api_key"] != self.user_data.lastfm_api_key:
-            self.user_data.lastfm_api_key = values["lastfm_api_key"]
-            self.online.set_lastfm_key(values["lastfm_api_key"])
-        self.user_data.jamendo_client_id = values["jamendo_client_id"]
-        if "download_folder" in values:
-            self.user_data.download_folder = values["download_folder"]
+        """Apply and save changed settings. `values` may hold any subset of the settings."""
+        u = self.user_data
+        was_online = u.online_enabled
+        simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
+                  "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
+                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders")
+        for key in simple:
+            if key in values:
+                setattr(u, key, values[key])
+        if "lastfm_api_key" in values and values["lastfm_api_key"] != u.lastfm_api_key:
+            u.lastfm_api_key = values["lastfm_api_key"]
+            self.online.set_lastfm_key(u.lastfm_api_key)
         if "use_browser_cookies" in values:
-            self.user_data.use_browser_cookies = bool(values["use_browser_cookies"])
-            downloader.ALLOW_BROWSER_COOKIES = self.user_data.use_browser_cookies
-        if "playlist_files" in values:
-            self.user_data.playlist_files = bool(values["playlist_files"])
+            u.use_browser_cookies = bool(values["use_browser_cookies"])
+            downloader.ALLOW_BROWSER_COOKIES = u.use_browser_cookies
         if values.get("download_source") in downloader.SOURCES:
-            self.user_data.download_source = values["download_source"]
+            u.download_source = values["download_source"]
         if "stream_full" in values:
-            self.user_data.stream_full = bool(values["stream_full"])
-            RemoteSong.stream_full = self.user_data.stream_full
-        if was_online != self.user_data.online_enabled:
+            u.stream_full = bool(values["stream_full"])
+            RemoteSong.stream_full = u.stream_full
+        if "private_session" in values:
+            self.private_session = bool(values["private_session"])
+            self.show_status("Private session on: what you play isn't remembered" if self.private_session
+                             else "Private session off", kind="info", timeout_ms=4000)
+        if "library_compact" in values:
+            self.library_panel.set_view_options(view="compact" if values["library_compact"] else "list")
+        if any(k in values for k in ("eq_enabled", "eq_bands", "eq_preset")):
+            u.eq_enabled = bool(values.get("eq_enabled", u.eq_enabled))
+            u.eq_bands = list(values.get("eq_bands", u.eq_bands))
+            u.eq_preset = values.get("eq_preset", u.eq_preset)
+            self._apply_equalizer()
+        if "canvas_enabled" in values:
+            u.canvas_enabled = bool(values["canvas_enabled"])
+            if self.current_song is not None:
+                self._update_now_playing(self.current_song)
+        if "startup" in values:
+            from core.startup_settings import set_start_at_login
+            u.startup = values["startup"]
+            set_start_at_login(u.startup)
+        if "close_to_tray" in values:
+            self._ensure_tray()
+        if "disabled_folders" in values:
+            self.rescan_library()
+        if "fade_seconds" in values and not u.fade_seconds:
+            self._apply_volume()
+        if was_online != u.online_enabled:
             self.net.online = None
             self._online_setting_changed()
         self._update_online_indicator()
         self.save_now()
+
+    # --- playback settings ------------------------------------------------------------------------------
+    def _apply_equalizer(self):
+        from core.audio_settings import make_equalizer
+        try:
+            if self.user_data.eq_enabled:
+                self._eq = make_equalizer(vlc, self.user_data.eq_bands)    # keep a reference while VLC uses it
+                self.player.set_equalizer(self._eq)
+            else:
+                self.player.set_equalizer(None)
+                self._eq = None
+        except Exception as e:
+            print(f"Equalizer error: {e}")
+
+    def active_music_folders(self):
+        """Music folders that are switched on in Settings."""
+        off = {normalise_path(f) for f in self.user_data.disabled_folders}
+        return [f for f in self.user_data.music_folders if normalise_path(f) not in off]
+
+    # --- tray icon, close to tray, notifications, restart ---------------------------------------------
+    def _ensure_tray(self):
+        from PyQt6.QtWidgets import QSystemTrayIcon
+        if getattr(self, "tray", None) is not None or not QSystemTrayIcon.isSystemTrayAvailable():
+            return getattr(self, "tray", None)
+        from PyQt6.QtWidgets import QApplication
+        self.tray = QSystemTrayIcon(QApplication.instance().windowIcon(), self)
+        self.tray.setToolTip("Sevbify")
+        menu = self._new_menu()
+        menu.addAction("Show Sevbify").triggered.connect(self._show_from_tray)
+        menu.addAction("Play / Pause").triggered.connect(self.play_pause_song)
+        menu.addAction("Next").triggered.connect(self.next_song)
+        menu.addAction("Previous").triggered.connect(self.prev_song)
+        menu.addSeparator()
+        menu.addAction("Quit Sevbify").triggered.connect(self.quit_app)
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(lambda reason: self._show_from_tray()
+                                    if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
+        self.tray.show()
+        return self.tray
+
+    def _show_from_tray(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def quit_app(self):
+        self._quitting = True
+        self.close()
+
+    def _notify_track(self, song):
+        if not self.user_data.notify_track or self.isActiveWindow():
+            return
+        tray = self._ensure_tray()
+        if tray is not None:
+            tray.showMessage(song.title, song.artist, QIcon(load_pixmap(song.album_cover_path)), 4000)
+
+    def restart_app(self):
+        from PyQt6.QtCore import QProcess
+        from core.startup_settings import restart_command
+        exe, args = restart_command()
+        self.save_now()
+        started = QProcess.startDetached(exe, args)
+        if (started[0] if isinstance(started, tuple) else started):
+            self.quit_app()
+        else:
+            self.show_status("⚠ Couldn't restart Sevbify; please close and open it again.", 8000)
 
     def _online_setting_changed(self):
         """Hook for pages/panels that show online content (refresh or hide it)."""
@@ -3331,7 +3517,15 @@ class MainWindow(QMainWindow):
             hook()
 
     def closeEvent(self, event):
-        """Save, stop audio and release VLC cleanly when the window closes."""
+        """Save, stop audio and release VLC cleanly when the window closes (or hide to the tray)."""
+        if self.user_data.close_to_tray and not self._quitting and not getattr(self, "_shut_down", False) \
+                and self._ensure_tray() is not None:
+            self.hide()
+            event.ignore()
+            self.tray.showMessage("Sevbify is still playing", "Quit from this icon's menu.", QIcon(), 2500) \
+                if not getattr(self, "_tray_hint_shown", False) else None
+            self._tray_hint_shown = True
+            return
         if getattr(self, "_shut_down", False):
             # Already released; touching VLC again would crash.
             super().closeEvent(event)
@@ -3385,7 +3579,7 @@ class MainWindow(QMainWindow):
             else:
                 {"home": self.show_home, "search": lambda: self.show_search(select=False),
                  "library": self.show_library, "playlists": self.show_playlists,
-                 "saved": self.show_saved, "radio": self.show_radio_page,
+                 "saved": self.show_saved, "radio": self.show_radio_page, "settings": self.open_settings,
                  "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
                  "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]
                                                            if a["key"] == arg), None))

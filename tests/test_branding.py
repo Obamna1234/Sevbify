@@ -44,22 +44,14 @@ def test_create_shortcuts_reports_success_and_failure(tmp_path, monkeypatch):
     assert not ok and "Access denied" in msg
 
 
-def test_shortcut_button_only_in_the_packaged_windows_app(qapp, monkeypatch):
+def test_shortcut_button_only_in_the_packaged_windows_app(window, monkeypatch):
     from core import shortcuts
-    from core.storage import UserData
-    from ui.settings_dialog import SettingsDialog
-    from PyQt6.QtWidgets import QPushButton
-
-    def buttons():
-        dialog = SettingsDialog(UserData())
-        texts = [b.text() for b in dialog.findChildren(QPushButton)]
-        dialog.deleteLater()
-        return texts
-
     monkeypatch.setattr(shortcuts, "can_create", lambda: False)
-    assert "Add to Desktop and Start menu" not in buttons()
+    window.open_settings()
+    assert "shortcuts" not in window.settings_page.controls
     monkeypatch.setattr(shortcuts, "can_create", lambda: True)
-    assert "Add to Desktop and Start menu" in buttons()
+    window.open_settings()
+    assert window.settings_page.controls["shortcuts"].text() == "Add to Desktop and Start menu"
 
 
 def test_vlc_trim_keeps_audio_and_removes_video(tmp_path):

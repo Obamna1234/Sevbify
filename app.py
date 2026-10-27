@@ -230,6 +230,13 @@ def main():
     # No black console windows flashing when ffmpeg / yt-dlp run in the background (Windows).
     from core.platform_fixes import hide_console_windows
     hide_console_windows()
+    # Settings that must be in place before the window exists: zoom, graphics, proxy.
+    try:
+        from core.storage import Storage
+        from core.startup_settings import apply_env
+        apply_env(Storage().load())
+    except Exception as e:
+        _log_stderr(f"Could not apply start-up settings: {e}\n")
     # 1. Create the QApplication first
     app = QApplication(sys.argv)
     icon_path = set_app_identity(app)
@@ -253,7 +260,10 @@ def main():
             QMessageBox.critical(None, "Startup error", f"The app could not start:\n\n{text}")
         sys.exit(1)
 
-    window.show()
+    if "--minimized" in sys.argv and not SMOKE_TEST:
+        window.showMinimized()                 # started at login with "Minimized"
+    else:
+        window.show()
 
     if SMOKE_TEST:
         def loaded():

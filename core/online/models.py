@@ -22,6 +22,7 @@ class OnlineTrack:
     license: str = ""            # e.g. Creative Commons licence URL
     genre: str = ""
     youtube_id: str = ""         # set once an official YouTube video has been chosen for in-app playback
+    explicit: bool = False       # marked explicit by the source (Deezer)
 
     # --- identity -------------------------------------------------------
     @property

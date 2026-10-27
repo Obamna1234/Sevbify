@@ -311,7 +311,7 @@ class LibraryPanel(QFrame):
         # --- chips --------------------------------------------------------------------------------------
         self.chips_box = QWidget()
         chips = QHBoxLayout(self.chips_box)
-        chips.setContentsMargins(4, 4, 0, 0)
+        chips.setContentsMargins(0, 4, 0, 0)
         chips.setSpacing(4)
         self.clear_chip_btn = self._icon_btn(icons.chevron("left", theme.TEXT, 16), "Show everything", 28)
         self.clear_chip_btn.setStyleSheet(self.clear_chip_btn.styleSheet().replace("transparent", theme.HOVER, 1))
@@ -324,7 +324,7 @@ class LibraryPanel(QFrame):
             b.setCheckable(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setFixedHeight(30)
-            b.setStyleSheet(theme.CHIP.replace("padding: 6px 12px", "padding: 4px 10px"))
+            b.setStyleSheet(theme.CHIP.replace("padding: 6px 12px", "padding: 4px 9px").replace("font-size: 13px", "font-size: 12px"))
             b.clicked.connect(lambda checked, k=key: self.set_chip(k if checked else None))
             chips.addWidget(b)
             self.chip_buttons[key] = b

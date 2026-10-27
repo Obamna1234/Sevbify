@@ -85,10 +85,36 @@ class UserData:
     library_sort: str = "recents"                 # "recents" | "added" | "alpha"
     library_view: str = "list"                    # "list" | "compact" | "grid"
     library_collapsed: bool = False               # Your Library shrunk to a strip of covers
+    explicit_ok: bool = True   # Settings: allow songs marked explicit (online results)
+    autoplay: bool = True   # Settings: keep playing similar songs when the queue ends
+    fade_seconds: int = 0   # Settings: fade out/in between songs (0 = off)
+    normalize: bool = False   # Settings: same loudness for every song (needs restart)
+    eq_enabled: bool = False   # Settings: equaliser on
+    eq_preset: str = 'Flat'   # equaliser preset name (or 'Custom')
+    eq_bands: List[float] = field(default_factory=lambda: [0.0] * 10)   # 10 values in dB (-20..20)
+    np_on_play: bool = True   # Settings: open the Now playing panel when you play
+    notify_track: bool = False   # Settings: desktop notification when the song changes
+    canvas_enabled: bool = True   # Settings: Canvas loop videos
+    zoom: int = 100   # Settings: zoom level in % (applies after restart)
+    startup: str = 'no'   # Settings: open after login (Windows)
+    close_to_tray: bool = False   # Settings: close button minimises to the tray
+    proxy_mode: str = 'auto'   # Settings: proxy (applies after restart)
+    proxy_url: str = ''   # e.g. http://127.0.0.1:8080
+    hw_accel: bool = True   # Settings: hardware acceleration (applies after restart)
+    disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     is_new: bool = True        # True when no save file existed yet (first run)
     load_warning: str = ""     # message for the user if the file had to be reset
+
+
+def _bands(value):
+    """Ten equaliser values in dB, clamped to VLC's range."""
+    out = [0.0] * 10
+    if isinstance(value, list):
+        for i, v in enumerate(value[:10]):
+            out[i] = max(-20.0, min(20.0, float(v)))
+    return out
 
 
 def _store_track(t):
@@ -156,6 +182,23 @@ class Storage:
                 "library_sort": data.library_sort,
                 "library_view": data.library_view,
                 "library_collapsed": bool(data.library_collapsed),
+                "explicit_ok": data.explicit_ok,
+                "autoplay": data.autoplay,
+                "fade_seconds": data.fade_seconds,
+                "normalize": data.normalize,
+                "eq_enabled": data.eq_enabled,
+                "eq_preset": data.eq_preset,
+                "eq_bands": list(data.eq_bands),
+                "np_on_play": data.np_on_play,
+                "notify_track": data.notify_track,
+                "canvas_enabled": data.canvas_enabled,
+                "zoom": data.zoom,
+                "startup": data.startup,
+                "close_to_tray": data.close_to_tray,
+                "proxy_mode": data.proxy_mode,
+                "proxy_url": data.proxy_url,
+                "hw_accel": data.hw_accel,
+                "disabled_folders": [to_stored_path(p) for p in data.disabled_folders],
             },
             "playlists": [
                 {"name": p.name, "tracks": [_store_track(t) for t in p.tracks],
@@ -209,6 +252,74 @@ class Storage:
         data.library_view = settings.get("library_view") if settings.get("library_view") in ("list", "compact", "grid") \
             else "list"
         data.library_collapsed = bool(settings.get("library_collapsed", False))
+        try:
+            data.explicit_ok = bool(settings.get('explicit_ok', True))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.autoplay = bool(settings.get('autoplay', True))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.fade_seconds = max(0, min(12, int(settings.get('fade_seconds', 0) or 0)))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.normalize = bool(settings.get('normalize', False))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.eq_enabled = bool(settings.get('eq_enabled', False))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.eq_preset = str(settings.get('eq_preset', 'Flat') or 'Flat')
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.eq_bands = _bands(settings.get('eq_bands'))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.np_on_play = bool(settings.get('np_on_play', True))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.notify_track = bool(settings.get('notify_track', False))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.canvas_enabled = bool(settings.get('canvas_enabled', True))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.zoom = int(settings.get('zoom', 100)) if int(settings.get('zoom', 100) or 100) in (70, 80, 90, 100, 110, 120, 130) else 100
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.startup = settings.get('startup') if settings.get('startup') in ('no', 'yes', 'minimized') else 'no'
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.close_to_tray = bool(settings.get('close_to_tray', False))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.proxy_mode = settings.get('proxy_mode') if settings.get('proxy_mode') in ('auto', 'none', 'http') else 'auto'
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.proxy_url = str(settings.get('proxy_url', '') or '')
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.hw_accel = bool(settings.get('hw_accel', True))
+        except (TypeError, ValueError):
+            pass
+        try:
+            data.disabled_folders = [from_stored_path(str(p)) for p in settings.get('disabled_folders', []) or []]
+        except (TypeError, ValueError):
+            pass
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
