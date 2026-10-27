@@ -104,3 +104,11 @@ def open_window(qapp):
 @pytest.fixture
 def window(open_window, audio_dir, data_dir):
     return open_window(audio_folder=str(audio_dir), data_dir=str(data_dir))
+
+
+def pytest_runtest_logreport(report):
+    """On GitHub, report each failing test as a readable annotation."""
+    if os.environ.get("GITHUB_ACTIONS") and report.failed:
+        msg = (report.longreprtext or "").strip().splitlines()
+        tail = " | ".join(line.strip() for line in msg[-12:] if line.strip())
+        print(f"\n::error title=TEST FAILED {report.nodeid} ({report.when})::{tail[:900]}")

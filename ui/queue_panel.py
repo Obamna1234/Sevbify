@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt, pyqtSignal
 
-PANEL_STYLE = "background-color: #121212;"
+PANEL_STYLE = "#queuePanel { background-color: #121212; } QLabel { background: transparent; }"
 MENU_STYLE = """
 QMenu { background: #282828; color: white; border: 1px solid #3e3e3e; padding: 4px; font-size: 13px; }
 QMenu::item { padding: 8px 24px 8px 12px; border-radius: 3px; }
@@ -84,6 +84,8 @@ class QueuePanel(QWidget):
     def __init__(self, pixmap_loader, parent=None):
         super().__init__(parent)
         self._loader = pixmap_loader
+        self.setObjectName("queuePanel")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(PANEL_STYLE)
         self.setMinimumWidth(300)
         self.setMaximumWidth(380)

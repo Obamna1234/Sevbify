@@ -21,10 +21,13 @@ def test_play_song_does_not_block(window, qapp):
 
 
 def test_track_end_advances_exactly_once(window, qapp):
-    window.play_song(window.songs[0])
-    assert wait_until(qapp, lambda: window.current_song is window.songs[1] and window._reached_playing)
-    # Second track is now playing; it must not have skipped straight to the third.
-    assert window.queue_index == 1
+    window.play_song(window.songs[0], queue=window.songs)
+    assert wait_until(qapp, lambda: window.songs[1] in window.pq.recent)
+    # Played in order with nothing skipped: first, then second (the silent test
+    # audio plays faster than real time, so the third may already have started).
+    played = list(reversed(window.pq.recent))
+    assert played[:2] == [window.songs[0], window.songs[1]]
+    assert "Skipped" not in window.status_label.text()
 
 
 def test_pause_and_resume(open_window, qapp, tmp_path, data_dir):

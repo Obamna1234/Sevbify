@@ -16,6 +16,13 @@
 - Online layer (`core/online/`): network client with disk cache (works offline with last-known info, shows nothing
   online when switched off), Deezer / Last.fm / Wikipedia providers, song matching against your library.
 - The GitHub build now runs a live check of the online services (`tools/online_check.py`), reported as notes.
+- **Now playing view** (right side, toggle with the ▣ button; shown by default for new users): big artwork with a slow
+  zoom-and-glow animation, song and artist, and **About the artist** (photo, Last.fm listeners, Deezer fans, bio, tags,
+  links) when online. Says clearly when you're offline or online features are off.
+- **Looping videos (canvas):** put a short video next to a song with the same name (e.g. `Song.mp4`), in a `canvas`
+  folder next to your music, or `%APPDATA%\Sevbify\canvas\<Artist>.mp4` for all of an artist's songs. Plays silently
+  behind the song; falls back to the animated artwork if it can't be played.
+- Fix: very short songs could be mistaken for broken files and skipped.
 
 ## v4.9.3 — 27 Oct 2026 — Renamed to Sevbify; macOS & Linux builds
 

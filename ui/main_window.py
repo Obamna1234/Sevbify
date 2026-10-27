@@ -12,6 +12,7 @@ from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent
 from .sidebar import Sidebar
 from .track_table import TrackTable
 from .queue_panel import QueuePanel
+from .now_playing_panel import NowPlayingPanel
 from . import icons
 from core.paths import (  # noqa: F401  (re-exported for older code/tests)
     PROJECT_ROOT, PLACEHOLDER_IMAGE, AUDIO_FOLDER, ALBUM_CACHE, ASSETS_FOLDER, normalise_path
@@ -23,6 +24,7 @@ from core import paths as core_paths
 from core.library import scan_folders
 from core.storage import Storage, StoredPlaylist
 from core.play_queue import PlayQueue
+from core.canvas import find_canvas
 from core.online.net import NetClient, OfflineError, OnlineDisabled
 from core.online.providers import OnlineMusic
 from .async_tasks import run_async
@@ -345,7 +347,8 @@ class MainWindow(QMainWindow):
 
         # Right-hand panel (Queue / Now playing), hidden until toggled.
         self.right_panel = QStackedWidget()
-        self.right_panel.setStyleSheet("background-color: #121212; border-left: 1px solid #1f1f1f;")
+        self.right_panel.setObjectName("rightPanel")
+        self.right_panel.setStyleSheet("#rightPanel { background-color: #121212; border-left: 1px solid #1f1f1f; }")
         self.queue_panel = QueuePanel(load_pixmap)
         self.queue_panel.close_requested.connect(lambda: self.set_right_panel(""))
         self.queue_panel.play_upcoming.connect(self._play_upcoming)
@@ -353,6 +356,11 @@ class MainWindow(QMainWindow):
         self.queue_panel.remove_from_queue.connect(self._remove_from_user_queue)
         self.queue_panel.clear_user_queue.connect(self._clear_user_queue)
         self.right_panel.addWidget(self.queue_panel)
+        self.now_playing_panel = NowPlayingPanel(load_pixmap)
+        self.now_playing_panel.close_requested.connect(lambda: self.set_right_panel(""))
+        self.right_panel.addWidget(self.now_playing_panel)
+        self._artist_cards = {}          # artist name -> card dict (this session)
+        self._online_hooks = [self._refresh_artist_card]
         self.right_panel.hide()
         self.top_layout.addWidget(self.right_panel)
 
@@ -751,6 +759,8 @@ class MainWindow(QMainWindow):
         self._update_mode_buttons()
 
         top.addSpacing(24)
+        self.nowplaying_btn = self._icon_button("Now playing view", lambda: self.toggle_right_panel("nowplaying"))
+        top.addWidget(self.nowplaying_btn)
         self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
         top.addWidget(self.queue_btn)
         top.addSpacing(6)
@@ -898,6 +908,11 @@ class MainWindow(QMainWindow):
 
         if self._track_handled:
             return
+
+        if state == vlc.State.Ended and not self._reached_playing and self.player.get_length() > 0:
+            # A very short song can start and finish between two progress checks.
+            # VLC knew its length, so it really played (a broken file has length 0).
+            self._reached_playing = True
 
         if state == vlc.State.Ended and self._reached_playing:
             # Natural end of the track: advance exactly once.
@@ -1383,6 +1398,7 @@ class MainWindow(QMainWindow):
         self.current_song = song
         self.pq.record_played(song)
         self._queue_changed()
+        self._update_now_playing(song)
         self.schedule_save(3000)
 
         # Show what we are trying to play straight away.
@@ -1463,10 +1479,12 @@ class MainWindow(QMainWindow):
                 self.player.set_pause(1)
                 self.play_btn.setText("▶️")
                 self.is_playing = False
+                self.now_playing_panel.set_playing(False)
             elif state == vlc.State.Paused:
                 self.player.set_pause(0)
                 self.play_btn.setText("⏸")
                 self.is_playing = True
+                self.now_playing_panel.set_playing(True)
             elif state in (vlc.State.Opening, vlc.State.Buffering):
                 return  # still loading; ignore extra clicks
             else:
@@ -1517,9 +1535,12 @@ class MainWindow(QMainWindow):
                                              one=(mode == "one"), dot=(mode != "off")))
         label = {"off": "off", "all": "all songs", "one": "this song"}[mode]
         self.repeat_btn.setToolTip(f"Repeat: {label} (Ctrl+R)")
-        if hasattr(self, "queue_btn"):
-            active = not self.right_panel.isHidden() and self.right_panel.currentWidget() is self.queue_panel
-            self.queue_btn.setIcon(icons.queue(icons.GREEN if active else icons.GREY, dot=active))
+        if hasattr(self, "queue_btn") and hasattr(self, "right_panel"):
+            shown = not self.right_panel.isHidden()
+            q = shown and self.right_panel.currentWidget() is self.queue_panel
+            n = shown and self.right_panel.currentWidget() is self.now_playing_panel
+            self.queue_btn.setIcon(icons.queue(icons.GREEN if q else icons.GREY, dot=q))
+            self.nowplaying_btn.setIcon(icons.now_playing(icons.GREEN if n else icons.GREY, dot=n))
 
     def toggle_shuffle(self):
         self.pq.set_shuffle(not self.pq.shuffle)
@@ -1552,6 +1573,55 @@ class MainWindow(QMainWindow):
             self._consecutive_failures = 0
             self._start_current()
 
+    def _update_now_playing(self, song):
+        canvas = find_canvas(song, self.storage.data_dir) if song is not None else None
+        self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
+        self._refresh_artist_card()
+
+    def _refresh_artist_card(self):
+        """Fill 'About the artist' for the current song (online, cached per artist)."""
+        panel = self.now_playing_panel
+        song = self.current_song
+        if song is None or not song.artist or song.artist == "Unknown Artist":
+            panel.set_card_message("")
+            return
+        if not self.online_enabled:
+            panel.set_card_message("Artist info is off. Turn on Online features in Settings to see it.")
+            return
+        artist = song.artist
+        if artist in self._artist_cards:
+            self._show_artist_card(artist, self._artist_cards[artist])
+            return
+        panel.set_card_message("Loading artist info…")
+
+        def done(card):
+            self._artist_cards[artist] = card
+            if self.current_song is not None and self.current_song.artist == artist:
+                self._show_artist_card(artist, card)
+
+        def failed(err):
+            if self.current_song is not None and self.current_song.artist == artist:
+                if isinstance(err, OnlineDisabled):
+                    panel.set_card_message("Artist info is off. Turn on Online features in Settings to see it.")
+                elif isinstance(err, OfflineError):
+                    panel.set_card_message("You're offline. Artist info will show when you're back online.")
+                else:
+                    panel.set_card_message("")
+
+        self.online_call(self.online.artist_card, artist, on_done=done, on_error=failed)
+
+    def _show_artist_card(self, artist, card):
+        panel = self.now_playing_panel
+        if not any(card.get(k) for k in ("bio", "fans", "listeners", "picture_url")):
+            panel.set_card_message("")
+            return
+        panel.set_artist_card(card)
+        url = card.get("picture_url")
+        if url:
+            self.online_call(self.net.get_image, url,
+                             on_done=lambda path: (self.current_song is not None and self.current_song.artist == artist
+                                                   and panel.set_artist_image(path)))
+
     def _queue_changed(self):
         if not self.right_panel.isHidden() and self.right_panel.currentWidget() is self.queue_panel:
             user, upcoming = self.pq.upcoming(limit=QueuePanel.MAX_ROWS)
@@ -1559,7 +1629,7 @@ class MainWindow(QMainWindow):
 
     def set_right_panel(self, name, save=True):
         """name: "" (hidden), "queue" or "nowplaying"."""
-        widget = {"queue": self.queue_panel}.get(name)
+        widget = {"queue": self.queue_panel, "nowplaying": self.now_playing_panel}.get(name)
         if widget is None:
             self.right_panel.hide()
             name = ""
@@ -1569,6 +1639,7 @@ class MainWindow(QMainWindow):
         self.user_data.right_panel = name
         self._update_mode_buttons()
         self._queue_changed()
+        self.now_playing_panel.set_playing(self.is_playing)
         if save:
             self.schedule_save()
 

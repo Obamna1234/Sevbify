@@ -68,7 +68,7 @@ class UserData:
     playlists: List[StoredPlaylist] = field(default_factory=list)
     shuffle: bool = False
     repeat: str = "off"                 # "off" | "all" | "one"
-    right_panel: str = ""               # "" | "queue" | "nowplaying"
+    right_panel: str = "nowplaying"     # "" | "queue" | "nowplaying"
     online_enabled: bool = True         # Settings -> Online features
     lastfm_api_key: str = ""
     jamendo_client_id: str = ""
