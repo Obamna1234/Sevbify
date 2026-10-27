@@ -18,7 +18,7 @@ decides what it does and tests it on Windows).
 | Python | 3.10 – 3.13, **64-bit** | https://www.python.org/downloads/ — tick "Add python.exe to PATH" |
 | VLC media player | 3.0.x, **64-bit** | https://www.videolan.org/vlc/ — must match Python's 64-bit; the app uses VLC's engine (libVLC) for playback |
 | Python packages | see `requirements.txt` | PyQt6, python-vlc, mutagen, Pillow, certifi, yt-dlp, pytest |
-| ffmpeg | any recent | Only for downloading songs when running from source. The ready-made app has it built in. |
+| ffmpeg | nothing to install | Needed for downloading songs. Comes with the `imageio-ffmpeg` package (copied once into `%APPDATA%\Sevbify\ffmpeg` when running from source); the ready-made app has it built in. |
 
 ## Quick start (recommended)
 

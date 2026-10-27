@@ -389,3 +389,16 @@ def test_queue_panel_offers_save_for_radio_only(window, qapp):
     assert "Save as playlist" not in buttons()
     window.pq.set_context(window.songs, seed, "first Radio")
     assert "Save as playlist" in buttons()
+
+
+def test_ffmpeg_from_imageio_is_used_when_none_installed(tmp_path, monkeypatch):
+    """Run Sevbify.bat (from source) must work without installing ffmpeg separately."""
+    pytest.importorskip("imageio_ffmpeg")
+    import shutil
+    e = downloader.engine()
+    monkeypatch.setattr(e, "ffmpeg_path", lambda: "ffmpeg")
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    assert shutil.which("ffmpeg") is None
+    downloader._ensure_ffmpeg(e, cache_dir=str(tmp_path / "ff"))
+    found = shutil.which("ffmpeg")
+    assert found and os.path.dirname(found) == str(tmp_path / "ff")

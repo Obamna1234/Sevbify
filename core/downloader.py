@@ -26,7 +26,34 @@ def engine():
     if _engine is None:
         from core import sevby_engine
         _engine = sevby_engine
+        try:
+            _ensure_ffmpeg(_engine)
+        except Exception as exc:  # never stop the app over this; check_tools() will report it
+            print(f"Could not set up the bundled ffmpeg: {exc}")
     return _engine
+
+
+def _ensure_ffmpeg(e, cache_dir=None):
+    """When running from source (Run Sevbify.bat) most PCs have no ffmpeg. The imageio-ffmpeg package
+    (in requirements.txt) contains one; copy it once as "ffmpeg(.exe)" into Sevbify's data folder and put
+    that folder on PATH so the engine and yt-dlp find it. The packaged app bundles its own copy."""
+    import shutil
+    if os.path.isfile(e.ffmpeg_path()) or shutil.which("ffmpeg"):
+        return
+    try:
+        import imageio_ffmpeg
+        src = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return
+    if cache_dir is None:
+        from core.storage import default_data_dir
+        cache_dir = os.path.join(default_data_dir(), "ffmpeg")
+    os.makedirs(cache_dir, exist_ok=True)
+    dst = os.path.join(cache_dir, "ffmpeg.exe" if os.name == "nt" else "ffmpeg")
+    if not os.path.isfile(dst) or os.path.getsize(dst) != os.path.getsize(src):
+        shutil.copy2(src, dst + ".tmp")
+        os.replace(dst + ".tmp", dst)
+    os.environ["PATH"] = cache_dir + os.pathsep + os.environ.get("PATH", "")
 
 
 def default_download_folder(music_folders) -> str:

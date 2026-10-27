@@ -19,7 +19,9 @@
 - New: `core/sevby_engine.py` (generated from SEVBY by `tools/make_engine.py`), `core/downloader.py`,
   `ui/download_manager.py`, `tools/download_check.py`, 21 tests in `tests/test_download.py` (fake downloader, no
   internet). The Windows build now bundles yt-dlp and ffmpeg, and `--smoke-test` checks both are inside the app.
-- Not yet tried: a real download from inside Sevbify on a home PC.
+- ffmpeg comes from the `imageio-ffmpeg` package, so downloads also work from `Run Sevbify.bat` without installing ffmpeg.
+- Not yet tried: a real download from inside Sevbify on a home PC. On GitHub's cloud machine, Bandcamp search and
+  YouTube matching work, but YouTube blocks the download itself there ("confirm you're not a bot"), as it often does for servers.
 
 **New look (Spotify desktop layout, our own code):**
 - Black window with three rounded panels: **Your Library** (left), the page (middle), Now playing / Queue (right).
