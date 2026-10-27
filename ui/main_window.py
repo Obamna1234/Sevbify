@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
         self.is_playing = False
         self._track_handled = True      # end/error of current track already processed?
         self._reached_playing = False   # did the current track ever actually start?
+        self._seen_length = 0           # longest length VLC reported for it (a broken file stays 0)
         self._open_elapsed_ms = 0       # time spent waiting for the track to start
         self._consecutive_failures = 0  # stops endless skipping if every file is bad
 
@@ -1038,6 +1039,7 @@ class MainWindow(QMainWindow):
                 self._reached_playing = True
                 self._apply_volume()  # VLC can reset volume when audio output starts
             self._open_elapsed_ms = 0
+            self._seen_length = max(self._seen_length, self.player.get_length())
             if not self.slider_being_moved:
                 current_time = self.player.get_time()
                 duration = self.player.get_length()
@@ -1054,6 +1056,10 @@ class MainWindow(QMainWindow):
             # A very short song can start and finish between two progress checks.
             # VLC knew its length, so it really played (a broken file has length 0).
             self._reached_playing = True
+
+        if state == vlc.State.Ended and self._reached_playing and max(self._seen_length, self.player.get_length()) <= 0:
+            # VLC can say "Playing" for a moment on a file it can't read, then "Ended" with no length.
+            self._reached_playing = False
 
         if state == vlc.State.Ended and self._reached_playing:
             # Natural end of the track: advance exactly once.
@@ -2012,6 +2018,7 @@ class MainWindow(QMainWindow):
         self._refresh_now_playing()
 
         self._reached_playing = False
+        self._seen_length = 0
         self._open_elapsed_ms = 0
 
         is_remote = getattr(song, "is_remote", False)
