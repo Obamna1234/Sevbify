@@ -16,7 +16,23 @@ from core import downloader  # noqa: E402
 SONG = "Kevin MacLeod - Monkeys Spinning Monkeys"
 
 
+def _use_bundled_ffmpeg():
+    """Use the same ffmpeg the built app bundles (from imageio-ffmpeg) when none is installed."""
+    import shutil
+    if shutil.which("ffmpeg"):
+        return
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        return
+    folder = tempfile.mkdtemp()
+    name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    shutil.copy(imageio_ffmpeg.get_ffmpeg_exe(), os.path.join(folder, name))
+    os.environ["PATH"] = folder + os.pathsep + os.environ.get("PATH", "")
+
+
 def main():
+    _use_bundled_ffmpeg()
     problems = downloader.check_tools()
     if problems:
         print(f"::warning title=Download check: tools missing::{' | '.join(problems)}")
