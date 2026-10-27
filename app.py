@@ -124,8 +124,9 @@ def _vlc_log_for(vlc, path):
             time.sleep(0.05)
         player.stop(); player.release(); inst.release()
         lines = open(log, encoding="utf-8", errors="replace").read().splitlines()
-        keep = [l for l in lines if any(k in l.lower() for k in ("error", "warning", "access", "http", "cannot", "no "))]
-        return " | ".join((keep or lines)[-25:])[:3000]
+        lines = [l for l in lines if "does not exist" not in l]          # options of removed video parts
+        start = next((i for i, l in enumerate(lines) if "creating access" in l), 0)
+        return " | ".join(lines[start:start + 40])[:3500]
     except Exception as e:
         return f"(no VLC log: {e})"
 
