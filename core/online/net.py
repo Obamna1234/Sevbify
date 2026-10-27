@@ -139,6 +139,29 @@ class NetClient:
                 pass
         return data
 
+    def get_text(self, url, params=None, ttl=3600):
+        """GET a web page as text (cached like JSON; the cache is used when offline)."""
+        if not self.enabled():
+            raise OnlineDisabled("Online features are switched off in Settings.")
+        full = self.build_url(url, params)
+        path = self._cache_path("pages", full, ".html")
+        if os.path.exists(path) and time.time() - os.path.getmtime(path) < ttl:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                return f.read()
+        try:
+            text = self._fetch(full).decode("utf-8", errors="replace")
+        except OfflineError:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8", errors="replace") as f:
+                    return f.read()
+            raise
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+        return text
+
     def get_image(self, url, ttl=60 * 24 * 3600):
         """Download an image (cover art, artist photo) and return the local file path."""
         if not url:

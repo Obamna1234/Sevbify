@@ -232,6 +232,7 @@ class LibraryRow(QFrame):
 class LibraryPanel(QFrame):
     create_clicked = pyqtSignal()                    # Create → Playlist
     create_folder_clicked = pyqtSignal()             # Create → Folder
+    import_clicked = pyqtSignal()                    # Create → Import a playlist
     open_all_songs = pyqtSignal()
     open_saved = pyqtSignal()
     open_playlist = pyqtSignal(object)
@@ -409,6 +410,9 @@ class LibraryPanel(QFrame):
             self.create_clicked.emit)
         m.addAction(icons.folder(theme.TEXT, 18), "Folder\nOrganise your playlists").triggered.connect(
             self.create_folder_clicked.emit)
+        m.addSeparator()
+        m.addAction(icons.download(theme.TEXT, 18), "Import a playlist\nFrom Spotify, Apple Music or a file").triggered.connect(
+            self.import_clicked.emit)
         btn = self._mini_create if self.collapsed else self.create_btn
         m.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
 

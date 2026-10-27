@@ -399,6 +399,7 @@ class MainWindow(QMainWindow):
         self.library_panel = LibraryPanel(cover_thumb)
         self.library_panel.create_clicked.connect(self.new_playlist)
         self.library_panel.create_folder_clicked.connect(self.create_folder)
+        self.library_panel.import_clicked.connect(self.import_playlist_dialog)
         self.library_panel.folder_menu.connect(self._folder_context_menu)
         self.library_panel.open_album.connect(self.show_album)
         self.library_panel.play_album.connect(lambda a: self.play_collection(a["title"], self.album_songs(a)))
@@ -486,6 +487,7 @@ class MainWindow(QMainWindow):
         self.settings_page.open_folder_requested.connect(
             lambda _w: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
         self.settings_page.shortcuts_requested.connect(self._make_shortcuts)
+        self.settings_page.import_requested.connect(self.import_playlist_dialog)
         self.stack.addWidget(self.settings_page)
 
         for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
@@ -620,6 +622,7 @@ class MainWindow(QMainWindow):
             return          # first run: no playlists; people make their own
         for stored in self.user_data.playlists:
             pl = Playlist(stored.name, stored.folder, stored.created, stored.last_played)
+            pl.custom_cover = stored.cover
             for entry in stored.tracks:
                 if isinstance(entry, dict):
                     # A song added from Radio/Search that isn't downloaded yet.
@@ -672,7 +675,8 @@ class MainWindow(QMainWindow):
         if self.library_ready:
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
-                                        else s.file_path for s in p.songs], p.folder, p.created, p.last_played)
+                                        else s.file_path for s in p.songs], p.folder, p.created, p.last_played,
+                               p.custom_cover)
                 for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
@@ -965,6 +969,7 @@ class MainWindow(QMainWindow):
         f = sub("File")
         act(f, "New Playlist", self.new_playlist, "Ctrl+N")
         act(f, "New Playlist Folder", self.create_folder, "Ctrl+Shift+N")
+        act(f, "Import playlist…", self.import_playlist_dialog)
         act(f, "Add music folder…", self._choose_music_folder)
         f.addSeparator()
         act(f, "Private Session", lambda: self.apply_settings({"private_session": not self.private_session}),
@@ -2022,6 +2027,184 @@ class MainWindow(QMainWindow):
         if ok:
             self.rename_folder(name, new)
 
+    # --- Playlist covers ----------------------------------------------------------------------------------
+    def choose_playlist_cover(self, playlist):
+        path, _ = QFileDialog.getOpenFileName(self, "Choose a cover picture", os.path.expanduser("~"),
+                                              "Pictures (*.jpg *.jpeg *.png *.webp *.bmp)")
+        if path:
+            self.set_playlist_cover(playlist, path)
+
+    def set_playlist_cover(self, playlist, source):
+        """Use a picture as the playlist's cover (copied into Sevbify's data folder), or "" for song covers."""
+        import shutil
+        import uuid
+        old = playlist.custom_cover
+        if source:
+            folder = os.path.join(self.storage.data_dir, "covers")
+            os.makedirs(folder, exist_ok=True)
+            ext = os.path.splitext(source)[1].lower() or ".jpg"
+            dest = os.path.join(folder, uuid.uuid4().hex + (ext if ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp") else ".jpg"))
+            try:
+                shutil.copyfile(source, dest)
+            except OSError as e:
+                self.show_status(f"⚠ Couldn't use that picture: {e}")
+                return False
+            playlist.custom_cover = dest
+        else:
+            playlist.custom_cover = ""
+        if old and old != playlist.custom_cover and os.path.dirname(old) == os.path.join(self.storage.data_dir, "covers"):
+            try:
+                os.remove(old)
+            except OSError:
+                pass
+        playlist.generate_cover()
+        self._playlists_changed(playlist)
+        return True
+
+    # --- Import playlists from Spotify, Apple Music or a file ---------------------------------------------
+    def import_playlist_dialog(self):
+        d = QDialog(self)
+        d.setWindowTitle("Import a playlist")
+        d.setMinimumWidth(520)
+        d.setStyleSheet(f"QDialog {{ background: #282828; }} QLabel {{ color: white; }}"
+                        f" QLabel#sub {{ color: {theme.SUBDUED}; font-size: 12px; }}")
+        v = QVBoxLayout(d)
+        v.setContentsMargins(24, 20, 24, 20)
+        v.setSpacing(10)
+        h = QLabel("Import a playlist")
+        h.setStyleSheet("font-size: 20px; font-weight: 800;")
+        v.addWidget(h)
+        sub = QLabel("Paste a link to a public Spotify or Apple Music playlist or album. The songs are added in the "
+                     "same order with the playlist's cover; songs you already have in your music folders play from "
+                     "your files, the rest stream while online and are listed under To download. Your Spotify account "
+                     "isn't signed in to or changed. Spotify links show up to 100 songs; for bigger playlists export "
+                     "a CSV with Exportify (exportify.net) and choose the file.")
+        sub.setObjectName("sub")
+        sub.setWordWrap(True)
+        v.addWidget(sub)
+        link = QLineEdit()
+        link.setPlaceholderText("https://open.spotify.com/playlist/…")
+        v.addWidget(link)
+        row = QHBoxLayout()
+        file_btn = QPushButton("Choose a file…")
+        file_btn.setStyleSheet(PILL_BUTTON)
+        row.addWidget(file_btn)
+        row.addStretch()
+        cancel = QPushButton("Cancel")
+        cancel.setStyleSheet(PILL_BUTTON)
+        go = QPushButton("Import")
+        go.setStyleSheet(GREEN_BUTTON)
+        go.setDefault(True)
+        row.addWidget(cancel)
+        row.addWidget(go)
+        v.addLayout(row)
+        cancel.clicked.connect(d.reject)
+        go.clicked.connect(d.accept)
+
+        def pick():
+            path, _ = QFileDialog.getOpenFileName(d, "Import a playlist file", os.path.expanduser("~"),
+                                                  "Playlists (*.csv *.txt *.m3u *.m3u8)")
+            if path:
+                d.done(2)
+                self.import_from_file(path)
+        file_btn.clicked.connect(pick)
+        if d.exec() == 1 and link.text().strip():
+            self.import_from_link(link.text().strip())
+
+    def import_from_link(self, text):
+        from core import importers
+        if importers.parse_link(text) is None:
+            self.show_status("⚠ Paste a Spotify or Apple Music playlist or album link.", 8000)
+            return
+        if not self.online_enabled:
+            self.show_status("⚠ Importing from a link needs Online features (Settings).", 8000)
+            return
+        self.show_status("Reading the playlist…", kind="info", timeout_ms=15000)
+
+        def done(result):
+            self._create_imported_playlist(result["name"], [("track", t) for t in result["tracks"]],
+                                           result.get("cover_url"), result.get("truncated"))
+
+        def failed(err):
+            self.show_status(f"⚠ Couldn't import: {err}", 12000)
+        self.online_call(importers.fetch_from_link, self.net, text, on_done=done, on_error=failed)
+
+    def import_from_file(self, path):
+        from core import importers
+        try:
+            result = importers.read_playlist_file(path)
+        except OSError as e:
+            self.show_status(f"⚠ Couldn't read {os.path.basename(path)}: {e}", 10000)
+            return None
+        if not result["items"]:
+            self.show_status(f"⚠ No songs found in {os.path.basename(path)}.", 8000)
+            return None
+        return self._create_imported_playlist(result["name"], result["items"])
+
+    def _create_imported_playlist(self, name, items, cover_url="", truncated=False):
+        base, n = name.strip() or "Imported playlist", 2
+        name = base
+        while self._name_taken(name):
+            name, n = f"{base} {n}", n + 1
+        by_key = {s.key: s for s in self.songs}
+        songs = []
+        for kind, value in items:
+            if kind == "file":
+                key = normalise_path(value)
+                songs.append(by_key.get(key) or Song(value))
+            else:
+                songs.append(RemoteSong(value))
+        pl = self.create_playlist(name, [])
+        if pl is None:
+            return None
+        pl.songs = songs
+        filled = self._fill_pending_slots()                   # songs already in your music folders
+        pl.generate_cover()
+        self._playlists_changed(pl)
+        pending = [s for s in pl.songs if getattr(s, "is_remote", False)]
+        self.show_status(f"Imported “{pl.name}”: {len(pl.songs)} songs"
+                         + (f", {len(pl.songs) - len(pending)} from your music" if len(pending) < len(pl.songs) else "")
+                         + (" (first 100: use Exportify for the rest)" if truncated else ""),
+                         kind="info", timeout_ms=10000)
+        self.show_playlist(pl)
+        if cover_url and self.online_enabled:
+            def got_cover(path, playlist=pl):
+                if path and playlist in self.playlists and not playlist.custom_cover:
+                    self.set_playlist_cover(playlist, path)
+            self.online_call(self.net.get_image, cover_url, on_done=got_cover)
+        if pending and self.online_enabled:
+            self._enrich_slots(pending)
+        return pl
+
+    def _enrich_slots(self, songs):
+        """Imported songs only have artist + title: look up cover art, album and a preview in the background."""
+        tracks = [s.track for s in songs]
+
+        def work():
+            out = []
+            for t in tracks:
+                try:
+                    out.append(self.online.enrich(t))
+                except Exception:
+                    out.append(t)
+            return out
+
+        def done(enriched):
+            for song, t in zip(songs, enriched):
+                if t is song.track:
+                    continue
+                for field in ("cover_url", "preview_url", "album", "genre", "duration_ms", "source_id", "artist_id"):
+                    value = getattr(t, field, None)
+                    if value and not getattr(song.track, field, None):
+                        setattr(song.track, field, value)
+                song.album = song.album or song.track.album
+                song.duration = song.duration or song.track.duration_ms
+            self.fetch_covers(songs, limit=len(songs))
+            self.schedule_save()
+            if self.open_playlist is not None:
+                self.refresh_playlist_page()
+        self.online_call(work, on_done=done)
+
     def new_playlist(self, open_it=True):
         """Create → Playlist: a new empty "My Playlist #N" straight away, like Spotify (rename it later)."""
         n = len(self.playlists) + 1
@@ -2053,6 +2236,9 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("Rename…").triggered.connect(lambda: self._rename_playlist_dialog(playlist))
         menu.addAction("Delete…").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
+        menu.addAction("Change cover…").triggered.connect(lambda: self.choose_playlist_cover(playlist))
+        if playlist.custom_cover:
+            menu.addAction("Use song covers").triggered.connect(lambda: self.set_playlist_cover(playlist, ""))
         move = menu.addMenu("Move to folder")
         move.setStyleSheet(MENU_STYLE)
         for f in self.user_data.folders:

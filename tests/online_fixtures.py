@@ -73,4 +73,9 @@ class FakeWeb:
                     best = k
         if best is None:
             raise urllib.error.HTTPError(url, 404, "not found", {}, None)
-        return json.dumps(self.routes[best]).encode("utf-8")
+        value = self.routes[best]
+        if isinstance(value, bytes):
+            return value
+        if isinstance(value, str):                 # a web page (HTML / XML / text)
+            return value.encode("utf-8")
+        return json.dumps(value).encode("utf-8")

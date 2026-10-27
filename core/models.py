@@ -139,6 +139,7 @@ class Playlist:
         self.songs = []
         self.cover_path = PLACEHOLDER_IMAGE
         self.folder = folder                    # name of the Your Library folder it's in ("" = none)
+        self.custom_cover = ""                  # a picture you chose (or the imported playlist's cover)
         self.created = created or time.time()   # for "Recently added" sorting
         self.last_played = last_played          # for "Recents" sorting (played or opened)
 
@@ -150,6 +151,9 @@ class Playlist:
         return sum(s.duration for s in self.songs)
 
     def generate_cover(self):
+        if self.custom_cover and os.path.exists(self.custom_cover):
+            self.cover_path = self.custom_cover
+            return self.cover_path
         covers = [s.album_cover_path for s in self.songs[:4]]
         if not covers:
             self.cover_path = PLACEHOLDER_IMAGE

@@ -48,6 +48,7 @@ class SettingsPage(QWidget):
     clear_cache_requested = pyqtSignal()
     open_folder_requested = pyqtSignal(str)
     shortcuts_requested = pyqtSignal()
+    import_requested = pyqtSignal()
 
     def __init__(self, eq_presets=None, parent=None):
         super().__init__(parent)
@@ -118,7 +119,8 @@ class SettingsPage(QWidget):
         self._text(
             "Sevbify has no account, ads or tracking and sells nothing. With online features on it contacts only: "
             "Deezer (search, radio, previews), Wikipedia (artist info), Apple iTunes (official song names), Bandcamp "
-            "and YouTube (full songs and downloads), and Last.fm / Jamendo if you add a key below. Those sites see "
+            "and YouTube (full songs and downloads), Spotify or Apple Music only when you import a playlist link, "
+            "and Last.fm / Jamendo if you add a key below. Those sites see "
             "your IP address and what you look up, like a web browser would. Sevbify only looks at the music folders "
             "you add; it never searches the rest of your computer.")
         self._line_edit("lastfm_api_key", "Last.fm API key (optional)",
@@ -130,6 +132,14 @@ class SettingsPage(QWidget):
 
         self._section("Your Library")
         self._toggle("library_compact", "Use compact library layout", "", u.library_view == "compact")
+        imp_row = QHBoxLayout()
+        imp_row.addLayout(self._name_desc("Import music from other apps",
+                                          "Spotify or Apple Music playlist links, or files from Exportify (.csv), "
+                                          ".txt and .m3u.", into=imp_row), 1)
+        imp = QPushButton("Import playlist")
+        imp.clicked.connect(self.import_requested.emit)
+        imp_row.addWidget(imp)
+        self._v.addLayout(imp_row)
         self._name_desc("Show songs from", "Folders on your computer that Sevbify plays music from. Switch one off to "
                         "hide its songs without removing it.")
         for folder in u.music_folders:

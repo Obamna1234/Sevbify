@@ -61,6 +61,7 @@ class StoredPlaylist:
     folder: str = ""             # Your Library folder ("" = none)
     created: float = 0.0
     last_played: float = 0.0
+    cover: str = ""              # custom cover picture
 
 
 @dataclass
@@ -204,7 +205,8 @@ class Storage:
                 {"name": p.name, "tracks": [_store_track(t) for t in p.tracks],
                  **({"folder": p.folder} if p.folder else {}),
                  **({"created": round(p.created, 3)} if p.created else {}),
-                 **({"last_played": round(p.last_played, 3)} if p.last_played else {})}
+                 **({"last_played": round(p.last_played, 3)} if p.last_played else {}),
+                 **({"cover": to_stored_path(p.cover)} if p.cover else {})}
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
@@ -337,8 +339,10 @@ class Storage:
                 except (TypeError, ValueError):
                     return 0.0
             folder = str(item.get("folder") or "")
+            cover = item.get("cover") or ""
             playlists.append(StoredPlaylist(name, tracks, folder if folder in data.folders else "",
-                                            num("created"), num("last_played")))
+                                            num("created"), num("last_played"),
+                                            from_stored_path(str(cover)) if cover else ""))
         data.playlists = playlists
         return data
 
