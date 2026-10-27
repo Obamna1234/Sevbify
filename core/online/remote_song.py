@@ -4,7 +4,8 @@ It looks like a local Song to the rest of the app (title, artist, artwork,
 duration, key) so it can sit in the queue, the queue panel and playlists.
 How it plays is decided when it starts:
   1. a full-length stream the source permits (Jamendo, Internet Archive), or
-  2. the 30-second preview (Deezer).
+  2. with Settings -> "Play full songs" on: the full song found on Bandcamp/YouTube (core/streamer.py), or
+  3. the 30-second preview (Deezer).
 """
 from core.paths import PLACEHOLDER_IMAGE
 from .models import OnlineTrack
@@ -13,6 +14,7 @@ from .models import OnlineTrack
 class RemoteSong:
     is_remote = True
     file_path = ""
+    stream_full = False          # set from Settings by the main window: play full songs instead of previews
 
     def __init__(self, track: OnlineTrack):
         self.track = track
@@ -34,7 +36,8 @@ class RemoteSong:
 
     @property
     def is_preview(self):
-        return not self.track.stream_url and bool(self.track.preview_url)
+        """True when this song will play as a 30-second preview."""
+        return not self.track.stream_url and bool(self.track.preview_url) and not RemoteSong.stream_full
 
     def matches(self, query: str) -> bool:
         haystack = f"{self.title} {self.artist} {self.album}".casefold()

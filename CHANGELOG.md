@@ -2,6 +2,17 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Full songs, To download, fresh start (v5.0.0-beta.4):**
+- Songs you don't have yet now **stream in full** while online (Bandcamp first, then YouTube, matched by the song's
+  real length with SEVBY's engine), instead of 30-second previews. They stay ⬇ "not downloaded" until downloaded;
+  the player shows *Full song · YouTube · not downloaded*. Falls back to the preview if no full song is found.
+  Settings → *Play full songs you don't have yet* switches it off. The one-time notice now covers streaming too.
+- **Saved for later** is now called **To download** in the left panel and on its page.
+- New users start with **no playlists** (the sample playlists are gone).
+- Removed old unused files (`ui/sidebar.py`, `ui/Home_View.py`, `ui/Playlist_View.py`, `ui/player_bar.py`,
+  `test_home.py`, `Folder_Structure_Scanner_v4.py`).
+- New `core/streamer.py` with 9 tests (fake searches, no internet).
+
 **Logo, icons and a smaller app (v5.0.0-beta.3):**
 - New Sevbify logo (SEVBY family look: white play button with SEVBY's green download arrow and sound wave) as the
   icon of Sevbify.exe, its window, taskbar and shortcuts. macOS (.icns) and Linux (.png + .desktop) icons are ready

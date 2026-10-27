@@ -17,9 +17,12 @@ See `CHANGELOG.md` inside the zip for the full list. Highlights:
 
 - Spotify-style look: Your Library panel, Home shelves, queue and now-playing panels.
 - Search, Go to song radio and artist info when online; your own music always works offline.
-- **Downloading songs you don't have yet** (SEVBY's engine, in the background): right-click a greyed ⬇ song →
-  **Download**, **⬇ Download** on a playlist, or **⬇ Download all** on Saved for later. Each song fills its own place
-  in the playlist. Radio → **Save as playlist** in the queue panel.
+- **Songs you don't have yet stream in full** while online (found on Bandcamp, then YouTube) and stay marked ⬇
+  until downloaded. They're listed under **To download** on the left.
+- **Downloading** (SEVBY's engine, in the background): right-click a greyed ⬇ song → **Download**,
+  **⬇ Download** on a playlist, or **⬇ Download all** on To download. Each song fills its own place in the playlist.
+  Radio → **Save as playlist** in the queue panel.
+- New users start with no playlists.
 
 **Pre-release / beta:** built and tested automatically on GitHub's Windows machine, but downloading a real song from
 inside Sevbify hasn't been confirmed on a home PC yet. Please report anything that goes wrong.

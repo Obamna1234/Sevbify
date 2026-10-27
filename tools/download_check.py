@@ -54,5 +54,17 @@ def main():
             print(f"::warning title=Download check failed (cloud servers are often blocked)::{tail[:900]}")
 
 
+def stream_check():
+    """Can the full-song finder get a playable link? (Bandcamp first, then YouTube.)"""
+    from core import streamer
+    for artist, title in (("Kevin MacLeod", "Monkeys Spinning Monkeys"), ("Perturbator", "Future Club")):
+        try:
+            res = streamer.find_full_song(artist, title)
+            print(f"::notice title=Stream OK::{artist} - {title}: {res['source']} {res['page']}")
+        except Exception as e:
+            print(f"::warning title=Stream check failed ({artist} - {title})::{str(e)[:400]}")
+
+
 if __name__ == "__main__":
     main()
+    stream_check()

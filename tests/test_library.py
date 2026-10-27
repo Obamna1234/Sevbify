@@ -6,16 +6,17 @@ from conftest import make_wav, wait_until
 
 
 # ---------------------------------------------------------------- persistence
-def test_first_run_creates_sample_playlists_and_save_file(window, data_dir):
-    assert [p.name for p in window.playlists] == ["Favorites", "Chill Hits", "Workout Mix"]
+def test_first_run_starts_with_no_playlists_and_a_save_file(window, data_dir):
+    assert window.playlists == []                      # no sample playlists: people make their own
     saved = json.loads((data_dir / "library.json").read_text(encoding="utf-8"))
     assert saved["version"] == 1
-    assert [p["name"] for p in saved["playlists"]] == ["Favorites", "Chill Hits", "Workout Mix"]
+    assert saved["playlists"] == []
 
 
 def test_playlists_and_volume_survive_restart(open_window, audio_dir, data_dir):
     w = open_window(audio_folder=str(audio_dir), data_dir=str(data_dir))
     pl = w.create_playlist("Road Trip", [w.songs[2], w.songs[0]])
+    w.create_playlist("Favorites", [w.songs[1]])
     w.delete_playlist(next(p for p in w.playlists if p.name == "Favorites"))
     w.volume_slider.setValue(42)
     w.close()  # flushes the pending volume save

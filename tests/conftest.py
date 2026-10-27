@@ -100,6 +100,10 @@ def open_window(qapp):
         # Tests that need online data install their own FakeWeb.
         from online_fixtures import FakeWeb
         w.net._opener = FakeWeb(offline=True)
+        # Songs you don't have play as previews in tests (full streaming would search the real web).
+        from core.online.remote_song import RemoteSong
+        w.user_data.stream_full = False
+        RemoteSong.stream_full = False
         windows.append(w)
         assert wait_until(qapp, lambda: w.library_ready), "library scan did not finish"
         return w

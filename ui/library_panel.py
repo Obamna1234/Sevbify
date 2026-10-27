@@ -1,4 +1,4 @@
-"""Left 'Your Library' panel (Spotify layout): Your Songs, Saved for later and
+"""Left 'Your Library' panel (Spotify layout): Your Songs, To download and
 every playlist as a list with artwork, filter chips, a filter box and + Create."""
 from PyQt6.QtWidgets import (
     QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QLineEdit, QSizePolicy
@@ -142,7 +142,7 @@ class LibraryPanel(QFrame):
         chips = QHBoxLayout()
         chips.setContentsMargins(8, 4, 0, 0)
         self.chip_playlists = self._chip("Playlists")
-        self.chip_saved = self._chip("Saved for later")
+        self.chip_saved = self._chip("To download")
         for c in (self.chip_playlists, self.chip_saved):
             c.toggled.connect(self._chip_toggled)
             chips.addWidget(c)
@@ -216,8 +216,8 @@ class LibraryPanel(QFrame):
                              active=st["active"] == "library", playing=st["playing_source"] in ("Your Songs", "Your Library"))
             row.clicked.connect(self.open_all_songs.emit)
             v.addWidget(row)
-        if not only_playlists and visible("Saved for later"):
-            row = LibraryRow(self._special_saved, "Saved for later", f"To download • {st['n_saved']} songs",
+        if not only_playlists and visible("To download"):
+            row = LibraryRow(self._special_saved, "To download", f"Not downloaded yet • {st['n_saved']} songs",
                              active=st["active"] == "saved", playing=st["playing_source"].startswith("Saved:"))
             row.clicked.connect(self.open_saved.emit)
             v.addWidget(row)

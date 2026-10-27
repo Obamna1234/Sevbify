@@ -35,14 +35,13 @@ from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
 from .settings_dialog import SettingsDialog
 from .download_manager import DownloadManager
-from core import downloader
+from core import downloader, streamer
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
 OPEN_TIMEOUT_MS = 10000
 # Pressing "previous" more than this far into a track restarts it instead
 # (same behaviour as Spotify).
 PREV_RESTART_THRESHOLD_MS = 3000
-SAMPLE_PLAYLIST_NAMES = ["Favorites", "Chill Hits", "Workout Mix"]
 HOME_TILE_WIDTH = 170   # cover is 140 px; the extra room fits titles and artist names
 
 # Spotify-style slider: thin grey track, white fill; green fill + white knob on hover.
@@ -314,6 +313,7 @@ class MainWindow(QMainWindow):
         # --- Saved user data ---------------------------------------------
         self.storage = Storage(data_dir)
         self.user_data = self.storage.load()
+        RemoteSong.stream_full = self.user_data.stream_full
         if audio_folder is not None:
             self.user_data.music_folders = [str(audio_folder)]
         self._save_timer = QTimer(self)
@@ -558,10 +558,7 @@ class MainWindow(QMainWindow):
     def _build_playlists_from_storage(self, by_key):
         self.playlists = []
         if self.user_data.is_new:
-            # First run: create the sample playlists once. They are normal
-            # playlists after that and can be renamed or deleted.
-            self.playlists = self.create_playlists()
-            return
+            return          # first run: no playlists; people make their own
         for stored in self.user_data.playlists:
             pl = Playlist(stored.name)
             for entry in stored.tracks:
@@ -575,19 +572,6 @@ class MainWindow(QMainWindow):
                 pl.add_song(by_key.get(key) or Song(entry))
             pl.generate_cover()
             self.playlists.append(pl)
-
-    def create_playlists(self):
-        """Sample playlists (only created on first run)."""
-        playlists = []
-        if not self.songs:
-            return playlists
-        for name in SAMPLE_PLAYLIST_NAMES:
-            p = Playlist(name)
-            for s in self.songs[:4]:
-                p.add_song(s)
-            p.generate_cover()
-            playlists.append(p)
-        return playlists
 
     # ------------------------------------------------------------------
     def add_music_folder(self, folder: str) -> bool:
@@ -767,7 +751,7 @@ class MainWindow(QMainWindow):
         if getattr(song, "is_remote", False) and saved_genre is None:
             menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
         if saved_genre is not None and saved_index is not None:
-            menu.addAction("✕  Remove from Saved for later").triggered.connect(
+            menu.addAction("✕  Remove from To download").triggered.connect(
                 lambda: self.remove_saved(saved_genre, saved_index))
         if has_artist:
             open_menu = menu.addMenu("↗  Open in")
@@ -1217,13 +1201,13 @@ class MainWindow(QMainWindow):
             self.home_scroll.setWidget(content)
             return
 
-        # Quick tiles: Your Songs, Saved for later, playlists.
+        # Quick tiles: Your Songs, To download, playlists.
         quick = QGridLayout()
         quick.setSpacing(8)
         tiles = [(self.library_panel._special_songs, "Your Songs", self.show_library,
                   lambda: self.play_song(self.songs[0], queue=self.songs, source="Your Songs"), "Your Songs")]
         if self.user_data.save_for_later:
-            tiles.append((self.library_panel._special_saved, "Saved for later", self.show_saved,
+            tiles.append((self.library_panel._special_saved, "To download", self.show_saved,
                           lambda: self._play_saved(sorted(self.user_data.save_for_later)[0]), "Saved:"))
         for pl in self.playlists[:8 - len(tiles)]:
             tiles.append((cover_thumb(pl.cover_path, 64), pl.name, lambda p=pl: self.show_playlist(p),
@@ -1446,7 +1430,8 @@ class MainWindow(QMainWindow):
                 owned = sum(1 for s in items if not getattr(s, "is_remote", False))
                 self.search_web_status.setText(
                     f"{len(items)} songs  ·  double-click to play"
-                    + ("  ·  songs you own play in full, others as 30-second previews" if owned < len(items) else ""))
+                    + (("  ·  ⬇ songs stream in full while online; download them to keep" if RemoteSong.stream_full
+                        else "  ·  songs you own play in full, others as 30-second previews") if owned < len(items) else ""))
             else:
                 self.search_web_status.setText(f"No web results for \"{query}\".")
             self.fetch_covers(items, limit=25)
@@ -1654,7 +1639,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(8)
         from .library_panel import gradient_cover
         header, meta = self._gradient_header(
-            gradient_cover(200, "#1ed760", "#0b5c33", "⬇"), "To download", "Saved for later", "#137a43",
+            gradient_cover(200, "#1ed760", "#0b5c33", "⬇"), "Downloads", "To download", "#137a43",
             lambda: self.user_data.save_for_later and self._play_saved(sorted(self.user_data.save_for_later)[0]))
         meta.setText("Everything waiting to be downloaded: the ⬇ songs in your playlists, plus songs you saved "
                      "from Radio or Search (sorted by genre). When a song arrives it leaves this list and fills "
@@ -2040,12 +2025,15 @@ class MainWindow(QMainWindow):
                 self._track_handled = True
                 self._handle_failed_track("online features are switched off")
                 return
+            if self.user_data.stream_full and not song.track.stream_url and self._accept_online_notice():
+                self._stream_full_song(song)
+                return
             if not song.playable_url:
                 self.player.stop()
                 self._track_handled = True
                 self._handle_failed_track("no preview available for this song")
                 return
-            if song.is_preview:
+            if not song.track.stream_url:
                 self._set_now_playing_text(song.title, song.artist, "30-second preview")
         elif not song.exists:
             self.player.stop()
@@ -2053,9 +2041,18 @@ class MainWindow(QMainWindow):
             self._handle_failed_track("file not found (moved or deleted?)")
             return
 
+        self._play_media(song.playable_url if is_remote else song.file_path)
+        # Note: any "Skipped …" message is left visible; it clears on its own timer.
+
+    def _play_media(self, location, headers=None):
+        """Hand a file path or web link to VLC and start playing it."""
         try:
             self.player.stop()
-            media = self.vlc_instance.media_new(song.playable_url if is_remote else song.file_path)
+            media = self.vlc_instance.media_new(location)
+            for name, value in (headers or {}).items():
+                option = {"user-agent": "http-user-agent", "referer": "http-referrer"}.get(name.lower())
+                if option and value:
+                    media.add_option(f":{option}={value}")
             self.player.set_media(media)
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
@@ -2063,12 +2060,57 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._track_handled = True
             self._handle_failed_track(f"playback error: {e}")
-            return
-
+            return False
         self._track_handled = False
         self.is_playing = True
         self._set_play_icon(True)
-        # Note: any "Skipped …" message is left visible; it clears on its own timer.
+        return True
+
+    def _stream_full_song(self, song):
+        """Find the full song online (in the background) and stream it; fall back to the preview."""
+        self.player.stop()
+        self._track_handled = True                   # nothing to watch until the stream is found
+        self.is_playing = True
+        self._set_play_icon(True)
+        self._set_now_playing_text(song.title, song.artist, "Finding the full song…")
+        token = object()
+        self._stream_token = token
+
+        def still_wanted():
+            return getattr(self, "_stream_token", None) is token and self.current_song is song \
+                and not getattr(self, "_shut_down", False)
+
+        def done(res):
+            if not still_wanted():
+                return
+            if res.get("duration_ms") and not song.duration:
+                song.duration = res["duration_ms"]
+            self._set_now_playing_text(song.title, song.artist, f"Full song · {res['source']} · not downloaded")
+            self._play_media(res["url"], res.get("headers"))
+
+        def failed(err):
+            if not still_wanted():
+                return
+            if song.track.preview_url:
+                self._set_now_playing_text(song.title, song.artist, "30-second preview (full song not found)")
+                self._play_media(song.track.preview_url)
+            else:
+                self._track_handled = True
+                self._handle_failed_track("the full song wasn't found online")
+
+        self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
+                         self.user_data.download_source, on_done=done, on_error=failed)
+
+    def _accept_online_notice(self):
+        """Show the one-time notice about downloading/streaming from Bandcamp and YouTube. True if accepted."""
+        if self.user_data.download_notice_accepted:
+            return True
+        answer = QMessageBox.question(self, "Sevbify", self.DOWNLOAD_NOTICE.format(folder=self.download_folder()))
+        if answer != QMessageBox.StandardButton.Yes:
+            return False
+        self.user_data.download_notice_accepted = True
+        self.schedule_save()
+        return True
 
     def _refresh_now_playing(self):
         for table in (self.library_table, self.search_table, self.pl_table):
@@ -2442,11 +2484,13 @@ class MainWindow(QMainWindow):
         return folder
 
     DOWNLOAD_NOTICE = (
-        "Sevbify looks for each song on Bandcamp first, then on YouTube, and saves it as an MP3 in:\n"
+        "To play full songs you don't have yet and to download them, Sevbify looks for each song on "
+        "Bandcamp first, then on YouTube. Streams play straight away; downloads are saved as MP3s in:\n"
         "{folder}\n\n"
         "Only download music you have the right to download, for example songs you have bought or that "
-        "the artist offers for free. Downloading from YouTube goes against YouTube's terms of service; "
-        "you decide whether to use it.\n\n"
+        "the artist offers for free. Streaming or downloading YouTube audio outside YouTube's own player "
+        "goes against YouTube's terms of service; you decide whether to use it. You can switch full songs "
+        "off in Settings (30-second previews are used instead).\n\n"
         "Sevbify is not affiliated with YouTube, Bandcamp, Apple, Spotify, Deezer or Sevby LLC (sevby.com).\n\n"
         "Continue?")
 
@@ -2457,12 +2501,8 @@ class MainWindow(QMainWindow):
             self.show_status("Those songs are already on your computer.", kind="info", timeout_ms=3000)
             return 0
         folder = self.download_folder()
-        if not self.user_data.download_notice_accepted:
-            answer = QMessageBox.question(self, "Download songs", self.DOWNLOAD_NOTICE.format(folder=folder))
-            if answer != QMessageBox.StandardButton.Yes:
-                return 0
-            self.user_data.download_notice_accepted = True
-            self.schedule_save()
+        if not self._accept_online_notice():
+            return 0
         added = self.downloads.request(tracks, folder, self.user_data.download_source)
         if added:
             self.show_status(f"⬇ Downloading {added} song{'s' if added != 1 else ''} in the background…",
@@ -2554,7 +2594,8 @@ class MainWindow(QMainWindow):
                 self._consecutive_failures = 0
                 self._start_current()
             local = sum(1 for s in items if not getattr(s, "is_remote", False))
-            self.show_status(f"{name}: {len(items)} songs ({local} from your library, others as previews)",
+            self.show_status(f"{name}: {len(items)} songs ({local} from your library, others "
+                             f"{'streamed in full' if RemoteSong.stream_full else 'as previews'})",
                              kind="info", timeout_ms=6000)
             if self.user_data.right_panel == "":
                 self.set_right_panel("queue")
@@ -2648,6 +2689,9 @@ class MainWindow(QMainWindow):
         self.user_data.jamendo_client_id = values["jamendo_client_id"]
         if values.get("download_source") in downloader.SOURCES:
             self.user_data.download_source = values["download_source"]
+        if "stream_full" in values:
+            self.user_data.stream_full = bool(values["stream_full"])
+            RemoteSong.stream_full = self.user_data.stream_full
         if was_online != self.user_data.online_enabled:
             self.net.online = None
             self._online_setting_changed()

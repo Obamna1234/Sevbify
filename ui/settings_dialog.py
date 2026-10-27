@@ -65,6 +65,14 @@ class SettingsDialog(QDialog):
         v.addWidget(self.jamendo)
 
         v.addWidget(self._line())
+        self.stream_full = QCheckBox("Play full songs you don't have yet")
+        self.stream_full.setChecked(user_data.stream_full)
+        v.addWidget(self.stream_full)
+        v.addWidget(self._sub(
+            "When online, songs from Search and Radio stream in full (found on Bandcamp first, then YouTube) "
+            "instead of 30-second previews. They stay marked ⬇ until you download them for offline listening."))
+
+        v.addWidget(self._line())
         v.addWidget(self._label("Downloads"))
         v.addWidget(self._sub(
             "Songs you choose to download are looked for here, saved as MP3s in a "
@@ -125,4 +133,5 @@ class SettingsDialog(QDialog):
             "lastfm_api_key": self.lastfm.text().strip(),
             "jamendo_client_id": self.jamendo.text().strip(),
             "download_source": self.download_source.currentText(),
+            "stream_full": self.stream_full.isChecked(),
         }
