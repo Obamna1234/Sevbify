@@ -1,9 +1,10 @@
-# Custom Spotify Replica — Local Music Player
+# Aurvo — Local Music Player
 
-A Spotify-inspired desktop music player for local files, built with Python, PyQt6 and VLC.
+Aurvo is an ad-free desktop music player for your own music files, with a familiar dark,
+streaming-app-style interface. Built with Python, PyQt6 and VLC.
 Windows is the first target platform.
 
-**Current version:** v4.9 — library, search, saved playlists, volume. See `CHANGELOG.md`.
+**Current version:** v4.9.2 — library, search, saved playlists, volume. See `CHANGELOG.md`.
 
 ## Requirements
 
@@ -19,14 +20,14 @@ Windows is the first target platform.
 **One-time setup**
 1. Install **64-bit Python 3.12** (https://www.python.org/downloads/, tick *Add python.exe to PATH*)
    and **64-bit VLC** (https://www.videolan.org/vlc/).
-2. In GitHub Desktop: **File → Clone repository → Spotify-Replica**.
+2. In GitHub Desktop: **File → Clone repository → Aurvo**.
 3. Optional: copy your music into the clone's `audio` folder (it stays on your PC and is never
    uploaded), or skip this and use **Your Library → Add folder…** in the app.
    With no `audio` folder, the app uses your Windows *Music* folder.
 
 **Every time there's an update**
 1. GitHub Desktop → **Fetch origin** → **Pull origin**.
-2. Double-click **`Run Spotify Replica.bat`**.
+2. Double-click **`Run Aurvo.bat`**.
 
 The first run sets up a private Python environment (about a minute). After that it starts
 straight away, and re-installs packages automatically only when an update needs it.
@@ -34,7 +35,7 @@ straight away, and re-installs packages automatically only when an update needs 
 
 **Ready-made .exe (no Python needed):** every push is built and tested on a real Windows machine
 by GitHub Actions. Open the repo's **Actions** tab → latest *Windows build & tests* run →
-download **Spotify-Replica-Windows** → unzip → run `Spotify Replica.exe` (VLC must be installed).
+download **Aurvo-Windows** → unzip → run `Aurvo.exe` (VLC must be installed).
 
 ## Manual setup (Windows, PowerShell)
 
@@ -60,7 +61,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 python app.py
 ```
 
-You can also launch it from any folder, e.g. `python "C:\path\to\spotify-replica\app.py"` —
+You can also launch it from any folder, e.g. `python "C:\path\to\Aurvo\app.py"` —
 music and artwork are found relative to the project folder.
 
 ## Using the app
@@ -85,7 +86,8 @@ art embedded in the file's tags, or a placeholder.
 
 ## Where your playlists and settings are saved
 
-`%APPDATA%\Custom Spotify Replica\library.json` (paste that into File Explorer's address bar).
+`%APPDATA%\Aurvo\library.json` (paste that into File Explorer's address bar). Playlists saved
+under the app's old name (`%APPDATA%\Custom Spotify Replica`) are copied across automatically on first launch.
 Playlists, volume and music folders are saved automatically. Songs inside the project folder are
 saved with relative paths, so moving the project folder doesn't break playlists. If a song's
 file goes missing, it stays in the playlist greyed out as "(file missing)" instead of being
@@ -105,7 +107,7 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 
 | Path | Purpose |
 |---|---|
-| `Run Spotify Replica.bat` | One-click launcher (sets up Python packages automatically) |
+| `Run Aurvo.bat` | One-click launcher (sets up Python packages automatically) |
 | `Run Tests.bat` | Runs the automated tests |
 | `.github/workflows/windows-build.yml` | Automatic Windows tests + `.exe` build on every push |
 | `app.py` | Entry point. Shows a clear message if VLC is missing. `--smoke-test` starts, loads the library and exits (used by the automatic build). |

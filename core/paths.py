@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import sys
 
-# True when running as the packaged "Spotify Replica.exe" (built by PyInstaller).
+# True when running as the packaged "Aurvo.exe" (built by PyInstaller).
 FROZEN = getattr(sys, "frozen", False)
 
 if FROZEN:
@@ -28,7 +28,7 @@ def _user_data_dir() -> Path:
         base = os.path.expanduser("~/Library/Application Support")
     else:
         base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    return Path(base) / "Custom Spotify Replica"
+    return Path(base) / "Aurvo"
 
 
 PLACEHOLDER_IMAGE = str(RESOURCE_ROOT / "assets" / "album_covers" / "placeholder.png")

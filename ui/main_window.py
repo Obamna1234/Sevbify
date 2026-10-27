@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
         data_dir:     where library.json is saved (default: %APPDATA%).
         """
         super().__init__()
-        self.setWindowTitle("Custom Spotify Replica")
+        self.setWindowTitle("Aurvo")
         self.setGeometry(100, 100, 1200, 800)
         self.setStyleSheet("background-color: #121212;")
 

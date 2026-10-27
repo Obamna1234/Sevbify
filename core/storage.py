@@ -1,6 +1,6 @@
 """Saving and loading user data (playlists + settings) as a versioned JSON file.
 
-File location (Windows): %APPDATA%\\Custom Spotify Replica\\library.json
+File location (Windows): %APPDATA%\\Aurvo\\library.json
 The file is written atomically (temp file + rename) so a crash or power cut
 while saving can't leave a half-written file. If the file is unreadable it is
 renamed to library.corrupt-<timestamp>.json and the app starts with defaults,
@@ -15,7 +15,9 @@ from typing import List
 
 from .paths import AUDIO_FOLDER, to_stored_path, from_stored_path
 
-APP_DIR_NAME = "Custom Spotify Replica"
+APP_DIR_NAME = "Aurvo"
+# Folder used before the app was named Aurvo; data is copied from it once.
+LEGACY_APP_DIR_NAMES = ["Custom Spotify Replica"]
 SCHEMA_VERSION = 1
 DATA_FILE_NAME = "library.json"
 
@@ -28,6 +30,26 @@ def default_data_dir() -> str:
     else:
         base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     return os.path.join(base, APP_DIR_NAME)
+
+
+def migrate_legacy_data(new_dir: str) -> bool:
+    """Copy playlists/settings saved under the app's old name into new_dir.
+
+    Runs only if new_dir has no library.json yet. The old folder is left in
+    place as a backup. Returns True if something was copied.
+    """
+    import shutil
+    if os.path.exists(os.path.join(new_dir, DATA_FILE_NAME)):
+        return False
+    parent = os.path.dirname(new_dir)
+    for old_name in LEGACY_APP_DIR_NAMES:
+        old_dir = os.path.join(parent, old_name)
+        old_file = os.path.join(old_dir, DATA_FILE_NAME)
+        if os.path.isfile(old_file):
+            os.makedirs(new_dir, exist_ok=True)
+            shutil.copy2(old_file, os.path.join(new_dir, DATA_FILE_NAME))
+            return True
+    return False
 
 
 @dataclass
@@ -49,6 +71,11 @@ class UserData:
 class Storage:
     def __init__(self, data_dir: str = None):
         self.data_dir = data_dir or default_data_dir()
+        if data_dir is None:
+            try:
+                migrate_legacy_data(self.data_dir)
+            except OSError as e:
+                print(f"Could not copy data from the old app folder: {e}")
         self.path = os.path.join(self.data_dir, DATA_FILE_NAME)
 
     # ------------------------------------------------------------------

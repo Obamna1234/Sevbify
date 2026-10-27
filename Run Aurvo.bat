@@ -8,7 +8,7 @@ rem  changes (e.g. after pulling an update in GitHub Desktop).
 rem ===================================================================
 setlocal
 cd /d "%~dp0"
-title Spotify Replica launcher
+title Aurvo launcher
 
 where py >nul 2>nul
 if errorlevel 1 (
