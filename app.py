@@ -110,7 +110,20 @@ def main():
         def loaded():
             _smoke_log(f"OK: window opened, library loaded with {len(window.songs)} songs "
                        f"from {window.user_data.music_folders}")
+            # Downloading needs yt-dlp and ffmpeg inside the packaged app.
+            try:
+                from core import downloader
+                problems = downloader.check_tools()
+                e = downloader.engine()
+                details = f"yt-dlp {e.ytdlp_version()}, ffmpeg at {e.ffmpeg_path()}"
+            except Exception:
+                problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""
             window.close()
+            if problems:
+                _smoke_log("FAILED: downloads would not work: " + " | ".join(problems))
+                app.exit(4)
+                return
+            _smoke_log("OK: download tools found: " + details)
             app.exit(0)
 
         def timed_out():

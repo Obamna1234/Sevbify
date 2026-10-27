@@ -18,13 +18,15 @@ def test_web_results_shown_and_owned_song_plays_full(window, qapp, tmp_path):
     window.show_search()
     window.search_input.setText("narc")
     assert window.search_lib_header.isVisibleTo(window.search_page)
-    assert wait_until(qapp, lambda: window.web_table.rowCount() == 2)
+    assert wait_until(qapp, lambda: window.web_table.rowCount() == 1)
+    # Your own copy is listed on top under "In your library" and not repeated in the web results.
+    assert owned in window.search_table.songs_in_view()
     items = window.web_table.songs_in_view()
-    assert items[0] is owned                                  # matched to your own file
-    assert getattr(items[1], "is_remote", False) and items[1].title == "Gamechanger"
+    assert getattr(items[0], "is_remote", False) and items[0].title == "Gamechanger"
+    assert window.web_table.item(0, 1).text().endswith("⬇")   # clearly not downloaded
     assert "30-second previews" in window.search_web_status.text()
-    window.web_table.play_requested.emit(items[1], items)
-    assert window.current_song is items[1]
+    window.web_table.play_requested.emit(items[0], items)
+    assert window.current_song is items[0]
     assert window.pq.source_name == "Search: narc"
 
 

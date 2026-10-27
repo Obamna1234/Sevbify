@@ -1,5 +1,5 @@
 """Top bar: back/forward, Home, the "What do you want to play?" search pill,
-online status and Settings (Spotify layout)."""
+download progress, online status and Settings (Spotify layout)."""
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLineEdit, QLabel, QSizePolicy
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 
@@ -12,6 +12,7 @@ class TopBar(QWidget):
     home_clicked = pyqtSignal()
     settings_clicked = pyqtSignal()
     search_activated = pyqtSignal()           # search box clicked / typed into
+    downloads_clicked = pyqtSignal()          # the download progress pill was clicked
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -50,6 +51,16 @@ class TopBar(QWidget):
         h.addWidget(self.search_edit, 2)
         h.addStretch(1)
 
+        # Download progress ("⬇ 2 of 5 · Song"); hidden when nothing is downloading.
+        self.downloads_btn = QPushButton()
+        self.downloads_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.downloads_btn.setMaximumWidth(280)
+        self.downloads_btn.setStyleSheet(self._pill_style(theme.TEXT))
+        self.downloads_btn.setFixedHeight(28)
+        self.downloads_btn.clicked.connect(self.downloads_clicked.emit)
+        self.downloads_btn.hide()
+        h.addWidget(self.downloads_btn)
+
         self.online_label = QLabel()
         self.online_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.online_label.mousePressEvent = lambda e: self.settings_clicked.emit()
@@ -85,6 +96,23 @@ class TopBar(QWidget):
 
     def set_home_active(self, active):
         self.home_btn.setIcon(icons.home(theme.TEXT, filled=active))
+
+    def set_downloads(self, text: str, tip: str = "", failed: bool = False):
+        """Show download progress, or hide the pill when text is empty."""
+        if not text:
+            self.downloads_btn.hide()
+            return
+        metrics = self.downloads_btn.fontMetrics()
+        self.downloads_btn.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, 250))
+        self.downloads_btn.setToolTip(tip or text)
+        self.downloads_btn.setStyleSheet(self._pill_style(theme.RED if failed else theme.TEXT))
+        self.downloads_btn.show()
+
+    @staticmethod
+    def _pill_style(colour):
+        return (f"QPushButton {{ color: {colour}; background: {theme.ELEVATED}; border: none; border-radius: 14px;"
+                f" padding: 5px 12px; font-size: 12px; font-weight: 600; text-align: left; }}"
+                f" QPushButton:hover {{ background: {theme.HOVER}; }}")
 
     def set_online_state(self, state: str):
         """state: "online", "offline", "disabled" or "unknown"."""

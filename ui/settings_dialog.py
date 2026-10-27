@@ -1,6 +1,6 @@
-"""Settings window: online features switch and optional service keys."""
+"""Settings window: online features switch, optional service keys and where downloads come from."""
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QFrame
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QFrame, QComboBox
 )
 from PyQt6.QtCore import Qt
 
@@ -18,6 +18,8 @@ QPushButton:hover { border-color: white; }
 QPushButton#primary { color: black; background: #1db954; border: none; }
 QPushButton#primary:hover { background: #1ed760; }
 QFrame#line { background: #2a2a2a; max-height: 1px; }
+QComboBox { background: #2a2a2a; color: white; border: 1px solid #3e3e3e; border-radius: 4px; padding: 6px 8px; font-size: 13px; }
+QComboBox QAbstractItemView { background: #282828; color: white; selection-background-color: #3e3e3e; }
 """
 
 
@@ -63,6 +65,17 @@ class SettingsDialog(QDialog):
         v.addWidget(self.jamendo)
 
         v.addWidget(self._line())
+        v.addWidget(self._label("Downloads"))
+        v.addWidget(self._sub(
+            "Songs you choose to download are looked for here, saved as MP3s in a "
+            "“Sevbify downloads” folder inside your first music folder, and fill their playlist slots. "
+            "Only download music you have the right to download."))
+        self.download_source = QComboBox()
+        self.download_source.addItems(["Bandcamp + YouTube", "Bandcamp only", "YouTube only"])
+        self.download_source.setCurrentText(user_data.download_source)
+        v.addWidget(self.download_source)
+
+        v.addWidget(self._line())
         row = QHBoxLayout()
         if on_clear_cache:
             clear = QPushButton("Clear online cache")
@@ -101,4 +114,5 @@ class SettingsDialog(QDialog):
             "online_enabled": self.online.isChecked(),
             "lastfm_api_key": self.lastfm.text().strip(),
             "jamendo_client_id": self.jamendo.text().strip(),
+            "download_source": self.download_source.currentText(),
         }

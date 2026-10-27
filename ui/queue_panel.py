@@ -83,6 +83,7 @@ class QueuePanel(QWidget):
     play_recent = pyqtSignal(object)         # Song
     remove_from_queue = pyqtSignal(int)      # position in user queue
     clear_user_queue = pyqtSignal()
+    save_as_playlist = pyqtSignal()          # keep the current Radio as a playlist
 
     MAX_ROWS = 60
 
@@ -191,7 +192,18 @@ class QueuePanel(QWidget):
                     v.addWidget(row)
                 pos = len(user_queue)
             if upcoming:
-                v.addWidget(self._section(f"Next from: {source_name}" if source_name else "Next up"))
+                head = QHBoxLayout()
+                head.addWidget(self._section(f"Next from: {source_name}" if source_name else "Next up"), 1)
+                if source_name.endswith(" Radio"):
+                    save = QPushButton("Save as playlist")
+                    save.setCursor(Qt.CursorShape.PointingHandCursor)
+                    save.setToolTip("Keep this Radio as a playlist. Songs you don't have yet can be downloaded "
+                                    "later and fill their place.")
+                    save.setStyleSheet("QPushButton { color: #b3b3b3; border: none; background: transparent; font-weight: bold; padding: 14px 8px 0 0; }"
+                                       "QPushButton:hover { color: white; }")
+                    save.clicked.connect(self.save_as_playlist.emit)
+                    head.addWidget(save)
+                v.addLayout(head)
                 for i, song in enumerate(upcoming[: max(0, self.MAX_ROWS - len(user_queue))]):
                     row = TrackRow(song, self._loader)
                     row.clicked.connect(lambda p=pos + i: self.play_upcoming.emit(p))

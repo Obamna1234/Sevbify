@@ -1,6 +1,25 @@
 # Changelog
 
-## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search
+## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
+
+**Downloading songs (SEVBY's engine, in the background):**
+- Songs you don't have yet are greyed out with **⬇** in web search results, playlists and Saved for later, online
+  or offline. Playlist headers say how many still need downloading to play offline.
+- **Download** / **Retry download** in their right-click menu, **⬇ Download** on a playlist, **⬇ Download all** on
+  the Saved for later (*To download*) page, which now also lists every ⬇ slot in your playlists.
+- Downloads run one at a time in the background while music keeps playing: Bandcamp first, then YouTube, saved as
+  tagged MP3s with cover art in `Sevbify downloads` inside your first music folder. Each song fills its exact place
+  in every playlist it was added to. Rows show *Queued to download*, *Downloading…* or *Download failed*.
+- **⬇ pill** in the top bar shows progress; click to stop or to retry failures. Closing the app stops cleanly.
+- **Radio → Save as playlist** (queue panel). Songs you don't have stay as ⬇ slots in their place.
+- Search: songs you already have are listed on top and not repeated under *More from the web*.
+- Settings → **Downloads**: Bandcamp + YouTube / Bandcamp only / YouTube only (remembered).
+- One-time notice before the first download: only download what you have the right to; not affiliated with
+  YouTube, Bandcamp, Apple, Spotify, Deezer or Sevby LLC.
+- New: `core/sevby_engine.py` (generated from SEVBY by `tools/make_engine.py`), `core/downloader.py`,
+  `ui/download_manager.py`, `tools/download_check.py`, 21 tests in `tests/test_download.py` (fake downloader, no
+  internet). The Windows build now bundles yt-dlp and ffmpeg, and `--smoke-test` checks both are inside the app.
+- Not yet tried: a real download from inside Sevbify on a home PC.
 
 **New look (Spotify desktop layout, our own code):**
 - Black window with three rounded panels: **Your Library** (left), the page (middle), Now playing / Queue (right).

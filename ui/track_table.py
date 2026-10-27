@@ -109,6 +109,9 @@ class TrackTable(QTableWidget):
 
         self._current_key = None
         self.mark_pending = False      # playlists: show "⬇" on songs not downloaded yet
+        # Set by the main window: key -> (state, note) from the download manager, so rows can show
+        # "Queued", "Downloading…" or "Download failed".
+        self.download_state = None
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context)
         self.cellDoubleClicked.connect(self._on_double_click)
@@ -135,10 +138,18 @@ class TrackTable(QTableWidget):
                 self.setItem(row, col, item)
             if getattr(song, "is_remote", False):
                 tip = "Not in your library: plays as a 30-second preview" if song.is_preview else "Not in your library: plays online"
-                if self.mark_pending:
+                state, note = self.download_state(song.track.key) if self.download_state else (None, "")
+                label = {"queued": "   · Queued to download", "downloading": "   · Downloading…",
+                         "failed": "   · Download failed"}.get(state)
+                if label:
+                    title.setText(song.title + label)
+                    if state == "failed":
+                        tip = f"Download failed: {note}. Right-click → Retry download.\n" + tip
+                elif self.mark_pending:
                     title.setText(f"{song.title}   ⬇")
-                    tip = ("Not downloaded yet (needed for offline listening). It fills in here automatically "
-                           "when the song appears in your music folders.\n" + tip)
+                if self.mark_pending:
+                    tip = ("Not downloaded yet (needed for offline listening). Right-click → Download, or it "
+                           "fills in here by itself when the song appears in your music folders.\n" + tip)
                 for item in (num, title, artist, album, dur):
                     item.setToolTip(tip)
                 dur.setText((format_time(song.duration) if song.duration else "--:--") + ("  · 30s" if song.is_preview else ""))
@@ -175,6 +186,11 @@ class TrackTable(QTableWidget):
             if song is None or (not song.exists and not getattr(song, "is_remote", False)):
                 continue
             current = song.key == self._current_key
+            if getattr(song, "is_remote", False) and self.mark_pending and not current:
+                # Not downloaded yet: greyed out so it's obvious, online or offline.
+                for col in range(5):
+                    self.item(row, col).setForeground(QBrush(DIM))
+                continue
             self.item(row, 1).setForeground(QBrush(GREEN if current else WHITE))
             self.item(row, 0).setForeground(QBrush(GREEN if current else GREY))
             for col in (2, 3, 4):

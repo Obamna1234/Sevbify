@@ -34,6 +34,8 @@ from core.online.models import OnlineTrack, build_match_index, find_local_match
 from core.online.remote_song import RemoteSong
 from .async_tasks import run_async
 from .settings_dialog import SettingsDialog
+from .download_manager import DownloadManager
+from core import downloader
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
 OPEN_TIMEOUT_MS = 10000
@@ -364,6 +366,7 @@ class MainWindow(QMainWindow):
         self.top_bar.forward_clicked.connect(self.go_forward)
         self.top_bar.settings_clicked.connect(self.open_settings)
         self.top_bar.search_activated.connect(lambda: self.show_search(select=False))
+        self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
         self._history, self._history_pos, self._replaying = [], -1, False
@@ -404,12 +407,27 @@ class MainWindow(QMainWindow):
         self.queue_panel.play_recent.connect(lambda s: self.play_song(s, queue=list(self.pq.recent), source="Recently played"))
         self.queue_panel.remove_from_queue.connect(self._remove_from_user_queue)
         self.queue_panel.clear_user_queue.connect(self._clear_user_queue)
+        self.queue_panel.save_as_playlist.connect(self.save_queue_as_playlist)
         self.right_panel.addWidget(self.queue_panel)
         self.now_playing_panel = NowPlayingPanel(load_pixmap)
         self.now_playing_panel.close_requested.connect(lambda: self.set_right_panel(""))
         self.right_panel.addWidget(self.now_playing_panel)
         self._artist_cards = {}          # artist name -> card dict (this session)
         self._online_hooks = [self._refresh_artist_card]
+
+        # --- Downloads (SEVBY engine, in the background) ------------------
+        self.downloads = DownloadManager(self)
+        self._downloaded_paths = {}      # song key -> file the download manager saved
+        self._downloads_refresh = QTimer(self)
+        self._downloads_refresh.setSingleShot(True)
+        self._downloads_refresh.timeout.connect(self._refresh_download_views)
+        self._download_rescan = QTimer(self)
+        self._download_rescan.setSingleShot(True)
+        self._download_rescan.timeout.connect(self.rescan_library)
+        self.downloads.changed.connect(lambda: self._downloads_refresh.start(150))
+        self.downloads.song_done.connect(self._on_song_downloaded)
+        self.downloads.run_finished.connect(self._on_downloads_finished)
+        self.downloads.problem.connect(lambda text: self.show_status("⚠ Can't download: " + text, 15000))
         self.right_panel.hide()
         self.top_layout.addWidget(self.right_panel)
 
@@ -435,6 +453,8 @@ class MainWindow(QMainWindow):
         self.setup_playlist_page()
         self.setup_saved_page()
         self.setup_shortcuts()
+        for table in (self.pl_table, self.web_table):
+            table.download_state = self.downloads.state
 
         self.show_home()
 
@@ -696,8 +716,11 @@ class MainWindow(QMainWindow):
     def _playlists_changed(self, playlist=None):
         self.save_now()
         self.display_playlists()
+        self._refresh_library_panel()
         if self.open_playlist is not None and (playlist is None or playlist is self.open_playlist):
             self.refresh_playlist_page()
+        if self.stack.currentWidget() is self.saved_page:
+            self.refresh_saved_page()
 
     def _remove_generated_cover(self, path):
         # Only delete collages we generated, never user artwork/placeholder.
@@ -730,6 +753,15 @@ class MainWindow(QMainWindow):
         if not self.online_enabled:
             radio.setText("◉  Go to song radio (turn on Online features)")
         radio.triggered.connect(lambda: self.start_radio(song))
+        if getattr(song, "is_remote", False):
+            state, _note = self.downloads.state(song.track.key)
+            if state in ("queued", "downloading"):
+                act = menu.addAction("⬇  Downloading…" if state == "downloading" else "⬇  Queued to download")
+                act.setEnabled(False)
+                menu.addAction("■  Stop all downloads").triggered.connect(self.downloads.stop)
+            else:
+                text = "⬇  Retry download" if state == "failed" else "⬇  Download"
+                menu.addAction(text).triggered.connect(lambda: self.download_songs([song]))
         if getattr(song, "is_remote", False) and saved_genre is None:
             menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
         if saved_genre is not None and saved_index is not None:
@@ -1302,6 +1334,7 @@ class MainWindow(QMainWindow):
         self.search_web_status = self._muted_label("")
         layout.addWidget(self.search_web_status)
         self.web_table = TrackTable(sortable=False)
+        self.web_table.mark_pending = True      # songs you don't have: greyed with ⬇ (online or offline)
         self.web_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
         self.web_table.context_requested.connect(
             lambda s, row, pos: self._show_song_menu(s, pos, queue=self.web_table.songs_in_view(), source=src()))
@@ -1382,6 +1415,11 @@ class MainWindow(QMainWindow):
                 return                                  # user typed something else meanwhile
             self._web_query_shown = query
             items = self.radio_items(tracks)
+            # Songs already listed under "In your library" aren't repeated; any other song you own
+            # comes first, then the ones you'd still need to download.
+            shown = {s.key for s in self.search_table.songs_in_view()}
+            items = [s for s in items if s.key not in shown]
+            items.sort(key=lambda s: getattr(s, "is_remote", False))
             self.web_table.set_songs(items)
             self.web_table.set_current(self.current_song)
             self.web_table.setVisible(bool(items))
@@ -1508,7 +1546,7 @@ class MainWindow(QMainWindow):
     def _refresh_library_panel(self):
         if not hasattr(self, "library_panel"):
             return
-        n_saved = sum(len(v) for v in self.user_data.save_for_later.values())
+        n_saved = len(self.songs_to_download())
         playing = self.pq.source_name if self.current_song is not None else ""
         self.library_panel.set_items(self.playlists, len(self.songs), n_saved, playing)
 
@@ -1599,9 +1637,9 @@ class MainWindow(QMainWindow):
         header, meta = self._gradient_header(
             gradient_cover(200, "#1ed760", "#0b5c33", "⬇"), "To download", "Saved for later", "#137a43",
             lambda: self.user_data.save_for_later and self._play_saved(sorted(self.user_data.save_for_later)[0]))
-        meta.setText("Songs you found with Radio or Search, sorted by genre so styles never mix. "
-                     "When a song appears in your music folders it leaves this list and fills any "
-                     "playlist slot it was added to.")
+        meta.setText("Everything waiting to be downloaded: the ⬇ songs in your playlists, plus songs you saved "
+                     "from Radio or Search (sorted by genre). When a song arrives it leaves this list and fills "
+                     "its place in every playlist it was added to.")
         layout.addWidget(header)
         self.saved_scroll = QScrollArea()
         self.saved_scroll.setWidgetResizable(True)
@@ -1617,14 +1655,46 @@ class MainWindow(QMainWindow):
     def refresh_saved_page(self):
         self._refresh_library_panel()
         content = QWidget()
+        content.setObjectName("savedContent")
+        content.setStyleSheet("#savedContent { background: transparent; }")
         v = QVBoxLayout(content)
         v.setContentsMargins(24, 0, 24, 12)
         v.setSpacing(6)
         genres = sorted(self.user_data.save_for_later, key=str.casefold)
-        if not genres:
-            v.addWidget(self._muted_label("Nothing saved yet. Right-click a song in Radio or web search results "
-                                          "and choose “Save for later”."))
+        in_playlists = self.playlist_songs_to_download()
+        everything = self.songs_to_download()
+        if everything:
+            top = QHBoxLayout()
+            top.addWidget(self._muted_label(
+                f"{len(everything)} song{'s' if len(everything) != 1 else ''} to download. Each one fills its "
+                "place in its playlist when it arrives."), 1)
+            all_btn = QPushButton(f"⬇ Download all {len(everything)}" if len(everything) > 1 else "⬇ Download")
+            all_btn.setStyleSheet(GREEN_BUTTON)
+            all_btn.setFixedHeight(36)
+            all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            all_btn.clicked.connect(lambda: self.download_songs(self.songs_to_download()))
+            top.addWidget(all_btn)
+            v.addLayout(top)
+        if not genres and not in_playlists:
+            v.addWidget(self._muted_label("Nothing to download. Songs you add to a playlist from Radio or web "
+                                          "search, or save with “Save for later”, show up here."))
         all_remote = []
+        if in_playlists:
+            head = QHBoxLayout()
+            head.addWidget(self._section_label(f"In your playlists  ·  {len(in_playlists)}"))
+            head.addStretch()
+            v.addLayout(head)
+            table = TrackTable(sortable=False)
+            table.mark_pending = True
+            table.download_state = self.downloads.state
+            table.set_songs(in_playlists)
+            table.setFixedHeight(36 + len(in_playlists) * table.verticalHeader().defaultSectionSize() + 4)
+            table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source="To download"))
+            table.context_requested.connect(
+                lambda s, row, pos, t=table: self._show_song_menu(s, pos, queue=t.songs_in_view(),
+                                                                   source="To download"))
+            v.addWidget(table)
+            all_remote += in_playlists
         for genre in genres:
             songs = self.saved_songs(genre)
             all_remote += songs
@@ -1633,6 +1703,7 @@ class MainWindow(QMainWindow):
             head.addWidget(lbl)
             head.addStretch()
             for text, slot in (("▶ Play", lambda _=False, g=genre: self._play_saved(g)),
+                               ("⬇ Download all", lambda _=False, g=genre: self.download_songs(self.saved_songs(g))),
                                ("➕ Add all to playlist…", lambda _=False, g=genre: self._add_saved_to_playlist(g)),
                                ("Export…", lambda _=False, g=genre: self.export_song_list(self.saved_songs(g), g))):
                 b = QPushButton(text)
@@ -1644,6 +1715,7 @@ class MainWindow(QMainWindow):
             v.addLayout(head)
             table = TrackTable(sortable=False)
             table.mark_pending = True
+            table.download_state = self.downloads.state
             table.set_songs(songs)
             table.setFixedHeight(36 + len(songs) * table.verticalHeader().defaultSectionSize() + 4)
             table.play_requested.connect(lambda s, view, g=genre: self.play_song(s, queue=view, source=f"Saved: {g}"))
@@ -1794,6 +1866,15 @@ class MainWindow(QMainWindow):
         delete_btn.setFixedHeight(32)
         delete_btn.clicked.connect(self._confirm_delete_open_playlist)
         actions.addWidget(delete_btn)
+        self.pl_download_btn = QPushButton("⬇ Download")
+        self.pl_download_btn.setStyleSheet(PILL_BUTTON)
+        self.pl_download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pl_download_btn.setFixedHeight(32)
+        self.pl_download_btn.setToolTip("Download every song in this playlist that isn't on your computer yet")
+        self.pl_download_btn.clicked.connect(
+            lambda: self.open_playlist and self.download_songs(self.open_playlist.songs))
+        self.pl_download_btn.hide()
+        actions.addWidget(self.pl_download_btn)
         actions.addStretch()
         hv.addLayout(actions)
         layout.addWidget(self.pl_header)
@@ -1843,10 +1924,12 @@ class MainWindow(QMainWindow):
         missing = sum(1 for s in pl.songs if not s.exists and not getattr(s, "is_remote", False))
         meta = f"{n} song{'s' if n != 1 else ''}, {format_total(pl.total_duration)}"
         if pending:
-            meta += f" · ⬇ {pending} not downloaded yet"
+            meta += (f" · ⬇ {pending} not downloaded yet (download to play offline)" if pending == 1 else
+                     f" · ⬇ {pending} not downloaded yet (download them to play offline)")
         if missing:
             meta += f" · {missing} missing"
         self.pl_meta.setText(meta)
+        self._update_playlist_download_button()
         self.pl_table.set_songs(pl.songs)
         self.pl_table.set_current(self.current_song)
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
@@ -2225,6 +2308,13 @@ class MainWindow(QMainWindow):
             nonlocal too_new
             if not getattr(song, "is_remote", False):
                 return None
+            saved = self._downloaded_paths.get(song.track.key)
+            if saved:
+                # Downloaded by Sevbify: the file is complete, and its name/tags may use the official
+                # spelling, so link it directly instead of matching by name.
+                for s in self.songs:
+                    if s.key == saved:
+                        return s
             match = find_local_match(song.track, self.songs, index)
             if match is None:
                 return None
@@ -2295,6 +2385,132 @@ class MainWindow(QMainWindow):
             self._watcher.addPaths(dirs)
 
     # ------------------------------------------------------------------
+    # Downloading "not downloaded yet" songs (SEVBY engine, background)
+    # ------------------------------------------------------------------
+    DOWNLOAD_SUBFOLDER = "Sevbify downloads"
+
+    def playlist_songs_to_download(self):
+        """Not-downloaded songs in any playlist (each song once), in playlist order."""
+        seen, out = set(), []
+        for pl in self.playlists:
+            for s in pl.songs:
+                if getattr(s, "is_remote", False) and s.track.key not in seen:
+                    seen.add(s.track.key)
+                    out.append(s)
+        return out
+
+    def songs_to_download(self):
+        """Everything waiting to be downloaded: playlist slots plus Saved for later (each song once)."""
+        out = self.playlist_songs_to_download()
+        seen = {s.track.key for s in out}
+        for genre in sorted(self.user_data.save_for_later, key=str.casefold):
+            for s in self.saved_songs(genre):
+                if s.track.key not in seen:
+                    seen.add(s.track.key)
+                    out.append(s)
+        return out
+
+    def download_folder(self):
+        """Downloads go into a "Sevbify downloads" folder inside the first music folder, so the
+        library already scans them. Without any music folder, ~/Music/Sevbify downloads is added."""
+        for f in self.user_data.music_folders:
+            if os.path.isdir(f):
+                return os.path.join(f, self.DOWNLOAD_SUBFOLDER)
+        folder = os.path.join(os.path.expanduser("~"), "Music", self.DOWNLOAD_SUBFOLDER)
+        os.makedirs(folder, exist_ok=True)
+        self.add_music_folder(folder)
+        return folder
+
+    DOWNLOAD_NOTICE = (
+        "Sevbify looks for each song on Bandcamp first, then on YouTube, and saves it as an MP3 in:\n"
+        "{folder}\n\n"
+        "Only download music you have the right to download, for example songs you have bought or that "
+        "the artist offers for free. Downloading from YouTube goes against YouTube's terms of service; "
+        "you decide whether to use it.\n\n"
+        "Sevbify is not affiliated with YouTube, Bandcamp, Apple, Spotify, Deezer or Sevby LLC (sevby.com).\n\n"
+        "Continue?")
+
+    def download_songs(self, songs):
+        """Queue the not-downloaded songs among `songs` for download. Returns how many were queued."""
+        tracks = [s.track for s in songs if getattr(s, "is_remote", False)]
+        if not tracks:
+            self.show_status("Those songs are already on your computer.", kind="info", timeout_ms=3000)
+            return 0
+        folder = self.download_folder()
+        if not self.user_data.download_notice_accepted:
+            answer = QMessageBox.question(self, "Download songs", self.DOWNLOAD_NOTICE.format(folder=folder))
+            if answer != QMessageBox.StandardButton.Yes:
+                return 0
+            self.user_data.download_notice_accepted = True
+            self.schedule_save()
+        added = self.downloads.request(tracks, folder, self.user_data.download_source)
+        if added:
+            self.show_status(f"⬇ Downloading {added} song{'s' if added != 1 else ''} in the background…",
+                             kind="info", timeout_ms=4000)
+        else:
+            self.show_status("Already downloading.", kind="info", timeout_ms=3000)
+        return added
+
+    def _on_song_downloaded(self, key, path, title):
+        if path:
+            self._downloaded_paths[key] = normalise_path(path)
+        self._download_rescan.start(400)
+
+    def _on_downloads_finished(self, result):
+        ok, failed = result["ok"], result["failed"]
+        if result["stopped"]:
+            text = f"Downloads stopped · {ok} finished"
+        else:
+            text = f"⬇ Downloads finished · {ok} downloaded"
+        if failed:
+            text += f" · {len(failed)} failed (click the ⬇ button at the top to retry)"
+        self.show_status(text, kind="error" if failed else "info", timeout_ms=10000)
+        self._refresh_download_views()
+
+    def _refresh_download_views(self):
+        d = self.downloads
+        if d.is_busy():
+            tip = (d.step_text or "Downloading") + "\nClick to stop."
+            self.top_bar.set_downloads(d.summary(), tip)
+        elif d.failed_count():
+            n = d.failed_count()
+            self.top_bar.set_downloads(f"⬇ {n} failed", "Click to retry the songs that failed", failed=True)
+        else:
+            self.top_bar.set_downloads("")
+        if self.open_playlist is not None:
+            self._update_playlist_download_button()
+            self.pl_table.set_songs(self.open_playlist.songs)
+            self.pl_table.set_current(self.current_song)
+        if self.web_table.rowCount():
+            self.web_table.set_songs(self.web_table.songs_in_view())
+            self.web_table.set_current(self.current_song)
+        if self.user_data.save_for_later and self.stack.currentWidget() is self.saved_page:
+            self.refresh_saved_page()
+
+    def _update_playlist_download_button(self):
+        pl = self.open_playlist
+        waiting = [s for s in (pl.songs if pl else []) if getattr(s, "is_remote", False)
+                   and self.downloads.state(s.track.key)[0] not in ("queued", "downloading")]
+        self.pl_download_btn.setText(f"⬇ Download {len(waiting)}" if len(waiting) > 1 else "⬇ Download")
+        self.pl_download_btn.setVisible(bool(waiting))
+
+    def _show_downloads_menu(self):
+        menu = self._new_menu()
+        d = self.downloads
+        if d.is_busy():
+            info = menu.addAction(d.summary())
+            info.setEnabled(False)
+            if d.step_text:
+                step = menu.addAction(d.step_text)
+                step.setEnabled(False)
+            menu.addAction("■  Stop downloads").triggered.connect(d.stop)
+        if d.failed_count():
+            menu.addAction(f"↻  Retry {d.failed_count()} failed").triggered.connect(
+                lambda: d.retry_failed(self.download_folder(), self.user_data.download_source))
+        btn = self.top_bar.downloads_btn
+        menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
+
+    # ------------------------------------------------------------------
     # Go to Radio
     # ------------------------------------------------------------------
     def start_radio(self, seed):
@@ -2331,6 +2547,23 @@ class MainWindow(QMainWindow):
                 self.show_status(f"⚠ Radio couldn't start: {err}")
 
         self.online_call(self.online.radio, seed.artist, seed.title, on_done=done, on_error=failed)
+
+    def save_queue_as_playlist(self):
+        """Keep the current Radio (or any queue source) as a normal playlist. Songs you don't have yet
+        stay as "not downloaded" slots and show up under To download."""
+        songs = list(self.pq.original)
+        if not songs:
+            return None
+        base = self.pq.source_name or "New playlist"
+        name, n = base, 2
+        while self._name_taken(name):
+            name, n = f"{base} {n}", n + 1
+        pl = self.create_playlist(name, songs)
+        if pl is not None:
+            pending = sum(1 for s in songs if getattr(s, "is_remote", False))
+            self.show_status(f"Saved “{pl.name}”" + (f" · {pending} to download" if pending else ""),
+                             kind="info", timeout_ms=5000)
+        return pl
 
     def radio_items(self, tracks):
         """Turn online tracks into queue items: your own file if you have the song,
@@ -2393,6 +2626,8 @@ class MainWindow(QMainWindow):
             self.user_data.lastfm_api_key = values["lastfm_api_key"]
             self.online.set_lastfm_key(values["lastfm_api_key"])
         self.user_data.jamendo_client_id = values["jamendo_client_id"]
+        if values.get("download_source") in downloader.SOURCES:
+            self.user_data.download_source = values["download_source"]
         if was_online != self.user_data.online_enabled:
             self.net.online = None
             self._online_setting_changed()
@@ -2417,6 +2652,9 @@ class MainWindow(QMainWindow):
             if self._scan_thread is not None:
                 self._scan_thread.stop()
                 self._scan_thread.wait(3000)
+            # Stop downloading (finished songs are kept) and let the worker end before VLC is released.
+            self.downloads.stop()
+            self.downloads.wait(10000)
             if hasattr(self, "_watcher"):
                 self._watcher.removePaths(self._watcher.directories() or [])
             self.timer.stop()

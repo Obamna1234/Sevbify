@@ -72,6 +72,8 @@ class UserData:
     online_enabled: bool = True         # Settings -> Online features
     lastfm_api_key: str = ""
     jamendo_client_id: str = ""
+    download_source: str = "Bandcamp + YouTube"   # Settings -> Downloads (see core/downloader.SOURCES)
+    download_notice_accepted: bool = False        # the one-time "only download what you may" notice
     recent: List[str] = field(default_factory=list)       # recently played file paths
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     is_new: bool = True        # True when no save file existed yet (first run)
@@ -133,6 +135,8 @@ class Storage:
                 "online_enabled": bool(data.online_enabled),
                 "lastfm_api_key": data.lastfm_api_key,
                 "jamendo_client_id": data.jamendo_client_id,
+                "download_source": data.download_source,
+                "download_notice_accepted": bool(data.download_notice_accepted),
             },
             "playlists": [
                 {"name": p.name, "tracks": [_store_track(t) for t in p.tracks]}
@@ -169,6 +173,9 @@ class Storage:
         data.online_enabled = bool(settings.get("online_enabled", True))
         data.lastfm_api_key = str(settings.get("lastfm_api_key", "") or "")
         data.jamendo_client_id = str(settings.get("jamendo_client_id", "") or "")
+        if settings.get("download_source") in ("Bandcamp + YouTube", "Bandcamp only", "YouTube only"):
+            data.download_source = settings["download_source"]
+        data.download_notice_accepted = bool(settings.get("download_notice_accepted", False))
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
