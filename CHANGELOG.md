@@ -2,6 +2,17 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Logo, icons and a smaller app (v5.0.0-beta.3):**
+- New Sevbify logo (SEVBY family look: white play button with SEVBY's green download arrow and sound wave) as the
+  icon of Sevbify.exe, its window, taskbar and shortcuts. macOS (.icns) and Linux (.png + .desktop) icons are ready
+  for when those builds are switched on; `tools/make_logo.py` draws them all.
+- **Settings → Add to Desktop and Start menu** (Windows app) makes shortcuts with the logo.
+- VLC trimmed to what Sevbify uses (audio only): its own window, video, subtitles, visualisations, casting/streaming
+  out, device discovery and remote control are left out (`tools/trim_vlc.py`). All audio formats, web streams,
+  the equaliser and speed filters stay. VLC never opens a video window now.
+- The start-up check on GitHub now plays WAV, MP3, FLAC, OGG, Opus, M4A and a web stream with the trimmed VLC, plays a
+  looping canvas video with Qt's video player, and checks the icon, all inside the packaged app.
+
 **All-in-one Windows app:** VLC's playback engine (libVLC + plugins) is now inside the ready-made app, so nothing
 needs installing. The build hides the machine's own VLC before starting the packaged app, and `--smoke-test` plays a
 WAV and an MP3 tone with the built-in engine. New releases are published automatically from the `VERSION` file

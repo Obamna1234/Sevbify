@@ -302,7 +302,8 @@ class MainWindow(QMainWindow):
         theme.load_fonts()
         self.setStyleSheet(theme.base_stylesheet())
 
-        self.vlc_instance = vlc.Instance(*vlc_args)
+        # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
+        self.vlc_instance = vlc.Instance("--no-video", *vlc_args)
         if self.vlc_instance is None:
             raise RuntimeError(
                 "libVLC could not be initialised. Make sure the 64-bit VLC media "

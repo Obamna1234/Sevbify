@@ -1,3 +1,5 @@
+<img src="assets/branding/sevbify_logo_1024.png" alt="Sevbify logo" width="160">
+
 # Sevbify — Local Music Player
 
 Sevbify is an ad-free desktop music player for your own music files, with a familiar dark,
@@ -40,7 +42,7 @@ straight away, and re-installs packages automatically only when an update needs 
 
 **Ready-made app (no Python, no GitHub Desktop needed):** open the repo's **Releases** page (right-hand side of the
 repo's main page) → newest version → under **Assets** download **Sevbify-Windows.zip** → Extract All → run
-**Sevbify.exe**. It's all in one: VLC's playback engine, the downloader and ffmpeg are inside, so nothing else needs
+**Sevbify.exe**. To open it like any other app, use **Settings → Add to Desktop and Start menu**. It's all in one: VLC's playback engine, the downloader and ffmpeg are inside, so nothing else needs
 installing. The install steps are on each release page.
 
 How releases are made: every push is built and tested on a real Windows machine by GitHub Actions (macOS and Linux
@@ -185,6 +187,7 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 - Sevbify's own code: MIT.
 - Download engine: from SEVBY (MIT). Uses **yt-dlp** (Unlicense) and **ffmpeg** (the ready-made app
   bundles an ffmpeg build from the `imageio-ffmpeg` package, which is GPL-licensed; see https://ffmpeg.org).
+- Logo and icons: original artwork for Sevbify, drawn by `tools/make_logo.py` (files in `assets/branding`).
 - Playback: VLC's engine, libVLC (LGPL 2.1+; some plugins GPL) by VideoLAN, via python-vlc. The ready-made Windows
   app includes libVLC and its plugins in `_internal\vlc`, with VLC's licence as `VLC-COPYING.txt`; VLC's source code
   is at https://www.videolan.org. Font: Figtree (SIL Open Font License).

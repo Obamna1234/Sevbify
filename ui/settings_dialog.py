@@ -75,6 +75,16 @@ class SettingsDialog(QDialog):
         self.download_source.setCurrentText(user_data.download_source)
         v.addWidget(self.download_source)
 
+        from core import shortcuts
+        if shortcuts.can_create():
+            v.addWidget(self._line())
+            v.addWidget(self._label("Shortcuts"))
+            v.addWidget(self._sub("Sevbify comes as a folder without an installer. Add it to your Desktop and "
+                                  "Start menu so you can open it like any other app."))
+            add = QPushButton("Add to Desktop and Start menu")
+            add.clicked.connect(lambda: add.setText(shortcuts.create_windows_shortcuts()[1]))
+            v.addWidget(add, 0, Qt.AlignmentFlag.AlignLeft)
+
         v.addWidget(self._line())
         row = QHBoxLayout()
         if on_clear_cache:

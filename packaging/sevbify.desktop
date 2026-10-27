@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sevbify
+Comment=Music player for your own files, with song downloads
+Exec=Sevbify
+Icon=sevbify
+Terminal=false
+Categories=AudioVideo;Audio;Player;

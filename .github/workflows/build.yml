@@ -100,10 +100,20 @@ jobs:
             cp "$SRC/libvlc.dll" "$SRC/libvlccore.dll" vlc/
             cp -r "$SRC/plugins" vlc/
             cp "$SRC/COPYING.txt" vlc/VLC-COPYING.txt 2>/dev/null || true
+            # Drop what Sevbify never uses (VLC's window, video, casting, ...); see tools/trim_vlc.py.
+            python tools/trim_vlc.py vlc
+            # Rebuild VLC's plugin list for the trimmed set so the app starts quickly.
+            "$SRC/vlc-cache-gen.exe" vlc/plugins || echo "::warning title=VLC::plugin cache not rebuilt"
             du -sh vlc
             EXTRA="--add-data vlc${SEP}vlc"
           fi
-          pyinstaller --noconfirm --windowed --name Sevbify --collect-all yt_dlp \
+          # Sevbify's logo as the program icon (Windows .ico, macOS .icns, Linux .png).
+          case "${{ runner.os }}" in
+            Windows) ICON=assets/branding/sevbify.ico ;;
+            macOS)   ICON=assets/branding/sevbify.icns ;;
+            *)       ICON=assets/branding/sevbify_256.png ;;
+          esac
+          pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp \
             --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" $EXTRA app.py
 
       - name: Check the built app starts (Windows)
@@ -115,7 +125,7 @@ jobs:
           $p = Start-Process -FilePath "dist\Sevbify\Sevbify.exe" -ArgumentList "--smoke-test" -PassThru -Wait
           Write-Host "Exit code: $($p.ExitCode)"
           $log = Join-Path $env:APPDATA "Sevbify\smoke-test.log"
-          if (Test-Path $log) { Get-Content $log }
+          if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "::notice title=Smoke test::$_" } }
           if ($p.ExitCode -ne 0) { throw "Smoke test failed" }
 
       - name: Check the built app starts (macOS / Linux)
@@ -136,7 +146,8 @@ jobs:
             Windows) cp README.md CHANGELOG.md dist/Sevbify/
                      pwsh -Command 'Compress-Archive -Path "dist\Sevbify" -DestinationPath "Sevbify-Windows.zip"' ;;
             macOS)   ditto -c -k --keepParent dist/Sevbify.app Sevbify-macOS.zip ;;
-            Linux)   cp README.md CHANGELOG.md dist/Sevbify/
+            Linux)   cp README.md CHANGELOG.md packaging/sevbify.desktop dist/Sevbify/
+                     cp assets/branding/sevbify_256.png dist/Sevbify/sevbify.png
                      tar czf Sevbify-Linux.tar.gz -C dist Sevbify ;;
           esac
           ls -la Sevbify-*

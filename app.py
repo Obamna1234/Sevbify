@@ -53,9 +53,10 @@ def _smoke_log(text: str):
 
 
 def _smoke_playback():
-    """Play a generated one-second tone (WAV, and MP3 made with the bundled ffmpeg) through libVLC's
-    silent output. A file that VLC can't read ends with length 0. Returns (ok, details)."""
-    import math, struct, subprocess, tempfile, wave
+    """Play a generated one-second tone through libVLC's silent output: WAV, plus MP3, FLAC, OGG, Opus and
+    M4A made with the bundled ffmpeg, and the MP3 again as a web stream from a local server (like previews).
+    A file VLC can't read ends with length 0. Returns (ok, details)."""
+    import functools, http.server, math, struct, subprocess, tempfile, threading, wave
     try:
         import vlc
         lib = getattr(getattr(vlc, "dll", None), "_name", "?")
@@ -66,16 +67,22 @@ def _smoke_playback():
         with wave.open(files[0], "wb") as w:
             w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
             w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(i / 10))) for i in range(22050)))
-        try:
-            from core import downloader
-            ff = downloader.engine().ffmpeg_path()
-            mp3 = os.path.join(folder, "smoke.mp3")
-            subprocess.run([ff, "-y", "-loglevel", "error", "-i", files[0], mp3], timeout=60,
+        from core import downloader
+        ff = downloader.engine().ffmpeg_path()
+        for name, extra in (("smoke.mp3", []), ("smoke.flac", []), ("smoke.ogg", ["-c:a", "libvorbis"]),
+                            ("smoke.opus", ["-c:a", "libopus"]), ("smoke.m4a", ["-c:a", "aac"])):
+            out = os.path.join(folder, name)
+            subprocess.run([ff, "-y", "-loglevel", "error", "-i", files[0], *extra, out], timeout=60,
                            creationflags=0x08000000 if os.name == "nt" else 0)
-            if os.path.isfile(mp3):
-                files.append(mp3)
-        except Exception:
-            pass
+            if not os.path.isfile(out):
+                return False, f"ffmpeg could not make {name} for the check"
+            files.append(out)
+        # Serve the folder over http so web-stream playback is checked too (no internet needed).
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=folder)
+        handler.log_message = lambda *a: None
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        files.append(f"http://127.0.0.1:{server.server_address[1]}/smoke.mp3")
         inst = vlc.Instance("--aout=adummy", "--no-video", "--quiet")
         results = []
         for path in files:
@@ -88,12 +95,53 @@ def _smoke_playback():
                 time.sleep(0.05)
             state, length = player.get_state(), media.get_duration()
             player.stop(); player.release()
+            label = "web stream" if path.startswith("http") else os.path.splitext(path)[1][1:].upper()
             if state != vlc.State.Ended or length <= 0:
                 inst.release()
-                return False, f"{os.path.basename(path)} did not play ({state}, length {length} ms, libVLC: {lib})"
-            results.append(f"{os.path.splitext(path)[1][1:].upper()} {length} ms")
+                server.shutdown()
+                return False, f"{label} did not play ({state}, length {length} ms, libVLC: {lib})"
+            results.append(f"{label} {length} ms")
         inst.release()
+        server.shutdown()
         return True, f"played {', '.join(results)} with libVLC {vlc.libvlc_get_version().decode()} from {lib}"
+    except Exception:
+        return False, traceback.format_exc()
+
+
+def _smoke_canvas(window):
+    """Play a generated 2-second looping video in the Now playing panel (the Canvas feature), with Qt's
+    video player as packaged in the app. Returns (ok, details)."""
+    import subprocess, tempfile
+    from PyQt6.QtCore import QEventLoop, QTimer, QUrl
+    try:
+        from ui.now_playing_panel import HAVE_VIDEO
+        player = window.now_playing_panel.video_player
+        if not HAVE_VIDEO or player is None:
+            return False, "Qt's video player (QtMultimedia) is missing from the app"
+        from core import downloader
+        ff = downloader.engine().ffmpeg_path()
+        path = os.path.join(tempfile.mkdtemp(), "canvas.mp4")
+        subprocess.run([ff, "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=320x400:rate=24:duration=2",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", path], timeout=60,
+                       creationflags=0x08000000 if os.name == "nt" else 0)
+        if not os.path.isfile(path):
+            return False, "ffmpeg could not make the test video"
+        errors = []
+        player.errorOccurred.connect(lambda *a: errors.append(player.errorString()))
+        player.setSource(QUrl.fromLocalFile(path))
+        player.play()
+        loop = QEventLoop()
+        deadline = time.time() + 15
+        poll = QTimer()
+        poll.timeout.connect(lambda: loop.quit() if (errors or player.position() > 300 or time.time() > deadline) else None)
+        poll.start(50)
+        loop.exec()
+        poll.stop()
+        pos = player.position()
+        player.stop()
+        if errors or pos <= 300:
+            return False, f"the test video did not play (position {pos} ms, errors: {errors})"
+        return True, f"looping video played to {pos} ms (H.264 MP4, Qt video player)"
     except Exception:
         return False, traceback.format_exc()
 
@@ -131,9 +179,31 @@ def install_error_guard():
     sys.excepthook = hook
 
 
+APP_ID = "Obamna1234.Sevbify"
+ICON_FILE = os.path.join("assets", "branding", "sevbify_icon_512.png")
+
+
+def set_app_identity(app):
+    """Show Sevbify's own logo in the window, taskbar and Alt+Tab (not Python's)."""
+    from PyQt6.QtGui import QIcon
+    from core.paths import RESOURCE_ROOT
+    if os.name == "nt":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+        except Exception:
+            pass
+    app.setApplicationName("Sevbify")
+    icon_path = os.path.join(str(RESOURCE_ROOT), ICON_FILE)
+    if os.path.isfile(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    return icon_path
+
+
 def main():
     # 1. Create the QApplication first
     app = QApplication(sys.argv)
+    icon_path = set_app_identity(app)
     install_error_guard()
 
     # 2. Import and create the main window. Importing loads libVLC, which
@@ -160,6 +230,12 @@ def main():
         def loaded():
             _smoke_log(f"OK: window opened, library loaded with {len(window.songs)} songs "
                        f"from {window.user_data.music_folders}")
+            if app.windowIcon().isNull():
+                _smoke_log(f"FAILED: Sevbify's icon is missing ({icon_path})")
+                window.close()
+                app.exit(7)
+                return
+            _smoke_log("OK: Sevbify icon loaded")
             # Downloading needs yt-dlp and ffmpeg inside the packaged app.
             try:
                 from core import downloader
@@ -170,7 +246,13 @@ def main():
                 problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""
             # Playback must work with the VLC engine inside the app (no separately installed VLC).
             ok_play, play_details = _smoke_playback()
+            ok_video, video_details = _smoke_canvas(window)
             window.close()
+            if not ok_video:
+                _smoke_log("FAILED: canvas video check: " + video_details)
+                app.exit(6)
+                return
+            _smoke_log("OK: canvas video check: " + video_details)
             if not ok_play:
                 _smoke_log("FAILED: playback check: " + play_details)
                 app.exit(5)

@@ -6,6 +6,7 @@ Everything is included (player engine, downloader, ffmpeg); nothing else to inst
 2. Right-click the zip → **Extract All…** → **Extract**.
 3. Open the extracted `Sevbify` folder and double-click **Sevbify.exe**.
    If Windows says "Windows protected your PC", click **More info** → **Run anyway** (the app isn't signed yet).
+4. Optional: in Sevbify, **Settings** (⚙ top right) → **Add to Desktop and Start menu**.
 
 Your playlists and settings are kept between versions (`%APPDATA%\Sevbify`). To update, download the new zip,
 extract it, and use the new `Sevbify.exe`; you can delete the old folder.
