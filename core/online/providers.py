@@ -64,6 +64,42 @@ class Deezer:
         data = self._get(f"/chart/{genre_id}/tracks", {"limit": limit}, ttl=12 * 3600)
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
 
+    def genre_overview(self, genre_id):
+        """Everything on a Browse genre page, from Deezer's chart for that genre (refreshed by Deezer every day;
+        Sevbify keeps it 6 hours): {"tracks", "albums", "artists", "playlists"}. "releases" comes from the
+        genre's editorial new-release list when Deezer has one."""
+        data = self._get(f"/chart/{genre_id}", {"limit": 25}, ttl=6 * 3600)
+        out = {"tracks": [self.track_from(d) for d in (data.get("tracks") or {}).get("data", [])
+                          if d.get("readable", True)],
+               "albums": [a for a in (data.get("albums") or {}).get("data", []) if a.get("title")],
+               "artists": [a for a in (data.get("artists") or {}).get("data", []) if a.get("name")],
+               "playlists": [p for p in (data.get("playlists") or {}).get("data", []) if p.get("title")]}
+        try:
+            rel = self._get(f"/editorial/{genre_id}/releases", {"limit": 20}, ttl=12 * 3600)
+            out["releases"] = [a for a in rel.get("data", []) if a.get("title")]
+        except Exception:
+            out["releases"] = []
+        return out
+
+    def playlist_tracks(self, playlist_id, limit=100):
+        data = self._get(f"/playlist/{playlist_id}/tracks", {"limit": limit}, ttl=6 * 3600)
+        return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
+
+    def album_tracks(self, album):
+        """Songs of an album dict from Deezer (its tracks don't repeat the cover, so it's added)."""
+        data = self._get(f"/album/{album.get('id')}/tracks", {"limit": 100}, ttl=7 * 24 * 3600)
+        out = []
+        for d in data.get("data", []):
+            if not d.get("readable", True):
+                continue
+            t = self.track_from(d)
+            t.album = t.album or album.get("title", "")
+            t.cover_url = t.cover_url or album.get("cover_xl") or album.get("cover_big") or ""
+            if not t.artist:
+                t.artist = (album.get("artist") or {}).get("name", "")
+            out.append(t)
+        return out
+
     def genre_artists(self, genre_id, limit=12):
         data = self._get(f"/genre/{genre_id}/artists", {"limit": limit}, ttl=24 * 3600)
         return [{"id": a.get("id"), "name": a.get("name", ""), "picture": a.get("picture_xl") or a.get("picture_big") or ""}
@@ -80,6 +116,11 @@ class Deezer:
         if not items:
             items = self._get("/search", {"q": f"{artist} {title}", "limit": 5}, ttl=7 * 24 * 3600).get("data", [])
         return self.track_from(items[0]) if items else None
+
+    def search_artists(self, query, limit=10):
+        """Artists matching a search (dicts with name, picture_xl, nb_fan), best known first."""
+        data = self._get("/search/artist", {"q": query, "limit": limit}, ttl=24 * 3600)
+        return [a for a in data.get("data", []) if a.get("name")]
 
     def find_artist(self, name):
         data = self._get("/search/artist", {"q": name, "limit": 5}, ttl=7 * 24 * 3600)

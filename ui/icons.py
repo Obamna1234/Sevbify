@@ -413,3 +413,25 @@ def fullscreen(color=GREY, size=18, exit_=False):
                 p.drawLine(corner, QPointF(corner.x(), corner.y() + dy * s * (far - near)))
     p.end()
     return QIcon(pm)
+
+
+def browse(color=GREY, size=24):
+    """Spotify's Browse icon: a drawer/box with a line across and a small handle."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.075)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawRoundedRect(QRectF(s * 0.16, s * 0.2, s * 0.68, s * 0.62), s * 0.08, s * 0.08)
+    p.drawLine(QPointF(s * 0.16, s * 0.42), QPointF(s * 0.84, s * 0.42))
+    p.drawLine(QPointF(s * 0.4, s * 0.58), QPointF(s * 0.6, s * 0.58))
+    p.end()
+    return QIcon(pm)
+
+
+def close(color=GREY, size=18):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.1))
+    p.drawLine(QPointF(s * 0.25, s * 0.25), QPointF(s * 0.75, s * 0.75))
+    p.drawLine(QPointF(s * 0.75, s * 0.25), QPointF(s * 0.25, s * 0.75))
+    p.end()
+    return QIcon(pm)

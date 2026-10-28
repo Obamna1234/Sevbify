@@ -14,7 +14,7 @@ from core.online.models import OnlineTrack
 from core.online.remote_song import RemoteSong
 from core.paths import PLACEHOLDER_IMAGE
 from .cards import Card
-from .shows_page import ShowsHome, ShowPage, EpisodeRow, BrowseTile, TileGrid, TILE_COLOURS
+from .shows_page import ShowsHome, ShowPage, EpisodeRow, BrowseTile, TileGrid, TILE_COLOURS, GenrePage
 from .video_page import VideoPage
 from . import theme
 
@@ -68,11 +68,12 @@ class ShowsMixin:
         self.show_page.follow_clicked.connect(self._toggle_follow)
         self.show_page.download_all_clicked.connect(self._download_whole_show)
         self.show_page.sort_changed.connect(self._sort_show)
+        self.genre_page = GenrePage()
         self.video_page = VideoPage()
         self.video_page.audio_only_requested.connect(self._video_to_audio)
         self.video_page.error.connect(lambda msg: self.show_status(f"⚠ Video: {msg}", 10000))
         self._video_song = None
-        for page in (self.podcasts_page, self.audiobooks_page, self.show_page, self.video_page):
+        for page in (self.podcasts_page, self.audiobooks_page, self.show_page, self.video_page, self.genre_page):
             page.setObjectName("page")
             page.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             page.setStyleSheet("#page { background: transparent; }")
@@ -733,20 +734,99 @@ class ShowsMixin:
         self.online_call(self.online.deezer.genres, on_done=done, on_error=failed)
 
     def show_genre(self, genre):
-        self.show_status(f"Loading {genre['name']}…", kind="info", timeout_ms=8000)
+        """A Browse genre page like Spotify's: big coloured title, then shelves of what's popular in that genre
+        right now (Deezer's daily charts: songs, playlists, albums, new releases, artists)."""
+        from .shows_page import section_title, muted, CardGrid
+        self.genre_page.show_loading(genre["name"], self._genre_colour(genre))
+        self.stack.setCurrentWidget(self.genre_page)
+        self._set_nav("genre", genre["id"])
+
+        def done(data):
+            if self.stack.currentWidget() is not self.genre_page:
+                return
+            sections = []
+            songs = self.radio_items(data["tracks"])[:10]
+            if songs:
+                from .track_table import TrackTable
+                t = TrackTable(sortable=False)
+                t.set_two_line_titles(True)
+                t.mark_pending = True
+                t.download_state = self.downloads.state
+                t.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+                t.set_songs(songs)
+                t.set_current(self.current_song)
+                t.setFixedHeight(36 + len(songs) * t.verticalHeader().defaultSectionSize() + 4)
+                src = f"{genre['name']}: popular songs"
+                t.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src))
+                t.context_requested.connect(lambda s, row, pos, tt=t: self._show_song_menu(
+                    s, pos, queue=tt.songs_in_view(), source=src))
+                self.fetch_covers(songs)
+                sections.append(("Popular songs", t, 0))
+            pl_cards = [self._card(p["title"], f"{p.get('nb_tracks') or ''} songs".strip(),
+                                   p.get("picture_xl") or p.get("picture_big") or "",
+                                   lambda p=p: self.open_web_playlist(p)) for p in data["playlists"]]
+            sections.append((f"{genre['name']} playlists", pl_cards, 1))
+            sections.append(("New releases", [self._album_card(a) for a in data.get("releases", [])], 1))
+            sections.append(("Popular albums", [self._album_card(a) for a in data["albums"]], 1))
+            sections.append(("Popular artists", [self._card(a["name"], "Artist", a.get("picture_xl") or a.get("picture_big")
+                                                            or "", lambda n=a["name"]: self.go_to_artist(n),
+                                                            round_art=True) for a in data["artists"]], 1))
+            self.genre_page.set_sections(sections, note="Popular right now, from Deezer's charts for this genre "
+                                                        "(they change every day).")
+        self.online_call(self.online.deezer.genre_overview, genre["id"], on_done=done,
+                         on_error=lambda e: self.genre_page.show_message(f"Couldn't load {genre['name']}: {e}"))
+
+    @staticmethod
+    def _genre_colour(genre):
+        from .shows_page import TILE_COLOURS
+        return TILE_COLOURS[(int(genre.get("id") or 0)) % len(TILE_COLOURS)]
+
+    def _album_card(self, a):
+        artist = (a.get("artist") or {}).get("name", "")
+        return self._card(a.get("title", ""), artist, a.get("cover_xl") or a.get("cover_big") or "",
+                          lambda a=a: self.open_web_album(a))
+
+    def open_web_playlist(self, p):
+        """A Deezer playlist from Browse: its songs (stream while online), with Save to Your Library."""
+        self.show_status(f"Loading {p['title']}…", kind="info", timeout_ms=8000)
 
         def done(tracks):
-            songs = self.radio_items(tracks)
-            cover = self.net.cached_image(genre["picture"]) or PLACEHOLDER_IMAGE
+            self._show_web_collection("Playlist", p["title"], tracks, p.get("picture_xl") or p.get("picture_big") or "")
+        self.online_call(self.online.deezer.playlist_tracks, p["id"], on_done=done,
+                         on_error=lambda e: self.show_status(f"⚠ Couldn't load {p['title']}: {e}", 8000))
+
+    def open_web_album(self, a):
+        self.show_status(f"Loading {a.get('title', '')}…", kind="info", timeout_ms=8000)
+
+        def done(tracks):
+            self._show_web_collection("Album", a.get("title", ""), tracks, a.get("cover_xl") or a.get("cover_big") or "")
+        self.online_call(self.online.deezer.album_tracks, a, on_done=done,
+                         on_error=lambda e: self.show_status(f"⚠ Couldn't load {a.get('title', '')}: {e}", 8000))
+
+    def _show_web_collection(self, kind, title, tracks, cover_url):
+        songs = self.radio_items(tracks)
+        self.clear_status()
+
+        def show(cover_path):
             self.collection_table.mark_pending = True
             self.collection_table.download_state = self.downloads.state
-            self._show_collection("Genre", genre["name"], songs, cover,
-                                  f"Popular right now  •  {len(songs)} songs  •  double-click to play",
-                                  ("genre", genre["id"]))
+            self._show_collection(kind, title, songs, cover_path or PLACEHOLDER_IMAGE,
+                                  f"{len(songs)} songs  •  stream while online  •  Save to keep it in Your Library",
+                                  ("webcollection", title),
+                                  extra_buttons=(("Save to Your Library",
+                                                  lambda: self._save_web_collection(title, songs, cover_url), False),))
             self.fetch_covers(songs)
-            self.clear_status()
-        self.online_call(self.online.deezer.genre_chart, genre["id"], on_done=done,
-                         on_error=lambda e: self.show_status(f"⚠ Couldn't load {genre['name']}: {e}", 8000))
+        cached = self.net.cached_image(cover_url) if cover_url else ""
+        if cached or not cover_url:
+            show(cached)
+        else:
+            self.online_call(self.net.get_image, cover_url, on_done=show, on_error=lambda _e: show(""))
+
+    def _save_web_collection(self, title, songs, cover_url):
+        pl = self._create_imported_playlist(title, [("track", s.track) if getattr(s, "is_remote", False)
+                                                    else ("file", s.file_path) for s in songs], cover_url)
+        if pl is not None:
+            self.show_status(f"Saved “{pl.name}” to Your Library", kind="info", timeout_ms=5000)
 
     # ==================================================================================================
     # Your Library entries

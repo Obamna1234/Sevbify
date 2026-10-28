@@ -43,3 +43,15 @@ def test_shots2(window, qapp):
     window.mini_player.overlay.show()
     wait_until(qapp, lambda: False, 0.3)
     window.mini_player.grab().save(f"{S}/mini.png")
+
+
+def test_shot_search(window, qapp, tmp_path):
+    from test_search_online import use_web
+    use_web(window, tmp_path)
+    window.resize(1500, 900)
+    window.show()
+    window.show_search()
+    window.search_input.setText("narc")
+    wait_until(qapp, lambda: window.web_table.rowCount() > 0, 5)
+    wait_until(qapp, lambda: False, 1)
+    window.grab().save(f"{S}/search.png")

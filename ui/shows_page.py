@@ -474,3 +474,72 @@ class ShowPage(QWidget):
     def set_cover(self, pixmap):
         if self.cover_label is not None:
             self.cover_label.setPixmap(rounded(pixmap, 200, 8))
+
+
+class GenrePage(QWidget):
+    """A Browse genre: a big coloured header with the genre's name (like Spotify's), then shelves."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        outer.addWidget(self.scroll)
+        self.title, self.colour = "", "#8d67ab"
+
+    def _base(self):
+        content = QWidget()
+        content.setObjectName("genrePage")
+        content.setStyleSheet("#genrePage { background: transparent; }")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(0, 0, 0, 24)
+        v.setSpacing(10)
+        header = QFrame()
+        header.setObjectName("genreHeader")
+        header.setFixedHeight(260)
+        c = QColor(self.colour)
+        header.setStyleSheet(f"#genreHeader {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {c.name()},"
+                             f" stop:1 {c.darker(170).name()}); border-top-left-radius: {theme.RADIUS}px;"
+                             f" border-top-right-radius: {theme.RADIUS}px; }}")
+        hv = QVBoxLayout(header)
+        hv.setContentsMargins(28, 20, 28, 24)
+        hv.addStretch()
+        t = QLabel(self.title)
+        t.setStyleSheet(f"color: white; font-size: {84 if len(self.title) < 12 else 56}px; font-weight: 900;"
+                        " background: transparent;")
+        hv.addWidget(t)
+        v.addWidget(header)
+        return content, v
+
+    def show_loading(self, title, colour):
+        self.title, self.colour = title, colour
+        self.show_message("Loading…")
+
+    def show_message(self, text):
+        content, v = self._base()
+        m = muted(text)
+        m.setContentsMargins(28, 8, 28, 8)
+        v.addWidget(m)
+        v.addStretch()
+        theme.replace_scroll_widget(self.scroll, content)
+
+    def set_sections(self, sections, note=""):
+        """sections: [(title, [cards] or widget, rows)]."""
+        content, v = self._base()
+        body = QVBoxLayout()
+        body.setContentsMargins(24, 0, 24, 0)
+        body.setSpacing(10)
+        if note:
+            body.addWidget(muted(note))
+        for title, cards, rows in sections:
+            if not cards:
+                continue
+            body.addSpacing(10)
+            body.addWidget(section_title(title))
+            body.addWidget(cards if isinstance(cards, QWidget) else CardGrid(cards, rows=rows))
+        v.addLayout(body)
+        v.addStretch()
+        theme.replace_scroll_widget(self.scroll, content)

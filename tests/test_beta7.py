@@ -223,3 +223,20 @@ def test_miniplayer_and_full_screen_keep_playing(window, qapp):
     assert window.full_screen_view.isVisible()
     window.full_screen_view.close()
     assert window.full_screen_view is None and window.current_song is window.songs[1]
+
+
+def test_canvas_video_from_the_song_menu_and_hide_canvas(window, qapp, tmp_path):
+    from core import canvas as cv
+    song = window.songs[0]
+    video = tmp_path / "loop.mp4"
+    video.write_bytes(b"fake mp4")
+    texts = [a.text() for a in window.build_song_menu(song).actions()]
+    assert "▣  Canvas video" in texts and "▣  Hide Canvas" not in texts       # no loop yet
+    cv.set_canvas(song, str(video), window.storage.data_dir)
+    assert cv.find_canvas(song, window.storage.data_dir)
+    menu = window.build_song_menu(song)
+    hide = next(a for a in menu.actions() if a.text() == "▣  Hide Canvas")
+    hide.trigger()
+    assert window.user_data.canvas_enabled is False
+    assert any(a.text() == "▣  Show Canvas" for a in window.build_song_menu(song).actions())
+    assert cv.remove_canvas(song, window.storage.data_dir) and not cv.find_canvas(song, window.storage.data_dir)

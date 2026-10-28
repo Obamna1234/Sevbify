@@ -137,22 +137,24 @@ def replace_scroll_widget(scroll, widget):
     old = scroll.takeWidget()
     scroll.setWidget(widget)
     if old is not None:
-        old.setParent(_graveyard())    # parked under a never-shown holder, never a window of its own
+        old.setParent(_graveyard(scroll))   # parked under a never-shown holder, never a window of its own
         old.hide()
         old.deleteLater()
 
 
-_holder = []
-
-
-def _graveyard():
-    """A hidden widget that holds pages waiting to be deleted (never shown, so nothing in it can appear)."""
+def _graveyard(near=None):
+    """A hidden widget that holds pages waiting to be deleted (never shown, so nothing in it can appear).
+    It lives inside the same window, so it is cleaned up with it (a free-floating one crashed Python at exit)."""
     from PyQt6.QtWidgets import QWidget
-    if not _holder:
-        w = QWidget()
-        w.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
-        _holder.append(w)
-    return _holder[0]
+    top = near.window() if near is not None else None
+    holder = getattr(top, "_sevbify_graveyard", None) if top is not None else None
+    if holder is None:
+        holder = QWidget(top)
+        holder.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+        holder.hide()
+        if top is not None:
+            top._sevbify_graveyard = holder
+    return holder
 
 
 def release_mouse_inside(widget):

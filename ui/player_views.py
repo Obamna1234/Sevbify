@@ -69,6 +69,8 @@ class _Controls(QWidget):
 
     def refresh(self):
         w = self.win
+        if getattr(w, "_shut_down", False):
+            return                                   # the main window closed (VLC released)
         playing = bool(getattr(w, "is_playing", False))
         self.play.setIcon(icons.pause("#000000", 20) if playing else icons.play("#000000", 20))
         self.play.setToolTip("Pause" if playing else "Play")
@@ -142,6 +144,9 @@ class MiniPlayer(QWidget):
 
     def refresh(self):
         from .main_window import load_pixmap
+        if getattr(self.win, "_shut_down", False):
+            self.close()
+            return
         song = self.win.current_song
         self.title.setText(song.title if song else "Nothing playing")
         self.artist.setText(song.artist if song else "")
@@ -246,6 +251,9 @@ class FullScreenView(QWidget):
         from .now_playing_panel import dominant_colour
         from .library_panel import rounded
         w = self.win
+        if getattr(w, "_shut_down", False):
+            self.close()
+            return
         song = w.current_song
         self.title.setText(song.title if song else "Nothing playing")
         self.artist.setText(song.artist if song else "")

@@ -20,6 +20,18 @@ def win(window, tmp_path, monkeypatch):
                                                {"id": 113, "name": "Dance", "picture_xl": "https://img/dance.jpg"}]}
     routes["api.deezer.com/chart/152/tracks"] = {"data": [deezer_track(30, "Song 2", "Blur", 70),
                                                           deezer_track(31, "Plug In Baby", "Muse", 71)]}
+    routes["api.deezer.com/chart/152"] = {
+        "tracks": {"data": [deezer_track(30, "Song 2", "Blur", 70), deezer_track(31, "Plug In Baby", "Muse", 71)]},
+        "albums": {"data": [{"id": 5, "title": "Parklife", "artist": {"name": "Blur"},
+                             "cover_xl": "https://img/parklife.jpg"}]},
+        "artists": {"data": [{"id": 70, "name": "Blur", "picture_xl": "https://img/blur.jpg"}]},
+        "playlists": {"data": [{"id": 900, "title": "Rock Classics", "nb_tracks": 2,
+                                "picture_xl": "https://img/rc.jpg"}]}}
+    routes["api.deezer.com/editorial/152/releases"] = {"data": []}
+    routes["api.deezer.com/playlist/900/tracks"] = {"data": [deezer_track(31, "Plug In Baby", "Muse", 71)]}
+    routes["api.deezer.com/album/5/tracks"] = {"data": [{"id": 50, "title": "Girls & Boys", "duration": 260,
+                                                         "preview": "https://cdn/gb.mp3",
+                                                         "artist": {"id": 70, "name": "Blur"}}]}
     window.net = NetClient(str(tmp_path / "c"), enabled=lambda: True, opener=FakeWeb(routes))
     window.online = OnlineMusic(window.net)
     window.user_data.download_notice_accepted = True
@@ -142,8 +154,21 @@ def test_browse_tiles_and_a_genre_page(win, qapp):
     assert ok, ([t.title for t in win.browse_scroll.widget().findChildren(BrowseTile)], win._genres)
     rock = next(t for t in win.browse_scroll.widget().findChildren(BrowseTile) if t.title == "Rock")
     rock.clicked.emit()
+    assert win.stack.currentWidget() is win.genre_page
+    from ui.track_table import TrackTable
+    from ui.cards import Card
+    assert wait_until(qapp, lambda: win.genre_page.scroll.widget().findChildren(TrackTable))
+    table = win.genre_page.scroll.widget().findChildren(TrackTable)[0]
+    assert [s.title for s in table.songs_in_view()] == ["Song 2", "Plug In Baby"]
+    cards = {c.findChildren(type(win.song_info))[-2].text() for c in win.genre_page.scroll.widget().findChildren(Card)}
+    assert {"Rock Classics", "Parklife", "Blur"} <= cards
+    win.open_web_playlist({"id": 900, "title": "Rock Classics"})
     assert wait_until(qapp, lambda: win.stack.currentWidget() is win.collection_page)
-    assert [s.title for s in win.collection_table.songs_in_view()] == ["Song 2", "Plug In Baby"]
+    assert [s.title for s in win.collection_table.songs_in_view()] == ["Plug In Baby"]
+    win._save_web_collection("Rock Classics", win.collection_table.songs_in_view(), "")
+    assert any(p.name == "Rock Classics" for p in win.playlists)
+    win.open_web_album({"id": 5, "title": "Parklife", "cover_xl": "", "artist": {"name": "Blur"}})
+    assert wait_until(qapp, lambda: [s.title for s in win.collection_table.songs_in_view()] == ["Girls & Boys"])
     win.search_input.setText("narc")
     assert not win.browse_scroll.isVisibleTo(win.search_page)               # typing hides Browse
 

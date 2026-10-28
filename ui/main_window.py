@@ -914,6 +914,19 @@ class MainWindow(ShowsMixin, QMainWindow):
             for label, url in track.links().items():
                 open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
 
+        try:
+            has_canvas = bool(find_canvas(song, self.storage.data_dir))
+        except Exception:
+            has_canvas = False
+        if has_canvas:              # like Spotify: Hide / Show Canvas for songs that have a loop
+            on = self.user_data.canvas_enabled
+            menu.addAction("▣  Hide Canvas" if on else "▣  Show Canvas").triggered.connect(
+                lambda: self.apply_settings({"canvas_enabled": not self.user_data.canvas_enabled}))
+        canvas_menu = menu.addMenu("▣  Canvas video")
+        canvas_menu.setStyleSheet(MENU_STYLE)
+        canvas_menu.addAction("Choose a video for this song…").triggered.connect(lambda: self.choose_canvas(song))
+        if has_canvas:
+            canvas_menu.addAction("Remove the video").triggered.connect(lambda: self.remove_canvas_for(song))
         if playlist is not None and row is not None:
             menu.addSeparator()
             up = menu.addAction("↑  Move up")
@@ -1926,25 +1939,116 @@ class MainWindow(ShowsMixin, QMainWindow):
         layout.addWidget(self.browse_scroll, 1)
 
         src = lambda: f"Search: {self.search_input.text().strip()}"
+        # Results scroll as one page, like Spotify: chips, Top result + Songs, your songs, more songs, artists,
+        # podcasts, audiobooks.
+        self.results_scroll = QScrollArea()
+        self.results_scroll.setWidgetResizable(True)
+        self.results_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.results_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        results = QWidget()
+        results.setObjectName("searchResults")
+        results.setStyleSheet("#searchResults { background: transparent; }")
+        rl = QVBoxLayout(results)
+        rl.setContentsMargins(0, 0, 0, 12)
+        rl.setSpacing(10)
+        self.results_scroll.setWidget(results)
+        layout.addWidget(self.results_scroll, 1)
+        self.results_scroll.hide()
+
+        chips = QHBoxLayout()
+        chips.setSpacing(8)
+        self.search_chip = "all"
+        self.search_chips = {}
+        for key, label in (("all", "All"), ("songs", "Songs"), ("artists", "Artists"), ("podcasts", "Podcasts"),
+                           ("audiobooks", "Audiobooks")):
+            b = QPushButton(label)
+            b.setCheckable(True)
+            b.setChecked(key == "all")
+            b.setFixedHeight(32)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(theme.CHIP)
+            b.clicked.connect(lambda _=False, k=key: self.set_search_chip(k))
+            chips.addWidget(b)
+            self.search_chips[key] = b
+        chips.addStretch()
+        rl.addLayout(chips)
+
+        # Top result (big card) and the first songs beside it
+        self.search_top = QWidget()
+        top = QHBoxLayout(self.search_top)
+        top.setContentsMargins(0, 4, 0, 4)
+        top.setSpacing(24)
+        left = QVBoxLayout()
+        left.addWidget(self._section_label("Top result"))
+        self.top_result = QFrame()
+        self.top_result.setObjectName("topResult")
+        self.top_result.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.top_result.setFixedHeight(220)
+        self.top_result.setMinimumWidth(320)
+        self.top_result.setStyleSheet(f"#topResult {{ background: {theme.ELEVATED}; border-radius: 8px; }}"
+                                      f" #topResult:hover {{ background: {theme.HOVER}; }}")
+        tv = QVBoxLayout(self.top_result)
+        tv.setContentsMargins(20, 20, 20, 20)
+        self.top_art = QLabel()
+        self.top_art.setFixedSize(92, 92)
+        self.top_title = QLabel("")
+        self.top_title.setStyleSheet("color: white; font-size: 30px; font-weight: 800; background: transparent;")
+        self.top_title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.top_sub = QLabel("")
+        self.top_sub.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 14px; background: transparent;")
+        tv.addWidget(self.top_art)
+        tv.addStretch()
+        tv.addWidget(self.top_title)
+        tv.addWidget(self.top_sub)
+        self.top_result.mousePressEvent = lambda e: self._play_top_result()
+        left.addWidget(self.top_result)
+        top.addLayout(left, 2)
+        right = QVBoxLayout()
+        right.addWidget(self._section_label("Songs"))
+        self.top_songs = TrackTable(sortable=False)
+        self.top_songs.set_two_line_titles(True)
+        self.top_songs.mark_pending = True
+        self.top_songs.horizontalHeader().hide()
+        self.top_songs.setColumnHidden(0, True)
+        self.top_songs.setColumnHidden(3, True)
+        self.top_songs.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.top_songs.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
+        self.top_songs.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.top_songs.songs_in_view(), source=src()))
+        right.addWidget(self.top_songs)
+        right.addStretch()
+        top.addLayout(right, 3)
+        rl.addWidget(self.search_top)
+        self.search_top.hide()
+
         self.search_lib_header = self._section_label("In your library")
-        layout.addWidget(self.search_lib_header)
+        rl.addWidget(self.search_lib_header)
         self.search_table = TrackTable(sortable=False)
+        self.search_table.set_two_line_titles(True)
+        self.search_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.search_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
         self.search_table.context_requested.connect(
             lambda s, row, pos: self._show_song_menu(s, pos, queue=self.search_table.songs_in_view(), source=src()))
-        layout.addWidget(self.search_table)
+        rl.addWidget(self.search_table)
 
-        self.search_web_header = self._section_label("More from the web")
-        layout.addWidget(self.search_web_header)
+        self.search_web_header = self._section_label("More songs")
+        rl.addWidget(self.search_web_header)
         self.search_web_status = self._muted_label("")
-        layout.addWidget(self.search_web_status)
+        rl.addWidget(self.search_web_status)
         self.web_table = TrackTable(sortable=False)
+        self.web_table.set_two_line_titles(True)
+        self.web_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.web_table.mark_pending = True      # songs you don't have: greyed with ⬇ (online or offline)
         self.web_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
         self.web_table.context_requested.connect(
             lambda s, row, pos: self._show_song_menu(s, pos, queue=self.web_table.songs_in_view(), source=src()))
-        layout.addWidget(self.web_table, 1)
-        layout.addStretch()
+        rl.addWidget(self.web_table)
+        self.search_more = QVBoxLayout()              # Artists / Podcasts / Audiobooks shelves (filled per search)
+        self.search_more_box = QWidget()
+        self.search_more_box.setLayout(self.search_more)
+        self.search_more.setContentsMargins(0, 0, 0, 0)
+        rl.addWidget(self.search_more_box)
+        rl.addStretch()
 
         self._web_search_timer = QTimer(self)
         self._web_search_timer.setSingleShot(True)
@@ -1992,6 +2096,11 @@ class MainWindow(ShowsMixin, QMainWindow):
     def refresh_search_results(self, *_):
         query = self.search_input.text().strip()
         self.browse_scroll.setVisible(not query)
+        self.results_scroll.setVisible(bool(query))
+        if query != getattr(self, "_extra_query", None):
+            self._extra_query = query
+            self._extra_results = {}
+            self._clear_search_more()
         if not query:
             # Genres are only fetched once you actually look at Browse.
             if self._genres is None and self.online_enabled and self.stack.currentWidget() is self.search_page:
@@ -2007,13 +2116,13 @@ class MainWindow(ShowsMixin, QMainWindow):
         results = self.search(query)
         self.search_table.set_songs(results)
         self.search_table.set_current(self.current_song)
-        # Show at most ~6 library rows so web results stay visible below.
-        rows = min(len(results), 6)
-        self.search_table.setFixedHeight(36 + rows * self.search_table.verticalHeader().defaultSectionSize() + 4)
+        self._fit_table(self.search_table, 8)
         self.search_lib_header.setVisible(bool(results))
         self.search_table.setVisible(bool(results))
         if results:
             self.search_lib_header.setText(f"In your library  ·  {len(results)}")
+        self._update_top_result()
+        self._apply_search_chip()
 
         if not self.online_enabled:
             self.search_summary.setVisible(not results)
@@ -2035,6 +2144,123 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.search_web_status.show()
             self._web_search_timer.start(450)          # wait until typing pauses
 
+    # --- Spotify-style search results: chips, Top result, Songs, and Artists / Podcasts / Audiobooks -----------
+    def _fit_table(self, table, max_rows):
+        rows = min(table.rowCount(), max_rows)
+        header = 0 if table.horizontalHeader().isHidden() else 36
+        table.setFixedHeight(header + rows * table.verticalHeader().defaultSectionSize() + 4)
+
+    def set_search_chip(self, key):
+        self.search_chip = key
+        for k, b in self.search_chips.items():
+            b.setChecked(k == key)
+        self._apply_search_chip()
+        q = self.search_input.text().strip()
+        if q and key in ("artists", "podcasts", "audiobooks"):
+            self._search_extras(q)
+
+    def _apply_search_chip(self):
+        chip = getattr(self, "search_chip", "all")
+        songs_shown = chip in ("all", "songs")
+        has_lib = self.search_table.rowCount() > 0
+        has_web = self.web_table.rowCount() > 0
+        self.search_top.setVisible(chip == "all" and (has_lib or has_web))
+        self.search_lib_header.setVisible(songs_shown and has_lib)
+        self.search_table.setVisible(songs_shown and has_lib)
+        online = self.online_enabled and len(self.search_input.text().strip()) >= 2
+        self.search_web_header.setVisible(songs_shown and online)
+        self.search_web_status.setVisible(songs_shown and online and bool(self.search_web_status.text()))
+        self.web_table.setVisible(songs_shown and has_web)
+        self._render_search_more()
+
+    def _update_top_result(self):
+        """Top result: your own best match first, else the first web result; Songs: the next four."""
+        from .library_panel import rounded
+        lib, web = self.search_table.songs_in_view(), self.web_table.songs_in_view()
+        everything = [x for x in lib + web if x is not None]
+        if not everything:
+            self.search_top.hide()
+            return
+        top = everything[0]
+        self._top_song = top
+        self.top_title.setText(self.top_title.fontMetrics().elidedText(top.title, Qt.TextElideMode.ElideRight, 420))
+        kind = "Song" + (" · not downloaded" if getattr(top, "is_remote", False) else "")
+        self.top_sub.setText(f"{kind}  •  {top.artist}")
+        self.top_art.setPixmap(rounded(load_pixmap(top.album_cover_path), 92, 4))
+        self.top_songs.set_songs(everything[:4])
+        self.top_songs.set_current(self.current_song)
+        self._fit_table(self.top_songs, 4)
+
+    def _play_top_result(self):
+        song = getattr(self, "_top_song", None)
+        if song is not None:
+            queue = [x for x in self.search_table.songs_in_view() + self.web_table.songs_in_view() if x is not None]
+            self.play_song(song, queue=queue, source=f"Search: {self.search_input.text().strip()}")
+
+    def _clear_search_more(self):
+        while self.search_more.count():
+            item = self.search_more.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.hide()
+                w.deleteLater()
+
+    def _search_extras(self, query):
+        """Artists (Deezer), podcasts (Apple's directory) and audiobooks (LibriVox) for this search, once each."""
+        if not self.online_enabled or len(query) < 2:
+            return
+        from core import podcasts as _pods, audiobooks as _books
+        from .shows_controller import country_code
+        chip = getattr(self, "search_chip", "all")
+        wanted = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts",),
+                  "audiobooks": ("audiobooks",)}.get(chip, ())
+        for kind in wanted:
+            if kind in self._extra_results:
+                continue
+            self._extra_results[kind] = None                      # asked
+            fn = {"artists": lambda q=query: self.online.deezer.search_artists(q, 10),
+                  "podcasts": lambda q=query: _pods.search(self.net, q, 10, country_code()),
+                  "audiobooks": lambda q=query: _books.search(self.net, q, 10)}[kind]
+
+            def done(res, k=kind, q=query):
+                if q == getattr(self, "_extra_query", None):
+                    self._extra_results[k] = res or []
+                    self._render_search_more()
+
+            def failed(_e, k=kind, q=query):
+                if q == getattr(self, "_extra_query", None):
+                    self._extra_results[k] = []
+            self.online_call(fn, on_done=done, on_error=failed)
+
+    def _render_search_more(self):
+        from .shows_page import CardGrid
+        self._clear_search_more()
+        chip = getattr(self, "search_chip", "all")
+        res = getattr(self, "_extra_results", {}) or {}
+        order = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts",),
+                 "audiobooks": ("audiobooks",)}.get(chip, ())
+        rows = 1 if chip == "all" else 0
+        for kind in order:
+            items = res.get(kind)
+            if items is None:
+                if kind in res and chip != "all":
+                    self.search_more.addWidget(self._muted_label("Searching…"))
+                continue
+            if not items:
+                if chip != "all":
+                    self.search_more.addWidget(self._muted_label(f"No {kind} found."))
+                continue
+            title = {"artists": "Artists", "podcasts": "Podcasts", "audiobooks": "Audiobooks"}[kind]
+            self.search_more.addWidget(self._section_label(title))
+            if kind == "artists":
+                cards = [self._card(a.get("name", ""), "Artist", a.get("picture_xl") or a.get("picture_big") or "",
+                                    lambda n=a.get("name", ""): self.go_to_artist(n), round_art=True) for a in items]
+            elif kind == "podcasts":
+                cards = self._show_cards(items)
+            else:
+                cards = self._book_cards(items)
+            self.search_more.addWidget(CardGrid(cards, rows=rows))
+
     def _run_web_search(self):
         query = self.search_input.text().strip()
         if len(query) < 2 or not self.online_enabled:
@@ -2052,7 +2278,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             items.sort(key=lambda s: getattr(s, "is_remote", False))
             self.web_table.set_songs(items)
             self.web_table.set_current(self.current_song)
+            self._fit_table(self.web_table, 50)
             self.web_table.setVisible(bool(items))
+            self._update_top_result()
+            self._apply_search_chip()
+            self._search_extras(query)
             if items:
                 owned = sum(1 for s in items if not getattr(s, "is_remote", False))
                 self.search_web_status.setText(
@@ -2269,7 +2499,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         lay.addWidget(wrap, 1)
         self._collection_name = ""
 
-    def _show_collection(self, kind, title, songs, cover_path, meta_text, nav):
+    def _show_collection(self, kind, title, songs, cover_path, meta_text, nav, extra_buttons=()):
         while self._collection_header_box.count():
             item = self._collection_header_box.takeAt(0)
             if item.widget():
@@ -2280,7 +2510,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         top = QColor.fromHsv(colour.hsvHue(), min(255, colour.hsvSaturation() + 40), min(210, colour.value() + 60))
         self._collection_name = title
         header, meta = self._gradient_header(cover, kind, title, top.name(),
-                                             lambda: self.play_collection(title, songs))
+                                             lambda: self.play_collection(title, songs), extra_buttons=extra_buttons)
         meta.setText(meta_text)
         self._collection_header_box.addWidget(header)
         self.collection_table.set_songs(songs)
@@ -3567,7 +3797,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _update_now_playing(self, song):
         canvas = (find_canvas(song, self.storage.data_dir)
-                  if song is not None and not getattr(song, "is_remote", False) and self.user_data.canvas_enabled
+                  if song is not None and self.user_data.canvas_enabled
                   else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
         self._refresh_artist_card()
@@ -3663,6 +3893,33 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.show_restart_bar("Zoom 100%")
         self.show_status("Settings reset.", kind="info", timeout_ms=4000)
         return True
+
+    def choose_canvas(self, song):
+        """Use your own short looping video as this song's Canvas (Spotify's own loops can't be fetched
+        without signing in to Spotify, so Sevbify never tries)."""
+        from core import canvas as cv
+        path, _ = QFileDialog.getOpenFileName(self, f"Canvas video for “{song.title}”", os.path.expanduser("~"),
+                                              "Videos (*.mp4 *.webm *.mov *.m4v)")
+        if not path:
+            return
+        try:
+            cv.set_canvas(song, path, self.storage.data_dir)
+        except (OSError, ValueError) as e:
+            self.show_status(f"⚠ Couldn't use that video: {e}", 8000)
+            return
+        if not self.user_data.canvas_enabled:
+            self.apply_settings({"canvas_enabled": True})
+        if self.current_song is song:
+            self._update_now_playing(song)
+        self.show_status(f"Canvas set for “{song.title}”", kind="info", timeout_ms=4000)
+
+    def remove_canvas_for(self, song):
+        from core import canvas as cv
+        if not cv.remove_canvas(song, self.storage.data_dir):
+            self.show_status("That video is next to your music files; delete or rename it there.", kind="info",
+                             timeout_ms=8000)
+        if self.current_song is song:
+            self._update_now_playing(song)
 
     def change_zoom(self, step):
         """Ctrl + / Ctrl - / Ctrl 0. Sevbify draws everything at its zoom when it starts, so a new zoom needs
@@ -4545,6 +4802,10 @@ class MainWindow(ShowsMixin, QMainWindow):
             super().closeEvent(event)
             return
         self._shut_down = True
+        for view in (getattr(self, "mini_player", None), getattr(self, "full_screen_view", None)):
+            if view is not None:
+                view.timer.stop()
+                view.close()
         try:
             if self._save_timer.isActive():
                 self.save_now()
@@ -4602,8 +4863,9 @@ class MainWindow(ShowsMixin, QMainWindow):
                  "podcasts": self.show_podcasts, "audiobooks": self.show_audiobooks,
                  "show": lambda: (self.stack.setCurrentWidget(self.show_page) if self._show_ctx
                                   and self._show_ctx["obj"].key == arg else self.show_home()),
-                 "genre": lambda: self.show_genre(next(g for g in self._genres if g["id"] == arg))
+                 "genre": lambda: self.show_genre(next(g for g in (self._genres or []) if g["id"] == arg))
                  if any(g["id"] == arg for g in (self._genres or [])) else self.show_home(),
+                 "webcollection": self.show_home,
                  "video": self.show_home,
                  "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
                  "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]

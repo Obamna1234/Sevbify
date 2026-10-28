@@ -55,7 +55,6 @@ class TopBar(QWidget):
 
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("What do you want to play?")
-        self.search_edit.setClearButtonEnabled(True)
         self.search_edit.addAction(icons.search(theme.SUBDUED, 24), QLineEdit.ActionPosition.LeadingPosition)
         self.search_edit.setFixedHeight(48)
         self.search_edit.setMinimumWidth(260)
@@ -70,15 +69,27 @@ class TopBar(QWidget):
         self.search_edit.mousePressEvent = self._search_pressed
         # Browse button inside the search pill (right end), like Spotify's.
         self.browse_btn = QPushButton(self.search_edit)
-        self.browse_btn.setIcon(icons.grid(theme.SUBDUED, 20))
-        self.browse_btn.setIconSize(QSize(20, 20))
+        self.browse_btn.setIcon(icons.browse(theme.SUBDUED, 26))
+        self.browse_btn.setIconSize(QSize(26, 26))
         self.browse_btn.setFixedSize(36, 36)
         self.browse_btn.setToolTip("Browse")
         self.browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.browse_btn.setStyleSheet(f"QPushButton {{ background: transparent; border: none; border-left: 1px solid"
                                       f" {theme.DIM}; border-radius: 0; }} QPushButton:hover {{ background: transparent; }}")
         self.browse_btn.clicked.connect(self.browse_clicked.emit)
-        self.search_edit.setTextMargins(0, 0, 40, 0)
+        # Clear (✕) sits left of the divider, like Spotify's, and only while there's text.
+        self.clear_btn = QPushButton(self.search_edit)
+        self.clear_btn.setIcon(icons.close(theme.SUBDUED, 18))
+        self.clear_btn.setIconSize(QSize(18, 18))
+        self.clear_btn.setFixedSize(32, 32)
+        self.clear_btn.setToolTip("Clear search field")
+        self.clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clear_btn.setStyleSheet("QPushButton { background: transparent; border: none; border-radius: 16px; }"
+                                     " QPushButton:hover { background: rgba(255,255,255,0.08); }")
+        self.clear_btn.clicked.connect(lambda: (self.search_edit.clear(), self.search_edit.setFocus()))
+        self.clear_btn.hide()
+        self.search_edit.textChanged.connect(lambda t: self.clear_btn.setVisible(bool(t)))
+        self.search_edit.setTextMargins(0, 0, 76, 0)
         self.search_edit.resizeEvent = self._place_browse_button
         c.addWidget(self.search_edit, 1)
 
@@ -131,6 +142,7 @@ class TopBar(QWidget):
     def _place_browse_button(self, event):
         QLineEdit.resizeEvent(self.search_edit, event)
         self.browse_btn.move(self.search_edit.width() - 44, (self.search_edit.height() - 36) // 2)
+        self.clear_btn.move(self.search_edit.width() - 82, (self.search_edit.height() - 32) // 2)
 
     def _search_pressed(self, event):
         QLineEdit.mousePressEvent(self.search_edit, event)

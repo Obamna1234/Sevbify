@@ -51,5 +51,7 @@ def test_typing_fast_only_searches_once(window, qapp, tmp_path):
     for text in ("n", "na", "nar", "narc"):
         window.search_input.setText(text)
     assert wait_until(qapp, lambda: window.web_table.rowCount() > 0)
-    searches = [u for u in web.calls if "/search?" in u]
+    searches = [u for u in web.calls if "deezer.com/search?" in u]
     assert len(searches) == 1 and "q=narc" in searches[0]
+    # Artists and podcasts are looked up once too, for the final text only
+    assert all("narc" in u for u in web.calls if "search" in u)
