@@ -19,10 +19,35 @@ def loose_windows(app, main):
     return out
 
 
+class _WindowWatcher:
+    """Records every widget that is shown as a window of its own (even for an instant)."""
+
+    def __init__(self, app, main):
+        from PyQt6.QtCore import QObject, QEvent
+        from PyQt6.QtWidgets import QMenu, QWidget
+        seen = self.seen = []
+
+        class F(QObject):
+            def eventFilter(self, obj, ev):
+                if ev.type() == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() \
+                        and obj is not main and not isinstance(obj, QMenu) \
+                        and obj.windowType() not in (Qt.WindowType.ToolTip, Qt.WindowType.Popup):
+                    seen.append(type(obj).__name__)
+                return False
+        from PyQt6.QtCore import Qt
+        self.f = F()
+        app.installEventFilter(self.f)
+        self.app = app
+
+    def stop(self):
+        self.app.removeEventFilter(self.f)
+
+
 def test_cards_never_open_as_little_windows(win, qapp):
-    """beta.6: Home cards were shown before being put in the window, so they flashed up as small "Sevbify"
-    windows (worst while downloads refreshed Home), and could keep the mouse."""
+    """beta.6: Home cards were shown before being put in the window, so on Windows they flashed up as small
+    "Sevbify" windows (worst while downloads refreshed Home), and could keep the mouse."""
     win.show()
+    watch = _WindowWatcher(qapp, win)
     for chip in ("podcasts", "audiobooks", "all", "podcasts"):
         win.set_home_chip(chip)
         wait_until(qapp, lambda: False, 0.6)
@@ -31,6 +56,8 @@ def test_cards_never_open_as_little_windows(win, qapp):
     wait_until(qapp, lambda: False, 0.6)
     assert loose_windows(qapp, win) == []
     assert win._top_shows                    # the Top podcasts shelf really loaded
+    watch.stop()
+    assert watch.seen == [], watch.seen     # not even for an instant
 
 
 def test_page_rebuild_waits_while_a_menu_is_open(window, qapp, monkeypatch):
@@ -295,3 +322,39 @@ def test_files_dragged_from_explorer_are_accepted(window, qapp, audio_dir):
     assert row.acceptDrops()
     _drag_events(row, mime, QPoint(10, 10))
     assert wait_until(qapp, lambda: len(other.songs) == len(files), 3)
+
+
+def test_playlist_preview_steps_through_songs(window, qapp):
+    pl = window.create_playlist("Peek", list(window.songs))
+    window.show_playlist(pl)
+    assert window.pl_preview_btn.isVisibleTo(window.playlist_page)
+    window.open_preview()
+    page = window.preview_page
+    assert window.stack.currentWidget() is page and window.current_song is pl.songs[0]
+    assert page.position.text() == f"1 of {len(pl.songs)}"
+    page.next_btn.click()
+    assert window.current_song is pl.songs[1] and page.title.text() == pl.songs[1].title
+    page.step(-1)
+    assert window.current_song is pl.songs[0]
+    page.leave()
+    assert window.stack.currentWidget() is window.playlist_page
+
+
+def test_no_window_flashes_while_downloads_refresh_the_pages(window, qapp):
+    import time
+    from test_download import prepare, fake_ok, remote
+    window.show()
+    watch = _WindowWatcher(qapp, window)
+
+    def slow(song, *a, **k):
+        time.sleep(0.15)
+        return fake_ok(song, *a, **k)
+    prepare(window, slow)
+    pl = window.create_playlist("Mix", [remote(f"T{i}", "Art") for i in range(4)])
+    for page in (window.show_saved, window.show_home, lambda: window.show_playlist(pl)):
+        page()
+        window.download_songs([s for s in pl.songs if getattr(s, "is_remote", False)][:2])
+        wait_until(qapp, lambda: not window.downloads.is_busy(), 10)
+        wait_until(qapp, lambda: False, 0.6)
+    watch.stop()
+    assert watch.seen == []

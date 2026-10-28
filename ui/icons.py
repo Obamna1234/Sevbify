@@ -186,6 +186,10 @@ def chevron(direction="left", color=WHITE, size=24):
     p.setPen(_pen(color, s * 0.1))
     if direction == "left":
         pts = [QPointF(s * 0.6, s * 0.25), QPointF(s * 0.36, s * 0.5), QPointF(s * 0.6, s * 0.75)]
+    elif direction == "up":
+        pts = [QPointF(s * 0.25, s * 0.6), QPointF(s * 0.5, s * 0.36), QPointF(s * 0.75, s * 0.6)]
+    elif direction == "down":
+        pts = [QPointF(s * 0.25, s * 0.4), QPointF(s * 0.5, s * 0.64), QPointF(s * 0.75, s * 0.4)]
     else:
         pts = [QPointF(s * 0.4, s * 0.25), QPointF(s * 0.64, s * 0.5), QPointF(s * 0.4, s * 0.75)]
     p.drawPolyline(QPolygonF(pts))

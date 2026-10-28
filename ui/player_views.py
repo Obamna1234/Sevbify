@@ -289,3 +289,150 @@ class FullScreenView(QWidget):
         if getattr(self.win, "full_screen_view", None) is self:
             self.win.full_screen_view = None
         super().closeEvent(e)
+
+
+class PreviewPage(QWidget):
+    """Spotify's playlist Preview: one song at a time with its big cover; Next ↓ / ↑ (or the arrow keys and
+    the mouse wheel) move through the playlist, each song starting a third of the way in."""
+
+    def __init__(self, win):
+        super().__init__()
+        self.win = win
+        self.playlist = None
+        self.index = 0
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(28, 20, 28, 24)
+        top = QHBoxLayout()
+        self.head = QLabel("")
+        self.head.setStyleSheet("color: white; font-size: 15px; font-weight: 700; background: transparent;")
+        top.addWidget(self.head)
+        top.addStretch()
+        close = _round(icons.close(theme.TEXT, 18), "Close preview", self.leave, 36)
+        top.addWidget(close)
+        v.addLayout(top)
+        mid = QHBoxLayout()
+        left = QVBoxLayout()
+        left.addStretch()
+        self.title = QLabel("")
+        self.title.setWordWrap(True)
+        self.title.setStyleSheet("color: white; font-size: 34px; font-weight: 800; background: transparent;")
+        self.artist = QLabel("")
+        self.artist.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 16px; background: transparent;")
+        left.addWidget(self.title)
+        left.addWidget(self.artist)
+        left.addStretch()
+        mid.addLayout(left, 1)
+        self.cover = QLabel()
+        self.cover.setFixedSize(360, 360)
+        mid.addWidget(self.cover, 0, Qt.AlignmentFlag.AlignCenter)
+        right = QVBoxLayout()
+        right.addStretch()
+        self.more = _round(icons.more(theme.TEXT, 24), "More options", self._menu, 40)
+        self.add = _round(icons.plus(theme.TEXT, 20), "Add to playlist", self._menu, 40)
+        self.dl = _round(icons.download(theme.TEXT, 22), "Download", self._download, 40)
+        for b in (self.more, self.add, self.dl):
+            right.addWidget(b, 0, Qt.AlignmentFlag.AlignRight)
+        right.addStretch()
+        mid.addLayout(right, 1)
+        v.addLayout(mid, 1)
+        bottom = QHBoxLayout()
+        self.position = QLabel("")
+        self.position.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px; background: transparent;")
+        bottom.addWidget(self.position)
+        bottom.addStretch()
+        self.prev_btn = _round(icons.chevron("up", theme.TEXT, 18), "Previous song (↑)", lambda: self.step(-1), 40)
+        self.next_btn = QPushButton("Next  ↓")
+        self.next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_btn.setFixedHeight(40)
+        self.next_btn.setStyleSheet("QPushButton { color: black; background: white; border: none; border-radius: 20px;"
+                                    " padding: 0 22px; font-size: 14px; font-weight: 700; }"
+                                    " QPushButton:hover { background: #f0f0f0; }")
+        self.next_btn.clicked.connect(lambda: self.step(1))
+        bottom.addWidget(self.prev_btn)
+        bottom.addWidget(self.next_btn)
+        v.addLayout(bottom)
+
+    def open(self, playlist, start=0):
+        self.playlist = playlist
+        self.index = max(0, min(start, len(playlist.songs) - 1))
+        self.head.setText(playlist.name)
+        self._show(play=True)
+        self.setFocus()
+
+    def _show(self, play):
+        from .main_window import load_pixmap
+        from .library_panel import rounded
+        songs = self.playlist.songs if self.playlist else []
+        if not songs:
+            return
+        song = songs[self.index]
+        self.title.setText(song.title)
+        self.artist.setText(song.artist)
+        self.cover.setPixmap(rounded(load_pixmap(song.album_cover_path), 360, 8))
+        self.position.setText(f"{self.index + 1} of {len(songs)}")
+        self.dl.setVisible(bool(getattr(song, "is_remote", False)))
+        self.next_btn.setEnabled(self.index < len(songs) - 1)
+        if play:
+            self.win.play_song(song, queue=songs, source=self.playlist.name)
+            self._seek_later = song
+            self._seek_tries = 0
+            QTimer.singleShot(600, self._seek_in)
+
+    def _seek_in(self):
+        """Start a third of the way in, like Spotify's preview (only once the song is really playing)."""
+        w = self.win
+        if getattr(w, "_shut_down", False) or getattr(self, "_seek_later", None) is not w.current_song:
+            return
+        length = w.player.get_length()
+        if length > 30_000 and w.player.get_time() < 5_000:
+            w.player.set_time(int(length / 3))
+        elif length <= 0 and getattr(self, "_seek_tries", 0) < 15:      # still opening: look again shortly
+            self._seek_tries = getattr(self, "_seek_tries", 0) + 1
+            QTimer.singleShot(400, self._seek_in)
+
+    def step(self, delta):
+        if not self.playlist:
+            return
+        new = max(0, min(len(self.playlist.songs) - 1, self.index + delta))
+        if new != self.index:
+            self.index = new
+            self._show(play=True)
+
+    def current(self):
+        return self.playlist.songs[self.index] if self.playlist and self.playlist.songs else None
+
+    def _menu(self):
+        song = self.current()
+        if song is not None:
+            self.win._show_song_menu(song, self.more.mapToGlobal(self.more.rect().bottomLeft()),
+                                     queue=self.playlist.songs, playlist=self.playlist, row=self.index,
+                                     source=self.playlist.name)
+
+    def _download(self):
+        song = self.current()
+        if song is not None:
+            self.win.download_songs([song])
+
+    def leave(self):
+        if self.playlist is not None and self.playlist in self.win.playlists:
+            self.win.show_playlist(self.playlist)
+        else:
+            self.win.show_home()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key.Key_Down:
+            self.step(1)
+        elif e.key() == Qt.Key.Key_Up:
+            self.step(-1)
+        elif e.key() == Qt.Key.Key_Escape:
+            self.leave()
+        else:
+            super().keyPressEvent(e)
+
+    def wheelEvent(self, e):
+        import time
+        if time.monotonic() - getattr(self, "_last_wheel", 0) < 0.45:      # one song per flick of the wheel
+            return
+        self._last_wheel = time.monotonic()
+        self.step(1 if e.angleDelta().y() < 0 else -1)

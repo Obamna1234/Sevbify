@@ -3278,7 +3278,16 @@ class MainWindow(ShowsMixin, QMainWindow):
                             f" QPushButton:hover {{ background: rgba(255,255,255,0.08); }}")
             b.clicked.connect(slot)
             return b
-        # Spotify's row: ▶ | shuffle | download | ••• ...... search | Custom order
+        # Spotify's row: ▶ | preview | shuffle | download | ••• ...... search | Custom order
+        self.pl_preview_btn = QPushButton()
+        self.pl_preview_btn.setFixedSize(36, 44)
+        self.pl_preview_btn.setIconSize(QSize(30, 38))
+        self.pl_preview_btn.setToolTip("Preview: flick through the songs one by one")
+        self.pl_preview_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pl_preview_btn.setStyleSheet("QPushButton { background: transparent; border: 2px solid rgba(255,255,255,0.7);"
+                                          " border-radius: 6px; } QPushButton:hover { border-color: white; }")
+        self.pl_preview_btn.clicked.connect(self.open_preview)
+        actions.addWidget(self.pl_preview_btn)
         self.pl_shuffle_btn = round_btn(icons.shuffle(theme.SUBDUED, 28), "Shuffle play", self._shuffle_open_playlist)
         actions.addWidget(self.pl_shuffle_btn)
         self.pl_download_btn = round_btn(icons.download(theme.SUBDUED, 30), "Download",
@@ -3403,6 +3412,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._show_playlist_songs()
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
         self.pl_table.setVisible(True)               # stays visible so songs and files can be dropped in
+        self.pl_preview_btn.setIcon(QIcon(rounded(cover, 38, 4)))
+        self.pl_preview_btn.setVisible(bool(pl.songs))
         self.pl_title.setText(pl.name)
         size = 56 if len(pl.name) <= 16 else (44 if len(pl.name) <= 24 else (34 if len(pl.name) <= 36 else 26))
         self.pl_title.setStyleSheet(f"color: white; font-size: {size}px; font-weight: 800; background: transparent;")
@@ -3458,6 +3469,24 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.pl_filter.setFocus()
         else:
             self.pl_filter.clear()
+
+    def open_preview(self):
+        """Spotify's Preview for the open playlist (a page of its own; Close or Esc goes back)."""
+        pl = self.open_playlist
+        if pl is None or not pl.songs:
+            return
+        from .player_views import PreviewPage
+        if getattr(self, "preview_page", None) is None:
+            self.preview_page = PreviewPage(self)
+            self.preview_page.setObjectName("page")
+            self.preview_page.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            self.preview_page.setStyleSheet("#page { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+                                            " stop:0 #2b2b2b, stop:1 #121212); border-radius: 8px; }")
+            self.stack.addWidget(self.preview_page)
+        self.stack.setCurrentWidget(self.preview_page)
+        self._set_nav("preview", pl)
+        start = pl.songs.index(self.current_song) if self.current_song in pl.songs else 0
+        self.preview_page.open(pl, start)
 
     def _shuffle_open_playlist(self):
         pl = self.open_playlist
@@ -4880,6 +4909,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                  "genre": lambda: self.show_genre(next(g for g in (self._genres or []) if g["id"] == arg))
                  if any(g["id"] == arg for g in (self._genres or [])) else self.show_home(),
                  "webcollection": self.show_home,
+                 "preview": lambda: self.show_playlist(arg) if arg in self.playlists else self.show_home(),
                  "video": self.show_home,
                  "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
                  "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]

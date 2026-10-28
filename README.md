@@ -90,16 +90,20 @@ music and artwork are found relative to the project folder.
 | **Your Library** (left) | Chips **Playlists / Podcasts / Audiobooks / Albums / Artists / Downloaded / To download**; 🔍 to filter; **Recents ▾** to sort (Recents, Recently added, Alphabetical) and view (Compact, List, Grid); folders; click *Your Library* to shrink it to covers, ⤢ to fill the window. **+ Create** → Playlist, Folder, or **Import a playlist**. |
 | **Your Songs** | Every song in your music folders. Click a column header to sort. **Add folder…** / **✕** / **Rescan**. |
 | **Playlists** | Click to open, double-click to play. Change the cover from the playlist page. |
-| **Import a playlist** | Paste a public **Spotify** or **Apple Music** playlist/album link, or choose a file (Exportify **CSV**, **TXT** in any language/encoding, **M3U**). Same order and cover; songs already in your music folders play from your files, the rest stream and wait under To download. Your Spotify account is never signed in to. |
+| **Import a playlist** | Paste a public **Spotify** or **Apple Music** playlist/album link, or choose a file (Exportify **CSV**, **TXT** in any language/encoding, **M3U**). Same order and cover; songs already in your music folders play from your files, the rest stream and wait under To download. Your Spotify account is never signed in to. **More than 100 songs:** Spotify only shares 100 per link without signing in, so in Spotify click a song in the playlist, press **Ctrl+A** then **Ctrl+C**, and paste into the second box. |
 | **Podcasts** | Search Apple's podcast directory, follow shows, stream or download episodes, continue where you left off. Paste a **YouTube channel** link for video podcasts: **Watch** the video or play the audio only. |
 | **Audiobooks** | Free public-domain audiobooks read by LibriVox volunteers (via the Internet Archive): stream chapters, download whole books, carry on where you stopped. |
 | **Settings** (⚙ or Ctrl+P) | Online & privacy, music folders on/off, downloads, playback (equaliser, normalise, fade, autoplay), display, Canvas, zoom, start-up and tray, storage, proxy, updates. |
-| **A playlist** | Play, Rename, Delete. Right-click a song to move it up/down, remove it, or add it to another playlist. |
-| **Player bar** | Play/pause, previous (restarts the song if > 3 s in), next, seek, volume and mute. |
+| **A playlist** | ▶ Play, **Preview** (the little cover: flick through the songs one at a time), shuffle, download (green when every song is downloaded), **•••** (Edit details, Delete, Move to folder, Add to other playlist, Share and export). 🔍 searches inside it, **Custom order ▾** sorts the view. **Shift+click** selects a range of songs, **Ctrl+click** adds one; right-click acts on all selected; **Delete** removes them. |
+| **Share and export** | **Export playlist file (.m3u8)** writes a list of your music files (it doesn't contain the music). **Copy songs to a folder or phone** copies the actual files, in order ("01 - Artist - Title.mp3") with a playlist file, skipping ones already there. |
+| **Player bar** | Play/pause, previous (restarts the song if > 3 s in), next, seek, volume and mute, **Miniplayer** and **Full screen** (F11). |
+| **Zoom** | **Ctrl +**, **Ctrl −**, **Ctrl 0** (or View → Zoom, or Settings). Sevbify restarts to show the new size. **Settings → Reset** puts settings back (your music, playlists and downloads are kept). |
+| **Private session** | File → Private Session: nothing you play is remembered (Recently played, Recents, podcast positions) until you close Sevbify or 6 hours pass. |
+| **Online / Offline** | Click **● Online** at the top right to go offline: Sevbify then contacts nothing at all. |
 | **Songs you don't have yet** | Greyed out with **⬇** everywhere (web search results, playlists, To download). While online they **stream in full**; right-click → **Download** to keep them for offline. |
 | **Radio** | In the queue panel, **Save as playlist** keeps a Radio as a playlist; songs you don't have stay in their place as ⬇ slots. |
 | **To download** (left panel) | Every song waiting to be downloaded: all ⬇ slots in your playlists plus songs you chose *Save for later* on, with **⬇ Download all**. |
-| **⬇ pill in the top bar** | Shows download progress ("⬇ 2 of 5 · Song"). Click it to stop, or to retry songs that failed. |
+| **⬇ pill in the top bar** | Shows download progress ("⬇ 2 of 5 · Song"). Click it for **Pause after this song / Resume**, **Stop all** (stopped songs can be resumed), and each song with **Cancel** or **Try again**. If the internet or the download drive goes away, downloads wait and try again every minute. |
 
 **Keyboard (same as Spotify):** Space = play/pause · Ctrl+→ / Ctrl+← = next / previous · Shift+→ / Shift+← = seek 5 s ·
 Ctrl+↑ / Ctrl+↓ = volume · Ctrl+S = shuffle · Ctrl+R = repeat · Ctrl+L = search · Ctrl+F = filter Your Library ·
@@ -228,6 +232,9 @@ is contacted at all.
 - Updates: "Check for Sevbify updates" can't see new releases while the GitHub project is private (it says so).
 - Video podcasts (YouTube) and full songs from YouTube depend on yt-dlp keeping up with YouTube's changes: use
   Settings → Update yt-dlp if they stop working.
-- Spotify links show up to 100 songs; for bigger playlists use an Exportify CSV.
+- A Spotify playlist link brings in 100 songs; paste the songs copied in Spotify (Ctrl+A, Ctrl+C) to get them all.
+- Spotify's own Canvas loops can't be fetched without signing in to a Spotify account, so Sevbify doesn't; add
+  your own loop with a song's ••• → Canvas video.
+- Zoom needs a restart to apply (Sevbify is drawn at one size when it starts).
 - Full streaming of songs you don't have depends on Bandcamp/YouTube being reachable (not in mainland China
   without a VPN, for example) and can break when YouTube changes; then the 30-second preview is used.

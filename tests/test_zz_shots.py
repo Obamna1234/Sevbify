@@ -43,3 +43,13 @@ def test_shots2(window, qapp):
     window.mini_player.overlay.show()
     wait_until(qapp, lambda: False, 0.3)
     window.mini_player.grab().save(f"{S}/mini.png")
+
+
+def test_shot_preview(window, qapp):
+    window.resize(1500, 900)
+    window.show()
+    pl = window.create_playlist("Locked in 2.0", list(window.songs))
+    window.show_playlist(pl)
+    window.open_preview()
+    wait_until(qapp, lambda: False, 0.5)
+    window.grab().save(f"{S}/preview.png")

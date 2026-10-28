@@ -2,6 +2,38 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Fixes from the beta.6 test, and more of Spotify (v5.0.0-beta.7):**
+- Fixed the small "Sevbify" window that flashed up and took over the mouse, mostly while downloading: Home
+  cards were shown before being put in the window (30+ flashes during a download run). Pages now never
+  rebuild under a held mouse button or an open menu, and old pages are never turned into windows.
+- Fixed the empty "Something went wrong" box (white text on white) and the Podcasts / Audiobooks Home chips.
+- The Online button really switches Sevbify offline and back; Home and search no longer move sideways.
+- Menus switch instantly (no submenu delay or fade).
+- Crossfade overlaps the two songs with equal-power curves (no jump in volume); smooth volume slider.
+- Dropping files from File Explorer works again (song lists had switched drops off).
+- Downloads: Pause after this song, Resume, Stop all keeps songs as Stopped, Cancel / Try again per song; they
+  wait out a lost internet connection or missing drive instead of failing.
+- Downloaded podcasts and audiobooks are listed under Downloaded and play offline; no hidden
+  `.sevbify-noscan` files any more (beta.6's are removed).
+- Episodes sort by release date (newest / oldest); descriptions are cut at whole lines; faster artwork; a
+  YouTube channel shows whether YouTube verified it.
+- Import: covers looked up a few songs at a time; Spotify playlists over 100 songs come in complete by pasting
+  the songs copied in Spotify.
+- Song lists: Shift+click / Ctrl+click selection, whole-row hover and selection, Delete key, drag several songs;
+  playlists show the artist under the title; Spotify time format (3:07).
+- Playlist page like Spotify's: Preview, shuffle, download, •••, search in playlist, sort, + Add,
+  Name & details. Spotify-style playlist menu (Move to folder with Find a folder, Add to other playlist,
+  Share and export: .m3u8 export and copy the actual songs to a folder or phone).
+- Spotify's white "Delete from Your Library?" card and dark "Edit details" box.
+- Search like Spotify's: chips, Top result, Songs, artists, podcasts, audiobooks; clear and Browse buttons.
+- Browse genres open a genre page (popular songs, playlists, new releases, albums, artists) from Deezer's daily
+  charts; playlists and albums can be saved to Your Library.
+- Miniplayer, Full screen (F11), zoom with Ctrl + / Ctrl − / Ctrl 0, Spotify's equaliser curve and zoom
+  pictures, Reset appearance / Reset all settings.
+- Song menu: Hide Canvas / Show Canvas, and Canvas video → choose your own loop.
+- Private session badge; it ends when Sevbify closes or after 6 hours.
+- Your Library chips are pills with ‹ › buttons.
+
 **Spotify's library, settings, import, Browse, podcasts and audiobooks (v5.0.0-beta.6):**
 - **Your Library** like Spotify: chips Playlists / Podcasts / Audiobooks / Albums / Artists / Downloaded / To download,
   filter, sort (Recents / Recently added / Alphabetical), Compact / List / Grid, folders (Create → Folder, Move to

@@ -37,6 +37,9 @@ class Show:
     genre: str = ""
     kind: str = "podcast"       # "podcast" | "youtube"
     link: str = ""
+    verified: bool = False      # YouTube: the channel has YouTube's verified tick
+    followers: int = 0          # YouTube: subscribers
+    channel: str = ""           # YouTube: the channel that uploads the videos (for playlists too)
 
     @property
     def key(self):
@@ -254,7 +257,10 @@ def fetch_youtube_channel(url, show=None, extract=None, limit=60):
     thumbs = [t.get("url") for t in (info.get("thumbnails") or []) if t.get("url")]
     show = Show(title=title, author=info.get("uploader") or title, feed_url=url, kind="youtube",
                 image_url=(thumbs[-1] if thumbs else (show.image_url if show else "")),
-                description=clean_text(info.get("description") or "", 600), link=info.get("webpage_url") or url)
+                description=clean_text(info.get("description") or "", 600), link=info.get("webpage_url") or url,
+                verified=bool(info.get("channel_is_verified")),
+                followers=int(info.get("channel_follower_count") or 0),
+                channel=info.get("channel") or info.get("uploader") or "")
     episodes = []
     for i, entry in enumerate((info.get("entries") or [])[:limit]):
         vid = entry.get("id") or ""
@@ -271,6 +277,19 @@ def fetch_youtube_channel(url, show=None, extract=None, limit=60):
                                 description=clean_text(entry.get("description") or "", 300), guid=f"yt:{vid}",
                                 show_key=show.key))
     return show, episodes
+
+
+def source_note(show):
+    """How sure Sevbify is that a YouTube source is the creator's own (shown on the show page). Uses what
+    YouTube itself says about the channel (its verified tick and subscribers), not the name or picture."""
+    if show.kind != "youtube":
+        return "From the show's own podcast feed (the publisher's official feed)."
+    if show.verified:
+        n = show.followers
+        size = f" · {n / 1_000_000:.1f}M subscribers" if n >= 1_000_000 else (f" · {n // 1000}K subscribers" if n >= 1000 else "")
+        return f"✓ Verified YouTube channel{(': ' + show.channel) if show.channel else ''}{size}"
+    return ("⚠ Not verified by YouTube" + (f" ({show.channel})" if show.channel else "") +
+            ": check it's the creator's own channel before downloading (re-uploads are common).")
 
 
 def _ydl(extra):

@@ -259,7 +259,8 @@ class ShowsMixin:
             label = "YouTube channel · video podcast" if obj.kind == "youtube" else "Podcast"
             author = obj.author
             follow_text = ("Follow", "Following")
-            description = obj.description
+            description = (podcasts.source_note(obj) + "\n\n" + obj.description).strip() \
+                if obj.kind == "youtube" else obj.description
         if loading:
             message = "Loading…"
         elif not rows and not message:

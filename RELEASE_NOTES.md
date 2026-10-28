@@ -23,6 +23,11 @@ See `CHANGELOG.md` inside the zip for the full list. Highlights:
   **⬇ Download** on a playlist, or **⬇ Download all** on To download. Each song fills its own place in the playlist.
   Radio → **Save as playlist** in the queue panel.
 - New users start with no playlists.
+- **New in beta.7:** fixes from the beta.6 test (the flashing mini-window during downloads, the Podcasts
+  error, the Online button, drag and drop from File Explorer, crossfade, volume), download Pause / Resume /
+  Cancel / Try again, downloaded podcasts under Downloaded, Shift+click selection, Spotify-style playlist page,
+  Preview, search and genre pages, Miniplayer, Full screen, zoom keys and Reset settings, playlist export and
+  copy-to-phone, and full Spotify playlists over 100 songs.
 - **New in beta.6:** Your Library like Spotify (podcasts, audiobooks, albums, artists, folders, sorting, grid,
   collapse/expand), a full Settings page (equaliser, normalise, fade, autoplay, zoom, start with Windows, tray,
   proxy, private session…), **Import a playlist** from a Spotify / Apple Music link or a file, **Browse**,

@@ -150,3 +150,15 @@ def test_podcast_folders_are_not_scanned_as_music(tmp_path):
     (music / "Podcasts" / OLD_NO_SCAN_MARKER).write_text("Podcasts and audiobooks downloaded by Sevbify\n")
     remove_old_marker(str(music / "Podcasts"))
     assert not (music / "Podcasts" / OLD_NO_SCAN_MARKER).exists()
+
+
+def test_youtube_source_note_uses_youtube_facts_not_names():
+    from core.podcasts import Show, source_note, fetch_youtube_channel
+    info = {"channel": "Fin vs History", "uploader": "Fin vs History", "channel_is_verified": True,
+            "channel_follower_count": 812000, "entries": [{"id": "abc", "title": "Ep 1", "duration": 60}]}
+    show, eps = fetch_youtube_channel("https://www.youtube.com/@FinvsHistory", extract=lambda u: info)
+    assert show.verified and source_note(show).startswith("✓ Verified YouTube channel: Fin vs History · 812K")
+    copy = dict(info, channel="Fin vs History Clips", channel_is_verified=False)
+    show2, _ = fetch_youtube_channel("https://www.youtube.com/@fvhclips", extract=lambda u: copy)
+    assert source_note(show2).startswith("⚠ Not verified by YouTube")
+    assert "official feed" in source_note(Show("A Podcast", feed_url="https://feed"))
