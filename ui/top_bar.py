@@ -15,6 +15,7 @@ class TopBar(QWidget):
     browse_clicked = pyqtSignal()             # the Browse button in the search pill
     downloads_clicked = pyqtSignal()          # the download progress pill was clicked
     menu_clicked = pyqtSignal()               # the ⋯ button (File / Edit / View / Playback / Help)
+    online_toggled = pyqtSignal()             # the Online / Offline button was clicked
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,9 +41,17 @@ class TopBar(QWidget):
         h.addWidget(self.forward_btn)
         h.addStretch(1)
 
+        # Home + search sit in the exact middle of the window whatever is on the left or right (the online
+        # state text or the download pill used to push them sideways). They're placed by _place_center().
+        self.center = QWidget(self)
+        c = QHBoxLayout(self.center)
+        c.setContentsMargins(0, 0, 0, 0)
+        c.setSpacing(8)
+        self._left_group = [self.menu_btn, self.back_btn, self.forward_btn]
+
         self.home_btn = self._round(icons.home(theme.TEXT, filled=True), "Home", 48, theme.ELEVATED)
         self.home_btn.clicked.connect(self.home_clicked.emit)
-        h.addWidget(self.home_btn)
+        c.addWidget(self.home_btn)
 
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("What do you want to play?")
@@ -50,7 +59,7 @@ class TopBar(QWidget):
         self.search_edit.addAction(icons.search(theme.SUBDUED, 24), QLineEdit.ActionPosition.LeadingPosition)
         self.search_edit.setFixedHeight(48)
         self.search_edit.setMinimumWidth(260)
-        self.search_edit.setMaximumWidth(480)
+        self.search_edit.setMaximumWidth(9999)
         self.search_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.search_edit.setStyleSheet(
             f"QLineEdit {{ background: {theme.ELEVATED}; color: {theme.TEXT}; border: 1px solid {theme.ELEVATED};"
@@ -71,8 +80,7 @@ class TopBar(QWidget):
         self.browse_btn.clicked.connect(self.browse_clicked.emit)
         self.search_edit.setTextMargins(0, 0, 40, 0)
         self.search_edit.resizeEvent = self._place_browse_button
-        h.addWidget(self.search_edit, 2)
-        h.addStretch(1)
+        c.addWidget(self.search_edit, 1)
 
         # Download progress ("⬇ 2 of 5 · Song"); hidden when nothing is downloading.
         self.downloads_btn = QPushButton()
@@ -84,15 +92,41 @@ class TopBar(QWidget):
         self.downloads_btn.hide()
         h.addWidget(self.downloads_btn)
 
-        self.online_label = QLabel()
+        # Click to go offline / online (Sevbify contacts nothing at all while offline).
+        self.online_label = QPushButton()
         self.online_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.online_label.mousePressEvent = lambda e: self.settings_clicked.emit()
+        self.online_label.clicked.connect(self.online_toggled.emit)
         h.addWidget(self.online_label)
         self.settings_btn = self._round(icons.gear(theme.SUBDUED, 20), "Settings", 36, "transparent")
         self.settings_btn.clicked.connect(self.settings_clicked.emit)
         h.addWidget(self.settings_btn)
         self.set_online_state("unknown")
         self.set_history(False, False)
+
+    CENTER_MAX = 48 + 8 + 480                 # Home button + gap + Spotify-width search pill
+
+    def _place_center(self):
+        w = self.width()
+        left = max(b.geometry().right() for b in self._left_group) + 12
+        right_items = [x for x in (self.downloads_btn, self.online_label, self.settings_btn) if not x.isHidden()]
+        right = min((x.geometry().left() for x in right_items), default=w) - 12
+        cw = min(self.CENTER_MAX, w - 2 * max(left, w - right))
+        cw = max(cw, min(self.CENTER_MAX, right - left), 260)
+        x = (w - cw) // 2
+        if x < left:                       # narrow window: keep clear of the buttons on the left
+            x = left
+        cw = max(200, min(cw, right - x))
+        self.center.setGeometry(x, (self.height() - 48) // 2, cw, 48)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self._place_center)     # after the layout has placed the side buttons
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self._place_center)
 
     def _place_browse_button(self, event):
         QLineEdit.resizeEvent(self.search_edit, event)
@@ -128,6 +162,7 @@ class TopBar(QWidget):
         """Show download progress, or hide the pill when text is empty."""
         if not text:
             self.downloads_btn.hide()
+            self._relayout()
             return
         text = text[2:] if text.startswith("⬇ ") else text     # the drawn icon replaces the emoji arrow
         self.downloads_btn.setIcon(icons.download(theme.RED if failed else theme.TEXT, 16))
@@ -136,6 +171,11 @@ class TopBar(QWidget):
         self.downloads_btn.setToolTip(tip or text)
         self.downloads_btn.setStyleSheet(self._pill_style(theme.RED if failed else theme.TEXT))
         self.downloads_btn.show()
+        self._relayout()
+
+    def _relayout(self):
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self._place_center)
 
     @staticmethod
     def _pill_style(colour):
@@ -146,10 +186,19 @@ class TopBar(QWidget):
     def set_online_state(self, state: str):
         """state: "online", "offline", "disabled" or "unknown"."""
         text, color, tip = {
-            "online": ("● Online", theme.GREEN, "Online features are on and working."),
-            "offline": ("● Offline", theme.RED, "Can't reach the internet. Your own music still works."),
-            "disabled": ("● Online features off", theme.DIM, "Switched off in Settings. Click to change."),
-        }.get(state, ("● Online", theme.DIM, "Online features are on."))
+            "online": ("● Online", theme.GREEN, "Online and working. Click to go offline: Sevbify then contacts "
+                                                "nothing at all (your own music and downloads still play)."),
+            "offline": ("● No internet", theme.RED, "Online, but the internet can't be reached. Your own music "
+                                                    "still works. Click to go offline on purpose."),
+            "disabled": ("● Offline", theme.SUBDUED, "Offline: Sevbify contacts nothing (no search, streaming, "
+                                                     "radio, podcasts or downloads). Click to go online."),
+        }.get(state, ("● Online", theme.DIM, "Online. Click to go offline."))
+        self.online_state = state
         self.online_label.setText(text)
-        self.online_label.setStyleSheet(f"color: {color}; font-size: 12px; font-weight: 600; padding: 0 6px;")
+        self.online_label.setStyleSheet(
+            f"QPushButton {{ color: {color}; background: transparent; border: none; border-radius: 14px;"
+            f" font-size: 12px; font-weight: 600; padding: 4px 10px; }}"
+            f" QPushButton:hover {{ background: {theme.HOVER}; }}")
         self.online_label.setToolTip(tip)
+        # Same width whatever it says, so nothing next to it moves.
+        self.online_label.setFixedWidth(self.online_label.fontMetrics().horizontalAdvance("● No internet") + 28)

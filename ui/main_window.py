@@ -126,16 +126,17 @@ class ScanThread(QThread):
     """Scans music folders in the background so the window never freezes."""
     scanned = pyqtSignal(list, list)  # songs, problems
 
-    def __init__(self, folders, parent=None):
+    def __init__(self, folders, parent=None, skip=()):
         super().__init__(parent)
         self.folders = list(folders)
+        self.skip = list(skip)
         self._stop = False
 
     def stop(self):
         self._stop = True
 
     def run(self):
-        songs, problems = scan_folders(self.folders, should_stop=lambda: self._stop)
+        songs, problems = scan_folders(self.folders, should_stop=lambda: self._stop, skip=self.skip)
         if not self._stop:
             self.scanned.emit(songs, problems)
 
@@ -323,6 +324,13 @@ class MainWindow(ShowsMixin, QMainWindow):
                 "player is installed (https://www.videolan.org/vlc/)."
             )
         self.player = self.vlc_instance.media_player_new()
+        # A second player for crossfading: the next song starts on it while the current one fades out
+        # (Settings → Fade between songs). self.player is always the song you hear "now".
+        self._spare_player = self.vlc_instance.media_player_new()
+        self._xf = None                    # crossfade in progress: dict(out=player, start=time, ms=length)
+        self._xf_timer = QTimer(self)
+        self._xf_timer.setInterval(30)
+        self._xf_timer.timeout.connect(self._crossfade_step)
         self.private_session = False
         self._quitting = False
         self._eq = None
@@ -391,6 +399,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_bar.browse_clicked.connect(self.show_browse)
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
         self.top_bar.menu_clicked.connect(self._show_app_menu)
+        self.top_bar.online_toggled.connect(lambda: self.set_online(not self.online_enabled))
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
         self._history, self._history_pos, self._replaying = [], -1, False
@@ -563,7 +572,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._rescan_pending = True
             return
         self.library_count_label.setText("Scanning your music…")
-        self._scan_thread = ScanThread(self.active_music_folders(), self)
+        self._scan_thread = ScanThread(self.active_music_folders(), self, skip=self.not_music_folders())
         self._scan_thread.scanned.connect(self._on_scan_finished)
         self._scan_thread.finished.connect(self._on_scan_thread_done)
         self._scan_thread.start()
@@ -982,6 +991,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         f.addSeparator()
         act(f, "Private Session", lambda: self.apply_settings({"private_session": not self.private_session}),
             checked=self.private_session)
+        act(f, "Offline mode", lambda: self.set_online(not self.online_enabled), checked=not self.online_enabled)
         f.addSeparator()
         act(f, "Exit", self.quit_app, "Ctrl+Shift+Q")
 
@@ -1270,10 +1280,19 @@ class MainWindow(ShowsMixin, QMainWindow):
     # ------------------------------------------------------------------
     def set_volume(self, value: int):
         value = max(0, min(100, int(value)))
+        if value == self.user_data.volume and not self.user_data.muted:
+            return
         self.user_data.volume = value
         if self.user_data.muted and value > 0:
             self.user_data.muted = False  # moving the slider unmutes, like Spotify
-        self._apply_volume()
+        # Dragging sends many values a second; hand VLC the newest one at most every 15 ms so the sound
+        # follows the slider smoothly instead of queueing up changes.
+        if not hasattr(self, "_volume_timer"):
+            self._volume_timer = QTimer(self)
+            self._volume_timer.setSingleShot(True)
+            self._volume_timer.timeout.connect(self._apply_volume)
+        if not self._volume_timer.isActive():
+            self._volume_timer.start(15)
         self._update_mute_icon()
         self.schedule_save()
 
@@ -1283,11 +1302,122 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._update_mute_icon()
         self.schedule_save()
 
+    def _all_players(self):
+        return [p for p in (self.player, getattr(self, "_spare_player", None)) if p is not None]
+
+    def _effective_volume(self, gain=1.0):
+        """VLC volume for the slider position times a fade gain (0..1). VLC (and Windows) turn the volume
+        number into loudness on a cube curve, so the gain is applied as gain^(1/3): fades then sound even
+        instead of dropping away at the start and jumping at the end."""
+        if self.user_data.muted:
+            return 0
+        g = max(0.0, min(1.0, gain)) ** (1 / 3)
+        return int(round(self.user_data.volume * g))
+
     def _apply_volume(self):
+        if getattr(self, "_shut_down", False):
+            return                                   # VLC was released (the window closed)
         try:
-            self.player.audio_set_volume(0 if self.user_data.muted else self.user_data.volume)
+            xf = getattr(self, "_xf", None)
+            if xf is not None:
+                self._crossfade_step()             # both players get their share of the fade
+                return
+            self._last_set_volume = self._effective_volume(self._end_fade_gain())
+            self.player.audio_set_volume(self._last_set_volume)
         except Exception as e:
             print(f"Volume error: {e}")
+
+    def _end_fade_gain(self):
+        """Fade the last song out at the end of the queue (nothing to crossfade into)."""
+        fade = (self.user_data.fade_seconds or 0) * 1000
+        if not fade or self._next_for_crossfade() is not None:
+            return 1.0
+        try:
+            length, now = self.player.get_length(), self.player.get_time()
+        except Exception:
+            return 1.0
+        if length <= fade * 2 or now < 0:
+            return 1.0
+        import math
+        remaining = length - now
+        if remaining >= fade:
+            return 1.0
+        return max(0.0, math.sin((remaining / fade) * math.pi / 2))
+
+    # --- crossfade ------------------------------------------------------------------------------------
+    def _next_for_crossfade(self):
+        """True-ish when the song after this one is known now, so the two can overlap."""
+        if self.current_song is None or item_key(self.current_song) or self._sleep_at_track_end:
+            return None                              # podcasts / audiobooks / sleep timer: no crossfade
+        pq = self.pq
+        if pq.repeat == "one":
+            return None
+        if pq.user_queue:
+            return pq.user_queue[0]
+        if pq.index + 1 < len(pq.items):
+            return pq.items[pq.index + 1]
+        if pq.repeat == "all" and pq.items:
+            return pq.items[0]
+        return None
+
+    def _maybe_start_crossfade(self):
+        fade = (self.user_data.fade_seconds or 0) * 1000
+        if not fade or self._xf is not None or self._next_for_crossfade() is None:
+            return
+        length, now = self.player.get_length(), self.player.get_time()
+        if length <= fade * 2 or now < 0 or length - now > fade:
+            return
+        out = self.player
+        self.player, self._spare_player = self._spare_player, out
+        self._xf = {"out": out, "start": time.monotonic(), "ms": max(500, length - now), "in_started": None}
+        self._xf_timer.start()
+        self._advance_after_current(auto=True)       # starts the next song on the other player
+        if self._xf is not None and self.player.get_state() not in (vlc.State.Opening, vlc.State.Buffering,
+                                                                     vlc.State.Playing):
+            # The next song didn't start (e.g. it's being looked up online): let the old one finish normally.
+            pass
+
+    def _crossfade_step(self):
+        xf = self._xf
+        if xf is None:
+            self._xf_timer.stop()
+            return
+        import math
+        t = (time.monotonic() - xf["start"]) * 1000 / xf["ms"]
+        out_gain = math.cos(min(1.0, t) * math.pi / 2)                  # equal-power curve
+        try:
+            xf["out"].audio_set_volume(self._effective_volume(out_gain))
+            if self.player.get_state() == vlc.State.Playing:
+                if xf["in_started"] is None:
+                    xf["in_started"] = time.monotonic()
+                tin = (time.monotonic() - xf["in_started"]) * 1000 / xf["ms"]
+                self.player.audio_set_volume(self._effective_volume(math.sin(min(1.0, tin) * math.pi / 2)))
+                done = t >= 1 and tin >= 1
+            else:
+                self.player.audio_set_volume(0)
+                done = t >= 1 and self.player.get_state() not in (vlc.State.Opening, vlc.State.Buffering)
+        except Exception:
+            done = True
+        if done or t >= 3:
+            self._end_crossfade()
+
+    def _end_crossfade(self):
+        xf, self._xf = self._xf, None
+        self._xf_timer.stop()
+        if xf is not None:
+            try:
+                xf["out"].stop()
+            except Exception:
+                pass
+        try:
+            self.player.audio_set_volume(self._effective_volume())
+        except Exception:
+            pass
+
+    def cancel_crossfade(self):
+        """Something else happened (Next, Previous, pause, a new song): stop the fading song straight away."""
+        if self._xf is not None:
+            self._end_crossfade()
 
     def _update_mute_icon(self):
         v = self.user_data.volume
@@ -1355,12 +1485,15 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self.apply_pending_resume()
             if state == vlc.State.Playing and item_key(self.current_song):
                 self.track_item_progress(self.player.get_time())
-            if self.user_data.fade_seconds and state == vlc.State.Playing and not self.user_data.muted:
-                from core.audio_settings import fade_factor
-                f = fade_factor(self.player.get_time(), self.player.get_length(), self.user_data.fade_seconds * 1000)
-                target = int(self.user_data.volume * f)
-                if self.player.audio_get_volume() != target:
-                    self.player.audio_set_volume(target)
+            if self.user_data.fade_seconds and state == vlc.State.Playing and self._xf is None:
+                self._maybe_start_crossfade()
+                if self._xf is None:
+                    # Compare with what we last set, not what VLC reports: VLC's own number can be off by one
+                    # after its internal rounding, and re-setting it every 100 ms made the sound stutter.
+                    target = self._effective_volume(self._end_fade_gain())
+                    if getattr(self, "_last_set_volume", None) != target:
+                        self._last_set_volume = target
+                        self.player.audio_set_volume(target)
             if not self.slider_being_moved:
                 current_time = self.player.get_time()
                 duration = self.player.get_length()
@@ -1687,16 +1820,20 @@ class MainWindow(ShowsMixin, QMainWindow):
         for sh in getattr(self, "_home_shelves", []):
             if sh["cols"] == cols:
                 continue
+            try:
+                sh["grid"].count()
+            except RuntimeError:          # Home was rebuilt meanwhile; these cards are gone
+                continue
             sh["cols"] = cols
             grid = sh["grid"]
             for c in sh["cards"]:
                 grid.removeWidget(c)
             for i, c in enumerate(sh["cards"]):
-                if not sh["all"] and i >= cols:
-                    c.hide()
-                    continue
-                c.show()
-                grid.addWidget(c, i // cols, i % cols)
+                # Always put the card in the grid FIRST: show() on a card that isn't inside the window yet
+                # opens it as a little window of its own (the "Sevbify mini-window" from the beta.6 test).
+                hidden = not sh["all"] and i >= cols
+                grid.addWidget(c, (i // cols) if not hidden else 0, (i % cols) if not hidden else 0)
+                c.setVisible(not hidden)
 
     def eventFilter(self, obj, event):
         if obj is getattr(self, "home_scroll", None) and event.type() == QEvent.Type.Resize:
@@ -2379,7 +2516,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         for i in reversed(range(self.playlist_scroll_layout.count())):
             w = self.playlist_scroll_layout.itemAt(i).widget()
             if w:
-                w.setParent(None)
+                w.hide()
+                self.playlist_scroll_layout.removeWidget(w)
+                w.deleteLater()
 
         if not self.playlists:
             self.playlist_scroll_layout.addWidget(
@@ -2494,6 +2633,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             v.addWidget(self._muted_label("Nothing to download. Songs you add to a playlist from Radio or web "
                                           "search, or save with “Save for later”, show up here."))
         all_remote = []
+        self._saved_tables = []
+        self._saved_genres = genres
         if in_playlists:
             head = QHBoxLayout()
             head.addWidget(self._section_label(f"In your playlists  ·  {len(in_playlists)}"))
@@ -2509,6 +2650,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 lambda s, row, pos, t=table: self._show_song_menu(s, pos, queue=t.songs_in_view(),
                                                                    source="To download"))
             v.addWidget(table)
+            self._saved_tables.append((table, self.playlist_songs_to_download))
             all_remote += in_playlists
         for genre in genres:
             songs = self.saved_songs(genre)
@@ -2544,6 +2686,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 lambda s, row, pos, t=table, g=genre: self._show_song_menu(
                     s, pos, queue=t.songs_in_view(), source=f"Saved: {g}", saved_genre=g, saved_index=row))
             v.addWidget(table)
+            self._saved_tables.append((table, lambda g=genre: self.saved_songs(g)))
         v.addStretch()
         theme.replace_scroll_widget(self.saved_scroll, content)
         self.fetch_covers(all_remote)
@@ -2808,6 +2951,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 otherwise the whole library is used.
         source: name shown as "Next from: <source>" in the queue panel.
         """
+        self.cancel_crossfade()
         if queue is not None:
             self.pq.set_context(queue, song, source if source is not None else self.pq.source_name)
         elif song in self.pq.items:
@@ -2997,6 +3141,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self.pq.set_context(self.songs, self.songs[0], "Your Songs")
 
             state = self.player.get_state()
+            self.cancel_crossfade()
 
             if state == vlc.State.Playing:
                 self.player.set_pause(1)
@@ -3018,12 +3163,14 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.show_status(f"⚠ Play/Pause error: {e}")
 
     def next_song(self):
+        self.cancel_crossfade()
         if self.pq.items or self.pq.user_queue:
             self._consecutive_failures = 0
             if self.pq.advance(auto=False) is not None:
                 self._start_current()
 
     def prev_song(self):
+        self.cancel_crossfade()
         if not self.queue:
             return
         self._consecutive_failures = 0
@@ -3406,6 +3553,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._refresh_download_views()
 
     def _refresh_download_views(self):
+        if theme.user_is_busy():
+            # A mouse button is held or a menu is open: refreshing now would rebuild the rows under it.
+            self._downloads_refresh.start(300)
+            return
         d = self.downloads
         if d.is_busy():
             tip = (d.step_text or "Downloading") + "\nClick to stop."
@@ -3423,8 +3574,26 @@ class MainWindow(ShowsMixin, QMainWindow):
             if table.rowCount():
                 table.set_songs(table.songs_in_view())
                 table.set_current(self.current_song)
-        if self.user_data.save_for_later and self.stack.currentWidget() is self.saved_page:
+        if self.stack.currentWidget() is self.saved_page and not self._update_saved_tables():
             self.refresh_saved_page()
+
+    def _update_saved_tables(self):
+        """Refresh the To download lists in place when the same songs are still listed (only their state
+        changed). Returns False when the page needs rebuilding."""
+        tables = getattr(self, "_saved_tables", None)
+        if not tables:
+            return False
+        genres = sorted(self.user_data.save_for_later, key=str.casefold)
+        if genres != getattr(self, "_saved_genres", None):
+            return False
+        new_lists = [getter() for _table, getter in tables]
+        for (table, _g), songs in zip(tables, new_lists):
+            if [s.key for s in songs] != [s.key for s in table.songs_in_view() if s is not None]:
+                return False
+        for (table, _g), songs in zip(tables, new_lists):
+            table.set_songs(songs)
+            table.set_current(self.current_song)
+        return True
 
     def _update_playlist_download_button(self):
         pl = self.open_playlist
@@ -3643,6 +3812,22 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.set_album_cover(self.current_song.album_cover_path)
             self.now_playing_panel.artwork.set_pixmap(load_pixmap(self.current_song.album_cover_path))
 
+    def set_online(self, on):
+        """Online / Offline (the button at the top right, File → Offline mode, Settings → Online features).
+        Offline means Sevbify contacts nothing at all; your own music and downloaded episodes still play."""
+        on = bool(on)
+        if on == self.online_enabled:
+            self._update_online_indicator()
+            return
+        if not on and self.downloads.is_busy():
+            self.downloads.stop()
+        self.apply_settings({"online_enabled": on})
+        if self.stack.currentWidget() is self.settings_page:
+            self.open_settings()
+        self.show_status("Online: search, radio, podcasts and downloads are back." if on else
+                         "Offline: Sevbify contacts nothing now. Your own music and downloads still play. "
+                         "A song already streaming plays to its end.", kind="info", timeout_ms=6000)
+
     def _update_online_indicator(self):
         if not self.online_enabled:
             state = "disabled"
@@ -3811,9 +3996,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         try:
             if self.user_data.eq_enabled:
                 self._eq = make_equalizer(vlc, self.user_data.eq_bands)    # keep a reference while VLC uses it
-                self.player.set_equalizer(self._eq)
+                for p in self._all_players():
+                    p.set_equalizer(self._eq)
             else:
-                self.player.set_equalizer(None)
+                for p in self._all_players():
+                    p.set_equalizer(None)
                 self._eq = None
         except Exception as e:
             print(f"Equalizer error: {e}")
@@ -3903,8 +4090,13 @@ class MainWindow(ShowsMixin, QMainWindow):
             if hasattr(self, "_watcher"):
                 self._watcher.removePaths(self._watcher.directories() or [])
             self.timer.stop()
-            self.player.stop()
-            self.player.release()
+            self.cancel_crossfade()
+            for t in (getattr(self, "_volume_timer", None), self._xf_timer):
+                if t is not None:
+                    t.stop()
+            for p in self._all_players():
+                p.stop()
+                p.release()
             self.vlc_instance.release()
         except Exception as e:
             print(f"Shutdown error: {e}")

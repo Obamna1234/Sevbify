@@ -197,10 +197,18 @@ def install_error_guard():
             os._exit(3)
         if time.time() - last_shown[0] > 10:  # don't flood the user with pop-ups
             last_shown[0] = time.time()
-            QMessageBox.warning(
-                None, "Something went wrong",
-                f"An unexpected error occurred, but the app is still running.\n\n"
-                f"{exc_type.__name__}: {exc}\n\nDetails were saved to:\n{log_path}")
+            from PyQt6.QtWidgets import QApplication
+            box = QMessageBox(QApplication.activeWindow())
+            box.setIcon(QMessageBox.Icon.Warning)
+            box.setWindowTitle("Something went wrong")
+            # Own colours: without a parent window the text came out white on white (beta.6 test).
+            box.setStyleSheet("QMessageBox { background: #282828; } QLabel { color: white; font-size: 13px; }"
+                              " QPushButton { color: white; background: #3e3e3e; border: none; border-radius: 14px;"
+                              " padding: 6px 18px; } QPushButton:hover { background: #535353; }")
+            box.setText("Something went wrong, but Sevbify is still running.")
+            box.setInformativeText(f"{exc_type.__name__}: {exc}\n\nDetails were saved to:\n{log_path}\n"
+                                   "Please send that file if it keeps happening.")
+            box.exec()
 
     sys.excepthook = hook
 
@@ -241,6 +249,11 @@ def main():
     app = QApplication(sys.argv)
     icon_path = set_app_identity(app)
     install_error_guard()
+    try:
+        from ui.theme import apply_app_behaviour
+        apply_app_behaviour(app)
+    except Exception as e:
+        _log_stderr(f"Could not set menu behaviour: {e}\n")
 
     # 2. Import and create the main window. Importing loads libVLC, which
     #    fails if VLC is not installed, so show a helpful message instead of

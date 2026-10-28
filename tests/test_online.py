@@ -139,7 +139,7 @@ def test_online_track_round_trip():
 def test_settings_switch_updates_indicator_and_blocks_requests(window):
     called = {}
     window.apply_settings({"online_enabled": False, "lastfm_api_key": "", "jamendo_client_id": ""})
-    assert "off" in window.sidebar.online_label.text()
+    assert "Offline" in window.sidebar.online_label.text()
     window.online_call(lambda: 1, on_done=lambda r: called.setdefault("done", r),
                        on_error=lambda e: called.setdefault("err", type(e).__name__))
     assert called == {"err": "OnlineDisabled"}

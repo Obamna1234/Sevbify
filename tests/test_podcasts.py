@@ -138,12 +138,15 @@ def test_audiobooks_search_and_chapters_in_order(net):
 
 def test_podcast_folders_are_not_scanned_as_music(tmp_path):
     from conftest import make_wav
-    from core.library import scan_folders, mark_no_scan
+    from core.library import scan_folders, remove_old_marker, OLD_NO_SCAN_MARKER
     music = tmp_path / "Music"
     (music / "Artist").mkdir(parents=True)
     make_wav(music / "Artist" / "song.wav", 0.2)
-    pods = mark_no_scan(str(music / "Podcasts"))
-    make_wav(music / "Podcasts" / "episode.wav", 0.2)
-    songs, problems = scan_folders([str(music)])
+    (music / "Podcasts" / "Show").mkdir(parents=True)
+    make_wav(music / "Podcasts" / "Show" / "episode.wav", 0.2)
+    songs, problems = scan_folders([str(music)], skip=[str(music / "Podcasts")])
     assert [s.title for s in songs] == ["song"] and not problems
-    assert pods.endswith("Podcasts")
+    # beta.6's hidden marker file is cleaned up; no new one is made
+    (music / "Podcasts" / OLD_NO_SCAN_MARKER).write_text("Podcasts and audiobooks downloaded by Sevbify\n")
+    remove_old_marker(str(music / "Podcasts"))
+    assert not (music / "Podcasts" / OLD_NO_SCAN_MARKER).exists()

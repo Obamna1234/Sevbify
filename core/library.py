@@ -3,29 +3,35 @@ import os
 
 from .models import Song, SUPPORTED_EXTENSIONS
 
-# A folder holding this file (and everything inside it) is never scanned for songs. Sevbify puts it in its
-# podcast and audiobook download folders, so episodes and chapters don't show up as music.
-NO_SCAN_MARKER = ".sevbify-noscan"
+# beta.6 put this hidden file in the podcast and audiobook download folders so they weren't scanned as music.
+# Sevbify now keeps that list itself (skip=...), and removes its old marker files when it sees them.
+OLD_NO_SCAN_MARKER = ".sevbify-noscan"
 
 
-def mark_no_scan(folder):
-    """Create `folder` and mark it as not music (see NO_SCAN_MARKER)."""
-    os.makedirs(folder, exist_ok=True)
-    marker = os.path.join(folder, NO_SCAN_MARKER)
-    if not os.path.exists(marker):
-        with open(marker, "w", encoding="utf-8") as f:
-            f.write("Podcasts and audiobooks downloaded by Sevbify: not shown in Your Songs.\n")
-    return folder
+def remove_old_marker(folder):
+    """Delete the marker file beta.6 left in `folder` (only our own one-line file)."""
+    marker = os.path.join(folder, OLD_NO_SCAN_MARKER)
+    try:
+        if os.path.isfile(marker) and os.path.getsize(marker) < 200:
+            os.remove(marker)
+    except OSError:
+        pass
 
 
-def scan_folders(folders, recursive=True, should_stop=lambda: False):
+def _norm(path):
+    return os.path.normcase(os.path.abspath(path))
+
+
+def scan_folders(folders, recursive=True, should_stop=lambda: False, skip=()):
     """Return a sorted, de-duplicated list of Songs found in the given folders.
 
     Missing folders are skipped (reported in the returned 'problems' list).
     should_stop: callable checked between files so a scan can be cancelled.
+    skip: folders that are never scanned (Sevbify's podcast and audiobook downloads).
     """
     songs = {}
     problems = []
+    skip = {_norm(f) for f in skip if f}
     for folder in folders:
         if not os.path.isdir(folder):
             problems.append(f"Folder not found: {folder}")
@@ -35,7 +41,7 @@ def scan_folders(folders, recursive=True, should_stop=lambda: False):
         else:
             walker = [(folder, [], os.listdir(folder))]
         for root, dirs, files in walker:
-            if NO_SCAN_MARKER in files:
+            if (skip and _norm(root) in skip) or OLD_NO_SCAN_MARKER in files:
                 dirs[:] = []
                 continue
             dirs.sort()

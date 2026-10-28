@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt, QLocale
 from PyQt6.QtGui import QPixmap
 
 from core import podcasts, audiobooks
-from core.library import mark_no_scan
+from core.library import remove_old_marker
 from core.online.models import OnlineTrack
 from core.online.remote_song import RemoteSong
 from core.paths import PLACEHOLDER_IMAGE
@@ -67,6 +67,7 @@ class ShowsMixin:
         self.show_page.play_clicked.connect(self._play_show)
         self.show_page.follow_clicked.connect(self._toggle_follow)
         self.show_page.download_all_clicked.connect(self._download_whole_show)
+        self.show_page.sort_changed.connect(self._sort_show)
         self.video_page = VideoPage()
         self.video_page.audio_only_requested.connect(self._video_to_audio)
         self.video_page.error.connect(lambda msg: self.show_status(f"⚠ Video: {msg}", 10000))
@@ -197,14 +198,18 @@ class ShowsMixin:
                 self._show_ctx.update(obj=fresh, episodes=episodes, items=[RemoteSong(e.track) for e in episodes])
                 self._render_show()
 
+        def offline_episodes(text):
+            songs, episodes = self._downloaded_for(show.key)
+            self._show_ctx.update(items=songs, episodes=episodes)
+            self._render_show(message=text + (" Your downloaded episodes:" if songs else ""))
+
         def failed(err):
             if self._show_ctx and self._show_ctx["obj"] is show:
-                self._render_show(message=f"Couldn't load this show: {err}")
+                offline_episodes(f"Couldn't load this show: {err}.")
         if self.online_enabled:
             self.online_call(podcasts.fetch_show, self.net, show, on_done=done, on_error=failed)
         else:
-            self._render_show(message="You're offline or online features are off. Downloaded episodes are in "
-                                      "Your Library under Downloaded.")
+            offline_episodes("You're offline.")
 
     def open_book(self, book):
         self._show_ctx = dict(kind="book", obj=book, items=[], episodes=[])
@@ -241,8 +246,12 @@ class ShowsMixin:
             description = obj.description
         else:
             image = obj.image_url
-            episodes = ctx["episodes"]
-            for song, ep in zip(ctx["items"], episodes):
+            pairs = list(zip(ctx["items"], ctx["episodes"]))
+            # Release date order like Spotify (episodes without a date go last either way).
+            newest = ctx.get("sort", "newest") == "newest"
+            pairs.sort(key=lambda p: (p[1].published <= 0, -p[1].published if newest else p[1].published))
+            ctx["items"], ctx["episodes"] = [p[0] for p in pairs], [p[1] for p in pairs]
+            for song, ep in pairs:
                 meta = ep.date_text
                 rows.append(self._episode_row(song, song.title, ep.description, meta_prefix=meta,
                                               playing_key=playing_key))
@@ -254,9 +263,15 @@ class ShowsMixin:
             message = "Loading…"
         elif not rows and not message:
             message = "No episodes found." if kind != "book" else "No chapters found."
+        count = ""
+        if kind != "book" and ctx["episodes"]:
+            n_dl = sum(1 for sng in ctx["items"] if self._is_downloaded(sng))
+            count = f"{len(ctx['episodes'])} episodes" + (f"  •  {n_dl} downloaded" if n_dl else "")
         self.show_page.build(label, obj.title, author, description, followed, rows,
                              top_colour="#2d4a5a" if kind != "book" else "#5a3d2d",
-                             can_download_all=kind == "book" and bool(rows), follow_text=follow_text, message=message)
+                             can_download_all=kind == "book" and bool(rows), follow_text=follow_text, message=message,
+                             sort=ctx.get("sort", "newest") if kind != "book" and len(rows) > 1 else None,
+                             count_text=count)
         self._with_image(image, self.show_page.set_cover)
         cover_cache = {}
         for row, song in zip(rows, ctx["items"]):
@@ -267,6 +282,28 @@ class ShowsMixin:
                 row.set_cover(cover_cache[url])
                 continue
             self._with_image(url, lambda pm, r=row, u=url: (cover_cache.__setitem__(u, pm), self._safe(r.set_cover, pm)))
+
+    def _sort_show(self, order):
+        if self._show_ctx is not None:
+            self._show_ctx["sort"] = order
+            self._render_show()
+
+    def _is_downloaded(self, song):
+        path = self.user_data.offline.get(item_key(song))
+        return bool(path and os.path.exists(path))
+
+    def _downloaded_for(self, key):
+        """(songs, episodes) downloaded from the show / book with this key, for when it can't be loaded online."""
+        songs, episodes = [], []
+        for k, info in self.user_data.offline_info.items():
+            path = self.user_data.offline.get(k)
+            if info.get("show_key") != key or not path or not os.path.exists(path):
+                continue
+            track = OnlineTrack.from_dict(info["track"])
+            songs.append(RemoteSong(track))
+            episodes.append(podcasts.Episode(track=track, published=float(info.get("published") or 0),
+                                             description=info.get("description", "")))
+        return songs, episodes
 
     @staticmethod
     def _safe(fn, *args):
@@ -498,6 +535,17 @@ class ShowsMixin:
     # ==================================================================================================
     # Downloading episodes and chapters (direct files; YouTube through yt-dlp)
     # ==================================================================================================
+    def not_music_folders(self):
+        """Podcast and audiobook download folders: never scanned as songs (Your Songs stays music only)."""
+        root = self.user_data.download_folder or self._download_folder_preview()
+        # Also every place episodes were actually saved (the download location may have changed since).
+        extra = {os.path.dirname(os.path.dirname(p)) for p in self.user_data.offline.values() if p}
+        out = [os.path.join(root, "Podcasts"), os.path.join(root, "Audiobooks")]
+        out += [f for f in extra if os.path.basename(f) in ("Podcasts", "Audiobooks") and f not in out]
+        for f in out:
+            remove_old_marker(f)
+        return out
+
     def _item_keys_waiting(self):
         keys = {item_key(s) for s, _p in self._item_queue}
         if self._item_active is not None:
@@ -509,14 +557,14 @@ class ShowsMixin:
         root = self.download_folder()
         t = song.track
         if t.source == "audiobook":
-            folder = mark_no_scan(os.path.join(root, "Audiobooks"))
+            folder = os.path.join(root, "Audiobooks")
             book_dir = os.path.join(folder, podcasts.safe_folder(f"{t.artist} - {t.album}"))
             index = 1
             ctx = self._show_ctx
             if ctx and song in ctx["items"]:
                 index = ctx["items"].index(song) + 1
             return os.path.join(book_dir, audiobooks.chapter_filename(index, t))
-        folder = mark_no_scan(os.path.join(root, "Podcasts"))
+        folder = os.path.join(root, "Podcasts")
         ep = podcasts.Episode(track=t, published=self._episode_date(song))
         return os.path.join(folder, podcasts.safe_folder(t.album or t.artist), podcasts.episode_filename(ep))
 
@@ -563,9 +611,21 @@ class ShowsMixin:
                 return podcasts.download_youtube_audio(song.track.page_url, os.path.splitext(path)[0])
             return self.net.download(song.track.download_url or song.track.stream_url, path)
 
+        ctx = self._show_ctx
+        info = {"track": song.track.to_dict(), "t": time.time(), "show_key": "", "show": None}
+        if ctx and song in ctx["items"]:
+            obj = ctx["obj"]
+            info["show_key"] = obj.key
+            info["show"] = obj.to_dict()
+            info["kind"] = ctx["kind"]
+            if ctx["kind"] == "show" and ctx["episodes"]:
+                ep = ctx["episodes"][ctx["items"].index(song)]
+                info["published"], info["description"] = ep.published, ep.description[:600]
+
         def done(result):
             self._item_active = None
             self.user_data.offline[item_key(song)] = result
+            self.user_data.offline_info[item_key(song)] = info
             self.schedule_save()
             if not self._item_queue:
                 self.show_status("⬇ Downloads finished", kind="info", timeout_ms=5000)
@@ -587,6 +647,7 @@ class ShowsMixin:
     def remove_item_download(self, song):
         key = item_key(song)
         path = self.user_data.offline.pop(key, None)
+        self.user_data.offline_info.pop(key, None)
         if path and os.path.exists(path):
             try:
                 os.remove(path)
@@ -704,13 +765,41 @@ class ShowsMixin:
                 if url and not self.net.cached_image(url) and url not in self._covers_asked:
                     self._covers_asked.add(url)
                     self._refresh_library_when_cover_arrives(url)
-        for s in self.followed_shows():
+        counts, extra = {}, {}
+        for k, info in self.user_data.offline_info.items():
+            path = self.user_data.offline.get(k)
+            if not info.get("show_key") or not path or not os.path.exists(path):
+                continue
+            counts[info["show_key"]] = counts.get(info["show_key"], 0) + 1
+            if info.get("show") and info["show_key"] not in extra:
+                extra[info["show_key"]] = info
+        followed = self.followed_shows()
+        books = self.saved_books()
+        known = {x.key for x in followed} | {x.key for x in books}
+        for key, info in extra.items():                # downloaded from a show you don't follow: still listed
+            if key in known:
+                continue
+            try:
+                if info.get("kind") == "book":
+                    books.append(audiobooks.Book.from_dict(info["show"]))
+                else:
+                    followed.append(podcasts.Show.from_dict(info["show"]))
+            except Exception:
+                pass
+
+        def dl(key):
+            n = counts.get(key, 0)
+            return f" • {n} downloaded" if n else ""
+        for s in followed:
             out.append(dict(kind="podcast", key=s.key, title=s.title,
-                            subtitle=("YouTube" if s.kind == "youtube" else "Podcast") + (f" • {s.author}" if s.author else ""),
-                            cover_path=self.net.cached_image(s.image_url) or PLACEHOLDER_IMAGE, obj=s))
-        for b in self.saved_books():
-            out.append(dict(kind="audiobook", key=b.key, title=b.title, subtitle=f"Audiobook • {b.author}",
-                            cover_path=self.net.cached_image(b.cover_url) or PLACEHOLDER_IMAGE, obj=b))
+                            subtitle=("YouTube" if s.kind == "youtube" else "Podcast") + (f" • {s.author}" if s.author else "")
+                            + dl(s.key),
+                            cover_path=self.net.cached_image(s.image_url) or PLACEHOLDER_IMAGE, obj=s,
+                            downloaded=counts.get(s.key, 0), followed=self.is_followed(s.key)))
+        for b in books:
+            out.append(dict(kind="audiobook", key=b.key, title=b.title, subtitle=f"Audiobook • {b.author}" + dl(b.key),
+                            cover_path=self.net.cached_image(b.cover_url) or PLACEHOLDER_IMAGE, obj=b,
+                            downloaded=counts.get(b.key, 0), followed=self.is_followed(b.key)))
         return out
 
     def open_library_show(self, entry):

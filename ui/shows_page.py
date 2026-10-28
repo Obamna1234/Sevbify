@@ -38,6 +38,9 @@ class CardGrid(QWidget):
         self.grid.setSpacing(4)
         self.grid.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self._cols = 0
+        for c in self.cards:
+            c.hide()
+            c.setParent(self)          # inside the window from the start, never a little window of its own
         self._place(4)
 
     def _place(self, cols):
@@ -124,6 +127,8 @@ class TileGrid(QWidget):
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(16)
         self._cols = 0
+        for t in self.tiles:
+            t.setParent(self)
         self._place(4)
 
     def _place(self, cols):
@@ -140,6 +145,48 @@ class TileGrid(QWidget):
             self._place(cols)
 
 
+class ElidedLabel(QLabel):
+    """Text cut to whole lines with "…" (a plain word-wrapped label with a height limit cut a line in half)."""
+
+    def __init__(self, text, lines=2, parent=None):
+        super().__init__(parent)
+        self.full_text, self.lines = " ".join((text or "").split()), lines
+        self.setWordWrap(True)
+        self.setToolTip(self.full_text if len(self.full_text) > 80 else "")
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self._width = 0
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if self.width() != self._width:
+            self._width = self.width()
+            self._relayout()
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._relayout()
+
+    def _relayout(self):
+        fm = self.fontMetrics()
+        width = max(50, self.width())
+        words, out, line = self.full_text.split(" "), [], ""
+        for i, w in enumerate(words):
+            trial = (line + " " + w).strip()
+            if fm.horizontalAdvance(trial) <= width or not line:
+                line = trial
+                continue
+            out.append(line)
+            line = w
+            if len(out) == self.lines - 1:
+                line = " ".join([line] + words[i + 1:])
+                break
+        if line:
+            out.append(fm.elidedText(line, Qt.TextElideMode.ElideRight, width) if len(out) == self.lines - 1
+                       else line)
+        self.setText("\n".join(out[:self.lines]))
+        self.setFixedHeight(fm.lineSpacing() * max(1, min(self.lines, len(out))) + 2)
+
+
 class EpisodeRow(QFrame):
     """One podcast episode or audiobook chapter: cover, title, date • length • progress, description, buttons."""
     play_clicked = pyqtSignal()
@@ -154,8 +201,8 @@ class EpisodeRow(QFrame):
         self.setStyleSheet(f"#epRow {{ background: transparent; border-radius: 6px; }}"
                            f" #epRow:hover {{ background: {theme.ROW_HOVER}; }}")
         h = QHBoxLayout(self)
-        h.setContentsMargins(12, 12, 12, 12)
-        h.setSpacing(16)
+        h.setContentsMargins(16, 16, 16, 16)
+        h.setSpacing(20)
         self.cover = QLabel()
         self.cover.setFixedSize(96, 96)
         self.cover.setStyleSheet(f"background: {theme.ELEVATED}; border-radius: 6px;")
@@ -163,17 +210,16 @@ class EpisodeRow(QFrame):
         h.addWidget(self.cover, 0, Qt.AlignmentFlag.AlignTop)
         v = QVBoxLayout()
         v.setSpacing(4)
-        t = QLabel(title)
-        t.setWordWrap(True)
+        t = ElidedLabel(title, 2)
         t.setStyleSheet(f"color: {theme.GREEN if playing else theme.TEXT}; font-size: 15px; font-weight: 700;"
                         f" background: transparent;")
+        t.setToolTip(title)
         v.addWidget(t)
         if description:
-            d = QLabel(description)
-            d.setWordWrap(True)
-            d.setMaximumHeight(38)
+            d = ElidedLabel(description, 2)
             d.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px; background: transparent;")
             v.addWidget(d)
+        v.addSpacing(4)
         row = QHBoxLayout()
         row.setSpacing(12)
         self.play_btn = QPushButton()
@@ -304,6 +350,7 @@ class ShowPage(QWidget):
     play_clicked = pyqtSignal()
     follow_clicked = pyqtSignal()
     download_all_clicked = pyqtSignal()
+    sort_changed = pyqtSignal(str)          # "newest" / "oldest"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -318,7 +365,7 @@ class ShowPage(QWidget):
         self.rows = []
 
     def build(self, kind, title, author, description, followed, rows, top_colour="#3a3a3a", can_download_all=False,
-              follow_text=("Follow", "Following"), message=""):
+              follow_text=("Follow", "Following"), message="", sort=None, count_text=""):
         content = QWidget()
         content.setObjectName("showPage")
         content.setStyleSheet("#showPage { background: transparent; }")
@@ -338,21 +385,24 @@ class ShowPage(QWidget):
         self.cover_label = QLabel()
         self.cover_label.setFixedSize(200, 200)
         self.cover_label.setStyleSheet(f"background: {theme.ELEVATED}; border-radius: 8px;")
-        top.addWidget(self.cover_label)
+        top.addWidget(self.cover_label, 0, Qt.AlignmentFlag.AlignBottom)
         info = QVBoxLayout()
         info.addStretch()
         k = QLabel(kind)
         k.setStyleSheet("color: white; font-size: 14px; font-weight: 600; background: transparent;")
         t = QLabel(title)
         t.setWordWrap(True)
-        t.setStyleSheet(f"color: white; font-size: {48 if len(title) < 30 else 32}px; font-weight: 800;"
-                        f" background: transparent;")
+        t.setMinimumWidth(10)
+        t.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        t.setStyleSheet(f"color: white; font-size: {48 if len(title) < 24 else (36 if len(title) < 48 else 26)}px;"
+                        f" font-weight: 800; background: transparent;")
         a = QLabel(author)
         a.setStyleSheet("color: white; font-size: 16px; font-weight: 700; background: transparent;")
         for w in (k, t, a):
             info.addWidget(w)
         top.addLayout(info, 1)
         hv.addLayout(top)
+        hv.addSpacing(8)                    # clear gap between the picture and the green play button
         actions = QHBoxLayout()
         actions.setSpacing(16)
         play = QPushButton()
@@ -381,7 +431,23 @@ class ShowPage(QWidget):
             dl.clicked.connect(self.download_all_clicked.emit)
             actions.addWidget(dl)
         actions.addStretch()
+        if sort is not None:
+            from PyQt6.QtWidgets import QComboBox
+            box = QComboBox()
+            box.addItems(["Newest first", "Oldest first"])
+            box.setCurrentIndex(0 if sort == "newest" else 1)
+            box.setToolTip("Sort episodes by release date")
+            box.setCursor(Qt.CursorShape.PointingHandCursor)
+            box.setStyleSheet(f"QComboBox {{ background: transparent; color: {theme.SUBDUED}; border: none;"
+                              f" font-size: 14px; padding: 4px 8px; }} QComboBox:hover {{ color: {theme.TEXT}; }}"
+                              f" QComboBox QAbstractItemView {{ background: #282828; color: white;"
+                              f" selection-background-color: #3e3e3e; }}")
+            box.currentIndexChanged.connect(lambda i: self.sort_changed.emit("newest" if i == 0 else "oldest"))
+            self.sort_box = box
+            actions.addWidget(box)
         hv.addLayout(actions)
+        if count_text:
+            hv.addWidget(muted(count_text))
         if description:
             d = muted(description)
             d.setMaximumWidth(900)

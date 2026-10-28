@@ -112,6 +112,7 @@ class UserData:
     resume: Dict[str, dict] = field(default_factory=dict) # episode / chapter key -> {"ms", "t", "track", "show"}
     finished: List[str] = field(default_factory=list)     # episode / chapter keys listened to the end
     offline: Dict[str, str] = field(default_factory=dict) # episode / chapter key -> downloaded file
+    offline_info: Dict[str, dict] = field(default_factory=dict)  # same keys -> {"track", "show", "book", "t"}
     is_new: bool = True        # True when no save file existed yet (first run)
     load_warning: str = ""     # message for the user if the file had to be reset
 
@@ -225,6 +226,7 @@ class Storage:
             "resume": data.resume,
             "finished": data.finished[-2000:],
             "offline": {k: to_stored_path(v) for k, v in data.offline.items()},
+            "offline_info": {k: v for k, v in data.offline_info.items() if k in data.offline},
         }
         tmp = self.path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -350,6 +352,9 @@ class Storage:
         data.finished = [str(k) for k in raw.get("finished", []) or []]
         offline = raw.get("offline", {}) or {}
         data.offline = {str(k): from_stored_path(str(v)) for k, v in offline.items()} if isinstance(offline, dict) else {}
+        info = raw.get("offline_info", {}) or {}
+        data.offline_info = {str(k): v for k, v in info.items() if isinstance(v, dict) and isinstance(v.get("track"), dict)} \
+            if isinstance(info, dict) else {}
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
 

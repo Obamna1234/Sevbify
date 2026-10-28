@@ -514,7 +514,7 @@ class LibraryPanel(QFrame):
         self._state.update(playlists=list(playlists), n_songs=n_songs, n_saved=n_saved,
                            playing_source=playing_source, albums=list(albums or []), artists=list(artists or []),
                            folders=list(folders or []), shows=list(shows or []))
-        self._rebuild()
+        self._rebuild(background=True)
 
     def set_active(self, key):
         """key: "library", "saved", a Playlist, ("album", key), ("artist", name), or None."""
@@ -592,8 +592,12 @@ class LibraryPanel(QFrame):
                             out.append(self._pl_entry(pl, 16))
 
         for show_kind in ("podcast", "audiobook"):
-            if chip in (None, show_kind + "s"):
+            if chip in (None, show_kind + "s", "downloaded"):
                 shows = [e for e in self._state.get("shows", []) if e["kind"] == show_kind and match(e["title"], e["subtitle"])]
+                if chip == "downloaded":           # podcasts / audiobooks with downloaded episodes
+                    shows = [e for e in shows if e.get("downloaded")]
+                elif chip is None or chip == show_kind + "s":
+                    shows = [e for e in shows if e.get("followed", True) or e.get("downloaded")]
                 for e in self._sorted(shows, lambda e: e["title"], lambda e: 0, lambda e: 0):
                     out.append(dict(kind=show_kind, title=e["title"], subtitle=e["subtitle"], obj=e, indent=0))
         if chip == "albums" or (query and chip is None):
@@ -702,12 +706,39 @@ class LibraryPanel(QFrame):
         cols = max(2, width // 180) if self.expanded else 2
         return cols, max(120, min(220, (width - 8) // cols))
 
-    def _rebuild(self):
+    def _signature(self, items, mode):
+        """What the list looks like; refreshing with the same signature changes nothing on screen."""
+        out = [mode, self.chip, self.sort, repr(self._state.get("active")), self._state.get("playing_source")]
+        for e in items:
+            obj = e.get("obj")
+            extra = ""
+            if e["kind"] == "playlist":
+                extra = (getattr(obj, "cover", "") or "", tuple(getattr(s, "album_cover_path", "") or ""
+                                                               for s in obj.songs[:8]), self.is_downloaded(obj))
+            elif isinstance(obj, dict):
+                extra = (obj.get("cover_path") or obj.get("cover") or "", len(obj.get("songs") or []))
+            ident = (obj.get("key") or e["title"]) if isinstance(obj, dict) else (obj if isinstance(obj, str) else id(obj))
+            out.append((e["kind"], e["title"], e["subtitle"], e.get("indent"), ident, repr(extra)))
+        return tuple(out)
+
+    def _rebuild(self, background=False):
+        if background and theme.user_is_busy():
+            # A download finished while a button is held or a menu is open: wait, don't pull the list away.
+            if not hasattr(self, "_later"):
+                self._later = QTimer(self)
+                self._later.setSingleShot(True)
+                self._later.timeout.connect(lambda: self._rebuild(background=True))
+            self._later.start(300)
+            return
+        items = self.entries()
+        mode = "collapsed" if self.collapsed else ("grid" if (self.view == "grid" or self.expanded) else self.view)
+        sig = self._signature(items, mode)
+        if background and sig == getattr(self, "_shown_sig", None):
+            return
+        self._shown_sig = sig
         content = QWidget()
         content.setObjectName("libContent")
         content.setStyleSheet(f"#libContent {{ background: {theme.PANEL}; }}")
-        items = self.entries()
-        mode = "collapsed" if self.collapsed else ("grid" if (self.view == "grid" or self.expanded) else self.view)
         if mode == "grid":
             grid = QGridLayout(content)
             grid.setContentsMargins(0, 0, 0, 0)

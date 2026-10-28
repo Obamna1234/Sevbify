@@ -81,7 +81,9 @@ def test_download_an_episode_and_play_it_offline(win, qapp, monkeypatch, audio_d
     path = win.user_data.offline["podcast:ep-2"]
     assert os.path.basename(path) == "2026-10-25 - Newest episode Vikings.m4a"
     pods = os.path.dirname(os.path.dirname(path))
-    assert os.path.exists(os.path.join(pods, ".sevbify-noscan"))           # never shows up as music
+    assert not os.path.exists(os.path.join(pods, ".sevbify-noscan"))       # no hidden marker file any more
+    assert os.path.normcase(os.path.abspath(pods)) in {os.path.normcase(os.path.abspath(f))
+                                                       for f in win.not_music_folders()}
     win.rescan_library()
     assert wait_until(qapp, lambda: not win._rescan_pending)
     assert not any("Vikings" in s.file_path for s in win.songs)

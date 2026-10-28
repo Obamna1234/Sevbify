@@ -8,6 +8,7 @@ import glob
 import os
 
 from PyQt6.QtGui import QFontDatabase, QFont
+from PyQt6.QtCore import Qt
 
 from core.paths import RESOURCE_ROOT
 
@@ -127,8 +128,70 @@ CHIP = (f"QPushButton {{ color: {TEXT}; background: {HOVER}; border: none; borde
 def replace_scroll_widget(scroll, widget):
     """Put new content in a scroll area. The old content is deleted later, after the current click or key
     press has finished: deleting it straight away crashes when the click came from a widget inside it."""
+    old = scroll.widget()
+    if old is not None:
+        release_mouse_inside(old)
+        # Hide it BEFORE taking it out. takeWidget() makes it a window of its own for a moment; on Windows a
+        # still-visible one flashed up as a small "Sevbify" window that kept the mouse (beta.6 test).
+        old.hide()
     old = scroll.takeWidget()
     scroll.setWidget(widget)
     if old is not None:
+        old.setParent(_graveyard())    # parked under a never-shown holder, never a window of its own
         old.hide()
         old.deleteLater()
+
+
+_holder = []
+
+
+def _graveyard():
+    """A hidden widget that holds pages waiting to be deleted (never shown, so nothing in it can appear)."""
+    from PyQt6.QtWidgets import QWidget
+    if not _holder:
+        w = QWidget()
+        w.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+        _holder.append(w)
+    return _holder[0]
+
+
+def release_mouse_inside(widget):
+    """If the mouse button is held on something inside `widget`, let go of it first."""
+    from PyQt6.QtWidgets import QWidget
+    grabber = QWidget.mouseGrabber()
+    if grabber is not None and (grabber is widget or widget.isAncestorOf(grabber)):
+        grabber.releaseMouse()
+
+
+def user_is_busy():
+    """True while a mouse button is held down or a menu is open: rebuilding a page then (e.g. because a download
+    finished) pulls widgets out from under the click or the menu."""
+    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtCore import Qt
+    return QApplication.mouseButtons() != Qt.MouseButton.NoButton or QApplication.activePopupWidget() is not None
+
+
+def apply_app_behaviour(app):
+    """Menus that switch instantly like Spotify's: no fade/slide animation and no delay before a submenu
+    (File → Edit → View) opens. With Windows' defaults the old submenu faded out and the new one appeared
+    a quarter of a second later, which looked like blinking."""
+    from PyQt6.QtWidgets import QProxyStyle, QStyle
+    from PyQt6.QtCore import Qt
+
+    class _Style(QProxyStyle):
+        def styleHint(self, hint, option=None, widget=None, returnData=None):
+            if hint == QStyle.StyleHint.SH_Menu_SubMenuPopupDelay:
+                return 0
+            if hint == QStyle.StyleHint.SH_Menu_SubMenuSloppyCloseTimeout:
+                return 150
+            if hint == QStyle.StyleHint.SH_Menu_FadeOutOnHide:
+                return 0
+            return super().styleHint(hint, option, widget, returnData)
+
+    for effect in (Qt.UIEffect.UI_AnimateMenu, Qt.UIEffect.UI_FadeMenu, Qt.UIEffect.UI_AnimateCombo,
+                   Qt.UIEffect.UI_AnimateTooltip, Qt.UIEffect.UI_FadeTooltip):
+        app.setEffectEnabled(effect, False)
+    style = _Style()                      # wraps the platform's default style
+    app.setStyle(style)
+    app._sevbify_style = style            # keep a reference
+    return style
