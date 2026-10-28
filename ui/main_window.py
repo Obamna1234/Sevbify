@@ -857,6 +857,10 @@ class MainWindow(ShowsMixin, QMainWindow):
     def build_song_menu(self, song, queue=None, playlist=None, row=None, source="",
                         saved_genre=None, saved_index=None):
         """Right-click menu for a song, in Spotify's order."""
+        from . import track_table as _tt
+        if len(_tt.menu_selection) > 1 and song in _tt.menu_selection:
+            return self.build_selection_menu(list(_tt.menu_selection), list(_tt.menu_selection_rows), playlist,
+                                             queue, source)
         menu = self._new_menu()
         is_remote = getattr(song, "is_remote", False)
         has_artist = bool(song.artist) and song.artist != "Unknown Artist"
@@ -868,7 +872,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             if state in ("queued", "downloading"):
                 act = menu.addAction("⬇  Downloading…" if state == "downloading" else "⬇  Queued to download")
                 act.setEnabled(False)
+                menu.addAction("✕  Cancel this download").triggered.connect(
+                    lambda: self.downloads.cancel(song.track.key))
                 menu.addAction("■  Stop all downloads").triggered.connect(self.downloads.stop)
+            elif state == "stopped":
+                menu.addAction("▶  Resume download").triggered.connect(lambda: self.downloads.retry(song.track.key))
             else:
                 text = "⬇  Retry download" if state == "failed" else "⬇  Download"
                 menu.addAction(text).triggered.connect(lambda: self.download_songs([song]))
@@ -914,6 +922,34 @@ class MainWindow(ShowsMixin, QMainWindow):
             down.triggered.connect(lambda: self.move_in_playlist(playlist, row, 1))
         return menu
 
+    def build_selection_menu(self, songs, rows, playlist=None, queue=None, source=""):
+        """Right-click on several selected songs (Shift / Ctrl + click): actions for all of them."""
+        menu = self._new_menu()
+        n = len(songs)
+        head = menu.addAction(f"{n} songs selected")
+        head.setEnabled(False)
+        self._add_playlist_submenu(menu, songs, skip=playlist)
+        menu.addAction(f"≡  Add {n} to queue").triggered.connect(lambda: [self.add_to_queue(s) for s in songs])
+        pending = [s for s in songs if getattr(s, "is_remote", False)]
+        if pending:
+            menu.addAction(f"⬇  Download {len(pending)}").triggered.connect(lambda: self.download_songs(pending))
+        if playlist is not None and rows:
+            menu.addAction(f"✕  Remove {n} from this playlist").triggered.connect(
+                lambda: self.remove_rows_from_playlist(playlist, rows))
+        menu.addSeparator()
+        menu.addAction("▶  Play these").triggered.connect(
+            lambda: self.play_song(songs[0], queue=songs, source=source or "Selected songs"))
+        return menu
+
+    def remove_rows_from_playlist(self, playlist, rows):
+        for r in sorted(set(rows), reverse=True):
+            if 0 <= r < len(playlist.songs):
+                del playlist.songs[r]
+        self._playlists_changed(playlist)
+        if self.open_playlist is playlist:
+            self.refresh_playlist_page()
+        self.show_status(f"Removed {len(set(rows))} songs from {playlist.name}", kind="info", timeout_ms=4000)
+
     def _add_playlist_submenu(self, menu, songs, skip=None):
         """"Add to playlist ▸" with a Find-a-playlist box at the top, like Spotify."""
         from PyQt6.QtWidgets import QWidgetAction, QLineEdit
@@ -927,7 +963,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         holder = QWidgetAction(add_menu)
         holder.setDefaultWidget(find)
         add_menu.addAction(holder)
-        add_menu.addAction("＋  New playlist").triggered.connect(lambda: self._new_playlist_with(songs[0]))
+        add_menu.addAction("＋  New playlist").triggered.connect(lambda: self._new_playlist_with(songs))
         add_menu.addSeparator()
         entries = []
         for pl in self.playlists:
@@ -1105,9 +1141,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.build_song_menu(song, queue, playlist, row, source).exec(global_pos)
 
     def _new_playlist_with(self, song):
+        songs = list(song) if isinstance(song, (list, tuple)) else [song]
         name, ok = QInputDialog.getText(self, "New playlist", "Playlist name:")
         if ok:
-            pl = self.create_playlist(name, [song])
+            pl = self.create_playlist(name, songs)
             if pl:
                 self.show_status(f"Created {pl.name}", kind="info", timeout_ms=3000)
 
@@ -2327,14 +2364,26 @@ class MainWindow(ShowsMixin, QMainWindow):
         sub = QLabel("Paste a link to a public Spotify or Apple Music playlist or album. The songs are added in the "
                      "same order with the playlist's cover; songs you already have in your music folders play from "
                      "your files, the rest stream while online and are listed under To download. Your Spotify account "
-                     "isn't signed in to or changed. Spotify links show up to 100 songs; for bigger playlists export "
-                     "a CSV with Exportify (exportify.net) and choose the file.")
+                     "isn't signed in to or changed.")
         sub.setObjectName("sub")
         sub.setWordWrap(True)
         v.addWidget(sub)
         link = QLineEdit()
         link.setPlaceholderText("https://open.spotify.com/playlist/…")
         v.addWidget(link)
+        more = QLabel("<b>More than 100 songs?</b> Without signing in, Spotify only shares the first 100 songs of a "
+                      "playlist link. To bring in all of them: in Spotify open the playlist, click any song, press "
+                      "<b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste below (keep the link above for the name and cover).")
+        more.setObjectName("sub")
+        more.setWordWrap(True)
+        v.addWidget(more)
+        from PyQt6.QtWidgets import QPlainTextEdit
+        songs_box = QPlainTextEdit()
+        songs_box.setPlaceholderText("https://open.spotify.com/track/…\nhttps://open.spotify.com/track/…")
+        songs_box.setFixedHeight(90)
+        songs_box.setStyleSheet("QPlainTextEdit { background: #3e3e3e; color: white; border: none; border-radius: 4px;"
+                                " padding: 4px; font-size: 12px; }")
+        v.addWidget(songs_box)
         row = QHBoxLayout()
         file_btn = QPushButton("Choose a file…")
         file_btn.setStyleSheet(PILL_BUTTON)
@@ -2358,26 +2407,60 @@ class MainWindow(ShowsMixin, QMainWindow):
                 d.done(2)
                 self.import_from_file(path)
         file_btn.clicked.connect(pick)
-        if d.exec() == 1 and link.text().strip():
-            self.import_from_link(link.text().strip())
+        if d.exec() == 1 and (link.text().strip() or songs_box.toPlainText().strip()):
+            self.import_from_link(link.text().strip(), songs_box.toPlainText())
 
-    def import_from_link(self, text):
+    def import_from_link(self, text, song_links=""):
+        """A playlist / album link, and/or Spotify song links copied from the Spotify app (all songs, in order)."""
         from core import importers
-        if importers.parse_link(text) is None:
-            self.show_status("⚠ Paste a Spotify or Apple Music playlist or album link.", 8000)
+        ids = importers.parse_track_links(song_links) or (importers.parse_track_links(text)
+                                                          if importers.parse_link(text) is None else [])
+        if importers.parse_link(text) is None and not ids:
+            self.show_status("⚠ Paste a Spotify or Apple Music playlist or album link, or Spotify song links.", 8000)
             return
         if not self.online_enabled:
             self.show_status("⚠ Importing from a link needs Online features (Settings).", 8000)
             return
         self.show_status("Reading the playlist…", kind="info", timeout_ms=15000)
+        progress = {"done": 0, "total": len(ids)}
+
+        def work():
+            head = None
+            if importers.parse_link(text) is not None:
+                try:
+                    head = importers.fetch_from_link(self.net, text)
+                except importers.ImportError_:
+                    if not ids:
+                        raise
+            if ids:
+                got = importers.fetch_tracks_from_links(
+                    self.net, song_links or text, progress=lambda a, b: progress.update(done=a, total=b),
+                    should_stop=lambda: getattr(self, "_shut_down", False))
+                if not got["tracks"]:
+                    raise importers.ImportError_("Spotify didn't answer for those song links. Try again later.")
+                head = dict(head or {"name": "Imported from Spotify", "cover_url": ""})
+                head.update(tracks=got["tracks"], truncated=False, failed=got["failed"])
+            return head
+
+        timer = QTimer(self)
+        timer.timeout.connect(lambda: progress["total"] and self.show_status(
+            f"Reading songs from Spotify… {progress['done']} of {progress['total']}", kind="info", timeout_ms=3000))
+        if ids:
+            timer.start(700)
 
         def done(result):
-            self._create_imported_playlist(result["name"], [("track", t) for t in result["tracks"]],
-                                           result.get("cover_url"), result.get("truncated"))
+            timer.stop()
+            pl = self._create_imported_playlist(result["name"], [("track", t) for t in result["tracks"]],
+                                                result.get("cover_url"), result.get("truncated"))
+            if result.get("failed"):
+                self.show_status(f"Imported {len(result['tracks'])} songs; {result['failed']} link(s) couldn't be "
+                                 "read.", kind="info", timeout_ms=10000)
+            return pl
 
         def failed(err):
+            timer.stop()
             self.show_status(f"⚠ Couldn't import: {err}", 12000)
-        self.online_call(importers.fetch_from_link, self.net, text, on_done=done, on_error=failed)
+        self.online_call(work, on_done=done, on_error=failed)
 
     def import_from_file(self, path):
         from core import importers
@@ -2414,7 +2497,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         pending = [s for s in pl.songs if getattr(s, "is_remote", False)]
         self.show_status(f"Imported “{pl.name}”: {len(pl.songs)} songs"
                          + (f", {len(pl.songs) - len(pending)} from your music" if len(pending) < len(pl.songs) else "")
-                         + (" (first 100: use Exportify for the rest)" if truncated else ""),
+                         + (" — Spotify only shares 100 songs per link: copy all songs in Spotify (Ctrl+A, Ctrl+C) "
+                            "and paste them in Import a playlist to get the rest" if truncated else ""),
                          kind="info", timeout_ms=10000)
         self.show_playlist(pl)
         if cover_url and self.online_enabled:
@@ -2426,21 +2510,35 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._enrich_slots(pending)
         return pl
 
-    def _enrich_slots(self, songs):
-        """Imported songs only have artist + title: look up cover art, album and a preview in the background."""
-        tracks = [s.track for s in songs]
+    def _enrich_slots(self, songs, chunk=8):
+        """Imported songs only have artist + title: look up cover art, album and a preview in the background.
+        Done a few songs at a time so covers appear while you look at the playlist (beta.6 waited for all of
+        them, and a long playlist ran into Deezer's limit of 50 lookups per 5 seconds)."""
+        todo = [s for s in songs if getattr(s, "is_remote", False) and not s.track.cover_url]
+        if not todo or not self.online_enabled:
+            return
+        part, rest = todo[:chunk], todo[chunk:]
+        tracks = [s.track for s in part]
 
         def work():
+            import time as _t
             out = []
             for t in tracks:
-                try:
-                    out.append(self.online.enrich(t))
-                except Exception:
-                    out.append(t)
+                for attempt in range(2):
+                    try:
+                        out.append(self.online.enrich(t))
+                        break
+                    except Exception as e:
+                        if attempt == 0 and "quota" in str(e).lower():
+                            _t.sleep(5)                 # Deezer: wait for the next 5-second window
+                            continue
+                        out.append(t)
+                        break
+                _t.sleep(0.11)                          # stay under Deezer's 10 lookups a second
             return out
 
         def done(enriched):
-            for song, t in zip(songs, enriched):
+            for song, t in zip(part, enriched):
                 if t is song.track:
                     continue
                 for field in ("cover_url", "preview_url", "album", "genre", "duration_ms", "source_id", "artist_id"):
@@ -2449,11 +2547,14 @@ class MainWindow(ShowsMixin, QMainWindow):
                         setattr(song.track, field, value)
                 song.album = song.album or song.track.album
                 song.duration = song.duration or song.track.duration_ms
-            self.fetch_covers(songs, limit=len(songs))
+            self.fetch_covers(part, limit=len(part))
             self.schedule_save()
-            if self.open_playlist is not None:
-                self.refresh_playlist_page()
-        self.online_call(work, on_done=done)
+            if self.open_playlist is not None and any(s in self.open_playlist.songs for s in part):
+                self.pl_table.set_songs(self.open_playlist.songs)
+                self.pl_table.set_current(self.current_song)
+            if rest:
+                self._enrich_slots(rest, chunk)
+        self.online_call(work, on_done=done, on_error=lambda _e: rest and self._enrich_slots(rest, chunk))
 
     def new_playlist(self, open_it=True):
         """Create → Playlist: a new empty "My Playlist #N" straight away, like Spotify (rename it later)."""
@@ -2852,6 +2953,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         layout.addWidget(self.pl_empty)
 
         self.pl_table = TrackTable(sortable=False)
+        self.pl_table.set_two_line_titles(True)
+        self.pl_table.delete_requested.connect(
+            lambda rows: self.open_playlist is not None and self.remove_rows_from_playlist(self.open_playlist, rows))
         self.pl_table.mark_pending = True
         self.pl_table.reorder_enabled = True
         self.pl_table.accept_files = True
@@ -2876,6 +2980,15 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.refresh_playlist_page()
         self.stack.setCurrentWidget(self.playlist_page)
         self._set_nav("playlist", playlist)
+        # Songs saved without artwork (e.g. imported before this version): look their covers up now.
+        remote = [s for s in playlist.songs if getattr(s, "is_remote", False)]
+        if remote and self.online_enabled:
+            asked = self.__dict__.setdefault("_covers_looked_up", set())
+            todo = [s for s in remote if not s.track.cover_url and s.track.key not in asked]
+            asked.update(s.track.key for s in todo)
+            self.fetch_covers(remote, limit=len(remote))
+            if todo:
+                self._enrich_slots(todo)
 
     def refresh_playlist_page(self):
         pl = self.open_playlist
@@ -3559,8 +3672,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             return
         d = self.downloads
         if d.is_busy():
-            tip = (d.step_text or "Downloading") + "\nClick to stop."
+            tip = (d.step_text or "Downloading") + "\nClick for Pause, Stop and the list of songs."
             self.top_bar.set_downloads(d.summary(), tip)
+        elif d.stopped_count():
+            n = d.stopped_count()
+            self.top_bar.set_downloads(f"⬇ {n} stopped", "Click to resume", failed=False)
         elif d.failed_count():
             n = d.failed_count()
             self.top_bar.set_downloads(f"⬇ {n} failed", "Click to retry the songs that failed", failed=True)
@@ -3602,7 +3718,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.pl_download_btn.setText(f"Download {len(waiting)}" if len(waiting) > 1 else "Download")
         self.pl_download_btn.setVisible(bool(waiting))
 
-    def _show_downloads_menu(self):
+    def build_downloads_menu(self):
+        """The download pill's menu: what's happening, Pause / Resume / Stop all, and each song with its own
+        Cancel / Retry. Downloads keep running in the background while you use the rest of Sevbify."""
         menu = self._new_menu()
         d = self.downloads
         if d.is_busy():
@@ -3611,12 +3729,43 @@ class MainWindow(ShowsMixin, QMainWindow):
             if d.step_text:
                 step = menu.addAction(d.step_text)
                 step.setEnabled(False)
-            menu.addAction("■  Stop downloads").triggered.connect(d.stop)
+            menu.addSeparator()
+            if d.paused:
+                menu.addAction("▶  Resume downloads").triggered.connect(d.resume)
+            else:
+                menu.addAction("❚❚  Pause after this song").triggered.connect(d.pause)
+            menu.addAction("■  Stop all downloads").triggered.connect(d.stop)
+        if d.stopped_count():
+            menu.addAction(f"▶  Resume {d.stopped_count()} stopped").triggered.connect(d.resume)
         if d.failed_count():
             menu.addAction(f"↻  Retry {d.failed_count()} failed").triggered.connect(
                 lambda: d.retry_failed(self.download_folder(), self.user_data.download_source))
+        items = d.items()
+        if items:
+            menu.addSeparator()
+            labels = {"queued": "Waiting", "downloading": "Downloading…", "failed": "Failed", "stopped": "Stopped"}
+            for key, state, title, artist, note in items[:15]:
+                sub = menu.addMenu(f"{labels.get(state, state)}  ·  {title} — {artist}")
+                sub.setStyleSheet(MENU_STYLE)
+                if state in ("queued", "downloading"):
+                    sub.addAction("✕  Cancel this download").triggered.connect(lambda _=False, k=key: d.cancel(k))
+                else:
+                    sub.addAction("↻  Try again").triggered.connect(lambda _=False, k=key: d.retry(k))
+                    sub.addAction("✕  Remove from the list").triggered.connect(lambda _=False, k=key: d.cancel(k))
+                if note and state == "failed":
+                    why = sub.addAction(f"Why: {note}")
+                    why.setEnabled(False)
+            if len(items) > 15:
+                more = menu.addAction(f"… and {len(items) - 15} more")
+                more.setEnabled(False)
+        menu.addSeparator()
+        menu.addAction("📂  Open download folder").triggered.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
+        return menu
+
+    def _show_downloads_menu(self):
         btn = self.top_bar.downloads_btn
-        menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
+        self.build_downloads_menu().exec(btn.mapToGlobal(btn.rect().bottomLeft()))
 
     # ------------------------------------------------------------------
     # Go to Radio

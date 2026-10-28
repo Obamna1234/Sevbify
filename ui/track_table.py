@@ -2,9 +2,10 @@
 
 Used by the Your Library, Search and playlist pages.
 """
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QApplication
-from PyQt6.QtGui import QColor, QBrush, QIcon, QPixmap, QDrag
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QMimeData, QPoint
+from PyQt6.QtWidgets import (QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QApplication,
+                             QStyledItemDelegate, QStyle)
+from PyQt6.QtGui import QColor, QBrush, QIcon, QPixmap, QDrag, QPainter, QPainterPath, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QMimeData, QPoint, QRectF
 
 from core.models import format_time
 
@@ -15,19 +16,26 @@ NUMBER_ROLE = Qt.ItemDataRole.UserRole + 2
 # Songs being dragged out of a song list (read by whatever they are dropped on, e.g. a playlist on the left).
 SONGS_MIME = "application/x-sevbify-songs"
 dragged_songs = []
+# The songs a right-click menu is for when several rows are selected (Shift / Ctrl + click), else [].
+menu_selection = []
+menu_selection_rows = []
 
 GREEN = QColor("#1db954")
 WHITE = QColor("#ffffff")
 GREY = QColor("#b3b3b3")
 DIM = QColor("#6a6a6a")
 
+ROW_HOVER = QColor("#2a2a2a")
+ROW_SELECTED = QColor("#5a5a5a")
+
+# Row backgrounds are painted by RowDelegate (the whole row at once, rounded ends like Spotify); the stylesheet
+# only sets text and spacing. beta.6 used ::item:hover, which lit up one cell at a time.
 TABLE_STYLE = """
 QTableWidget { background: transparent; color: white; border: none; font-size: 14px; outline: 0;
-    selection-background-color: #3e3e3e; selection-color: white; }
-QTableWidget::item { padding: 6px 8px; border: none; }
-QTableWidget::item:hover { background: #2a2a2a; }
+    selection-background-color: transparent; selection-color: white; }
+QTableWidget::item { padding: 6px 8px; border: none; background: transparent; }
 QTableWidget::item:selected, QTableWidget::item:selected:active, QTableWidget::item:selected:!active {
-    background: #3e3e3e; color: white; }
+    background: transparent; color: white; }
 QHeaderView { background: transparent; }
 QHeaderView::section { background: transparent; color: #b3b3b3; border: none;
     border-bottom: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; font-size: 13px; text-align: left; }
@@ -60,6 +68,76 @@ def _thumb(path, size=36):
     return icon
 
 
+class RowDelegate(QStyledItemDelegate):
+    """Paints the hover / selected background for the whole row (rounded at both ends), the ▶ / number
+    column, and the Title column as Spotify does: cover, title, and the artist on a second line."""
+
+    def __init__(self, table):
+        super().__init__(table)
+        self.table = table
+
+    def paint(self, painter, option, index):
+        t = self.table
+        row, col = index.row(), index.column()
+        selected = t.selectionModel().isRowSelected(row, index.parent())
+        hovered = row == t._hover_row
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if selected or hovered:
+            r = QRectF(option.rect)
+            first, last = col == 0, col == t.columnCount() - 1 or t.isColumnHidden(col + 1) and all(
+                t.isColumnHidden(c) for c in range(col + 1, t.columnCount()))
+            path = QPainterPath()
+            radius = 4.0
+            path.addRoundedRect(r.adjusted(0 if first else -radius * 2, 0, 0 if last else radius * 2, 0), radius, radius)
+            painter.setClipRect(r)
+            painter.fillPath(path, ROW_SELECTED if selected else ROW_HOVER)
+            painter.setClipping(False)
+        painter.restore()
+        if col == 1 and t.two_line_titles:
+            self._paint_title(painter, option, index)
+            return
+        opt = option.__class__(option)
+        opt.state &= ~QStyle.StateFlag.State_Selected
+        opt.state &= ~QStyle.StateFlag.State_MouseOver
+        opt.state &= ~QStyle.StateFlag.State_HasFocus
+        super().paint(painter, opt, index)
+
+    def _paint_title(self, painter, option, index):
+        t = self.table
+        song = index.data(SONG_ROLE)
+        rect = option.rect.adjusted(8, 0, -8, 0)
+        icon = index.data(Qt.ItemDataRole.DecorationRole)
+        size = 40
+        if isinstance(icon, QIcon) and not icon.isNull():
+            icon.paint(painter, rect.x(), rect.y() + (rect.height() - size) // 2, size, size)
+        text_x = rect.x() + size + 12
+        width = rect.right() - text_x
+        title_colour = index.data(Qt.ItemDataRole.ForegroundRole)
+        title_colour = title_colour.color() if isinstance(title_colour, QBrush) else WHITE
+        painter.save()
+        f = QFont(option.font)
+        f.setPixelSize(15)
+        painter.setFont(f)
+        painter.setPen(title_colour)
+        fm = painter.fontMetrics()
+        title = fm.elidedText(index.data(Qt.ItemDataRole.DisplayRole) or "", Qt.TextElideMode.ElideRight, width)
+        mid = rect.y() + rect.height() // 2
+        painter.drawText(text_x, mid - 4, title)
+        f2 = QFont(option.font)
+        f2.setPixelSize(13)
+        painter.setFont(f2)
+        dim = title_colour == DIM
+        painter.setPen(DIM if dim else GREY)
+        artist = getattr(song, "artist", "") if song is not None else ""
+        painter.drawText(text_x, mid + 15, painter.fontMetrics().elidedText(artist, Qt.TextElideMode.ElideRight, width))
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        hint = super().sizeHint(option, index)
+        return QSize(hint.width(), max(hint.height(), 56 if self.table.two_line_titles else 48))
+
+
 class _SortableItem(QTableWidgetItem):
     """Item that sorts by SORT_ROLE when present (numbers sort numerically)."""
 
@@ -75,6 +153,7 @@ class TrackTable(QTableWidget):
     context_requested = pyqtSignal(object, int, object)  # song, row, global QPoint
     rows_moved = pyqtSignal(int, int)                  # drag to reorder (playlists): from row, to row
     files_dropped = pyqtSignal(list, int)              # files/folders dropped from Explorer: paths, at row
+    delete_requested = pyqtSignal(list)                # Delete key on selected rows (playlists remove them)
 
     COLUMNS = ["#", "Title", "Artist", "Album", ""]
 
@@ -88,14 +167,17 @@ class TrackTable(QTableWidget):
         self.setStyleSheet(TABLE_STYLE)
         self.setShowGrid(False)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        # Click selects a song, Shift+click selects everything between, Ctrl+click adds or removes one.
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)   # Ctrl+A / Delete / Esc work after clicking a song
         self.verticalHeader().setVisible(False)
         self.verticalHeader().setDefaultSectionSize(48)
         self.setIconSize(QSize(36, 36))
         self.setWordWrap(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.two_line_titles = False      # Spotify's Title column: artist under the title (Artist column hidden)
+        self.setItemDelegate(RowDelegate(self))
 
         header = self.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -138,8 +220,26 @@ class TrackTable(QTableWidget):
         self.cellDoubleClicked.connect(self._on_double_click)
 
     # ------------------------------------------------------------------
+    def set_two_line_titles(self, on=True):
+        """Spotify's playlist look: # | Title (with the artist underneath) | Album | time."""
+        self.two_line_titles = bool(on)
+        self.setColumnHidden(2, self.two_line_titles)
+        self.verticalHeader().setDefaultSectionSize(56 if on else 48)
+        self.setIconSize(QSize(40, 40) if on else QSize(36, 36))
+        if on:
+            self.setColumnWidth(3, 280)
+        self.viewport().update()
+
+    def selected_songs(self):
+        rows = sorted({i.row() for i in self.selectionModel().selectedRows()})
+        return [s for s in (self.song_at(r) for r in rows) if s is not None]
+
+    def selected_rows(self):
+        return sorted({i.row() for i in self.selectionModel().selectedRows()})
+
     def set_songs(self, songs):
         self.setSortingEnabled(False)
+        keep = {getattr(s, "key", None) for s in self.selected_songs()} if self.rowCount() else set()
         self.setRowCount(len(songs))
         for row, song in enumerate(songs):
             num = _SortableItem(str(row + 1))
@@ -162,7 +262,7 @@ class TrackTable(QTableWidget):
                 tip = "Not in your library: plays as a 30-second preview" if song.is_preview else "Not in your library: plays online"
                 state, note = self.download_state(song.track.key) if self.download_state else (None, "")
                 label = {"queued": "   · Queued to download", "downloading": "   · Downloading…",
-                         "failed": "   · Download failed"}.get(state)
+                         "failed": "   · Download failed", "stopped": "   · Download stopped"}.get(state)
                 if label:
                     title.setText(song.title + label)
                     if state == "failed":
@@ -184,6 +284,14 @@ class TrackTable(QTableWidget):
             self.setSortingEnabled(True)
         self._hover_row = -1
         self._apply_highlight()
+        if keep:                                       # a refresh (e.g. a download finished) keeps the selection
+            self.clearSelection()
+            for row in range(self.rowCount()):
+                song = self.song_at(row)
+                if song is not None and song.key in keep:
+                    self.selectionModel().select(self.model().index(row, 0),
+                                                 self.selectionModel().SelectionFlag.Select |
+                                                 self.selectionModel().SelectionFlag.Rows)
 
     def refresh_artwork(self):
         """Re-apply cover icons (e.g. after online covers finished downloading)."""
@@ -228,7 +336,11 @@ class TrackTable(QTableWidget):
         old = self.item(self._hover_row, 0) if self._hover_row >= 0 else None
         if old is not None:
             old.setText(old.data(NUMBER_ROLE) or old.text())
-        self._hover_row = row
+        old_row, self._hover_row = self._hover_row, row
+        for r in (old_row, row):                       # repaint both whole rows (not one cell)
+            if r >= 0:
+                top = self.visualRect(self.model().index(r, 0)).top()
+                self.viewport().update(0, top, self.viewport().width(), self.rowHeight(r))
         new = self.item(row, 0) if row >= 0 else None
         if new is not None and self.song_at(row) is not None:
             new.setText(self.PLAY_GLYPH)
@@ -255,7 +367,11 @@ class TrackTable(QTableWidget):
             self._press_pos = None
             return
         self._press_pos, self._press_row = pos, row
-        if e.button() == Qt.MouseButton.LeftButton and self.columnAt(pos.x()) == 0:
+        mods = e.modifiers()
+        if e.button() == Qt.MouseButton.RightButton and self.selectionModel().isRowSelected(row, self.rootIndex()):
+            return                                     # right-click inside a selection keeps the selection
+        if e.button() == Qt.MouseButton.LeftButton and self.columnAt(pos.x()) == 0 and not (
+                mods & (Qt.KeyboardModifier.ShiftModifier | Qt.KeyboardModifier.ControlModifier)):
             song = self.song_at(row)
             if song is not None:                     # the ▶ next to the number plays straight away
                 self.selectRow(row)
@@ -271,6 +387,15 @@ class TrackTable(QTableWidget):
         if e.key() == Qt.Key.Key_Escape:
             self.clearSelection()
             return
+        if e.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace) and self.selected_rows():
+            self.delete_requested.emit(self.selected_rows())
+            return
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.selected_songs():
+            self.play_requested.emit(self.selected_songs()[0], self.songs_in_view())
+            return
+        if e.key() == Qt.Key.Key_Space:
+            e.ignore()                                 # Space = play / pause (the window's shortcut)
+            return
         super().keyPressEvent(e)
 
     # --- drag and drop ------------------------------------------------------------------------------
@@ -279,10 +404,11 @@ class TrackTable(QTableWidget):
         song = self.song_at(row)
         if song is None:
             return
-        dragged_songs = [song]
+        chosen = self.selected_songs()
+        dragged_songs = chosen if (song in chosen and len(chosen) > 1) else [song]
         mime = QMimeData()
         mime.setData(SONGS_MIME, str(row).encode())
-        mime.setText(f"{song.artist} - {song.title}")
+        mime.setText("\n".join(f"{s.artist} - {s.title}" for s in dragged_songs))
         drag = QDrag(self)
         drag.setMimeData(mime)
         icon = self.item(row, 1).icon()
@@ -335,8 +461,16 @@ class TrackTable(QTableWidget):
             self.play_requested.emit(song, self.songs_in_view())
 
     def _on_context(self, pos):
+        global menu_selection, menu_selection_rows
         row = self.rowAt(pos.y())
         song = self.song_at(row) if row >= 0 else None
         if song is not None:
-            self.selectRow(row)
-            self.context_requested.emit(song, row, self.viewport().mapToGlobal(pos))
+            if not self.selectionModel().isRowSelected(row, self.rootIndex()):
+                self.selectRow(row)
+            chosen = self.selected_songs()
+            menu_selection = chosen if len(chosen) > 1 else []
+            menu_selection_rows = self.selected_rows() if len(chosen) > 1 else []
+            try:
+                self.context_requested.emit(song, row, self.viewport().mapToGlobal(pos))
+            finally:
+                menu_selection, menu_selection_rows = [], []

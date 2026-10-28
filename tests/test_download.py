@@ -225,6 +225,45 @@ def test_manager_stop_cancels_waiting_songs(qapp, tmp_path):
     assert finished[0]["stopped"] and finished[0]["ok"] == 0
     assert not m.is_busy() and m.failed_count() == 0
     assert not [p for p in folder.rglob("*") if p.is_file()]    # nothing half-finished left behind
+    assert m.stopped_count() == 4                                # still listed, ready to resume
+    # Resume: all four come back and finish
+    gate.set()
+    finished.clear()
+    assert m.resume() is None and m.stopped_count() == 0
+    assert wait_until(qapp, lambda: finished, 10)
+    m.wait()
+    assert finished[0]["ok"] == 4 and not finished[0]["stopped"]
+
+
+def test_manager_cancel_one_keeps_the_rest_going(qapp, tmp_path):
+    gate, started = threading.Event(), threading.Event()
+    m = make_manager(blocking(gate, started))
+    done = []
+    m.song_done.connect(lambda k, p, t: done.append(t))
+    finished = []
+    m.run_finished.connect(finished.append)
+    m.request([track(str(i)) for i in range(3)], str(tmp_path))
+    assert started.wait(5)
+    m.cancel(track("0").key)                     # the one being downloaded
+    m.cancel(track("2").key)                     # one still waiting
+    wait_until(qapp, lambda: False, 0.3)
+    gate.set()
+    assert wait_until(qapp, lambda: finished, 10)
+    m.wait()
+    assert done == ["1"] and m.state(track("0").key) == (None, "") and m.state(track("2").key) == (None, "")
+
+
+def test_manager_pause_holds_the_next_song(qapp, tmp_path):
+    m = make_manager(fake_ok)
+    done = []
+    m.song_done.connect(lambda k, p, t: done.append(t))
+    m.pause()
+    m.request([track("a"), track("b")], str(tmp_path))
+    wait_until(qapp, lambda: False, 0.8)
+    assert done == [] and m.is_busy() and "paused" in m.summary()
+    m.resume()
+    assert wait_until(qapp, lambda: len(done) == 2, 10)
+    m.wait()
 
 
 def test_manager_reports_missing_tools(qapp, tmp_path):

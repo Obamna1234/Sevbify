@@ -3,6 +3,8 @@
 - A Spotify playlist or album link: read from Spotify's public embed page (what any browser loads for a shared
   link). No Spotify login, nothing is changed on the user's account. The embed page lists up to 100 songs; for
   longer playlists, export a CSV with Exportify (exportify.net) and import the file.
+- Spotify song links copied from the Spotify app (select songs, Ctrl+A, Ctrl+C): one public embed page per
+  song. This is how a playlist longer than 100 songs comes in complete, in order, still without a login.
 - An Apple Music playlist or album link (public): SEVBY's reader.
 - A file: .csv (Exportify, TuneMyMusic, Soundiiz...), .txt ("Artist - Title" per line), .m3u / .m3u8.
 
@@ -35,6 +37,69 @@ def parse_link(text):
     if m:
         return ("apple", m.group(0), None)
     return None
+
+
+TRACK_LINK_RE = re.compile(r"(?:open\.spotify\.com/(?:intl-[a-z]{2}/)?(?:embed/)?track/|spotify:track:)([A-Za-z0-9]{22})")
+
+
+def parse_track_links(text):
+    """Spotify song ids, in the pasted order, from links / spotify:track: URIs (one or many per line)."""
+    return TRACK_LINK_RE.findall(text or "")
+
+
+def parse_spotify_track_embed(html, track_id=""):
+    """One song (OnlineTrack) from a Spotify song's embed page, or None."""
+    m = NEXT_DATA_RE.search(html or "")
+    if not m:
+        return None
+    try:
+        entity = json.loads(m.group(1))["props"]["pageProps"]["state"]["data"]["entity"]
+    except (ValueError, KeyError, TypeError):
+        return None
+    title = entity.get("name") or entity.get("title") or ""
+    artists = entity.get("artists")
+    if isinstance(artists, list) and artists:
+        artist = ", ".join(a.get("name", "") for a in artists if isinstance(a, dict) and a.get("name"))
+    else:
+        artist = entity.get("subtitle") or ""
+    artist = ", ".join(a.strip() for a in artist.replace("\u00a0", " ").split(",") if a.strip())
+    if not title:
+        return None
+    cover = ""
+    images = (entity.get("visualIdentity") or {}).get("image") or []
+    for src in ((entity.get("coverArt") or {}).get("sources") or []) + list(images):
+        if isinstance(src, dict) and src.get("url"):
+            cover = src["url"]
+            break
+    album = (entity.get("album") or {}).get("name", "") if isinstance(entity.get("album"), dict) else ""
+    uri = entity.get("uri") or (f"spotify:track:{track_id}" if track_id else "")
+    return OnlineTrack(title=title, artist=artist, album=album, duration_ms=int(entity.get("duration") or 0),
+                       source="spotify", cover_url=cover,
+                       page_url=("https://open.spotify.com/track/" + uri.split(":")[-1]) if uri else "",
+                       explicit=bool(entity.get("isExplicit")))
+
+
+def fetch_tracks_from_links(net, text, progress=None, should_stop=lambda: False):
+    """Read every pasted Spotify song link (network, one small page each, cached for a month).
+    Returns {"tracks": [...], "failed": n}. progress(done, total) is called as it goes."""
+    import time as _t
+    ids = parse_track_links(text)
+    tracks, failed = [], 0
+    for i, tid in enumerate(ids):
+        if should_stop():
+            break
+        try:
+            t = parse_spotify_track_embed(net.get_text(spotify_embed_url("track", tid), ttl=30 * 86400), tid)
+        except Exception:
+            t = None
+        if t is None:
+            failed += 1
+        else:
+            tracks.append(t)
+        if progress is not None:
+            progress(i + 1, len(ids))
+        _t.sleep(0.05)
+    return {"tracks": tracks, "failed": failed}
 
 
 def spotify_embed_url(kind, item_id):

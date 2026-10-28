@@ -123,3 +123,34 @@ def test_episodes_sort_by_release_date(win, qapp):
     win.show_page.sort_changed.emit("oldest")
     oldest_first = [e.published for e in win._show_ctx["episodes"]]
     assert oldest_first == sorted(oldest_first)
+
+
+def test_shift_and_ctrl_click_select_like_spotify(window, qapp):
+    from PyQt6.QtTest import QTest
+    from PyQt6.QtCore import Qt, QPoint
+    from ui import track_table
+    pl = window.create_playlist("Sel", list(window.songs))
+    window.show_playlist(pl)
+    window.show()
+    t = window.pl_table
+    qapp.processEvents()
+
+    def click(row, mods=Qt.KeyboardModifier.NoModifier):
+        rect = t.visualRect(t.model().index(row, 3))
+        QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, mods, rect.center())
+
+    click(0)
+    click(2, Qt.KeyboardModifier.ShiftModifier)
+    assert t.selected_rows() == [0, 1, 2]
+    click(1, Qt.KeyboardModifier.ControlModifier)
+    assert t.selected_rows() == [0, 2]
+    # Right-click inside the selection: the menu is for both songs
+    track_table.menu_selection = [t.song_at(0), t.song_at(2)]
+    track_table.menu_selection_rows = [0, 2]
+    menu = window.build_song_menu(t.song_at(0), playlist=pl, row=0)
+    texts = [a.text() for a in menu.actions()]
+    assert "2 songs selected" in texts and "✕  Remove 2 from this playlist" in texts
+    track_table.menu_selection, track_table.menu_selection_rows = [], []
+    first, third = pl.songs[0], pl.songs[2]
+    window.remove_rows_from_playlist(pl, [0, 2])
+    assert first not in pl.songs and third not in pl.songs and len(pl.songs) == len(window.songs) - 2

@@ -15,7 +15,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from core import downloader
 
-QUEUED, DOWNLOADING, FAILED = "queued", "downloading", "failed"
+QUEUED, DOWNLOADING, FAILED, STOPPED = "queued", "downloading", "failed", "stopped"
 
 
 class _Worker(QThread):
@@ -47,6 +47,10 @@ class _Worker(QThread):
                 out = {"status": "fail", "note": "stopped"}
             self.song_finished.emit(key, out or {"status": "fail", "note": "couldn't be downloaded"})
             if res["stopped"]:
+                if self.m._cancel_one == key:          # only this song was cancelled: carry on with the rest
+                    self.m._cancel_one = ""
+                    downloader.Controls.reset()
+                    continue
                 return
 
 
@@ -66,6 +70,9 @@ class DownloadManager(QObject):
         self._states = {}                        # key -> {"state", "title", "artist", "note"}
         self._current = ""
         self._worker = None
+        self._jobs = {}                          # key -> job, kept so stopped / failed songs can be resumed
+        self._cancel_one = ""
+        self.paused = False
         self._batch = self._new_batch()
 
     @staticmethod
@@ -85,24 +92,34 @@ class DownloadManager(QObject):
                 self._states[key] = {"state": QUEUED, "title": t.title, "artist": t.artist, "note": ""}
                 # Filed by main artist: <download folder>/<Artist>/<Artist - Title>.mp3
                 out_dir = os.path.join(folder, downloader.artist_folder(t.artist)) if by_artist else folder
-                self._queue.append((key, downloader.song_line(t.artist, t.title), out_dir, source))
+                job = (key, downloader.song_line(t.artist, t.title), out_dir, source)
+                self._jobs[key] = job
+                self._queue.append(job)
                 added += 1
             if added:
                 self._batch["total"] += added
         if added:
-            downloader.Controls.reset()
-            if self._worker is None or not self._worker.isRunning():
-                self._start_worker()
+            self._kick()
             self.changed.emit()
         return added
 
+    def _kick(self):
+        if self._worker is None or not self._worker.isRunning():
+            downloader.Controls.reset()
+            downloader.Controls.set_paused(self.paused)
+            self._start_worker()
+
     def stop(self):
-        """Cancel everything still waiting and stop the song being downloaded (finished files are kept)."""
+        """Stop all downloads. Songs that were waiting (and the one being downloaded) stay listed as "Stopped"
+        and can be resumed; finished files are kept. A stopped song starts again from its beginning."""
         with self._lock:
             for key, *_ in self._queue:
-                self._states.pop(key, None)
+                if key in self._states:
+                    self._states[key].update(state=STOPPED, note="stopped")
             self._queue.clear()
             busy = bool(self._current)
+            if busy and self._current in self._states:
+                self._states[self._current].update(state=STOPPED, note="stopped")
         if busy:
             downloader.Controls.stop()
         self._batch["stopped"] = True
@@ -110,10 +127,76 @@ class DownloadManager(QObject):
         if not busy:
             self._finish_batch()
 
+    def pause(self):
+        """Hold the queue: the song being downloaded finishes, the next ones wait until Resume."""
+        self.paused = True
+        downloader.Controls.set_paused(True)
+        self.changed.emit()
+
+    def resume(self):
+        """Resume after Pause, and restart songs that were stopped."""
+        self.paused = False
+        downloader.Controls.set_paused(False)
+        self.resume_stopped()
+        self.changed.emit()
+
+    def resume_stopped(self):
+        with self._lock:
+            keys = [k for k, st in self._states.items() if st["state"] == STOPPED and k in self._jobs]
+            for k in keys:
+                self._states[k].update(state=QUEUED, note="")
+                self._queue.append(self._jobs[k])
+            if keys:
+                self._batch["total"] += len(keys)
+        if keys:
+            self._kick()
+            self.changed.emit()
+        return len(keys)
+
+    def cancel(self, key):
+        """Take one song off the list (stops it if it is downloading); the rest carry on."""
+        with self._lock:
+            before = len(self._queue)
+            self._queue = deque(j for j in self._queue if j[0] != key)
+            removed = before != len(self._queue)
+            current = self._current == key
+            if not current:
+                self._states.pop(key, None)
+                if removed:
+                    self._batch["total"] = max(0, self._batch["total"] - 1)
+        if current:
+            self._cancel_one = key
+            downloader.Controls.stop()
+        self.changed.emit()
+
+    def retry(self, key):
+        """Try one failed or stopped song again."""
+        with self._lock:
+            st = self._states.get(key)
+            if not st or st["state"] not in (FAILED, STOPPED) or key not in self._jobs:
+                return False
+            st.update(state=QUEUED, note="")
+            self._queue.append(self._jobs[key])
+            self._batch["total"] += 1
+        self._kick()
+        self.changed.emit()
+        return True
+
     def retry_failed(self, folder, source=downloader.SOURCE_BOTH) -> int:
         from core.online.models import OnlineTrack
         failed = [OnlineTrack(s["title"], s["artist"]) for s in self._states.values() if s["state"] == FAILED]
         return self.request(failed, folder, source)
+
+    def stopped_count(self):
+        return sum(1 for s in self._states.values() if s["state"] == STOPPED)
+
+    def items(self):
+        """[(key, state, title, artist, note)] for the downloads menu, in queue order."""
+        with self._lock:
+            order = ([self._current] if self._current else []) + [j[0] for j in self._queue]
+            rest = [k for k in self._states if k not in order]
+            return [(k, self._states[k]["state"], self._states[k]["title"], self._states[k]["artist"],
+                     self._states[k]["note"]) for k in order + rest if k in self._states]
 
     def wait(self, ms=8000):
         if self._worker is not None:
@@ -137,7 +220,8 @@ class DownloadManager(QObject):
             return ""
         b = self._batch
         cur = self._states.get(self._current, {}).get("title", "")
-        return f"⬇ {min(b['done'] + 1, b['total'])} of {b['total']}" + (f" · {cur}" if cur else "")
+        text = f"⬇ {min(b['done'] + 1, b['total'])} of {b['total']}" + (f" · {cur}" if cur else "")
+        return text + (" · paused after this song" if self.paused else "")
 
     # --- worker -----------------------------------------------------------------------------------
     def _start_worker(self):
@@ -157,7 +241,7 @@ class DownloadManager(QObject):
             return job
 
     def _on_started(self, key):
-        if key in self._states:
+        if key in self._states and self._states[key]["state"] == QUEUED:     # not if Stop came first
             self._states[key]["state"] = DOWNLOADING
         self.changed.emit()
 
@@ -174,7 +258,8 @@ class DownloadManager(QObject):
             b["titles"].append(info["title"])
             self.song_done.emit(key, res.get("path") or "", info["title"])
         elif res.get("note") == "stopped":
-            self._states.pop(key, None)
+            if self._states.get(key, {}).get("state") != STOPPED:
+                self._states.pop(key, None)          # cancelled: forget it
         else:
             self._states[key] = {**info, "state": FAILED, "note": res.get("note") or "couldn't be downloaded"}
             b["failed"].append(info["title"])

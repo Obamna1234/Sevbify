@@ -197,9 +197,23 @@ def test_clicking_empty_space_clears_the_selection(window, qapp):
 
 
 def test_selected_rows_are_grey_not_white(qapp):
-    from ui.track_table import TABLE_STYLE
+    from ui.track_table import TrackTable, ROW_SELECTED, ROW_HOVER
     from ui import theme
-    assert "selection-background-color: #3e3e3e" in TABLE_STYLE
+    from core.online.models import OnlineTrack
+    from core.online.remote_song import RemoteSong
+    # The whole row is painted grey when selected (and on hover), never white, never one cell at a time.
+    t = TrackTable()
+    t.resize(600, 200)
+    t.set_songs([RemoteSong(OnlineTrack("A", "B")), RemoteSong(OnlineTrack("C", "D"))])
+    t.selectRow(0)
+    img = t.viewport().grab().toImage()
+    y = t.rowViewportPosition(0) + 4
+    for x in (t.columnViewportPosition(2) + 2, t.columnViewportPosition(3) + 40, 590):
+        assert img.pixelColor(x, y).name() == ROW_SELECTED.name()
+    t._set_hover(1)
+    img = t.viewport().grab().toImage()
+    y1 = t.rowViewportPosition(1) + 4
+    assert img.pixelColor(t.columnViewportPosition(3) + 40, y1).name() == ROW_HOVER.name()
     from PyQt6.QtGui import QPalette
     theme.apply_dark_palette(qapp)
     assert qapp.palette().color(QPalette.ColorRole.Highlight).name() == theme.ROW_SELECTED
