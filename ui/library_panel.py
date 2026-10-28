@@ -326,7 +326,9 @@ class LibraryPanel(QFrame):
             b.setCheckable(True)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setFixedHeight(30)
-            b.setStyleSheet(theme.CHIP.replace("padding: 6px 12px", "padding: 4px 9px").replace("font-size: 13px", "font-size: 12px"))
+            # Rounded pill (a radius bigger than half the height made Qt draw square corners in beta.6)
+            b.setStyleSheet(theme.CHIP.replace("padding: 6px 12px", "padding: 4px 12px")
+                            .replace("border-radius: 16px", "border-radius: 15px").replace("font-size: 13px", "font-size: 13px"))
             b.clicked.connect(lambda checked, k=key: self.set_chip(k if checked else None))
             chips.addWidget(b)
             self.chip_buttons[key] = b
@@ -339,6 +341,17 @@ class LibraryPanel(QFrame):
         self.chips_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.chips_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         v.addWidget(self.chips_scroll)
+        # Spotify's ‹ › buttons at the ends of the chip row when not every chip fits.
+        self.chips_next = self._icon_btn(icons.chevron("right", theme.TEXT, 16), "More filters", 30)
+        self.chips_prev = self._icon_btn(icons.chevron("left", theme.TEXT, 16), "Back", 30)
+        for btn, step in ((self.chips_next, 1), (self.chips_prev, -1)):
+            btn.setParent(self.chips_scroll)
+            btn.setStyleSheet(f"QPushButton {{ background: {theme.HOVER}; border: none; border-radius: 15px; }}"
+                              f" QPushButton:hover {{ background: {theme.SELECTED}; }}")
+            btn.clicked.connect(lambda _=False, st=step: self._scroll_chips(st))
+            btn.hide()
+        self.chips_scroll.horizontalScrollBar().valueChanged.connect(lambda _v: self._place_chip_arrows())
+        self.chips_scroll.horizontalScrollBar().rangeChanged.connect(lambda *_: self._place_chip_arrows())
         # older code: .chip_playlists / .chip_saved
         self.chip_playlists = self.chip_buttons["playlists"]
         self.chip_saved = self.chip_buttons["todownload"]
@@ -509,6 +522,20 @@ class LibraryPanel(QFrame):
         self._rebuild()
 
     # --- data ---------------------------------------------------------------------------------------
+    def _scroll_chips(self, step):
+        bar = self.chips_scroll.horizontalScrollBar()
+        bar.setValue(bar.value() + step * max(80, self.chips_scroll.viewport().width() * 2 // 3))
+
+    def _place_chip_arrows(self):
+        bar = self.chips_scroll.horizontalScrollBar()
+        h = self.chips_scroll.height()
+        self.chips_next.move(self.chips_scroll.width() - 30, (h - 30) // 2 + 2)
+        self.chips_prev.move(0, (h - 30) // 2 + 2)
+        self.chips_next.setVisible(bar.maximum() > 0 and bar.value() < bar.maximum())
+        self.chips_prev.setVisible(bar.maximum() > 0 and bar.value() > 0)
+        self.chips_next.raise_()
+        self.chips_prev.raise_()
+
     def set_items(self, playlists, n_songs, n_saved, playing_source="", albums=None, artists=None, folders=None,
                   shows=None):
         self._state.update(playlists=list(playlists), n_songs=n_songs, n_saved=n_saved,
@@ -772,5 +799,6 @@ class LibraryPanel(QFrame):
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
+        QTimer.singleShot(0, self._place_chip_arrows)
         if not self.collapsed and (self.view == "grid" or self.expanded) and self._tile_layout()[0] != self._grid_columns:
             QTimer.singleShot(0, self._rebuild)

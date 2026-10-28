@@ -240,3 +240,58 @@ def test_canvas_video_from_the_song_menu_and_hide_canvas(window, qapp, tmp_path)
     assert window.user_data.canvas_enabled is False
     assert any(a.text() == "▣  Show Canvas" for a in window.build_song_menu(song).actions())
     assert cv.remove_canvas(song, window.storage.data_dir) and not cv.find_canvas(song, window.storage.data_dir)
+
+
+def test_private_session_remembers_nothing(window, qapp):
+    pl = window.create_playlist("Quiet", [window.songs[0]])
+    before = pl.last_played
+    window.apply_settings({"private_session": True})
+    assert window.top_bar.private_label.isVisibleTo(window.top_bar)
+    window.show_playlist(pl)
+    window.play_song(window.songs[0], queue=[window.songs[0]])
+    assert window.songs[0] not in window.pq.recent and pl.last_played == before
+    assert window._private_timer.isActive()               # ends by itself after 6 hours
+    window.apply_settings({"private_session": False})
+    window.play_song(window.songs[1], queue=[window.songs[1]])
+    assert window.songs[1] in window.pq.recent
+    assert not window.top_bar.private_label.isVisibleTo(window.top_bar)
+
+
+def _drag_events(widget, mime, pos):
+    from PyQt6.QtCore import Qt, QPointF
+    from PyQt6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+    from PyQt6.QtWidgets import QApplication
+    enter = QDragEnterEvent(pos, Qt.DropAction.CopyAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(widget, enter)
+    move = QDragMoveEvent(pos, Qt.DropAction.CopyAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(widget, move)
+    drop = QDropEvent(QPointF(pos), Qt.DropAction.CopyAction, mime, Qt.MouseButton.LeftButton,
+                      Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(widget, drop)
+    return enter.isAccepted(), move.isAccepted(), drop.isAccepted()
+
+
+def test_files_dragged_from_explorer_are_accepted(window, qapp, audio_dir):
+    """beta.6 showed the "not allowed" cursor: the song list had switched drops off."""
+    from PyQt6.QtCore import QMimeData, QUrl, QPoint
+    from ui.library_panel import LibraryRow
+    pl = window.create_playlist("Empty", [])
+    window.show_playlist(pl)
+    window.resize(1400, 900)
+    window.show()
+    qapp.processEvents()
+    files = sorted(audio_dir.iterdir())
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(p)) for p in files])
+    vp = window.pl_table.viewport()
+    assert vp.acceptDrops() and window.pl_table.acceptDrops()
+    assert _drag_events(vp, mime, QPoint(vp.width() // 2, 20)) == (True, True, True)
+    assert [s.file_path for s in pl.songs] == [str(p) for p in files]          # same order, no copies made
+    assert all(not getattr(s, "is_remote", False) for s in pl.songs)
+    other = window.create_playlist("Other", [])
+    window._refresh_library_panel()
+    qapp.processEvents()
+    row = next(r for r in window.library_panel.findChildren(LibraryRow) if r.accepts_drops and r.title_text == "Other")
+    assert row.acceptDrops()
+    _drag_events(row, mime, QPoint(10, 10))
+    assert wait_until(qapp, lambda: len(other.songs) == len(files), 3)

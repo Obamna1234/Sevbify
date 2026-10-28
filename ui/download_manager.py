@@ -17,6 +17,25 @@ from core import downloader
 
 QUEUED, DOWNLOADING, FAILED, STOPPED = "queued", "downloading", "failed", "stopped"
 
+import re as _re
+# Failures that aren't the song's fault: the internet dropped, or the download drive is missing or full.
+# Like UniFetcher's queue guard, the queue then pauses (the song waits) instead of failing song after song.
+_NO_INTERNET = _re.compile(r"getaddrinfo|name resolution|timed out|timeout|connection (?:reset|refused|aborted)|"
+                           r"network is unreachable|no route to host|temporary failure|urlopen error|"
+                           r"unable to download webpage", _re.I)
+_DRIVE = _re.compile(r"no space left|disk full|not enough space|errno 28|winerror 112|"
+                     r"cannot find the path|no such file or directory|winerror 3\b|device is not ready|winerror 21", _re.I)
+
+
+def pause_reason(note):
+    """"internet" / "drive" when a failure means the queue should wait rather than the song fail, else ""."""
+    note = note or ""
+    if _DRIVE.search(note):
+        return "drive"
+    if _NO_INTERNET.search(note):
+        return "internet"
+    return ""
+
 
 class _Worker(QThread):
     song_started = pyqtSignal(str)              # key
@@ -73,6 +92,11 @@ class DownloadManager(QObject):
         self._jobs = {}                          # key -> job, kept so stopped / failed songs can be resumed
         self._cancel_one = ""
         self.paused = False
+        self.pause_why = ""                      # "", "you", "internet" or "drive"
+        from PyQt6.QtCore import QTimer
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setSingleShot(True)
+        self._retry_timer.timeout.connect(self._auto_resume)
         self._batch = self._new_batch()
 
     @staticmethod
@@ -127,17 +151,22 @@ class DownloadManager(QObject):
         if not busy:
             self._finish_batch()
 
-    def pause(self):
+    def pause(self, why="you"):
         """Hold the queue: the song being downloaded finishes, the next ones wait until Resume."""
         self.paused = True
+        self.pause_why = why
         downloader.Controls.set_paused(True)
         self.changed.emit()
 
     def resume(self):
         """Resume after Pause, and restart songs that were stopped."""
         self.paused = False
+        self.pause_why = ""
+        self._retry_timer.stop()
         downloader.Controls.set_paused(False)
         self.resume_stopped()
+        if self._queue:
+            self._kick()                         # songs put back after "no internet" while the worker ended
         self.changed.emit()
 
     def resume_stopped(self):
@@ -221,7 +250,9 @@ class DownloadManager(QObject):
         b = self._batch
         cur = self._states.get(self._current, {}).get("title", "")
         text = f"⬇ {min(b['done'] + 1, b['total'])} of {b['total']}" + (f" · {cur}" if cur else "")
-        return text + (" · paused after this song" if self.paused else "")
+        why = {"internet": " · paused: no internet (tries again every minute)",
+               "drive": " · paused: the download drive is missing or full"}.get(self.pause_why, " · paused")
+        return text + (why if self.paused else "")
 
     # --- worker -----------------------------------------------------------------------------------
     def _start_worker(self):
@@ -260,10 +291,23 @@ class DownloadManager(QObject):
         elif res.get("note") == "stopped":
             if self._states.get(key, {}).get("state") != STOPPED:
                 self._states.pop(key, None)          # cancelled: forget it
+        elif pause_reason(res.get("note")) and key in self._jobs:
+            # Not this song's fault: put it back at the front and wait, then try again by itself.
+            why = pause_reason(res.get("note"))
+            with self._lock:
+                self._queue.appendleft(self._jobs[key])
+            self._states[key] = {**info, "state": QUEUED, "note": res.get("note") or ""}
+            b["done"] -= 1
+            self.pause(why)
+            self._retry_timer.start(60_000)
         else:
             self._states[key] = {**info, "state": FAILED, "note": res.get("note") or "couldn't be downloaded"}
             b["failed"].append(info["title"])
         self.changed.emit()
+
+    def _auto_resume(self):
+        if self.paused and self.pause_why in ("internet", "drive"):
+            self.resume()
 
     def _on_tools_missing(self, text):
         with self._lock:

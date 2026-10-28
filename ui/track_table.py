@@ -212,9 +212,11 @@ class TrackTable(QTableWidget):
         self._drop_row = -1
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)   # we handle dragging ourselves
+        # After setDragDropMode: it switches drops off again, which made every drop from File Explorer show
+        # the "not allowed" cursor in beta.6.
         self.setAcceptDrops(True)
         self.viewport().setAcceptDrops(True)
-        self.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)   # we handle dragging ourselves
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context)
         self.cellDoubleClicked.connect(self._on_double_click)

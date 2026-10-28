@@ -239,7 +239,7 @@ class EpisodeRow(QFrame):
         if can_watch:
             self.watch_btn = QPushButton("Watch")
             self.watch_btn.setStyleSheet(theme.PILL)
-            self.watch_btn.setFixedHeight(30)
+            self.watch_btn.setFixedHeight(32)
             self.watch_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             self.watch_btn.setToolTip("Watch the video (audio-only is the play button)")
             self.watch_btn.clicked.connect(self.watch_clicked.emit)

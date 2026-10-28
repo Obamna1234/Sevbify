@@ -3950,12 +3950,12 @@ class MainWindow(ShowsMixin, QMainWindow):
             h.addWidget(self._restart_text, 1)
             go = QPushButton("Restart now")
             go.setStyleSheet(GREEN_BUTTON)
-            go.setFixedHeight(30)
+            go.setFixedHeight(32)
             go.setCursor(Qt.CursorShape.PointingHandCursor)
             go.clicked.connect(self.restart_app)
             later = QPushButton("Later")
             later.setStyleSheet(PILL_BUTTON)
-            later.setFixedHeight(30)
+            later.setFixedHeight(32)
             later.setCursor(Qt.CursorShape.PointingHandCursor)
             later.clicked.connect(lambda: self.restart_bar.hide())
             h.addWidget(later)
@@ -4684,9 +4684,23 @@ class MainWindow(ShowsMixin, QMainWindow):
             u.stream_full = bool(values["stream_full"])
             RemoteSong.stream_full = u.stream_full
         if "private_session" in values:
+            # Private session (like Spotify's): while on, songs aren't added to Recently played (Home, the
+            # "recent" list in your save file), podcast / audiobook positions aren't saved, and Your Library's
+            # "Recents" order isn't changed by what you play. It ends when Sevbify closes or after 6 hours.
+            # Sevbify has no account, so nothing about your listening is sent anywhere either way.
             self.private_session = bool(values["private_session"])
-            self.show_status("Private session on: what you play isn't remembered" if self.private_session
-                             else "Private session off", kind="info", timeout_ms=4000)
+            self.top_bar.set_private(self.private_session)
+            if not hasattr(self, "_private_timer"):
+                self._private_timer = QTimer(self)
+                self._private_timer.setSingleShot(True)
+                self._private_timer.timeout.connect(lambda: self.apply_settings({"private_session": False}))
+            if self.private_session:
+                self._private_timer.start(6 * 3600 * 1000)
+            else:
+                self._private_timer.stop()
+            self.show_status("Private session on: what you play isn't remembered (ends when you close Sevbify "
+                             "or after 6 hours)" if self.private_session else "Private session off",
+                             kind="info", timeout_ms=5000)
         if "library_compact" in values:
             self.library_panel.set_view_options(view="compact" if values["library_compact"] else "list")
         if any(k in values for k in ("eq_enabled", "eq_bands", "eq_preset")):
@@ -4889,7 +4903,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.library_panel.set_expanded(False)            # opening something leaves the expanded library
         active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist", "show") else kind)
         self.library_panel.set_active(active)
-        if kind == "playlist" and arg is not None:
+        if kind == "playlist" and arg is not None and not self.private_session:
             import time as _time
             arg.last_played = _time.time()                     # "Recents" = recently played or opened
             self.schedule_save()

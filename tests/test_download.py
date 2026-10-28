@@ -442,3 +442,29 @@ def test_ffmpeg_from_imageio_is_used_when_none_installed(tmp_path, monkeypatch):
     downloader._ensure_ffmpeg(e, cache_dir=str(tmp_path / "ff"))
     found = shutil.which("ffmpeg")
     assert found and os.path.dirname(found) == str(tmp_path / "ff")
+
+
+def test_manager_waits_instead_of_failing_when_the_internet_drops(qapp, tmp_path):
+    from ui.download_manager import pause_reason
+    assert pause_reason("<urlopen error [Errno 11001] getaddrinfo failed>") == "internet"
+    assert pause_reason("[Errno 28] No space left on device") == "drive"
+    assert pause_reason("not found on YouTube") == ""
+    calls = []
+
+    def flaky(song, *a, **k):
+        calls.append(song)
+        if len(calls) == 1:
+            return {"status": "fail", "note": "Unable to download webpage: timed out"}
+        return fake_ok(song, *a, **k)
+    m = make_manager(flaky)
+    done = []
+    m.song_done.connect(lambda k, p, t: done.append(t))
+    m.request([track("a"), track("b")], str(tmp_path))
+    assert wait_until(qapp, lambda: m.paused and m.pause_why == "internet", 5)
+    assert m.failed_count() == 0 and m.state(track("a").key)[0] == "queued"
+    assert "no internet" in m.summary()
+    m._retry_timer.stop()
+    m.resume()                                   # (normally by itself a minute later)
+    assert wait_until(qapp, lambda: len(done) == 2, 10)
+    m.wait()
+    assert calls.count("Artist - a") == 2 and m.failed_count() == 0

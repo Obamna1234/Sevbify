@@ -103,6 +103,12 @@ class TopBar(QWidget):
         self.downloads_btn.hide()
         h.addWidget(self.downloads_btn)
 
+        self.private_label = QLabel("🔒 Private session")
+        self.private_label.setToolTip("Private session: what you play isn't remembered (File → Private Session)")
+        self.private_label.setStyleSheet("color: #509bf5; font-size: 12px; font-weight: 700; padding: 0 6px;")
+        self.private_label.hide()
+        h.addWidget(self.private_label)
+
         # Click to go offline / online (Sevbify contacts nothing at all while offline).
         self.online_label = QPushButton()
         self.online_label.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -119,7 +125,8 @@ class TopBar(QWidget):
     def _place_center(self):
         w = self.width()
         left = max(b.geometry().right() for b in self._left_group) + 12
-        right_items = [x for x in (self.downloads_btn, self.online_label, self.settings_btn) if not x.isHidden()]
+        right_items = [x for x in (self.downloads_btn, self.private_label, self.online_label, self.settings_btn)
+                       if not x.isHidden()]
         right = min((x.geometry().left() for x in right_items), default=w) - 12
         cw = min(self.CENTER_MAX, w - 2 * max(left, w - right))
         cw = max(cw, min(self.CENTER_MAX, right - left), 260)
@@ -183,6 +190,10 @@ class TopBar(QWidget):
         self.downloads_btn.setToolTip(tip or text)
         self.downloads_btn.setStyleSheet(self._pill_style(theme.RED if failed else theme.TEXT))
         self.downloads_btn.show()
+        self._relayout()
+
+    def set_private(self, on):
+        self.private_label.setVisible(bool(on))
         self._relayout()
 
     def _relayout(self):

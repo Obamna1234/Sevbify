@@ -274,15 +274,31 @@ class ShowsMixin:
                              sort=ctx.get("sort", "newest") if kind != "book" and len(rows) > 1 else None,
                              count_text=count)
         self._with_image(image, self.show_page.set_cover)
+        if kind == "book":
+            return
+        # Every row gets the show's picture at once (one download); episodes with their own picture swap it in,
+        # the first 40 straight away and the rest as you scroll down (beta.6 fetched hundreds up front).
+        show_pm = self.net.cached_image(image)
+        if show_pm:
+            pm = QPixmap(show_pm)
+            for row in rows:
+                row.set_cover(pm)
+        else:
+            self._with_image(image, lambda pm: [self._safe(r.set_cover, pm) for r in rows])
         cover_cache = {}
-        for row, song in zip(rows, ctx["items"]):
-            url = song.track.cover_url or image
-            if kind == "book":
+        own = [(row, song.track.cover_url) for row, song in zip(rows, ctx["items"])
+               if song.track.cover_url and song.track.cover_url != image]
+        for i, (row, url) in enumerate(own):
+            cached = self.net.cached_image(url)
+            if cached:
+                row.set_cover(QPixmap(cached))
+                continue
+            if i >= 40:
                 continue
             if url in cover_cache:
-                row.set_cover(cover_cache[url])
                 continue
-            self._with_image(url, lambda pm, r=row, u=url: (cover_cache.__setitem__(u, pm), self._safe(r.set_cover, pm)))
+            cover_cache[url] = True
+            self._with_image(url, lambda pm, u=url: [self._safe(r.set_cover, pm) for r, x in own if x == u])
 
     def _sort_show(self, order):
         if self._show_ctx is not None:
@@ -416,6 +432,7 @@ class ShowsMixin:
         """Play a podcast episode / chapter / YouTube episode: the downloaded file if there is one, else stream.
         Continues where you left off."""
         key = item_key(song)
+        self._ensure_item_cover(song)
         saved = self.user_data.resume.get(key)
         self._pending_resume = (key, saved["ms"]) if saved and saved.get("ms", 0) > 5000 else None
         path = self.user_data.offline.get(key)
@@ -447,6 +464,28 @@ class ShowsMixin:
             return
         self._set_now_playing_text(song.title, song.artist, kind)
         self._play_media(song.track.stream_url)
+
+    def _ensure_item_cover(self, song):
+        """The episode's (or else its show's) picture for the player bar and Now Playing, without waiting:
+        a picture already downloaded is used straight away; otherwise it comes in the background."""
+        if song.album_cover_path and song.album_cover_path != PLACEHOLDER_IMAGE:
+            return
+        urls = [song.track.cover_url]
+        ctx = self._show_ctx
+        if ctx and song in ctx.get("items", []):
+            urls.append(getattr(ctx["obj"], "image_url", "") or getattr(ctx["obj"], "cover_url", ""))
+        for url in [u for u in urls if u]:
+            cached = self.net.cached_image(url)
+            if cached:
+                song.album_cover_path = cached
+                return
+        for url in [u for u in urls if u][:1]:
+            if self.online_enabled:
+                def done(path, s=song):
+                    if path:
+                        s.album_cover_path = path
+                        self._schedule_view_refresh()
+                self.online_call(self.net.get_image, url, on_done=done)
 
     def apply_pending_resume(self):
         """Called by update_progress once playback has started: jump to where you left off."""
