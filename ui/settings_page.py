@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 
 from . import theme
-from .widgets import ToggleSwitch
+from .widgets import ToggleSwitch, EqualizerCurve, ZoomPreview
 from core.audio_settings import BAND_LABELS
 
 RESTART_KEYS = ("zoom", "normalize", "proxy_mode", "proxy_url", "hw_accel")
@@ -19,9 +19,9 @@ SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
 STYLE = f"""
 QLabel {{ color: {theme.TEXT}; background: transparent; }}
 QLabel#h1 {{ font-size: 32px; font-weight: 800; }}
-QLabel#h2 {{ font-size: 16px; font-weight: 700; padding-top: 18px; }}
-QLabel#name {{ font-size: 14px; }}
-QLabel#desc {{ color: {theme.SUBDUED}; font-size: 12px; }}
+QLabel#h2 {{ font-size: 16px; font-weight: 700; padding-top: 22px; padding-bottom: 2px; }}
+QLabel#name {{ font-size: 14px; color: {theme.TEXT}; }}
+QLabel#desc {{ color: #a7a7a7; font-size: 13px; }}
 QLineEdit {{ background: #2a2a2a; color: white; border: 1px solid #3e3e3e; border-radius: 4px; padding: 6px 8px;
     font-size: 13px; }}
 QLineEdit:focus {{ border-color: {theme.TEXT}; }}
@@ -51,6 +51,7 @@ class SettingsPage(QWidget):
     import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
     update_ytdlp_requested = pyqtSignal()
+    reset_requested = pyqtSignal(str)          # "appearance" or "all"
 
     def __init__(self, eq_presets=None, parent=None):
         super().__init__(parent)
@@ -200,14 +201,16 @@ class SettingsPage(QWidget):
                     f"{u.fade_seconds} seconds")
         self._toggle("normalize", "Normalize volume", "Sets the same loudness for every song. Applies after a "
                      "restart.", u.normalize)
-        self._toggle("eq_enabled", "Equalizer", "", u.eq_enabled)
+        self._toggle("eq_enabled", "Equalizer", "Drag the dots: up makes those sounds louder, down quieter.",
+                     u.eq_enabled)
+        self.controls["eq_enabled"].toggled.connect(lambda on: self.eq_curve.setEnabled(on))
         self._equalizer(u)
 
         self._section("Display")
         self._toggle("np_on_play", "Show the now-playing panel on click of play", "", u.np_on_play)
         self._toggle("notify_track", "Show desktop notifications when the song changes", "", u.notify_track)
-        self._toggle("canvas_enabled", "Canvas", "Short looping videos next to the song, when you've added one.",
-                     u.canvas_enabled)
+        self._toggle("canvas_enabled", "Canvas", "Short looping videos in the Now Playing view, when a song has one "
+                     "(also: a song's ••• menu → Hide Canvas / Show Canvas).", u.canvas_enabled)
         self._zoom(u.zoom)
 
         self._section("Startup and window behaviour")
@@ -276,6 +279,7 @@ class SettingsPage(QWidget):
             sc.clicked.connect(lambda: (self.shortcuts_requested.emit()))
             v.addWidget(sc, 0, Qt.AlignmentFlag.AlignLeft)
             self.controls["shortcuts"] = sc
+        self._reset_section()
         v.addStretch()
         theme.replace_scroll_widget(self.scroll, body)
 
@@ -367,13 +371,16 @@ class SettingsPage(QWidget):
         return n
 
     def _equalizer(self, u):
+        """Spotify's equaliser: presets, and a curve with a dot to drag on each band."""
         panel = QFrame()
         panel.setObjectName("eqPanel")
-        panel.setStyleSheet(f"#eqPanel {{ background: {theme.ELEVATED}; border-radius: 8px; }}")
+        panel.setStyleSheet(f"#eqPanel {{ background: transparent; }}")
         pv = QVBoxLayout(panel)
-        pv.setContentsMargins(18, 14, 18, 14)
+        pv.setContentsMargins(0, 6, 0, 6)
         top = QHBoxLayout()
-        top.addWidget(QLabel("Presets"))
+        lbl = QLabel("Presets")
+        lbl.setObjectName("desc")
+        top.addWidget(lbl)
         self.eq_combo = QComboBox()
         self.eq_combo.addItems(list(self.eq_presets) + ["Custom"])
         self.eq_combo.setCurrentText(u.eq_preset if u.eq_preset in self.eq_presets else "Custom")
@@ -385,42 +392,66 @@ class SettingsPage(QWidget):
                               else self._eq_set([0.0] * 10, "Custom"))
         top.addWidget(reset)
         pv.addLayout(top)
-        bands = QHBoxLayout()
-        self.eq_sliders = []
-        for i, label in enumerate(BAND_LABELS):
-            col = QVBoxLayout()
-            s = QSlider(Qt.Orientation.Vertical)
-            s.setRange(-200, 200)                   # tenths of a dB
-            s.setValue(int(round(u.eq_bands[i] * 10)))
-            s.setFixedHeight(140)
-            s.setToolTip(f"{label}: {u.eq_bands[i]:+.1f} dB")
-            s.sliderReleased.connect(self._eq_slider_moved)
-            col.addWidget(s, 0, Qt.AlignmentFlag.AlignHCenter)
-            lbl = QLabel(label)
-            lbl.setObjectName("desc")
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            col.addWidget(lbl)
-            bands.addLayout(col)
-            self.eq_sliders.append(s)
-        pv.addLayout(bands)
-        scale = QLabel("+20 dB at the top, −20 dB at the bottom")
-        scale.setObjectName("desc")
-        pv.addWidget(scale)
+        self.eq_curve = EqualizerCurve(u.eq_bands, BAND_LABELS)
+        self.eq_curve.setEnabled(bool(u.eq_enabled))
+        self.eq_curve.released.connect(self._eq_curve_released)
+        pv.addWidget(self.eq_curve)
         self.controls["eq_panel"] = panel
         self._v.addWidget(panel)
 
     def _zoom(self, current):
-        self._name_desc("Zoom level", "Makes everything bigger or smaller. Applies after a restart.")
+        """Spotify's zoom: three pictures (Dense / Default / Spacious), the exact levels, and Reset."""
+        from core.storage import ZOOM_LEVELS
+        self._name_desc("Zoom level", f"Now {current}%. You can also use Ctrl + and Ctrl − (Ctrl 0 resets). "
+                                      "Sevbify restarts to show a new size.")
+        pics = QHBoxLayout()
+        pics.setSpacing(12)
+        self.zoom_pictures = {}
+        for label, z, scale in (("Dense", 80, 0.8), ("Default", 100, 1.0), ("Spacious", 125, 1.25)):
+            pic = ZoomPreview(label, scale)
+            pic.setChecked(current == z)
+            pic.clicked.connect(lambda _=False, z=z: self._set_zoom(z))
+            pics.addWidget(pic)
+            self.zoom_pictures[z] = pic
+        pics.addStretch()
+        self._v.addLayout(pics)
         row = QHBoxLayout()
         group = QButtonGroup(self)
-        for z in (70, 80, 90, 100, 110, 120, 130):
+        for z in ZOOM_LEVELS:
             rb = QRadioButton(f"{z}%")
             rb.setChecked(z == current)
             group.addButton(rb, z)
             row.addWidget(rb)
         row.addStretch()
-        group.idClicked.connect(lambda z: self._emit({"zoom": z}))
+        reset = QPushButton("Reset")
+        reset.setToolTip("Back to 100%")
+        reset.clicked.connect(lambda: self._set_zoom(100))
+        row.addWidget(reset)
+        group.idClicked.connect(self._set_zoom)
         self.controls["zoom"] = group
+        self._v.addLayout(row)
+
+    def _set_zoom(self, z):
+        group = self.controls.get("zoom")
+        if group is not None and group.button(z) is not None and not group.button(z).isChecked():
+            group.button(z).setChecked(True)
+        for level, pic in getattr(self, "zoom_pictures", {}).items():
+            pic.setChecked(level == z)
+        self._emit({"zoom": z})
+
+    def _reset_section(self):
+        self._section("Reset")
+        row = QHBoxLayout()
+        row.addLayout(self._name_desc("Reset settings", "Puts settings back to how Sevbify starts. Your playlists, "
+                                      "music folders, downloads and podcasts are kept.", into=row), 1)
+        look = QPushButton("Reset appearance")
+        look.setToolTip("Zoom, Your Library layout, panels and Canvas")
+        look.clicked.connect(lambda: self.reset_requested.emit("appearance"))
+        everything = QPushButton("Reset all settings")
+        everything.clicked.connect(lambda: self.reset_requested.emit("all"))
+        row.addWidget(look)
+        row.addWidget(everything)
+        self.controls["reset_appearance"], self.controls["reset_all"] = look, everything
         self._v.addLayout(row)
 
     # --- reactions ----------------------------------------------------------------------------------
@@ -458,10 +489,8 @@ class SettingsPage(QWidget):
             self._eq_set(self.eq_presets[name], name)
 
     def _eq_set(self, bands, name):
-        for s, value in zip(self.eq_sliders, bands):
-            s.blockSignals(True)
-            s.setValue(int(round(value * 10)))
-            s.blockSignals(False)
+        self.eq_curve.set_values(bands)
+        self.eq_curve.setEnabled(True)
         self._emit({"eq_bands": [float(b) for b in bands], "eq_preset": name, "eq_enabled": True})
         sw = self.controls.get("eq_enabled")
         if sw is not None and not sw.isChecked():
@@ -469,8 +498,8 @@ class SettingsPage(QWidget):
             sw.setChecked(True)
             sw.blockSignals(False)
 
-    def _eq_slider_moved(self):
-        bands = [s.value() / 10 for s in self.eq_sliders]
+    def _eq_curve_released(self, bands):
+        bands = [float(b) for b in bands]
         self.eq_combo.blockSignals(True)
         self.eq_combo.setCurrentText("Custom")
         self.eq_combo.blockSignals(False)

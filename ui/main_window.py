@@ -327,6 +327,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         # A second player for crossfading: the next song starts on it while the current one fades out
         # (Settings → Fade between songs). self.player is always the song you hear "now".
         self._spare_player = self.vlc_instance.media_player_new()
+        self._zoom_at_start = self.user_data.zoom          # the zoom Sevbify is drawn at in this run
         self._xf = None                    # crossfade in progress: dict(out=player, start=time, ms=length)
         self._xf_timer = QTimer(self)
         self._xf_timer.setInterval(30)
@@ -503,6 +504,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.import_requested.connect(self.import_playlist_dialog)
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
+        self.settings_page.reset_requested.connect(self.reset_settings)
         self.stack.addWidget(self.settings_page)
 
         for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
@@ -1050,6 +1052,16 @@ class MainWindow(ShowsMixin, QMainWindow):
         act(v, "Now playing view", lambda: self.toggle_right_panel("nowplaying"),
             checked=self.user_data.right_panel == "nowplaying")
         act(v, "Queue", lambda: self.toggle_right_panel("queue"), checked=self.user_data.right_panel == "queue")
+        act(v, "Miniplayer", self.open_mini_player)
+        act(v, "Full screen", self.open_full_screen, "F11")
+        v.addSeparator()
+        z = self.user_data.zoom
+        pending = getattr(self, "_zoom_after_restart", None)
+        zm = v.addMenu(f"Zoom ({pending or z}%{' after restart' if pending and pending != z else ''})")
+        zm.setStyleSheet(MENU_STYLE)
+        act(zm, "Zoom In", lambda: self.change_zoom(+1), "Ctrl+=")
+        act(zm, "Zoom Out", lambda: self.change_zoom(-1), "Ctrl+-")
+        act(zm, "Reset Zoom (100%)", lambda: self.change_zoom(0), "Ctrl+0")
 
         pb = sub("Playback")
         playing = self.player.get_state() == vlc.State.Playing
@@ -1231,8 +1243,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         prog = QHBoxLayout()
         prog.setSpacing(8)
-        self.time_label = QLabel("00:00")
-        self.duration_label = QLabel("00:00")
+        self.time_label = QLabel("0:00")
+        self.duration_label = QLabel("0:00")
         for lbl, align in ((self.time_label, Qt.AlignmentFlag.AlignRight), (self.duration_label, Qt.AlignmentFlag.AlignLeft)):
             lbl.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
             lbl.setFixedWidth(42)
@@ -1269,6 +1281,14 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.volume_slider.setValue(self.user_data.volume)
         self.volume_slider.valueChanged.connect(self.set_volume)
         rh.addWidget(self.volume_slider)
+        self.mini_btn = self._icon_button("Open Miniplayer", self.open_mini_player)
+        self.mini_btn.setIcon(icons.mini_player(theme.SUBDUED, 18))
+        rh.addWidget(self.mini_btn)
+        self.fullscreen_btn = self._icon_button("Full screen (F11)", self.open_full_screen)
+        self.fullscreen_btn.setIcon(icons.fullscreen(theme.SUBDUED, 18))
+        rh.addWidget(self.fullscreen_btn)
+        self.mini_player = None
+        self.full_screen_view = None
         row.addWidget(right, 3)
 
         self._update_mode_buttons()
@@ -1311,6 +1331,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         sc("Ctrl+Shift+R", self.rescan_library)
         sc("Ctrl+Shift+Q", self.quit_app)
         sc("F1", self.show_about)
+        sc("F11", self.open_full_screen)
+        # Zoom like Spotify: Ctrl + / Ctrl - / Ctrl 0 (Ctrl = also works, as on most keyboards + needs Shift)
+        sc("Ctrl+=", lambda: self.change_zoom(+1))
+        sc("Ctrl++", lambda: self.change_zoom(+1))
+        sc("Ctrl+-", lambda: self.change_zoom(-1))
+        sc("Ctrl+0", lambda: self.change_zoom(0))
 
     # ------------------------------------------------------------------
     # Volume
@@ -2302,17 +2328,25 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _folder_context_menu(self, name, global_pos):
         menu = self._new_menu()
-        menu.addAction("Rename…").triggered.connect(lambda: self._rename_folder_dialog(name))
-        menu.addAction("Delete folder").triggered.connect(lambda: self.delete_folder(name))
+        menu.addAction("✎  Rename").triggered.connect(lambda: self._rename_folder_dialog(name))
+        menu.addAction("⊖  Delete").triggered.connect(lambda: self._confirm_delete_folder(name))
         menu.addSeparator()
         menu.addAction("Create playlist in this folder").triggered.connect(
             lambda: self.move_to_folder(self.new_playlist(open_it=False), name))
         menu.exec(global_pos)
 
     def _rename_folder_dialog(self, name):
-        new, ok = QInputDialog.getText(self, "Rename folder", "Folder name:", text=name)
-        if ok:
-            self.rename_folder(name, new)
+        from . import dialogs
+        res = dialogs.edit_details(self, "Rename folder", name, can_change_cover=False)
+        if res and res[0]:
+            self.rename_folder(name, res[0])
+
+    def _confirm_delete_folder(self, name):
+        from . import dialogs
+        n = sum(1 for p in self.playlists if p.folder == name)
+        extra = (f" The {n} playlist{'s' if n != 1 else ''} inside stay in Your Library." if n else "")
+        if dialogs.confirm(self, "Delete folder?", f"This will delete <b>{name}</b> from <b>Your Library</b>.{extra}"):
+            self.delete_folder(name)
 
     # --- Playlist covers ----------------------------------------------------------------------------------
     def choose_playlist_cover(self, playlist):
@@ -2580,35 +2614,119 @@ class MainWindow(ShowsMixin, QMainWindow):
         else:
             self.set_right_panel(self.user_data.right_panel, save=False)
 
-    def _playlist_context_menu(self, playlist, global_pos):
+    def build_playlist_menu(self, playlist):
+        """A playlist's ••• / right-click menu, in Spotify's order (only what Sevbify can do)."""
         menu = self._new_menu()
-        menu.addAction("▶  Play").triggered.connect(lambda: self.play_playlist(playlist))
-        menu.addAction("Open").triggered.connect(lambda: self.show_playlist(playlist))
+        menu.addAction("≡  Add to queue").triggered.connect(lambda: [self.add_to_queue(x) for x in playlist.songs])
         menu.addSeparator()
-        menu.addAction("Rename…").triggered.connect(lambda: self._rename_playlist_dialog(playlist))
-        menu.addAction("Delete…").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
-        menu.addAction("Change cover…").triggered.connect(lambda: self.choose_playlist_cover(playlist))
+        menu.addAction("✎  Edit details").triggered.connect(lambda: self.edit_playlist_details(playlist))
+        menu.addAction("⊖  Delete").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
+        pending = [x for x in playlist.songs if getattr(x, "is_remote", False)]
+        dl = menu.addAction(f"⬇  Download {len(pending)} song{'s' if len(pending) != 1 else ''}" if pending
+                            else "⬇  Downloaded")
+        dl.setEnabled(bool(pending))
+        dl.triggered.connect(lambda: self.download_songs(playlist.songs))
+        menu.addSeparator()
+        menu.addAction("♫  Create playlist").triggered.connect(lambda: self.new_playlist())
+        menu.addAction("＋  Create folder").triggered.connect(lambda: self.create_folder())
+        menu.addSeparator()
+        self._add_folder_submenu(menu, playlist)
+        other = menu.addMenu("＋  Add to other playlist")
+        other.setStyleSheet(MENU_STYLE)
+        others = [p for p in self.playlists if p is not playlist]
+        for p in others:
+            other.addAction(p.name).triggered.connect(lambda _=False, t=p: self.add_to_playlist(t, list(playlist.songs)))
+        other.setEnabled(bool(others) and bool(playlist.songs))
+        menu.addAction("🖼  Change cover…").triggered.connect(lambda: self.choose_playlist_cover(playlist))
         if playlist.custom_cover:
             menu.addAction("Use song covers").triggered.connect(lambda: self.set_playlist_cover(playlist, ""))
-        move = menu.addMenu("Move to folder")
+        share = menu.addMenu("⇪  Share and export")
+        share.setStyleSheet(MENU_STYLE)
+        share.addAction("Export playlist file (.m3u8)…").triggered.connect(lambda: self.export_playlist_file(playlist))
+        share.addAction("Copy songs to a folder or phone…").triggered.connect(lambda: self.copy_playlist_songs(playlist))
+        share.addAction("Copy song list (Artist - Title)").triggered.connect(
+            lambda: QApplication.clipboard().setText("\n".join(f"{x.artist} - {x.title}" for x in playlist.songs)))
+        return menu
+
+    def _playlist_context_menu(self, playlist, global_pos):
+        self.build_playlist_menu(playlist).exec(global_pos)
+
+    def _add_folder_submenu(self, menu, playlist):
+        """"Move to folder ▸" like Spotify: a Find a folder box, + Create folder, then your folders."""
+        from PyQt6.QtWidgets import QWidgetAction, QLineEdit
+        move = menu.addMenu("📁  Move to folder")
         move.setStyleSheet(MENU_STYLE)
+        find = QLineEdit()
+        find.setPlaceholderText("Find a folder")
+        find.setClearButtonEnabled(True)
+        find.setStyleSheet("QLineEdit { background: #3e3e3e; color: white; border: none; border-radius: 4px;"
+                           " padding: 6px 8px; margin: 4px; font-size: 13px; min-width: 200px; }")
+        holder = QWidgetAction(move)
+        holder.setDefaultWidget(find)
+        move.addAction(holder)
+
+        def create_and_move():
+            name = self.create_folder()
+            if name:
+                self.move_to_folder(playlist, name)
+        move.addAction("＋  Create folder").triggered.connect(create_and_move)
+        entries = []
         for f in self.user_data.folders:
             a = move.addAction(f)
             a.setEnabled(f != playlist.folder)
             a.triggered.connect(lambda _=False, name=f: self.move_to_folder(playlist, name))
-        if self.user_data.folders:
-            move.addSeparator()
-        move.addAction("New folder").triggered.connect(lambda: self.move_to_folder(playlist, self.create_folder()))
+            entries.append(a)
         if playlist.folder:
-            menu.addAction("Remove from folder").triggered.connect(lambda: self.move_to_folder(playlist, ""))
-        if any(s.exists and not getattr(s, "is_remote", False) for s in playlist.songs) or \
-                any(getattr(s, "is_remote", False) for s in playlist.songs):
-            menu.addSeparator()
-            pending = [s for s in playlist.songs if getattr(s, "is_remote", False)]
-            if pending:
-                menu.addAction(f"⬇  Download {len(pending)} song{'s' if len(pending) != 1 else ''}").triggered.connect(
-                    lambda: self.download_songs(playlist.songs))
-        menu.exec(global_pos)
+            move.addSeparator()
+            move.addAction("Remove from folder").triggered.connect(lambda: self.move_to_folder(playlist, ""))
+        find.textChanged.connect(lambda text: [a.setVisible(text.casefold() in a.text().casefold()) for a in entries])
+        move.aboutToShow.connect(lambda: (find.clear(), find.setFocus()))
+        return move
+
+    def edit_playlist_details(self, playlist):
+        from . import dialogs
+        res = dialogs.edit_details(self, "Edit details", playlist.name, load_pixmap(playlist.cover_path))
+        if res is None:
+            return
+        name, cover = res
+        if name and name != playlist.name:
+            self.rename_playlist(playlist, name)
+        if cover:
+            self.choose_playlist_cover(playlist)
+
+    def export_playlist_file(self, playlist):
+        from core import playlist_files as pf
+        start = os.path.join(self.download_folder(), pf.safe_name(playlist.name) + ".m3u8")
+        path, _ = QFileDialog.getSaveFileName(self, "Export playlist", start, "Playlist (*.m3u8)")
+        if not path:
+            return
+        try:
+            n, pending = pf.export_playlist(playlist.songs, path)
+        except OSError as e:
+            self.show_status(f"⚠ Couldn't save the playlist: {e}", 10000)
+            return
+        self.show_status(f"Saved {os.path.basename(path)}: {n} songs"
+                         + (f" ({pending} not downloaded yet are listed as notes, not songs)" if pending else "")
+                         + ". A playlist file lists your music files; it doesn't contain them.",
+                         kind="info", timeout_ms=12000)
+
+    def copy_playlist_songs(self, playlist):
+        """Copy the actual music files, in order, plus a playlist file, into a folder (a phone, USB stick…)."""
+        from core import playlist_files as pf
+        dest = QFileDialog.getExistingDirectory(self, f"Copy “{playlist.name}” to…", os.path.expanduser("~"))
+        if not dest:
+            return
+        songs = list(playlist.songs)
+        self.show_status(f"Copying “{playlist.name}”…", kind="info", timeout_ms=30000)
+
+        def done(res):
+            text = (f"Copied “{playlist.name}” to {res['folder']}: {res['copied']} copied"
+                    + (f", {res['skipped']} already there" if res["skipped"] else "")
+                    + (f", {res['pending']} not downloaded yet (download them first)" if res["pending"] else ""))
+            self.show_status(text, kind="info", timeout_ms=15000)
+        from .async_tasks import run_async
+        run_async(self, lambda: pf.copy_playlist(songs, dest, playlist.name), on_done=done,
+                  on_error=lambda e: self.show_status(f"⚠ Couldn't copy: {e}", 12000))
 
     def display_playlists(self):
         self._refresh_library_panel()
@@ -2919,31 +3037,68 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.pl_play_btn.setToolTip("Play")
         self.pl_play_btn.clicked.connect(lambda: self.open_playlist and self.play_playlist(self.open_playlist))
         actions.addWidget(self.pl_play_btn)
-        rename_btn = QPushButton("Rename")
-        rename_btn.setStyleSheet(PILL_BUTTON)
-        rename_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        rename_btn.setFixedHeight(32)
-        rename_btn.clicked.connect(self._rename_open_playlist)
-        actions.addWidget(rename_btn)
-        delete_btn = QPushButton("Delete")
-        delete_btn.setStyleSheet(PILL_BUTTON)
-        delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        delete_btn.setFixedHeight(32)
-        delete_btn.clicked.connect(self._confirm_delete_open_playlist)
-        actions.addWidget(delete_btn)
-        self.pl_download_btn = QPushButton("Download")
-        self.pl_download_btn.setIcon(icons.download(theme.TEXT, 18))
-        self.pl_download_btn.setIconSize(QSize(18, 18))
-        self.pl_download_btn.setStyleSheet(PILL_BUTTON)
-        self.pl_download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.pl_download_btn.setFixedHeight(32)
-        self.pl_download_btn.setToolTip("Download every song in this playlist that isn't on your computer yet")
-        self.pl_download_btn.clicked.connect(
-            lambda: self.open_playlist and self.download_songs(self.open_playlist.songs))
-        self.pl_download_btn.hide()
+        def round_btn(icon, tip, slot, size=40):
+            b = QPushButton()
+            b.setIcon(icon)
+            b.setIconSize(QSize(int(size * 0.7), int(size * 0.7)))
+            b.setFixedSize(size, size)
+            b.setToolTip(tip)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(f"QPushButton {{ background: transparent; border: none; border-radius: {size // 2}px; }}"
+                            f" QPushButton:hover {{ background: rgba(255,255,255,0.08); }}")
+            b.clicked.connect(slot)
+            return b
+        # Spotify's row: ▶ | shuffle | download | ••• ...... search | Custom order
+        self.pl_shuffle_btn = round_btn(icons.shuffle(theme.SUBDUED, 28), "Shuffle play", self._shuffle_open_playlist)
+        actions.addWidget(self.pl_shuffle_btn)
+        self.pl_download_btn = round_btn(icons.download(theme.SUBDUED, 30), "Download",
+                                         lambda: self.open_playlist and self.download_songs(self.open_playlist.songs))
         actions.addWidget(self.pl_download_btn)
+        self.pl_more_btn = round_btn(icons.more(theme.SUBDUED, 28), "More options for this playlist",
+                                     self._show_open_playlist_menu)
+        actions.addWidget(self.pl_more_btn)
         actions.addStretch()
+        self.pl_filter = QLineEdit()
+        self.pl_filter.setPlaceholderText("Search in playlist")
+        self.pl_filter.setClearButtonEnabled(True)
+        self.pl_filter.setFixedWidth(220)
+        self.pl_filter.setStyleSheet("QLineEdit { background: rgba(255,255,255,0.1); color: white; border: none;"
+                                     " border-radius: 4px; padding: 6px 8px; font-size: 13px; }")
+        self.pl_filter.hide()
+        self.pl_filter.textChanged.connect(lambda _t: self._show_playlist_songs())
+        self.pl_search_btn = round_btn(icons.search(theme.SUBDUED, 22), "Search in playlist", self._toggle_pl_filter, 36)
+        actions.addWidget(self.pl_filter)
+        actions.addWidget(self.pl_search_btn)
+        from PyQt6.QtWidgets import QComboBox
+        self.pl_sort = QComboBox()
+        self.pl_sort.addItems(["Custom order", "Title", "Artist", "Album", "Duration"])
+        self.pl_sort.setToolTip("Sort this view (the playlist's own order isn't changed)")
+        self.pl_sort.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pl_sort.setStyleSheet(f"QComboBox {{ background: transparent; color: {theme.SUBDUED}; border: none;"
+                                   f" font-size: 14px; padding: 4px 8px; }} QComboBox:hover {{ color: white; }}"
+                                   f" QComboBox QAbstractItemView {{ background: #282828; color: white;"
+                                   f" selection-background-color: #3e3e3e; }}")
+        self.pl_sort.currentIndexChanged.connect(lambda _i: self._show_playlist_songs())
+        actions.addWidget(self.pl_sort)
         hv.addLayout(actions)
+        pills = QHBoxLayout()
+        pills.setSpacing(8)
+        add_btn = QPushButton("  Add")
+        add_btn.setIcon(icons.plus(theme.TEXT, 14))
+        details_btn = QPushButton("✎  Name && details")
+        for b in (add_btn, details_btn):
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setFixedHeight(32)
+            b.setStyleSheet("QPushButton { color: white; background: rgba(255,255,255,0.1); border: none;"
+                            " border-radius: 16px; padding: 0 14px; font-size: 13px; font-weight: 700; }"
+                            " QPushButton:hover { background: rgba(255,255,255,0.18); }")
+        add_btn.setToolTip("Find songs to add (search), or drag songs and files onto this playlist")
+        add_btn.clicked.connect(lambda: self.show_search(select=True))
+        details_btn.clicked.connect(self._rename_open_playlist)
+        pills.addWidget(add_btn)
+        pills.addWidget(details_btn)
+        pills.addStretch()
+        hv.addLayout(pills)
         layout.addWidget(self.pl_header)
 
         self.pl_empty = self._muted_label(
@@ -2955,7 +3110,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.pl_table = TrackTable(sortable=False)
         self.pl_table.set_two_line_titles(True)
         self.pl_table.delete_requested.connect(
-            lambda rows: self.open_playlist is not None and self.remove_rows_from_playlist(self.open_playlist, rows))
+            lambda rows: self.open_playlist is not None and self.remove_rows_from_playlist(
+                self.open_playlist, [self._pl_index(r) for r in rows]))
         self.pl_table.mark_pending = True
         self.pl_table.reorder_enabled = True
         self.pl_table.accept_files = True
@@ -2967,7 +3123,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                                                                   source=self.open_playlist.name))
         self.pl_table.context_requested.connect(
             lambda s, row, pos: self.open_playlist and self._show_song_menu(
-                s, pos, queue=self.open_playlist.songs, playlist=self.open_playlist, row=row,
+                s, pos, queue=self.open_playlist.songs, playlist=self.open_playlist, row=self._pl_index(row),
                 source=self.open_playlist.name))
         table_wrap = QWidget()
         tw = QVBoxLayout(table_wrap)
@@ -3014,44 +3170,94 @@ class MainWindow(ShowsMixin, QMainWindow):
             meta += f" · {missing} missing"
         self.pl_meta.setText(meta)
         self._update_playlist_download_button()
-        self.pl_table.set_songs(pl.songs)
-        self.pl_table.set_current(self.current_song)
+        self._show_playlist_songs()
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
         self.pl_table.setVisible(True)               # stays visible so songs and files can be dropped in
         self.pl_title.setText(pl.name)
+        size = 56 if len(pl.name) <= 16 else (44 if len(pl.name) <= 24 else (34 if len(pl.name) <= 36 else 26))
+        self.pl_title.setStyleSheet(f"color: white; font-size: {size}px; font-weight: 800; background: transparent;")
         self.pl_empty.setVisible(not pl.songs)
 
     def _rename_playlist_dialog(self, pl):
-        name, ok = QInputDialog.getText(self, "Rename playlist", "New name:", text=pl.name)
-        if ok:
-            self.rename_playlist(pl, name)
+        self.edit_playlist_details(pl)
+
+    # --- the playlist page's view: search in playlist, sort, and rows <-> playlist positions -------------------
+    def _pl_view(self):
+        pl = self.open_playlist
+        if pl is None:
+            return []
+        songs = list(pl.songs)
+        q = self.pl_filter.text().strip().casefold() if hasattr(self, "pl_filter") else ""
+        if q:
+            songs = [x for x in songs if q in f"{x.title} {x.artist} {x.album}".casefold()]
+        key = self.pl_sort.currentText() if hasattr(self, "pl_sort") else "Custom order"
+        if key == "Title":
+            songs.sort(key=lambda x: x.title.casefold())
+        elif key == "Artist":
+            songs.sort(key=lambda x: (x.artist.casefold(), x.album.casefold()))
+        elif key == "Album":
+            songs.sort(key=lambda x: (x.album.casefold(), x.title.casefold()))
+        elif key == "Duration":
+            songs.sort(key=lambda x: x.duration or 0)
+        return songs
+
+    def _show_playlist_songs(self):
+        view = self._pl_view()
+        self._pl_view_songs = view
+        custom = len(view) == len(self.open_playlist.songs) if self.open_playlist else True
+        custom = custom and (not hasattr(self, "pl_sort") or self.pl_sort.currentIndex() == 0)
+        self.pl_table.reorder_enabled = custom          # drag to reorder only in the playlist's own order
+        self.pl_table.set_songs(view)
+        self.pl_table.set_current(self.current_song)
+
+    def _pl_index(self, row):
+        """Position in the playlist of the song shown on this row (the view may be sorted or searched)."""
+        pl, view = self.open_playlist, getattr(self, "_pl_view_songs", None)
+        if pl is None or not view or not (0 <= row < len(view)):
+            return row
+        song = view[row]
+        for i, x in enumerate(pl.songs):
+            if x is song:
+                return i
+        return row
+
+    def _toggle_pl_filter(self):
+        show = self.pl_filter.isHidden()
+        self.pl_filter.setVisible(show)
+        if show:
+            self.pl_filter.setFocus()
+        else:
+            self.pl_filter.clear()
+
+    def _shuffle_open_playlist(self):
+        pl = self.open_playlist
+        if pl is None or not pl.songs:
+            return
+        if not self.pq.shuffle:
+            self.toggle_shuffle()
+        import random
+        self.play_song(random.choice(pl.songs), queue=pl.songs, source=pl.name)
+
+    def _show_open_playlist_menu(self):
+        if self.open_playlist is not None:
+            b = self.pl_more_btn
+            self.build_playlist_menu(self.open_playlist).exec(b.mapToGlobal(b.rect().bottomLeft()))
 
     def _confirm_delete_playlist(self, pl):
-        answer = QMessageBox.question(
-            self, "Delete playlist", f"Delete \"{pl.name}\"?\n\nYour music files are not affected.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
-        if answer == QMessageBox.StandardButton.Yes:
+        """Spotify's "Delete from Your Library?" card. Only the playlist goes; music files are never touched."""
+        from . import dialogs
+        if dialogs.confirm(self, "Delete from Your Library?",
+                           f"This will delete <b>{pl.name}</b> from <b>Your Library</b>. Your music files stay "
+                           "where they are."):
             self.delete_playlist(pl)
 
     def _rename_open_playlist(self):
-        pl = self.open_playlist
-        if pl is None:
-            return
-        name, ok = QInputDialog.getText(self, "Rename playlist", "New name:", text=pl.name)
-        if ok:
-            self.rename_playlist(pl, name)
+        if self.open_playlist is not None:
+            self.edit_playlist_details(self.open_playlist)
 
     def _confirm_delete_open_playlist(self):
-        pl = self.open_playlist
-        if pl is None:
-            return
-        answer = QMessageBox.question(
-            self, "Delete playlist",
-            f"Delete \"{pl.name}\"?\n\nYour music files are not affected.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No)
-        if answer == QMessageBox.StandardButton.Yes:
-            self.delete_playlist(pl)
+        if self.open_playlist is not None:
+            self._confirm_delete_playlist(self.open_playlist)
 
     # ==================================================================
     # Playback
@@ -3095,7 +3301,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         # Show what we are trying to play straight away.
         self._set_now_playing_text(song.title, song.artist)
         self.set_album_cover(song.album_cover_path)
-        self.time_label.setText("00:00")
+        self.time_label.setText("0:00")
         self.duration_label.setText(format_time(song.duration) if song.duration > 0 else "--:--")
         self.progress_slider.setValue(0)
         self._refresh_now_playing()
@@ -3241,7 +3447,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.is_playing = False
             self._set_play_icon(False)
             self.progress_slider.setValue(0)
-            self.time_label.setText("00:00")
+            self.time_label.setText("0:00")
             self._queue_changed()
             return
         self._start_current()
@@ -3311,13 +3517,16 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _update_mode_buttons(self):
         on = self.pq.shuffle
+        # Tooltips like Spotify's, naming what's playing: "Enable shuffle for Rock".
+        ctx = self.pq.source_name if self.current_song is not None and self.pq.source_name else ""
+        for_ctx = f" for {ctx}" if ctx else ""
         self.shuffle_btn.setIcon(icons.shuffle(icons.GREEN if on else icons.GREY, dot=on))
-        self.shuffle_btn.setToolTip(f"Shuffle: {'on' if on else 'off'} (Ctrl+S)")
+        self.shuffle_btn.setToolTip(("Disable shuffle" if on else f"Enable shuffle{for_ctx}") + " (Ctrl+S)")
         mode = self.pq.repeat
         self.repeat_btn.setIcon(icons.repeat(icons.GREY if mode == "off" else icons.GREEN,
                                              one=(mode == "one"), dot=(mode != "off")))
-        label = {"off": "off", "all": "all songs", "one": "this song"}[mode]
-        self.repeat_btn.setToolTip(f"Repeat: {label} (Ctrl+R)")
+        self.repeat_btn.setToolTip({"off": f"Enable repeat{for_ctx}", "all": "Enable repeat one",
+                                    "one": "Disable repeat"}[mode] + " (Ctrl+R)")
         if hasattr(self, "queue_btn") and hasattr(self, "right_panel"):
             shown = not self.right_panel.isHidden()
             q = shown and self.right_panel.currentWidget() is self.queue_panel
@@ -3427,6 +3636,98 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.now_playing_panel.set_playing(self.is_playing)
         if save:
             self.schedule_save()
+
+    def reset_settings(self, which="all"):
+        """Settings → Reset appearance / Reset all settings (asks first). Playlists, music folders, downloads,
+        podcasts and audiobooks are never touched."""
+        from core.storage import default_settings
+        from . import dialogs
+        text = ("Zoom, Your Library's layout, the side panel and Canvas go back to how Sevbify starts."
+                if which == "appearance" else
+                "Every setting goes back to how Sevbify starts. Your playlists, music folders, downloads, "
+                "podcasts and audiobooks are kept.")
+        if not dialogs.confirm(self, "Reset settings?", text, "Reset"):
+            return False
+        values = default_settings(which)
+        self.apply_settings(values)
+        if "volume" in values:
+            self.volume_slider.setValue(values["volume"])
+        if hasattr(self, "library_panel"):
+            self.library_panel.set_view_options(sort=values.get("library_sort"), view=values.get("library_view"),
+                                                collapsed=values.get("library_collapsed"), emit=False)
+        if "right_panel" in values:
+            self.set_right_panel(values["right_panel"])
+        self.save_now()
+        self.open_settings()
+        if values.get("zoom") == 100 and self._zoom_at_start != 100:
+            self.show_restart_bar("Zoom 100%")
+        self.show_status("Settings reset.", kind="info", timeout_ms=4000)
+        return True
+
+    def change_zoom(self, step):
+        """Ctrl + / Ctrl - / Ctrl 0. Sevbify draws everything at its zoom when it starts, so a new zoom needs
+        a quick restart: the bar at the bottom says so, with a Restart button."""
+        from core.storage import ZOOM_LEVELS
+        cur = getattr(self, "_zoom_after_restart", None) or self.user_data.zoom
+        if step == 0:
+            new = 100
+        else:
+            levels = list(ZOOM_LEVELS)
+            i = levels.index(cur) if cur in levels else levels.index(100)
+            new = levels[max(0, min(len(levels) - 1, i + step))]
+        self._zoom_after_restart = new
+        self.apply_settings({"zoom": new})
+        self.show_restart_bar(f"Zoom {new}%")
+        return new
+
+    def show_restart_bar(self, text):
+        """A small bar above the player with "Restart now" (zoom and a few settings apply after a restart)."""
+        if getattr(self, "restart_bar", None) is None:
+            self.restart_bar = QFrame()
+            self.restart_bar.setObjectName("restartBar")
+            self.restart_bar.setStyleSheet(f"#restartBar {{ background: {theme.ELEVATED}; border-radius: 8px; }}"
+                                           " QLabel { color: white; font-size: 13px; }")
+            h = QHBoxLayout(self.restart_bar)
+            h.setContentsMargins(14, 6, 8, 6)
+            self._restart_text = QLabel("")
+            h.addWidget(self._restart_text, 1)
+            go = QPushButton("Restart now")
+            go.setStyleSheet(GREEN_BUTTON)
+            go.setFixedHeight(30)
+            go.setCursor(Qt.CursorShape.PointingHandCursor)
+            go.clicked.connect(self.restart_app)
+            later = QPushButton("Later")
+            later.setStyleSheet(PILL_BUTTON)
+            later.setFixedHeight(30)
+            later.setCursor(Qt.CursorShape.PointingHandCursor)
+            later.clicked.connect(lambda: self.restart_bar.hide())
+            h.addWidget(later)
+            h.addWidget(go)
+            self.main_layout.insertWidget(self.main_layout.indexOf(self.player_bar), self.restart_bar)
+        same = getattr(self, "_zoom_at_start", 100) == self.user_data.zoom
+        self._restart_text.setText(f"{text}: restart Sevbify to see it." if not same else
+                                   f"{text}: that's the size Sevbify is showing now.")
+        self.restart_bar.show()
+
+    def open_mini_player(self):
+        """Spotify's Miniplayer: a small always-on-top window with the cover and controls."""
+        from .player_views import MiniPlayer
+        if self.mini_player is None:
+            self.mini_player = MiniPlayer(self)
+            geo = self.geometry()
+            self.mini_player.move(geo.right() - 360, geo.bottom() - 440)
+        self.mini_player.show()
+        self.mini_player.raise_()
+        self.showMinimized()
+
+    def open_full_screen(self):
+        """Spotify's Full screen view (Esc or the button in its corner to leave). Playback carries on."""
+        from .player_views import FullScreenView
+        if self.full_screen_view is None:
+            self.full_screen_view = FullScreenView(self)
+        self.full_screen_view.showFullScreen()
+        self.full_screen_view.raise_()
+        self.full_screen_view.activateWindow()
 
     def toggle_right_panel(self, name):
         showing = not self.right_panel.isHidden() and self.user_data.right_panel == name
@@ -3684,8 +3985,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.top_bar.set_downloads("")
         if self.open_playlist is not None:
             self._update_playlist_download_button()
-            self.pl_table.set_songs(self.open_playlist.songs)
-            self.pl_table.set_current(self.current_song)
+            self._show_playlist_songs()
         for table in (self.web_table, self.radio_table):
             if table.rowCount():
                 table.set_songs(table.songs_in_view())
@@ -3715,8 +4015,15 @@ class MainWindow(ShowsMixin, QMainWindow):
         pl = self.open_playlist
         waiting = [s for s in (pl.songs if pl else []) if getattr(s, "is_remote", False)
                    and self.downloads.state(s.track.key)[0] not in ("queued", "downloading")]
-        self.pl_download_btn.setText(f"Download {len(waiting)}" if len(waiting) > 1 else "Download")
-        self.pl_download_btn.setVisible(bool(waiting))
+        pl = self.open_playlist
+        all_here = bool(pl and pl.songs) and not waiting and not any(getattr(x, "is_remote", False) for x in pl.songs)
+        self.pl_download_btn.setIcon(icons.downloaded(theme.GREEN, 30) if all_here else icons.download(theme.SUBDUED, 30))
+        self.pl_download_btn.setToolTip(f"Download {len(waiting)} song{'s' if len(waiting) != 1 else ''}" if waiting
+                                        else ("Downloaded: every song is on your computer" if all_here else
+                                              "Downloading…" if pl and pl.songs else "Nothing to download"))
+        self.pl_download_btn.setEnabled(bool(waiting))
+        self.pl_download_btn.setVisible(bool(pl and pl.songs))
+        self.pl_download_btn.setProperty("waiting", len(waiting))
 
     def build_downloads_menu(self):
         """The download pill's menu: what's happening, Pause / Resume / Stop all, and each song with its own
@@ -4097,6 +4404,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])
+        for key in ("volume", "muted", "library_view", "library_sort", "library_collapsed", "right_panel"):
+            if key in values:
+                setattr(u, key, values[key])
+        if "shuffle" in values and bool(values["shuffle"]) != self.pq.shuffle:
+            self.toggle_shuffle()
+        if values.get("repeat") in ("off", "all", "one"):
+            while self.pq.repeat != values["repeat"]:
+                self.cycle_repeat()
+        if "volume" in values or "muted" in values:
+            self._apply_volume()
+            self._update_mute_icon()
         if "lastfm_api_key" in values and values["lastfm_api_key"] != u.lastfm_api_key:
             u.lastfm_api_key = values["lastfm_api_key"]
             self.online.set_lastfm_key(u.lastfm_api_key)

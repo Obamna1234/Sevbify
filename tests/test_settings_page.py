@@ -23,12 +23,12 @@ def test_settings_is_a_page_and_switches_save(open_window, audio_dir, data_dir):
     w.settings_page.controls["proxy_mode"].setCurrentText("HTTP proxy")
     assert w.user_data.fade_seconds == 5 and w.user_data.proxy_mode == "http"
     assert w.settings_page.restart_bar.isVisibleTo(w.settings_page)        # proxy needs a restart
-    w.settings_page.controls["zoom"].button(120).click()
-    assert w.user_data.zoom == 120
+    w.settings_page.controls["zoom"].button(125).click()
+    assert w.user_data.zoom == 125
     w.close()
     w2 = open_window(audio_folder=str(audio_dir), data_dir=str(data_dir))
     u = w2.user_data
-    assert (u.autoplay, u.explicit_ok, u.canvas_enabled, u.fade_seconds, u.zoom) == (False, False, False, 5, 120)
+    assert (u.autoplay, u.explicit_ok, u.canvas_enabled, u.fade_seconds, u.zoom) == (False, False, False, 5, 125)
 
 
 def test_equalizer_presets_and_sliders(window):
@@ -40,8 +40,8 @@ def test_equalizer_presets_and_sliders(window):
     assert window.user_data.eq_enabled and window.user_data.eq_preset == name
     assert window.user_data.eq_bands == [float(b) for b in page.eq_presets[name]]
     assert window._eq is not None
-    page.eq_sliders[0].setValue(55)
-    page._eq_slider_moved()
+    page.eq_curve.values[0] = 5.5
+    page._eq_curve_released(page.eq_curve.values)
     assert window.user_data.eq_preset == "Custom" and window.user_data.eq_bands[0] == 5.5
     page.controls["eq_enabled"].click()
     assert not window.user_data.eq_enabled and window._eq is None

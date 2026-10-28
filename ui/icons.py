@@ -354,3 +354,62 @@ def folder(color=GREY, size=24):
     p.drawPath(path)
     p.end()
     return QIcon(pm)
+
+
+def more(color=GREY, size=24):
+    """Three dots (•••): "More options"."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(color))
+    for x in (0.22, 0.5, 0.78):
+        p.drawEllipse(QPointF(s * x, s * 0.5), s * 0.075, s * 0.075)
+    p.end()
+    return QIcon(pm)
+
+
+def downloaded(color=GREEN, size=20):
+    """Filled green circle with a dark down arrow (everything is downloaded)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(color))
+    p.drawEllipse(QPointF(s * 0.5, s * 0.5), s * 0.42, s * 0.42)
+    p.setPen(_pen("#000000", s * 0.09))
+    p.drawLine(QPointF(s * 0.5, s * 0.28), QPointF(s * 0.5, s * 0.66))
+    p.drawLine(QPointF(s * 0.34, s * 0.52), QPointF(s * 0.5, s * 0.68))
+    p.drawLine(QPointF(s * 0.66, s * 0.52), QPointF(s * 0.5, s * 0.68))
+    p.end()
+    return QIcon(pm)
+
+
+def mini_player(color=GREY, size=18):
+    """A screen with a small window in its corner (Open Miniplayer)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawRoundedRect(QRectF(s * 0.1, s * 0.2, s * 0.8, s * 0.6), s * 0.06, s * 0.06)
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    p.drawRoundedRect(QRectF(s * 0.5, s * 0.48, s * 0.3, s * 0.22), s * 0.03, s * 0.03)
+    p.end()
+    return QIcon(pm)
+
+
+def fullscreen(color=GREY, size=18, exit_=False):
+    """Four corner brackets: pointing out (Full screen) or in (Exit full screen)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.09))
+    near, far = 0.14, 0.38
+    for cx, dx in ((near, 1), (1 - near, -1)):
+        for cy, dy in ((near, 1), (1 - near, -1)):
+            if exit_:          # the corner point sits inside, arms go outwards
+                corner = QPointF(s * (cx + dx * (far - near)), s * (cy + dy * (far - near)))
+                p.drawLine(corner, QPointF(corner.x() - dx * s * (far - near), corner.y()))
+                p.drawLine(corner, QPointF(corner.x(), corner.y() - dy * s * (far - near)))
+            else:
+                corner = QPointF(s * cx, s * cy)
+                p.drawLine(corner, QPointF(corner.x() + dx * s * (far - near), corner.y()))
+                p.drawLine(corner, QPointF(corner.x(), corner.y() + dy * s * (far - near)))
+    p.end()
+    return QIcon(pm)

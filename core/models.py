@@ -22,10 +22,11 @@ def sanitize_filename(name: str) -> str:
 
 
 def format_time(ms: int) -> str:
-    """Convert milliseconds to MM:SS format"""
+    """Milliseconds as Spotify shows them: 3:07, or 1:02:07 for an hour or more."""
     seconds = max(0, int(ms)) // 1000
-    mins, secs = seconds // 60, seconds % 60
-    return f"{mins:02d}:{secs:02d}"
+    hrs, rem = divmod(seconds, 3600)
+    mins, secs = divmod(rem, 60)
+    return f"{hrs}:{mins:02d}:{secs:02d}" if hrs else f"{mins}:{secs:02d}"
 
 
 def format_total(ms: int) -> str:

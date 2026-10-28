@@ -113,3 +113,33 @@ def test_change_and_reset_playlist_cover(window, tmp_path):
     stored = pl.custom_cover
     window.set_playlist_cover(pl, "")
     assert not pl.custom_cover and not os.path.exists(stored)            # our copy is tidied up
+
+
+def track_page(name, artists, tid, cover="https://i.scdn.co/image/t"):
+    data = {"props": {"pageProps": {"state": {"data": {"entity": {
+        "type": "track", "name": name, "uri": f"spotify:track:{tid}", "duration": 200000,
+        "artists": [{"name": a} for a in artists], "coverArt": {"sources": [{"url": cover + tid}]}}}}}}}
+    return ('<html><body><script id="__NEXT_DATA__" type="application/json">' + json.dumps(data)
+            + "</script></body></html>")
+
+
+def test_copied_spotify_song_links_import_every_song_in_order(window, qapp, tmp_path):
+    """Spotify only shares 100 songs per playlist link without a login; songs copied in the Spotify app
+    (Ctrl+A, Ctrl+C) come in complete, in order, with the playlist's name and cover from the link."""
+    from core import importers
+    from core.online.net import NetClient
+    from core.online.providers import OnlineMusic
+    ids = [f"{i:022d}" for i in range(130)]
+    pasted = "\n".join(f"https://open.spotify.com/track/{t}?si=abc" for t in ids)
+    assert importers.parse_track_links(pasted) == ids
+    routes = dict(ROUTES)
+    routes["open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M"] = embed_page(name="Big One")
+    for i, t in enumerate(ids):
+        routes[f"open.spotify.com/embed/track/{t}"] = track_page(f"Song {i}", ["Band", "Guest"], t)
+    window.net = NetClient(str(tmp_path / "c"), enabled=lambda: True, opener=FakeWeb(routes))
+    window.online = OnlineMusic(window.net)
+    window.import_from_link("https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M", pasted)
+    assert wait_until(qapp, lambda: any(p.name == "Big One" for p in window.playlists), 30)
+    pl = next(p for p in window.playlists if p.name == "Big One")
+    assert len(pl.songs) == 130 and pl.songs[0].title == "Song 0" and pl.songs[129].title == "Song 129"
+    assert pl.songs[5].artist == "Band, Guest" and pl.songs[5].track.cover_url.endswith(ids[5])

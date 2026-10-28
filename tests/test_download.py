@@ -296,13 +296,14 @@ def test_download_fills_the_playlist_slot(window, audio_dir, qapp):
     prepare(window, official_name)
     pl = window.create_playlist("Mix", [window.songs[0], remote("Night City", "Vogel"), window.songs[1]])
     window.show_playlist(pl)
-    assert not window.pl_download_btn.isHidden()
+    assert window.pl_download_btn.isEnabled()
     assert window.download_songs(pl.songs) == 1                 # local songs are ignored
     assert wait_until(qapp, lambda: not getattr(pl.songs[1], "is_remote", False), 15)
     assert pl.songs[1].file_path.endswith("Night City (Official Spelling).wav")
     assert os.path.dirname(pl.songs[1].file_path) == str(audio_dir / "Sevbify downloads" / "Vogel")   # artist folder
     assert len(pl.songs) == 3                                   # still in the same place
-    assert wait_until(qapp, lambda: window.pl_download_btn.isHidden())
+    assert wait_until(qapp, lambda: not window.pl_download_btn.isEnabled()
+                      and "every song" in window.pl_download_btn.toolTip())          # green: all downloaded
 
 
 def test_not_downloaded_rows_show_their_state(window, qapp):
@@ -311,7 +312,7 @@ def test_not_downloaded_rows_show_their_state(window, qapp):
     pl = window.create_playlist("Later", [remote("Fresh", "Someone"), remote("Other", "Someone")])
     window.show_playlist(pl)
     assert window.pl_table.item(0, 1).text().endswith("⬇")
-    assert window.pl_download_btn.text() == "Download 2"
+    assert window.pl_download_btn.toolTip() == "Download 2 songs"
     window.download_songs(pl.songs)
     assert started.wait(5)
     assert wait_until(qapp, lambda: window.pl_table.item(0, 1).text().endswith("Downloading…"))

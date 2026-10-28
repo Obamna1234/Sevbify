@@ -154,3 +154,72 @@ def test_shift_and_ctrl_click_select_like_spotify(window, qapp):
     first, third = pl.songs[0], pl.songs[2]
     window.remove_rows_from_playlist(pl, [0, 2])
     assert first not in pl.songs and third not in pl.songs and len(pl.songs) == len(window.songs) - 2
+
+
+def test_zoom_keys_and_reset_settings_keep_your_music(window, qapp):
+    window._auto_answer_dialogs = True
+    pl = window.create_playlist("Keep me", [window.songs[0]])
+    assert window.change_zoom(+1) == 110 and window.change_zoom(+1) == 125
+    assert window.user_data.zoom == 125 and not window.restart_bar.isHidden()
+    assert window.change_zoom(0) == 100
+    window.change_zoom(+1)
+    window.apply_settings({"fade_seconds": 7, "autoplay": False, "canvas_enabled": False})
+    window.library_panel.set_view_options(view="grid")
+    assert window.reset_settings("appearance")
+    u = window.user_data
+    assert u.zoom == 100 and u.library_view == "list" and u.canvas_enabled
+    assert u.fade_seconds == 7                       # appearance only
+    assert window.reset_settings("all")
+    assert u.fade_seconds == 0 and u.autoplay
+    assert pl in window.playlists and window.songs and u.music_folders   # music and playlists kept
+    window._auto_answer_dialogs = False
+    assert not window.reset_settings("all")          # Cancel changes nothing
+
+
+def test_delete_asks_with_spotify_card_and_never_touches_files(window, qapp):
+    pl = window.create_playlist("Bin me", [window.songs[0]])
+    path = window.songs[0].file_path
+    window._auto_answer_dialogs = False
+    window._confirm_delete_playlist(pl)
+    assert pl in window.playlists
+    window._auto_answer_dialogs = True
+    window._confirm_delete_playlist(pl)
+    assert pl not in window.playlists and os.path.exists(path)
+    window.create_folder("Box")
+    window._confirm_delete_folder("Box")
+    assert "Box" not in window.user_data.folders
+
+
+def test_playlist_menu_has_spotify_items_and_export_copy(window, qapp, tmp_path):
+    from core import playlist_files as pf
+    from core.online.models import OnlineTrack
+    from core.online.remote_song import RemoteSong
+    pl = window.create_playlist("Trip", list(window.songs) + [RemoteSong(OnlineTrack("Later", "Band"))])
+    texts = [a.text() for a in window.build_playlist_menu(pl).actions()]
+    for t in ("✎  Edit details", "⊖  Delete", "📁  Move to folder", "＋  Add to other playlist", "⇪  Share and export"):
+        assert t in texts
+    n, pending = pf.export_playlist(pl.songs, str(tmp_path / "trip.m3u8"))
+    assert (n, pending) == (len(window.songs), 1)
+    text = (tmp_path / "trip.m3u8").read_text(encoding="utf-8")
+    assert text.count("#EXTINF") == len(window.songs) and "# not downloaded yet: Band - Later" in text
+    res = pf.copy_playlist(pl.songs, str(tmp_path / "phone"), "Trip")
+    files = sorted(os.listdir(res["folder"]))
+    assert res["copied"] == len(window.songs) and res["pending"] == 1 and files[0].startswith("1 - ") is False
+    assert files[0].startswith("01 - ") and "Trip.m3u8" in files
+    again = pf.copy_playlist(pl.songs, str(tmp_path / "phone"), "Trip")
+    assert again["copied"] == 0 and again["skipped"] == len(window.songs)   # nothing copied twice
+
+
+def test_miniplayer_and_full_screen_keep_playing(window, qapp):
+    window.play_song(window.songs[0], queue=window.songs)
+    wait_until(qapp, lambda: window.is_playing, 3)
+    window.open_mini_player()
+    assert window.mini_player is not None and window.mini_player.isVisible()
+    window.mini_player.controls.next.click()
+    assert window.current_song is window.songs[1]
+    window.mini_player.close()
+    window.showNormal()
+    window.open_full_screen()
+    assert window.full_screen_view.isVisible()
+    window.full_screen_view.close()
+    assert window.full_screen_view is None and window.current_song is window.songs[1]

@@ -117,6 +117,27 @@ class UserData:
     load_warning: str = ""     # message for the user if the file had to be reset
 
 
+# Settings → Reset: which values go back to how Sevbify starts. Never your playlists, folders, downloads,
+# podcasts or keys you typed in.
+APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapsed", "right_panel", "np_on_play",
+                       "canvas_enabled")
+ALL_SETTINGS = APPEARANCE_SETTINGS + (
+    "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
+    "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
+    "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
+    "disabled_folders")
+
+
+def default_settings(which="all"):
+    """{name: default value} for Settings → Reset ("appearance" or "all")."""
+    fresh = UserData()
+    names = APPEARANCE_SETTINGS if which == "appearance" else ALL_SETTINGS
+    return {n: getattr(fresh, n) for n in names}
+
+
+ZOOM_LEVELS = (50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200)   # like Spotify's (Ctrl + / Ctrl -)
+
+
 def _bands(value):
     """Ten equaliser values in dB, clamped to VLC's range."""
     out = [0.0] * 10
@@ -311,7 +332,7 @@ class Storage:
         except (TypeError, ValueError):
             pass
         try:
-            data.zoom = int(settings.get('zoom', 100)) if int(settings.get('zoom', 100) or 100) in (70, 80, 90, 100, 110, 120, 130) else 100
+            data.zoom = int(settings.get('zoom', 100)) if int(settings.get('zoom', 100) or 100) in ZOOM_LEVELS else 100
         except (TypeError, ValueError):
             pass
         try:
