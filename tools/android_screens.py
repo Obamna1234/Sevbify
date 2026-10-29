@@ -36,6 +36,7 @@ n = [0]
 
 def shot(name, wait=2.5):
     time.sleep(wait)
+    clear_anr()
     n[0] += 1
     path = os.path.join(OUT, f"{n[0]:02d}_{name}.png")
     with open(path, "wb") as f:
@@ -56,9 +57,25 @@ def nodes():
     return out
 
 
+def clear_anr(found=None):
+    """The emulator is slow on GitHub's machines; Android may show "System UI isn't responding". Wait it out."""
+    found = found if found is not None else nodes()
+    if any("isn't responding" in nd[0] for nd in found):
+        for nd in found:
+            if nd[0] == "Wait":
+                sh(f"input tap {nd[2]} {nd[3]}")
+                note("dismissed an 'isn't responding' box")
+                time.sleep(2)
+                return True
+    return False
+
+
 def tap(label, exact=True, index=0, below=0, tries=4):
     for _ in range(tries):
-        hits = [nd for nd in nodes()
+        found = nodes()
+        if clear_anr(found):
+            found = nodes()
+        hits = [nd for nd in found
                 if (nd[0] == label or nd[1] == label if exact else label.lower() in (nd[0] + " " + nd[1]).lower())
                 and nd[4] >= below]
         if len(hits) > index:
@@ -94,8 +111,10 @@ def step(name, fn):
 
 
 def main():
+    clear_anr()
     sh(f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
-    time.sleep(12)                    # first start unpacks Python
+    time.sleep(15)                    # first start unpacks Python
+    clear_anr()
     shot("home", 4)
 
     def home_more():

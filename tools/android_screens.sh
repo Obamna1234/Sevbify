@@ -15,6 +15,13 @@ adb shell mkdir -p "/sdcard/Music/Test"
 adb push music/. /sdcard/Music/Test/
 adb shell content call --uri content://media/ --method scan_volume --arg external_primary || true
 for f in 1 2 3 4; do adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test/$f.mp3 >/dev/null || true; done
+# Wait until Android's music index has the test songs (the app reads songs from that index).
+for k in $(seq 1 20); do
+  N=$(adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music 2>/dev/null | grep -c "Music/Test")
+  echo "indexed test songs: $N"; [ "$N" -ge 4 ] && break; sleep 3
+done
+adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music:title > $OUT/media_index.txt 2>&1
+sleep 20   # let the freshly booted emulator settle (avoids "System UI isn't responding")
 adb install -r -g $APK
 adb shell pm grant $PKG android.permission.READ_MEDIA_AUDIO || true
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS || true
