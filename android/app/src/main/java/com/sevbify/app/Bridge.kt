@@ -27,9 +27,13 @@ object Bridge {
         withContext(Dispatchers.IO) {
             val data = context.filesDir.resolve("core").absolutePath
             val cache = context.cacheDir.resolve("online").absolutePath
-            val res = JSONObject(module.callAttr("setup", data, cache, Library.settings.online, "").toString())
+            // The app's version (from the same VERSION file as Windows, set at build time).
+            val version = try {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
+            } catch (e: Exception) { "" }
+            val res = JSONObject(module.callAttr("setup", data, cache, Library.settings.online, "", version).toString())
             if (!res.optBoolean("ok")) throw CoreError(res.optString("error"))
-            Library.coreVersion = res.getJSONObject("value").optString("version")
+            Library.coreVersion = res.getJSONObject("value").optString("version").ifEmpty { version }
         }
         setUp = true
     }

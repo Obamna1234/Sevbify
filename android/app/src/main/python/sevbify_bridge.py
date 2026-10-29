@@ -61,8 +61,10 @@ def _net():
 
 # --- start-up and settings ----------------------------------------------------------------------------------
 @_call
-def setup(data_dir, cache_dir, online=True, lastfm_key=""):
+def setup(data_dir, cache_dir, online=True, lastfm_key="", version=""):
     os.environ["SEVBIFY_DATA_DIR"] = data_dir
+    if version:
+        os.environ["SEVBIFY_VERSION"] = version
     os.makedirs(data_dir, exist_ok=True)
     from core.online.net import NetClient
     from core.online.providers import OnlineMusic

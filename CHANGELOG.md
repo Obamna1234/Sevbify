@@ -2,6 +2,15 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Android app (v5.0.0-beta.8, first test version):**
+- New Sevbify-Android.apk next to the Windows zip in every release (Android 13+). It lives in the same
+  repository (`android/`) and runs the same `core/` code as Windows, so fixes to searching, matching,
+  downloading, importing, podcasts and audiobooks reach both apps.
+- Spotify-phone-style screens: Home, Search with Browse all, Your Library (filters, sort, list/grid), Create
+  (playlist / folder), playlist and album pages, artist pages, the now-playing screen with queue, mini player,
+  lock-screen and notification controls, podcasts and audiobooks, Settings and Import.
+- Downloads keep the original audio (no conversion needed) and go to Music/Sevbify on the phone.
+
 **Fixes from the beta.6 test, and more of Spotify (v5.0.0-beta.7):**
 - Fixed the small "Sevbify" window that flashed up and took over the mouse, mostly while downloading: Home
   cards were shown before being put in the window (30+ flashes during a download run). Pages now never

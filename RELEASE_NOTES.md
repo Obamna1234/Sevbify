@@ -11,6 +11,21 @@ Everything is included (player engine, downloader, ffmpeg); nothing else to inst
 Your playlists and settings are kept between versions (`%APPDATA%\Sevbify`). To update, download the new zip,
 extract it, and use the new `Sevbify.exe`; you can delete the old folder.
 
+## Install (Android, new and experimental) — Android 13 or newer
+
+1. On your phone, sign in to GitHub in the browser (the project is private, so downloads need you signed in).
+2. Open this release and, under **Assets**, tap **Sevbify-Android.apk**.
+3. Open the downloaded file. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
+   Play Protect may warn that the app is unknown — tap **Install anyway** (it's your own app, not from the Play Store).
+4. Open Sevbify, allow **Music and audio** (so it can see your songs) and **Notifications** (for the player
+   and download progress).
+
+Updating: install the new APK over the old one; your playlists stay. The Android app uses the same core as
+the Windows app (search, radio, full-song finding, downloads, importing, podcasts, audiobooks), with a layout
+based on Spotify's phone app: Home, Search, Your Library and Create along the bottom, a mini player above them,
+and the full now-playing screen. It only reads music from the folders you choose in Settings.
+Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
+
 ## What's in this version
 
 See `CHANGELOG.md` inside the zip for the full list. Highlights:

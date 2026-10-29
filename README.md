@@ -226,6 +226,15 @@ is contacted at all.
 - Podcasts: Apple's public podcast directory and each show's own RSS feed. Audiobooks: LibriVox recordings (public
   domain) hosted by the Internet Archive.
 
+## Android app
+
+`android/` holds the Android app (Kotlin + Jetpack Compose, Android 13 or newer). It runs this repository's
+`core/` Python code through Chaquopy, so the Windows app and the phone app share search, matching, downloads,
+importing, podcasts and audiobooks; only the screens differ (modelled on Spotify's phone app). GitHub builds
+it on every push (`gradle -p android assembleRelease`) and each release carries `Sevbify-Android.apk`.
+Install steps are in the release notes. The signing key (`android/app/sevbify-release.jks`) must move to a
+GitHub secret before this repository is ever made public.
+
 ## Known limitations
 
 - The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).
