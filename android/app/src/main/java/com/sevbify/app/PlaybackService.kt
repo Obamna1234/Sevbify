@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Sevbify's (see Player): songs you don't have are looked up just before they play, so the session only
  * ever holds the current song; Next / Previous on the lock screen go back to Sevbify's queue.
  */
-@UnstableApi
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
 

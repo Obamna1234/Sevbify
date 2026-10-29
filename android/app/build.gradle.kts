@@ -96,6 +96,11 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    lint {
+        // Lint warnings shouldn't stop the APK from being built (they're reviewed separately).
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 

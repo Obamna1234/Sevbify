@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.ArrowCircleDown
 import androidx.compose.material3.Icon
@@ -139,7 +140,7 @@ fun TrackRow(t: Track, onClick: () -> Unit, onMore: () -> Unit, number: Int? = n
 fun GreenPlay(onClick: () -> Unit, size: Dp = 52.dp, playing: Boolean = false) {
     Surface(onClick = onClick, shape = CircleShape, color = C.Green, modifier = Modifier.size(size)) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(if (playing) androidx.compose.material.icons.Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                  if (playing) "Pause" else "Play", tint = C.Black, modifier = Modifier.size(size * 0.55f))
         }
     }

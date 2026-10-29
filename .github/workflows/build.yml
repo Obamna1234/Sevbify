@@ -184,9 +184,10 @@ jobs:
           code=$?
           tail -n 120 gradle.log
           if [ $code -ne 0 ]; then
-            grep -E "^e: |error:|What went wrong|FAILURE|Could not|> " gradle.log | head -40 | while IFS= read -r line; do
-              echo "::error title=Android build::${line:0:900}"
-            done
+            # The errors as a few annotations (readable from the GitHub API): Kotlin errors first, then Gradle's
+            # "What went wrong" block.
+            { grep -E "^e: " gradle.log; grep -A12 "What went wrong" gradle.log; } | sed 's/%/%25/g' \
+              | python3 -c "import sys; t=sys.stdin.read().splitlines(); chunks=['%0A'.join(t[i:i+6]) for i in range(0,len(t),6)][:9]; [print('::error title=Android build::'+c[:3500]) for c in chunks]"
           fi
           exit $code
       - name: Name the APK
