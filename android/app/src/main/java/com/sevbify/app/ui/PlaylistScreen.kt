@@ -1,0 +1,311 @@
+package com.sevbify.app.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowCircleDown
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.outlined.ArrowCircleDown
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sevbify.app.Bridge
+import com.sevbify.app.Downloads
+import com.sevbify.app.Library
+import com.sevbify.app.Player
+import com.sevbify.app.Track
+import com.sevbify.app.toJsonArray
+import org.json.JSONObject
+import kotlinx.coroutines.launch
+
+fun totalTime(tracks: List<Track>): String {
+    val s = tracks.sumOf { it.durationMs } / 1000
+    val h = s / 3600; val m = (s % 3600) / 60
+    return if (h > 0) "$h hr $m min" else "$m min ${s % 60} sec"
+}
+
+/** The page shared by playlists, albums, artist songs, genre playlists...: Spotify's Android layout. */
+@Composable
+fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, source: String,
+              onMore: (() -> Unit)? = null, onSave: (() -> Unit)? = null, playlist: com.sevbify.app.Playlist? = null,
+              extraTop: @Composable () -> Unit = {}) {
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes + Downloads.doneCount
+    val colour = rememberCoverColour(cover, Color(0xFF404040))
+    val pending = tracks.filter { !it.isItem && !it.isLocal && Library.localFor(it) == null }
+    val playingHere = Player.sourceName == source && Player.current != null
+    LazyColumn {
+        item {
+            Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colour, C.Bg)))
+                       .statusBarsPadding().padding(bottom = 8.dp)) {
+                IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Cover(cover, 230.dp) }
+                Gap(16.dp)
+                Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 16.dp))
+                Gap(6.dp)
+                Text(listOf(kind, "${tracks.size} songs", totalTime(tracks)).filter { it.isNotEmpty() }.joinToString(" • "),
+                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp))
+                extraTop()
+                Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (pending.isEmpty() && tracks.isNotEmpty()) {
+                        IconButton(onClick = { Nav.say("Every song is downloaded") }) {
+                            Icon(Icons.Filled.ArrowCircleDown, "Downloaded", tint = C.Green, modifier = Modifier.size(30.dp))
+                        }
+                    } else {
+                        IconButton(onClick = { val n = Downloads.request(pending); Nav.say(if (n > 0) "Downloading $n songs" else "Already downloading") }) {
+                            Icon(Icons.Outlined.ArrowCircleDown, "Download", tint = C.Sub, modifier = Modifier.size(30.dp))
+                        }
+                    }
+                    if (onSave != null) {
+                        IconButton(onClick = onSave) { Icon(Icons.Filled.Add, "Save to Your Library", tint = C.Sub, modifier = Modifier.size(28.dp)) }
+                    }
+                    if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Filled.MoreVert, "More", tint = C.Sub) }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = { Player.toggleShuffle() }) {
+                        Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    GreenPlay(onClick = {
+                        if (playingHere) Player.playPause() else Player.playAll(tracks, source, shuffled = Player.shuffle)
+                    }, playing = playingHere && Player.isPlaying)
+                }
+            }
+        }
+        if (playlist != null) {
+            item {
+                Row(Modifier.fillMaxWidth().clickable { Nav.switch(Tab.SEARCH) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)).background(C.Card), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Add, null, tint = C.Sub)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("Add to this playlist", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        if (tracks.isEmpty()) item { Muted("No songs here yet. Search for songs and use ••• → Add to playlist.") }
+        itemsIndexed(tracks) { i, t ->
+            TrackRow(t, onClick = { Player.play(t, tracks, source) },
+                     onMore = { Nav.songMenu = SongMenu(t, playlist, if (playlist != null) i else -1, tracks, source) })
+        }
+        item { Gap(24.dp) }
+    }
+}
+
+@Composable
+fun PlaylistScreen(id: String) {
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes
+    val pl = Library.playlists.firstOrNull { it.id == id }
+    if (pl == null) { Muted("This playlist was deleted."); return }
+    LaunchedEffect(pl.id) {
+        pl.lastPlayed = System.currentTimeMillis()
+        // Imported songs often have no cover yet: look them up (a few at a time, like Windows).
+        val bare = pl.tracks.withIndex().filter { !it.value.isLocal && it.value.coverUrl.isEmpty() }
+        for (chunk in bare.chunked(8)) {
+            try {
+                val fixed = Bridge.arr("enrich", chunk.map { it.value }.toJsonArray().toString())
+                chunk.forEachIndexed { j, iv ->
+                    if (iv.index < pl.tracks.size && pl.tracks[iv.index].matchKey == iv.value.matchKey) {
+                        val f = Track.fromJson(fixed.getJSONObject(j))
+                        pl.tracks[iv.index] = iv.value.copy(coverUrl = f.coverUrl, album = iv.value.album.ifEmpty { f.album },
+                                                            previewUrl = iv.value.previewUrl.ifEmpty { f.previewUrl },
+                                                            durationMs = if (iv.value.durationMs > 0) iv.value.durationMs else f.durationMs)
+                    }
+                }
+                Library.changed()
+            } catch (_: Exception) { break }
+        }
+    }
+    SongsPage(pl.name, "Playlist", playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl)
+}
+
+@Composable
+fun CollectionScreen(s: Screen.Collection) {
+    SongsPage(s.title, s.kind, s.cover, s.tracks, s.title,
+              onSave = if (s.saveable) ({
+                  val pl = Library.newPlaylist(s.title, s.tracks)
+                  if (s.cover.isNotEmpty()) { pl.coverUrl = s.cover; Library.changed() }
+                  Nav.say("Saved “${pl.name}” to Your Library")
+              }) else null)
+}
+
+@Composable
+fun YourSongsScreen() {
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes
+    SongsPage("Your Songs", "On your phone", "", Library.localSongs, "Your Songs") {
+        if (Library.localSongs.isEmpty()) {
+            Muted("No songs found. Sevbify reads the Music folder (and the folders you add in Settings) once you allow " +
+                  "access to music. Downloads land in Music/Sevbify.")
+        }
+    }
+}
+
+@Composable
+fun ToDownloadScreen() {
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes + Downloads.doneCount
+    SongsPage("To download", "Not downloaded yet", "", Library.toDownload(), "To download") {
+        Muted("Every song in your playlists that isn't on the phone yet. When one arrives it fills its place in every playlist.")
+    }
+}
+
+@Composable
+fun DownloadsScreen() {
+    val items = Downloads.states.toList()
+    LazyColumn(Modifier.statusBarsPadding()) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                Text("Downloads", style = MaterialTheme.typography.headlineMedium)
+            }
+        }
+        item {
+            Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (Downloads.paused) Chip("Resume", false) { Downloads.resume() } else Chip("Pause", false) { Downloads.pause() }
+                Chip("Stop all", false) { Downloads.stopAll() }
+                if (Downloads.states.values.any { it == Downloads.State.STOPPED }) Chip("Resume stopped", false) { Downloads.resume() }
+            }
+        }
+        if (items.isEmpty()) item { Muted("Nothing is downloading.") }
+        items(items) { (key, state) ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(key.substringAfter('|').ifEmpty { key }, style = MaterialTheme.typography.bodyLarge)
+                    Text(state.name.lowercase().replaceFirstChar { it.uppercase() } +
+                             (Downloads.notes[key]?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodySmall)
+                }
+                if (state == Downloads.State.FAILED || state == Downloads.State.STOPPED) Chip("Try again", false) { Downloads.retry(key) }
+                Spacer(Modifier.width(8.dp))
+                Chip("Cancel", false) { Downloads.cancel(key) }
+            }
+        }
+    }
+}
+
+@Composable
+fun ArtistScreen(name: String) {
+    var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
+    var picture by remember { mutableStateOf("") }
+    var about by remember { mutableStateOf("") }
+    val mine = Library.localSongs.filter { it.artist.equals(name, true) || it.artist.startsWith("$name ", true) }
+    LaunchedEffect(name) {
+        if (!Library.settings.online) return@LaunchedEffect
+        try {
+            val o = Bridge.obj("artist_top", name, 10)
+            o.optJSONObject("artist")?.let { picture = it.optString("picture_xl") }
+            val a = o.optJSONArray("tracks")
+            if (a != null) tracks = (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) }
+            about = Bridge.obj("artist_card", name).optString("summary")
+        } catch (_: Exception) {}
+    }
+    SongsPage(name, "Artist", picture, mine + tracks.filter { t -> mine.none { it.matchKey == t.matchKey } }, "$name") {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("Artist radio", false) { (mine + tracks).firstOrNull()?.let { Player.startRadio(it) } }
+        }
+        if (about.isNotEmpty()) Text(about, style = MaterialTheme.typography.bodySmall, maxLines = 4,
+                                     modifier = Modifier.padding(horizontal = 16.dp))
+    }
+}
+
+/** A Browse genre: Spotify's coloured page, from Deezer's daily charts for that genre (shared core). */
+@Composable
+fun GenreScreen(g: Screen.Genre) {
+    var data by remember { mutableStateOf<JSONObject?>(null) }
+    var error by remember { mutableStateOf("") }
+    LaunchedEffect(g.id) {
+        try { data = Bridge.obj("genre_overview", g.id) } catch (e: Exception) { error = e.message ?: "" }
+    }
+    LazyColumn {
+        item {
+            Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(g.colour), C.Bg))).statusBarsPadding()) {
+                Column {
+                    IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    Text(g.name, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold, fontFamily = Figtree, color = C.Text,
+                         modifier = Modifier.padding(start = 16.dp, top = 40.dp, bottom = 16.dp))
+                }
+            }
+        }
+        val d = data
+        if (d == null) { item { Muted(if (error.isNotEmpty()) "Couldn't load ${g.name}: $error" else "Loading…") }; return@LazyColumn }
+        val songs = d.optJSONArray("tracks")?.let { a -> (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) } } ?: emptyList()
+        if (songs.isNotEmpty()) {
+            item { SectionTitle("Popular songs") }
+            items(songs.take(10)) { t ->
+                TrackRow(t, onClick = { Player.play(t, songs, "${g.name}: popular songs") },
+                         onMore = { Nav.songMenu = SongMenu(t, queue = songs, source = g.name) })
+            }
+        }
+        fun shelf(title: String, key: String, image: (JSONObject) -> String, sub: (JSONObject) -> String,
+                  open: (JSONObject) -> Unit, round: Boolean = false) {
+            val arr = d.optJSONArray(key) ?: return
+            if (arr.length() == 0) return
+            val list = (0 until arr.length()).map { arr.getJSONObject(it) }
+            item { SectionTitle(title) }
+            item {
+                LazyRow(Modifier.padding(start = 16.dp)) {
+                    items(list) { o -> ShelfCard(o.optString("title", o.optString("name")), sub(o), image(o), round) { open(o) } }
+                }
+            }
+        }
+        shelf("${g.name} playlists", "playlists", { it.optString("picture_xl") }, { "${it.optInt("nb_tracks")} songs" }, { p -> openWebPlaylist(p) })
+        shelf("New releases", "releases", { it.optString("cover_xl") }, { it.optJSONObject("artist")?.optString("name") ?: "" }, { a -> openWebAlbum(a) })
+        shelf("Popular albums", "albums", { it.optString("cover_xl") }, { it.optJSONObject("artist")?.optString("name") ?: "" }, { a -> openWebAlbum(a) })
+        shelf("Popular artists", "artists", { it.optString("picture_xl") }, { "Artist" }, { a -> Nav.go(Screen.Artist(a.optString("name"))) }, round = true)
+        item { Muted("Popular right now, from Deezer's charts for this genre (they change every day).") }
+        item { Gap(24.dp) }
+    }
+}
+
+fun openWebPlaylist(p: JSONObject) {
+    com.sevbify.app.SevbifyApp.instance.scope.launchSafely {
+        val t = Bridge.tracks("playlist_tracks", p.optLong("id"))
+        Nav.go(Screen.Collection("Playlist", p.optString("title"), t, p.optString("picture_xl")))
+    }
+}
+
+fun openWebAlbum(a: JSONObject) {
+    com.sevbify.app.SevbifyApp.instance.scope.launchSafely {
+        val t = Bridge.tracks("album_tracks", a.toString())
+        Nav.go(Screen.Collection("Album", a.optString("title"), t, a.optString("cover_xl")))
+    }
+}
+
+fun kotlinx.coroutines.CoroutineScope.launchSafely(block: suspend () -> Unit) {
+    launch {
+        try { block() } catch (e: Exception) { Nav.say("⚠ ${e.message}") }
+    }
+}

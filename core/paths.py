@@ -20,8 +20,14 @@ else:
     RESOURCE_ROOT = PROJECT_ROOT
 
 
+# The Android app (and tests) can point Sevbify's data somewhere else with SEVBIFY_DATA_DIR.
+DATA_DIR_OVERRIDE = os.environ.get("SEVBIFY_DATA_DIR", "")
+
+
 def _user_data_dir() -> Path:
     # Same location as core.storage.default_data_dir() (kept here to avoid an import cycle).
+    if DATA_DIR_OVERRIDE:
+        return Path(DATA_DIR_OVERRIDE)
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
     elif sys.platform == "darwin":
@@ -42,7 +48,7 @@ AUDIO_FOLDER = str(_local_audio if _local_audio.is_dir() else Path.home() / "Mus
 
 # Generated artwork cache. The packaged app may live in a read-only folder
 # (e.g. Program Files), so it keeps its cache in the user's app-data folder.
-ALBUM_CACHE = str(_user_data_dir() / "album_covers" if FROZEN else PROJECT_ROOT / "album_covers")
+ALBUM_CACHE = str(_user_data_dir() / "album_covers" if (FROZEN or DATA_DIR_OVERRIDE) else PROJECT_ROOT / "album_covers")
 
 os.makedirs(ALBUM_CACHE, exist_ok=True)
 

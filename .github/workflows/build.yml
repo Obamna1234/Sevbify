@@ -160,8 +160,66 @@ jobs:
             Sevbify-*.tar.gz
           retention-days: 30
 
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # Chaquopy runs pip with the same Python version the app uses (3.12) to bundle yt-dlp etc.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Build the APK (shares the repository's core/ with Windows)
+        run: |
+          set +e
+          gradle -p android assembleRelease --stacktrace --no-daemon > gradle.log 2>&1
+          code=$?
+          tail -n 120 gradle.log
+          if [ $code -ne 0 ]; then
+            grep -E "^e: |error:|What went wrong|FAILURE|Could not|> " gradle.log | head -40 | while IFS= read -r line; do
+              echo "::error title=Android build::${line:0:900}"
+            done
+          fi
+          exit $code
+      - name: Name the APK
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk Sevbify-Android.apk
+          ls -la Sevbify-Android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sevbify-Android
+          path: Sevbify-Android.apk
+          retention-days: 30
+
+  release:
+    name: Release
+    needs: [build, android]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is this a new version to release?
+        id: version
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then echo "release=true" >> "$GITHUB_OUTPUT";
+          else echo "release=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/download-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
+        with:
+          path: artifacts
+          merge-multiple: true
       - name: Publish release (new VERSION or a pushed tag)
-        if: matrix.name == 'Windows' && (startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true')
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
@@ -171,5 +229,6 @@ jobs:
           # Versions with a dash (5.0.0-beta.1) are test versions: marked "Pre-release".
           prerelease: ${{ contains(steps.version.outputs.version, '-') || contains(github.ref_name, '-') }}
           files: |
-            Sevbify-*.zip
-            Sevbify-*.tar.gz
+            artifacts/Sevbify-*.zip
+            artifacts/Sevbify-*.tar.gz
+            artifacts/Sevbify-*.apk

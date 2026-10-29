@@ -19,3 +19,9 @@ audio/
 build/
 dist/
 *.spec
+
+# Android build output
+.gradle/
+android/app/build/
+android/build/
+android/local.properties

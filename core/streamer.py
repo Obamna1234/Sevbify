@@ -94,3 +94,39 @@ def find_full_song(artist, title, duration_ms=0, source=downloader.SOURCE_BOTH, 
 def clear_cache():
     with _lock:
         _cache.clear()
+
+
+def download_original_audio(page, out_without_ext, progress=None):
+    """Save a Bandcamp / YouTube page's audio as it comes (m4a, webm/opus or mp3), with no conversion, so it
+    works where there's no ffmpeg (the Android app). Returns the saved file's path."""
+    import os
+    e = downloader.engine()
+    if e.yt_dlp is None:
+        raise NoFullSong("yt-dlp is not installed")
+    hooks = []
+    if progress is not None:
+        def hook(d):
+            if d.get("status") == "downloading" and d.get("total_bytes"):
+                progress(d.get("downloaded_bytes", 0) / max(1, d["total_bytes"]))
+        hooks.append(hook)
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
+            # m4a first: every phone plays it and it carries cover art; then whatever audio there is
+            "format": "bestaudio[ext=m4a]/bestaudio[acodec=mp3]/bestaudio/best", "socket_timeout": 20,
+            "outtmpl": out_without_ext + ".%(ext)s", "progress_hooks": hooks, "postprocessors": []}
+    with e.yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(page, download=True)
+    path = (info or {}).get("requested_downloads", [{}])[0].get("filepath") or ""
+    if not path:
+        folder = os.path.dirname(out_without_ext) or "."
+        base = os.path.basename(out_without_ext)
+        found = [f for f in os.listdir(folder) if f.startswith(base + ".") and not f.endswith(".part")]
+        path = os.path.join(folder, found[0]) if found else ""
+    if not path or not os.path.exists(path):
+        raise NoFullSong("the download didn't produce a file")
+    return path
+
+
+def download_full_song(artist, title, duration_ms, out_without_ext, source=downloader.SOURCE_BOTH, progress=None):
+    """Find the full song (same matching as streaming) and save its original audio. Returns (path, source)."""
+    found = find_full_song(artist, title, duration_ms, source)
+    return download_original_audio(found["page"], out_without_ext, progress), found["source"]

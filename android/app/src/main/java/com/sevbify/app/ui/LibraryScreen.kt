@@ -1,0 +1,202 @@
+package com.sevbify.app.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowCircleDown
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.sevbify.app.Library
+import com.sevbify.app.Playlist
+
+/** Your Library like Spotify's on Android: chips, Recents sort, Your Songs, To download, folders, playlists, shows. */
+@Composable
+fun LibraryScreen() {
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes
+    var chip by rememberSaveable { mutableStateOf("") }
+    var filter by rememberSaveable { mutableStateOf<String?>(null) }
+    var open by remember { mutableStateOf(setOf<String>()) }
+    var createOpen by remember { mutableStateOf(false) }
+    val sort = Library.settings.librarySort
+    val q = filter?.trim()?.lowercase() ?: ""
+
+    fun sorted(list: List<Playlist>) = when (sort) {
+        "alpha" -> list.sortedBy { it.name.lowercase() }
+        "added" -> list.sortedByDescending { it.created }
+        else -> list.sortedByDescending { maxOf(it.lastPlayed, it.created) }
+    }.sortedByDescending { it.pinned }
+
+    LazyColumn {
+        item {
+            Row(Modifier.statusBarsPadding().padding(start = 16.dp, end = 4.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(32.dp).clip(CircleShape).background(C.Green).clickable { Nav.go(Screen.Settings) },
+                    contentAlignment = Alignment.Center) { Text("S", color = C.Black, fontWeight = FontWeight.ExtraBold) }
+                Spacer(Modifier.width(12.dp))
+                Text("Your Library", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                IconButton(onClick = { filter = if (filter == null) "" else null }) { Icon(Icons.Filled.Search, "Search Your Library") }
+                IconButton(onClick = { createOpen = true }) { Icon(Icons.Filled.Add, "Create") }
+            }
+        }
+        if (filter != null) {
+            item {
+                OutlinedTextField(filter ?: "", { filter = it }, singleLine = true, placeholder = { Text("Search in Your Library") },
+                                  modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+            }
+        }
+        item {
+            LazyRow(Modifier.padding(vertical = 10.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (chip.isNotEmpty()) item {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(C.Card).clickable { chip = "" },
+                        contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, "Show everything", Modifier.size(18.dp)) }
+                }
+                items(listOf("playlists" to "Playlists", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks",
+                             "downloaded" to "Downloaded").filter { chip.isEmpty() || chip == it.first }) { (k, l) ->
+                    Chip(l, chip == k) { chip = if (chip == k) "" else k }
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().clickable {
+                    Library.settings.librarySort = when (sort) { "recents" -> "added"; "added" -> "alpha"; else -> "recents" }
+                    Library.changed()
+                }.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.AutoMirrored.Filled.Sort, null, tint = C.Text, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(when (sort) { "alpha" -> "Alphabetical"; "added" -> "Recently added"; else -> "Recents" },
+                     style = MaterialTheme.typography.labelLarge)
+            }
+        }
+        if ((chip == "" || chip == "playlists" || chip == "downloaded") && (q.isEmpty() || "your songs".contains(q))) {
+            item {
+                LibRow("Your Songs", "Songs on your phone • ${Library.localSongs.size}", null,
+                       Brush.linearGradient(listOf(Color(0xFF450AF5), Color(0xFFC4EFD9))), "♥") { Nav.go(Screen.YourSongs) }
+            }
+        }
+        if ((chip == "") && (q.isEmpty() || "to download".contains(q))) {
+            val n = Library.toDownload().size
+            item {
+                LibRow("To download", "Not downloaded yet • $n songs", null,
+                       Brush.linearGradient(listOf(Color(0xFF1ED760), Color(0xFF0E7A36))), "⬇") { Nav.go(Screen.ToDownload) }
+            }
+        }
+        if (chip == "" || chip == "playlists" || chip == "downloaded") {
+            val all = Library.playlists.filter { q.isEmpty() || q in it.name.lowercase() }
+                .filter { chip != "downloaded" || (it.tracks.isNotEmpty() && it.tracks.all { t -> Library.localFor(t) != null }) }
+            val inFolders = if (q.isEmpty() && chip != "downloaded") Library.folders.toList() else emptyList()
+            for (f in inFolders) {
+                val kids = sorted(all.filter { it.folder == f })
+                item {
+                    Row(Modifier.fillMaxWidth().clickable { open = if (f in open) open - f else open + f }
+                            .padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(64.dp).clip(RoundedCornerShape(4.dp)).background(C.Card), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Folder, null, tint = C.Sub, modifier = Modifier.size(30.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(f, style = MaterialTheme.typography.bodyLarge)
+                            Text("${kids.size} playlists", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Icon(if (f in open) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight, null, tint = C.Sub)
+                    }
+                }
+                if (f in open) items(kids, key = { "f" + it.id }) { pl -> PlaylistRow(pl, indent = true) }
+            }
+            val loose = sorted(all.filter { inFolders.isEmpty() || it.folder.isEmpty() || it.folder !in inFolders })
+            items(loose, key = { it.id }) { pl -> PlaylistRow(pl) }
+        }
+        if (chip == "" || chip == "podcasts" || chip == "audiobooks") {
+            val shows = Library.shows.filter { (chip == "" || (chip == "audiobooks") == it.isBook) && (q.isEmpty() || q in it.title.lowercase()) }
+            items(shows, key = { "s" + it.key }) { s ->
+                LibRow(s.title, (if (s.isBook) "Audiobook" else "Podcast") + " • ${s.author}", s.image) { Nav.go(Screen.ShowPage(s)) }
+            }
+        }
+        item { Gap(24.dp) }
+    }
+    if (createOpen) CreateSheet { createOpen = false }
+}
+
+@Composable
+private fun PlaylistRow(pl: Playlist, indent: Boolean = false) {
+    val playing = com.sevbify.app.Player.current != null && com.sevbify.app.Player.sourceName == pl.name
+    Row(Modifier.fillMaxWidth().combinedClickableCompat(onClick = { Nav.go(Screen.PlaylistPage(pl.id)) },
+                                                         onLongClick = { Nav.playlistMenu = pl })
+            .padding(start = if (indent) 32.dp else 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Cover(playlistCover(pl), 64.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(pl.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                 style = MaterialTheme.typography.bodyLarge.copy(color = if (playing) C.Green else C.Text))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (pl.pinned) { Icon(Icons.Filled.PushPin, "Pinned", tint = C.Green, modifier = Modifier.size(13.dp)); Spacer(Modifier.width(4.dp)) }
+                if (pl.tracks.isNotEmpty() && pl.tracks.all { Library.localFor(it) != null }) {
+                    Icon(Icons.Filled.ArrowCircleDown, "Downloaded", tint = C.Green, modifier = Modifier.size(13.dp)); Spacer(Modifier.width(4.dp))
+                }
+                Text("Playlist • ${pl.tracks.size} songs", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibRow(title: String, subtitle: String, image: String?, brush: Brush? = null, glyph: String = "", onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (brush != null) {
+            Box(Modifier.size(64.dp).clip(RoundedCornerShape(4.dp)).background(brush), contentAlignment = Alignment.Center) {
+                Text(glyph, color = Color.White, style = MaterialTheme.typography.titleLarge)
+            }
+        } else Cover(image, 64.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Suppress("unused")
+private val unusedIcon: ImageVector = Icons.Filled.Folder

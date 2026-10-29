@@ -23,6 +23,8 @@ DATA_FILE_NAME = "library.json"
 
 
 def default_data_dir() -> str:
+    if os.environ.get("SEVBIFY_DATA_DIR"):            # the Android app keeps everything in its own folder
+        return os.environ["SEVBIFY_DATA_DIR"]
     if sys.platform == "win32":
         base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
     elif sys.platform == "darwin":
