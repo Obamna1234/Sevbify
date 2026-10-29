@@ -28,6 +28,14 @@ jobs:
         run: |
           gradle -p android assembleRelease --no-daemon -q
           cp android/app/build/outputs/apk/release/app-release.apk Sevbify-Android.apk
+      - name: Android lint (report only)
+        continue-on-error: true
+        run: |
+          gradle -p android lintRelease --no-daemon -q || true
+          mkdir -p screens
+          cp android/app/build/reports/lint-results-release.txt screens/lint.txt 2>/dev/null || true
+          cp android/app/build/reports/lint-results-release.html screens/lint.html 2>/dev/null || true
+          ls android/app/build/reports || true
       - name: Enable KVM (fast emulator)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -51,7 +59,7 @@ jobs:
           git checkout --orphan screens-new
           git rm -rq --cached . ; git clean -fdq -e screens
           rm -rf ./* .github 2>/dev/null; cp -r /tmp/s/. .
-          rm -f logcat.txt
+          gzip -f logcat.txt || true
           git add -A && git commit -qm "Android screenshots ${GITHUB_SHA::7}"
           git push -f origin HEAD:screens
           for f in $(ls *.png | head -40); do echo "::notice title=shot::$f"; done

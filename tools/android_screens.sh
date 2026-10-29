@@ -13,7 +13,8 @@ for t in "Morning Light:Sevbify Test Band" "City Rain:Sevbify Test Band" "Slow O
 done
 adb shell mkdir -p "/sdcard/Music/Test"
 adb push music/. /sdcard/Music/Test/
-adb shell content call --uri content://media/ --method scan_volume --arg external_primary || true
+adb shell content call --uri content://media/ --method scan_volume --arg external_primary 2>&1 | head -3
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test 2>&1 | head -2
 for f in 1 2 3 4; do adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test/$f.mp3 >/dev/null || true; done
 # Wait until Android's music index has the test songs (the app reads songs from that index).
 for k in $(seq 1 20); do
@@ -21,6 +22,14 @@ for k in $(seq 1 20); do
   echo "indexed test songs: $N"; [ "$N" -ge 4 ] && break; sleep 3
 done
 adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music:title > $OUT/media_index.txt 2>&1
+if [ "$N" -lt 4 ]; then
+  # Fallback: Android re-indexes storage when it starts.
+  adb reboot; adb wait-for-device
+  until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 3; done
+  sleep 25
+  adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music:title > $OUT/media_index.txt 2>&1
+  echo "after reboot: $(grep -c 'Music/Test' $OUT/media_index.txt)"
+fi
 sleep 20   # let the freshly booted emulator settle (avoids "System UI isn't responding")
 adb install -r -g $APK
 adb shell pm grant $PKG android.permission.READ_MEDIA_AUDIO || true
@@ -30,14 +39,20 @@ adb shell settings put global window_animation_scale 1
 ( adb shell screenrecord --size 540x1200 --bit-rate 2000000 --time-limit 175 /sdcard/walk1.mp4
   adb shell screenrecord --size 540x1200 --bit-rate 2000000 --time-limit 175 /sdcard/walk2.mp4 ) &
 REC=$!
+adb logcat -G 16M || true
+adb logcat -c
 python3 tools/android_screens.py $OUT
+# Stress: 1,500 random taps, swipes and key presses inside Sevbify (no system keys), looking for crashes.
+adb shell monkey -p $PKG --throttle 250 --pct-syskeys 0 --pct-appswitch 0 --ignore-crashes --ignore-timeouts -s 42 -v 1500 > $OUT/monkey.txt 2>&1 || true
 sleep 3
 adb shell pkill -INT screenrecord || true
 sleep 4
 kill $REC 2>/dev/null || true
 adb pull /sdcard/walk1.mp4 $OUT/ || true
 adb pull /sdcard/walk2.mp4 $OUT/ || true
-adb logcat -d -t 3000 > $OUT/logcat.txt 2>/dev/null || true
-grep -E "AndroidRuntime|python|Sevbify|FATAL" $OUT/logcat.txt | tail -200 > $OUT/app_log.txt || true
+adb logcat -d > $OUT/logcat.txt 2>/dev/null || true
+grep -E -A25 "FATAL EXCEPTION|ANR in|Fatal signal|python.stderr|chaquopy" $OUT/logcat.txt | head -800 > $OUT/crashes.txt || true
+grep -c "FATAL EXCEPTION" $OUT/logcat.txt > $OUT/crash_count.txt || true
+grep -E "AndroidRuntime|python|Sevbify|FATAL|$PKG" $OUT/logcat.txt | grep -v uiautomator | tail -400 > $OUT/app_log.txt || true
 ls -la $OUT
 exit 0
