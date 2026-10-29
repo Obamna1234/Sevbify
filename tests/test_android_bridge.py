@@ -49,3 +49,10 @@ def test_bridge_search_import_podcasts_and_errors(bridge):
     assert call(bridge, "set_online", False) is False
     offline = json.loads(bridge.search("anything"))
     assert offline["ok"] is False
+
+
+def test_bridge_errors_are_readable(bridge):
+    class E(Exception):
+        pass
+    out = json.loads(bridge._fail(E("ERROR: [youtube] abc: Sign in to confirm you\u2019re not a bot. Use --cookies")))
+    assert out["error"].startswith("YouTube is blocking") and "--cookies" not in out["error"]

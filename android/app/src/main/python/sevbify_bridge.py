@@ -15,8 +15,25 @@ def _ok(value):
     return json.dumps({"ok": True, "value": value}, ensure_ascii=False)
 
 
+_FRIENDLY = (
+    ("confirm you\u2019re not a bot", "YouTube is blocking this connection for now (try again later or on another network)"),
+    ("confirm you're not a bot", "YouTube is blocking this connection for now (try again later or on another network)"),
+    ("Video unavailable", "that video isn't available"),
+    ("HTTP Error 429", "too many requests right now; try again in a few minutes"),
+)
+
+
+def _readable(exc):
+    """yt-dlp's errors are long and technical; show a short sentence for the common ones."""
+    text = str(exc) or type(exc).__name__
+    for needle, nice in _FRIENDLY:
+        if needle.lower() in text.lower():
+            return nice
+    return text.replace("ERROR: ", "")[:300]
+
+
 def _fail(exc):
-    return json.dumps({"ok": False, "error": str(exc) or type(exc).__name__,
+    return json.dumps({"ok": False, "error": _readable(exc),
                        "trace": traceback.format_exc()[-1500:]}, ensure_ascii=False)
 
 
