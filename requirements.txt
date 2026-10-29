@@ -1,5 +1,6 @@
 # Runtime
-PyQt6>=6.5
+PyQt6>=6.5,<6.12        # 6.12 (Oct 2026) changed how library rows react; pinned to the tested 6.11 until checked
+PyQt6-Qt6<6.12
 python-vlc>=3.0.18122   # also needs the VLC media player itself (64-bit) installed
 mutagen>=1.47
 Pillow>=10.0
