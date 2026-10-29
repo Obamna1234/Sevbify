@@ -167,6 +167,20 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
         Gap(12.dp)
         Row(Modifier.padding(horizontal = 16.dp)) { Chip("Find podcasts", false) { Nav.go(Screen.Podcasts) } }
     } else {
+        // Popular free audiobooks (LibriVox), like the Top podcasts shelf.
+        var popular by remember { mutableStateOf<List<Show>>(emptyList()) }
+        LaunchedEffect(Library.settings.online) {
+            if (Library.settings.online && popular.isEmpty()) {
+                try { val a = Bridge.arr("books", "popular", ""); popular = (0 until a.length()).map { Show(a.getJSONObject(it)) } }
+                catch (_: Exception) {}
+            }
+        }
+        if (popular.isNotEmpty()) {
+            SectionTitle("Popular free audiobooks")
+            LazyRow(Modifier.padding(start = 16.dp)) {
+                items(popular) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
+            }
+        }
         Gap(12.dp)
         Row(Modifier.padding(horizontal = 16.dp)) { Chip("Find free audiobooks", false) { Nav.go(Screen.Audiobooks) } }
     }

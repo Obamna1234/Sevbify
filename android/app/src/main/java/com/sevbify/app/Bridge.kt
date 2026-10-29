@@ -46,7 +46,11 @@ object Bridge {
         return withContext(Dispatchers.IO) {
             val raw = module.callAttr(name, *args).toString()
             val res = JSONObject(raw)
-            if (!res.optBoolean("ok")) throw CoreError(res.optString("error", "Something went wrong"))
+            if (!res.optBoolean("ok")) {
+                // Kept on the phone only (Android's own log), so a problem can be traced when testing.
+                android.util.Log.w("Sevbify", "$name failed: ${res.optString("error")}\n${res.optString("trace").takeLast(800)}")
+                throw CoreError(res.optString("error", "Something went wrong"))
+            }
             if (res.isNull("value")) null else res.get("value")
         }
     }

@@ -28,6 +28,9 @@ Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
 ## What's in this version
 
+beta.9: a security and stability pass on both apps (see `CHANGELOG.md`): links from podcast feeds can only
+be web addresses, Android starts faster and handles downloads, offline and errors more safely.
+
 See `CHANGELOG.md` inside the zip for the full list. Highlights:
 
 - Spotify-style look: Your Library panel, Home shelves, queue and now-playing panels.

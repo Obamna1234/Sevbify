@@ -123,7 +123,8 @@ fun TrackRow(t: Track, onClick: () -> Unit, onMore: () -> Unit, number: Int? = n
                 val sub = when (state) {
                     Downloads.State.DOWNLOADING -> "Downloading…"
                     Downloads.State.QUEUED -> "Waiting to download"
-                    Downloads.State.FAILED -> "Download failed"
+                    Downloads.State.FAILED -> "Download failed" +
+                        (Downloads.notes[if (t.isItem) t.itemKey else t.matchKey]?.let { ": " + it.take(80) } ?: "")
                     Downloads.State.STOPPED -> "Download stopped"
                     null -> t.artist
                 }

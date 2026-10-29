@@ -2,6 +2,19 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Security and stability check (v5.0.0-beta.9), both apps:**
+- Links from podcast feeds and imports can only be web addresses: a feed can no longer make "Open web page"
+  launch a program or file on the PC, or make Sevbify read or copy local files. Feeds that try an XML
+  "billion laughs" trick are refused, and oversized web answers are cut off.
+- Android: Python starts in the background (no freeze on first start); the app no longer closes if the online
+  core can't start; the download notification can't crash the app when downloads end straight away; switching
+  offline stops downloads instead of waiting; nothing-can-play lists no longer skip round and round; safe file
+  names for downloads (and correct extensions for podcast episodes); old http:// podcast episodes play (https
+  is tried first); the library is saved off the main thread and a damaged library file is kept, not lost;
+  your library is excluded from Google's cloud backup; failed downloads say why; Home → Audiobooks shows
+  popular free audiobooks.
+- Windows: PyQt6 pinned to the tested 6.11 (6.12 changed how Your Library reacts).
+
 **Android app (v5.0.0-beta.8, first test version):**
 - New Sevbify-Android.apk next to the Windows zip in every release (Android 13+). It lives in the same
   repository (`android/`) and runs the same `core/` code as Windows, so fixes to searching, matching,
