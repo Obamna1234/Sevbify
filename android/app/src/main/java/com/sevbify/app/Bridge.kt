@@ -3,6 +3,7 @@ package com.sevbify.app
 import android.content.Context
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -25,6 +26,7 @@ object Bridge {
     suspend fun setup(context: Context) = ready.withLock {
         if (setUp) return@withLock
         withContext(Dispatchers.IO) {
+            if (!Python.isStarted()) Python.start(AndroidPlatform(context.applicationContext))
             val data = context.filesDir.resolve("core").absolutePath
             val cache = context.cacheDir.resolve("online").absolutePath
             // The app's version (from the same VERSION file as Windows, set at build time).

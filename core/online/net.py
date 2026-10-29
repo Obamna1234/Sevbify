@@ -19,6 +19,21 @@ import urllib.request
 USER_AGENT = "Sevbify/5.0 (desktop music player; +https://github.com/Obamna1234/Sevbify)"
 
 
+# Only web addresses are ever opened. Links come from outside (podcast feeds, imported playlists), and a
+# "file:" link would otherwise read a file on this computer.
+WEB_SCHEMES = ("http", "https")
+MAX_RESPONSE_BYTES = 40 * 1024 * 1024     # pages, feeds, JSON and pictures; anything bigger isn't one of them
+
+
+def is_web_url(url):
+    """True for an http(s) address with a host (what Sevbify may open or fetch)."""
+    try:
+        p = urllib.parse.urlparse((url or "").strip())
+    except ValueError:
+        return False
+    return p.scheme.lower() in WEB_SCHEMES and bool(p.netloc)
+
+
 class OfflineError(Exception):
     """No connection (or the service could not be reached) and nothing cached."""
 
@@ -67,7 +82,7 @@ class NetClient:
             {k: v for k, v in params.items() if v is not None})
 
     def _cache_path(self, kind, url, ext):
-        h = hashlib.sha1(url.encode("utf-8")).hexdigest()
+        h = hashlib.sha1(url.encode("utf-8"), usedforsecurity=False).hexdigest()   # a file name, not security
         return os.path.join(self.cache_dir, kind, h + ext)
 
     def _throttle(self, url):
@@ -82,6 +97,8 @@ class NetClient:
     def _fetch(self, url):
         if not self.enabled():
             raise OnlineDisabled("Online features are switched off in Settings.")
+        if not is_web_url(url):
+            raise ServiceError("Only web (http/https) addresses can be opened.")
         self._throttle(url)
         try:
             if self._opener is not None:
@@ -90,7 +107,9 @@ class NetClient:
                 req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                            "Accept": "application/json, */*"})
                 with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as r:
-                    data = r.read()
+                    data = r.read(MAX_RESPONSE_BYTES + 1)
+                if len(data) > MAX_RESPONSE_BYTES:
+                    raise ServiceError(f"{urllib.parse.urlparse(url).hostname} sent far more than expected")
             self.online = True
             self.last_error = ""
             return data
@@ -196,6 +215,8 @@ class NetClient:
         """Download a file (only used for sources that allow downloading)."""
         if not self.enabled():
             raise OnlineDisabled("Online features are switched off in Settings.")
+        if not is_web_url(url):
+            raise ServiceError("Only web (http/https) addresses can be downloaded.")
         self._throttle(url)
         tmp = dest_path + ".part"
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})

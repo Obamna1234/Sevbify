@@ -19,6 +19,12 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 from core.online.models import OnlineTrack
+from core.online.net import is_web_url
+
+
+def _web(url):
+    """Links from a feed are only kept when they're web addresses (never file: or other local links)."""
+    return url.strip() if is_web_url(url) else ""
 
 ITUNES_NS = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 MEDIA_NS = "{http://search.yahoo.com/mrss/}"
@@ -160,8 +166,12 @@ def resolve_feed(net, show):
 # --- RSS feeds ---------------------------------------------------------------------------------------------
 def parse_feed(xml_text, feed_url=""):
     """(Show, [Episode]) from a podcast RSS feed, newest first."""
+    raw = xml_text.encode("utf-8") if isinstance(xml_text, str) else xml_text
+    if b"<!ENTITY" in raw[:200000]:
+        # Real feeds never declare entities; a feed that does could expand them to gigabytes ("billion laughs").
+        raise ValueError("That feed can't be read safely.")
     try:
-        root = ET.fromstring(xml_text.encode("utf-8") if isinstance(xml_text, str) else xml_text)
+        root = ET.fromstring(raw)
     except ET.ParseError as e:
         raise ValueError(f"That address isn't a podcast feed ({e}).")
     channel = root.find("channel")
@@ -175,13 +185,13 @@ def parse_feed(xml_text, feed_url=""):
     image = ""
     it_img = channel.find(f"{ITUNES_NS}image")
     if it_img is not None:
-        image = it_img.get("href", "")
+        image = _web(it_img.get("href", ""))
     if not image:
-        image = text(channel, "image/url")
+        image = _web(text(channel, "image/url"))
     show = Show(title=text(channel, "title") or "Podcast", author=text(channel, f"{ITUNES_NS}author"),
                 feed_url=feed_url, image_url=image,
                 description=clean_text(text(channel, "description") or text(channel, f"{ITUNES_NS}summary"), 600),
-                link=text(channel, "link"))
+                link=_web(text(channel, "link")))
     episodes = []
     for item in channel.findall("item")[:MAX_EPISODES]:
         enc = item.find("enclosure")
@@ -189,15 +199,16 @@ def parse_feed(xml_text, feed_url=""):
         if not url:
             media = item.find(f"{MEDIA_NS}content")
             url = media.get("url", "") if media is not None else ""
+        url = _web(url)
         if not url:
             continue
         ep_img = item.find(f"{ITUNES_NS}image")
         title = text(item, "title") or "Episode"
         track = OnlineTrack(title=title, artist=show.title, album=show.title,
                             duration_ms=parse_duration(text(item, f"{ITUNES_NS}duration")),
-                            cover_url=(ep_img.get("href", "") if ep_img is not None else "") or image,
+                            cover_url=_web(ep_img.get("href", "") if ep_img is not None else "") or image,
                             stream_url=url, download_url=url, source="podcast",
-                            page_url=text(item, "link"), genre="Podcast",
+                            page_url=_web(text(item, "link")), genre="Podcast",
                             explicit=text(item, f"{ITUNES_NS}explicit").lower() in ("yes", "true", "explicit"))
         guid = text(item, "guid") or url
         track.source_id = guid

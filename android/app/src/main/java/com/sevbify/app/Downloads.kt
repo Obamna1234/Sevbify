@@ -76,7 +76,10 @@ object Downloads {
     private fun kick() {
         if (worker?.isActive == true) return
         val app = SevbifyApp.instance
-        ContextCompat.startForegroundService(app, Intent(app, DownloadService::class.java))
+        DownloadService.cancelStop()
+        try {
+            ContextCompat.startForegroundService(app, Intent(app, DownloadService::class.java))
+        } catch (e: Exception) { /* Android refused (app in the background): downloads still run while open */ }
         worker = app.scope.launch {
             while (true) {
                 if (paused) { delay(500); continue }
@@ -84,8 +87,14 @@ object Downloads {
                 val t = jobs[key] ?: run { states.remove(key); null } ?: continue
                 states[key] = State.DOWNLOADING
                 DownloadService.update(app)
+                if (!Library.settings.online) {
+                    // Sevbify was switched offline: keep the rest as Stopped (Resume picks them up), don't
+                    // sit in the notifications waiting.
+                    states.filterValues { it == State.QUEUED || it == State.DOWNLOADING }.keys.toList()
+                        .forEach { states[it] = State.STOPPED; notes[it] = "Sevbify is offline" }
+                    break
+                }
                 try {
-                    if (!Library.settings.online) throw CoreError("you're offline")
                     if (t.isItem) downloadItem(app, t) else downloadSong(app, t)
                     states.remove(key); jobs.remove(key)
                     doneCount++
@@ -107,10 +116,7 @@ object Downloads {
         }
     }
 
-    private fun stopService() {
-        val app = SevbifyApp.instance
-        app.stopService(Intent(app, DownloadService::class.java))
-    }
+    private fun stopService() = DownloadService.requestStop()
 
     private suspend fun downloadSong(context: Context, t: Track) {
         val work = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "incoming").apply { mkdirs() }
@@ -123,22 +129,28 @@ object Downloads {
 
     private suspend fun downloadItem(context: Context, t: Track) {
         val dir = File(context.getExternalFilesDir(null), if (t.source == "audiobook") "Audiobooks" else "Podcasts").apply { mkdirs() }
-        val safe = (t.album.ifEmpty { t.artist } + " - " + t.title).replace(Regex("""[\\/:*?"<>|]"""), "_").take(120)
+        val safe = safeName(t.album.ifEmpty { t.artist } + " - " + t.title, "Episode").take(120)
         val path = if (t.source == "youtube") {
             Bridge.call("download_youtube", t.pageUrl, File(dir, safe).absolutePath) as String
         } else {
-            val ext = t.downloadUrl.ifEmpty { t.streamUrl }.substringBefore("?").substringAfterLast('.', "mp3").take(4)
+            // The extension of the file in the link ("…/episode.m4a?x=1" → m4a); mp3 when there isn't a clear one.
+            val last = t.downloadUrl.ifEmpty { t.streamUrl }.substringBefore("?").substringBefore("#").substringAfterLast('/')
+            val ext = last.substringAfterLast('.', "").lowercase().takeIf { it.matches(Regex("[a-z0-9]{2,4}")) } ?: "mp3"
             Bridge.call("download_url", t.downloadUrl.ifEmpty { t.streamUrl }, File(dir, "$safe.$ext").absolutePath) as String
         }
         Library.offline[t.itemKey] = path
         Library.save()
     }
 
+    /** A name that is safe as a file or folder name: no path characters, control characters or "..". */
+    fun safeName(name: String, fallback: String): String =
+        name.replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), "_").trim(' ', '.').ifEmpty { fallback }
+
     /** Move a finished song into Music/Sevbify/<Artist> (visible to other apps). Returns where it is now. */
     private fun publish(context: Context, file: File, t: Track): String {
         if (Build.VERSION.SDK_INT < 29) return file.absolutePath
-        val artistFolder = t.artist.split(Regex("""\s+(feat\.?|ft\.?|featuring|x|vs\.?)\s+""", RegexOption.IGNORE_CASE))
-            .first().replace(Regex("""[\\/:*?"<>|]"""), "_").trim().ifEmpty { "Unknown Artist" }
+        val artistFolder = safeName(t.artist.split(Regex("""\s+(feat\.?|ft\.?|featuring|x|vs\.?)\s+""", RegexOption.IGNORE_CASE))
+            .first(), "Unknown Artist").take(80).trim(' ', '.').ifEmpty { "Unknown Artist" }
         val values = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, file.name)
             put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MUSIC}/Sevbify/$artistFolder")

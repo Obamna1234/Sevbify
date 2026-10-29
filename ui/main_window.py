@@ -911,7 +911,10 @@ class MainWindow(ShowsMixin, QMainWindow):
             open_menu = menu.addMenu("↗  Open in")
             open_menu.setStyleSheet(MENU_STYLE)
             track = song.track if is_remote else OnlineTrack(song.title, song.artist)
+            from core.online.net import is_web_url
             for label, url in track.links().items():
+                if not is_web_url(url):
+                    continue
                 open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
 
         try:

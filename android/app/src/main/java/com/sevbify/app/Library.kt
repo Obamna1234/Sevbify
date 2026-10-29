@@ -77,7 +77,29 @@ object Library {
 
     fun load(context: Context) {
         file = File(context.filesDir, "library.json")
-        val o = try { JSONObject(file.readText()) } catch (e: Exception) { JSONObject() }
+        val o = try {
+            JSONObject(file.readText())
+        } catch (e: java.io.FileNotFoundException) {
+            JSONObject()                                       // first start
+        } catch (e: Exception) {
+            keepDamagedCopy(); JSONObject()
+        }
+        try {
+            read(o)
+        } catch (e: Exception) {
+            // Something in the file isn't what this version expects: keep a copy instead of crashing or
+            // overwriting it, and start with what could be read.
+            keepDamagedCopy()
+        }
+        changed(save = false)
+    }
+
+    private fun keepDamagedCopy() {
+        try { file.copyTo(File(file.parentFile, "library.damaged-${System.currentTimeMillis()}.json"), overwrite = false) }
+        catch (e: Exception) {}
+    }
+
+    private fun read(o: JSONObject) {
         settings = Settings.fromJson(o.optJSONObject("settings"))
         playlists.clear()
         o.optJSONArray("playlists")?.let { a -> for (i in 0 until a.length()) playlists.add(Playlist.fromJson(a.getJSONObject(i))) }
@@ -93,7 +115,6 @@ object Library {
         o.optJSONObject("resume")?.let { m -> m.keys().forEach { k -> resume[k] = m.getLong(k) } }
         finished.clear()
         o.optJSONArray("finished")?.let { a -> for (i in 0 until a.length()) finished.add(a.getString(i)) }
-        changed(save = false)
     }
 
     fun save() {
@@ -109,10 +130,18 @@ object Library {
             put("resume", JSONObject(resume as Map<*, *>))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
         }
-        val tmp = File(file.parentFile, "library.json.tmp")
-        tmp.writeText(o.toString())
-        tmp.renameTo(file)
+        val text = o.toString()
+        // Written on a background thread (one at a time, in order) so the screen never waits for the disk.
+        writer.execute {
+            try {
+                val tmp = File(file.parentFile, "library.json.tmp")
+                tmp.writeText(text)
+                if (!tmp.renameTo(file)) { file.writeText(text); tmp.delete() }
+            } catch (e: Exception) { /* disk full: the next save tries again */ }
+        }
     }
+
+    private val writer = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     fun changed(save: Boolean = true) {
         changes++

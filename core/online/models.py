@@ -52,7 +52,8 @@ class OnlineTrack:
             "Apple Music": f"https://music.apple.com/search?term={q_plus}",
             "Bandcamp": f"https://bandcamp.com/search?q={q_plus}&item_type=t",
         }
-        if self.page_url:
+        from core.online.net import is_web_url
+        if is_web_url(self.page_url):
             label = {"deezer": "Deezer", "jamendo": "Jamendo", "archive": "Internet Archive",
                      "lastfm": "Last.fm"}.get(self.source, "Source")
             links = {label: self.page_url, **links}

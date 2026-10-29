@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Some podcast feeds still give plain http:// links for their episodes. Sevbify asks for the https:// version
+     first and only falls back to http:// for those (the player can't play them otherwise). Everything else
+     Sevbify contacts uses https. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

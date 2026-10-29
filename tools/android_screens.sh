@@ -4,32 +4,37 @@ set -x
 APK=Sevbify-Android.apk; PKG=com.obamna1234.sevbify; OUT=screens
 mkdir -p $OUT music
 adb wait-for-device
-# A few test songs (tones with real tags) in the phone's Music folder, like a user's own music.
-i=0
-for t in "Morning Light:Sevbify Test Band" "City Rain:Sevbify Test Band" "Slow Orbit:Night Signals" "Paper Planes:Night Signals"; do
-  i=$((i+1)); title=${t%%:*}; artist=${t##*:}
-  ffmpeg -loglevel error -y -f lavfi -i "sine=frequency=$((220*i)):duration=40" -metadata title="$title" \
-    -metadata artist="$artist" -metadata album="Test Album $artist" -b:a 128k "music/$i.mp3"
-done
+# A few test songs (short tones) in the phone's Music folder, like a user's own music. mp3 with tags when
+# ffmpeg is there, otherwise plain WAV files.
+python3 - <<'PY'
+import math, os, shutil, struct, subprocess, wave
+songs = [("Morning Light", "Sevbify Test Band"), ("City Rain", "Sevbify Test Band"),
+         ("Slow Orbit", "Night Signals"), ("Paper Planes", "Night Signals")]
+for i, (title, artist) in enumerate(songs, 1):
+    wav = f"music/{artist} - {title}.wav"
+    with wave.open(wav, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+        w.writeframes(b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * 220 * i * n / 22050)))
+                               for n in range(22050 * 40)))
+    if shutil.which("ffmpeg"):
+        mp3 = wav[:-4] + ".mp3"
+        r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-metadata", f"title={title}",
+                            "-metadata", f"artist={artist}", "-metadata", f"album=Test Album {artist}", mp3])
+        if r.returncode == 0:
+            os.remove(wav)
+print(os.listdir("music"))
+PY
 adb shell mkdir -p "/sdcard/Music/Test"
 adb push music/. /sdcard/Music/Test/
 adb shell content call --uri content://media/ --method scan_volume --arg external_primary 2>&1 | head -3
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test 2>&1 | head -2
-for f in 1 2 3 4; do adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test/$f.mp3 >/dev/null || true; done
+adb shell ls -la /sdcard/Music/Test > $OUT/pushed_songs.txt 2>&1
 # Wait until Android's music index has the test songs (the app reads songs from that index).
 for k in $(seq 1 20); do
   N=$(adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music 2>/dev/null | grep -c "Music/Test")
   echo "indexed test songs: $N"; [ "$N" -ge 4 ] && break; sleep 3
 done
 adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music:title > $OUT/media_index.txt 2>&1
-if [ "$N" -lt 4 ]; then
-  # Fallback: Android re-indexes storage when it starts.
-  adb reboot; adb wait-for-device
-  until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 3; done
-  sleep 25
-  adb shell content query --uri content://media/external/audio/media --projection _display_name:relative_path:is_music:title > $OUT/media_index.txt 2>&1
-  echo "after reboot: $(grep -c 'Music/Test' $OUT/media_index.txt)"
-fi
 sleep 20   # let the freshly booted emulator settle (avoids "System UI isn't responding")
 adb install -r -g $APK
 adb shell pm grant $PKG android.permission.READ_MEDIA_AUDIO || true

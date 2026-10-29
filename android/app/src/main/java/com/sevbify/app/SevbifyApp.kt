@@ -1,8 +1,7 @@
 package com.sevbify.app
 
 import android.app.Application
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
+import com.sevbify.app.ui.Nav
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,11 +14,12 @@ class SevbifyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         Library.load(this)
+        Player.connect(this)                 // your own songs play even if the online core can't start
         scope.launch {
-            Bridge.setup(this@SevbifyApp)
-            Player.connect(this@SevbifyApp)
+            // Starting Python takes a few seconds the first time (it unpacks itself): done in the background
+            // inside Bridge.setup, so the app never freezes ("isn't responding") on its first start.
+            try { Bridge.setup(this@SevbifyApp) } catch (e: Exception) { Nav.say("Online features couldn't start: ${e.message}") }
         }
     }
 

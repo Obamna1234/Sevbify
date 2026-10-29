@@ -368,7 +368,8 @@ class ShowsMixin:
             menu.addAction("Mark as not played").triggered.connect(lambda: self._mark_finished(song, False))
         else:
             menu.addAction("✓  Mark as played").triggered.connect(lambda: self._mark_finished(song, True))
-        if song.track.page_url:
+        from core.online.net import is_web_url
+        if is_web_url(song.track.page_url):          # never file: or other local links from a feed
             from PyQt6.QtGui import QDesktopServices
             from PyQt6.QtCore import QUrl
             menu.addAction("↗  Open web page").triggered.connect(

@@ -46,6 +46,8 @@ object Player {
     private var ticker: Job? = null
     private var handledEnd = false
     private var lastResumeSave = 0L
+    private var failuresInARow = 0
+    private var plainHttpFor = ""               // episode whose https:// version failed              // stops skipping when nothing in the queue can play
 
     fun connect(context: Context) {
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -53,7 +55,10 @@ object Player {
         future.addListener({
             controller = future.get()
             controller?.addListener(object : MediaPlayer.Listener {
-                override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
+                    if (playing) failuresInARow = 0
+                }
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state == MediaPlayer.STATE_READY) {
                         duration = controller?.duration?.takeIf { it > 0 } ?: duration
@@ -66,6 +71,12 @@ object Player {
                     }
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    val t = current
+                    if (t != null && t.isItem && plainHttpFor != t.itemKey &&
+                        t.streamUrl.ifEmpty { t.downloadUrl }.startsWith("http://")) {
+                        plainHttpFor = t.itemKey          // the https version didn't work: try the original link
+                        start(); return
+                    }
                     status = "Couldn't play this song (${error.errorCodeName}); skipping"
                     advance(auto = false, failed = true)
                 }
@@ -92,6 +103,7 @@ object Player {
 
     // --- choosing what plays ---------------------------------------------------------------------------------
     fun play(track: Track, queue: List<Track> = listOf(track), source: String = "") {
+        failuresInARow = 0
         original = queue
         sourceName = source
         val order = if (shuffle) listOf(track) + queue.filter { it !== track }.shuffled() else queue
@@ -149,6 +161,17 @@ object Player {
     }
 
     private fun advance(auto: Boolean, failed: Boolean = false) {
+        if (failed) {
+            failuresInARow++
+            // Every song failed (offline with nothing downloaded, or no internet with Repeat on): stop instead
+            // of skipping round and round forever.
+            if (failuresInARow >= maxOf(1, context.size + userQueue.size)) {
+                controller?.pause()
+                status = if (Library.settings.online) "Nothing in this list could be played" else
+                    "You're offline and none of these songs are downloaded"
+                return
+            }
+        } else failuresInARow = 0
         if (auto && repeat == "one" && !failed) { start(); return }
         if (userQueue.isNotEmpty()) {
             val t = userQueue.removeAt(0)
@@ -194,6 +217,7 @@ object Player {
             try {
                 val (uri, headers, note) = locate(t) ?: return@launch
                 status = note
+                PlaybackService.headers.clear()             // only the playing song's link needs them
                 headers?.let { PlaybackService.headers[uri] = it }
                 val meta = MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
                     .setArtworkUri(t.art.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }).setExtras(Bundle()).build()
@@ -215,7 +239,10 @@ object Player {
                 val s = Bridge.obj("youtube_stream", t.pageUrl, false)
                 return Triple(s.getString("url"), headersOf(s), "Video podcast · audio")
             }
-            return Triple(t.streamUrl.ifEmpty { t.downloadUrl }, null, if (t.source == "audiobook") "Audiobook" else "Podcast")
+            val link = t.streamUrl.ifEmpty { t.downloadUrl }
+            // Ask for the secure (https) version of old http:// episode links first; plain http only if that fails.
+            val url = if (link.startsWith("http://") && plainHttpFor != t.itemKey) "https://" + link.removePrefix("http://") else link
+            return Triple(url, null, if (t.source == "audiobook") "Audiobook" else "Podcast")
         }
         Library.localFor(t)?.let { local ->
             val uri = if (local.localUri.startsWith("content:")) local.localUri else Uri.fromFile(File(local.localUri)).toString()
