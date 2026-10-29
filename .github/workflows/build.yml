@@ -67,6 +67,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller imageio-ffmpeg
 
+      - name: Probe
+        run: |
+          python -m pytest tests/test_library_panel.py tests/test_ui_fixes.py -q -p no:cacheprovider 2>&1 | tail -3 | sed 's/^/::warning::/'
+          echo ::warning::==== with bridge
+          python -m pytest tests/test_android_bridge.py tests/test_library_panel.py tests/test_ui_fixes.py -q -p no:cacheprovider 2>&1 | tail -3 | sed 's/^/::warning::/'
+          echo ::warning::==== beta7 + those
+          python -m pytest tests/test_beta7.py tests/test_library_panel.py tests/test_ui_fixes.py -q -p no:cacheprovider 2>&1 | tail -3 | sed 's/^/::warning::/'
+          echo ::warning::==== everything but bridge
+          python -m pytest tests -q -p no:cacheprovider --deselect tests/test_android_bridge.py 2>&1 | tail -4 | sed 's/^/::warning::/'
+          exit 1
       - name: Run automated tests
         run: |
           set +e
