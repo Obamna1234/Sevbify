@@ -199,6 +199,7 @@ private fun Dialogs() {
         )
     }
     com.sevbify.app.Updater.offer?.let { r -> UpdateDialog(r) }
+    com.sevbify.app.ImportCheck.review?.let { (pl, problems) -> ImportReviewDialog(pl, problems) }
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },

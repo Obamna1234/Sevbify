@@ -96,10 +96,17 @@ fun ImportScreen(start: String) {
                 busy = true
                 scope.launch {
                     try {
-                        val pl = importPlaylistFile(context, uri)
-                        Nav.back()
-                        Nav.go(Screen.PlaylistPage(pl.id))
-                        Nav.say("Imported “${pl.name}”: ${pl.tracks.size} songs")
+                        val (fileName, tracks) = readPlaylistFile(context, uri)
+                        // Name it (the file's name is filled in), then every song is checked for typos.
+                        askName(fileName, tr("Playlist name"), tr("Import")) { name ->
+                            val pl = Library.newPlaylist(name.ifBlank { fileName }, tracks)
+                            pl.origin = "file"
+                            Library.changed()
+                            Nav.back()
+                            Nav.go(Screen.PlaylistPage(pl.id))
+                            Nav.say("Imported “${pl.name}”: ${pl.tracks.size} songs. Checking them…")
+                            com.sevbify.app.ImportCheck.start(pl)
+                        }
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
                         Nav.say("⚠ Couldn't import: ${e.message}")
@@ -115,8 +122,9 @@ fun ImportScreen(start: String) {
 }
 
 /** A playlist file picked in Android's file picker: copied to the app's cache under its own name (Python reads
- *  paths, and the file name becomes the playlist's name), read by the shared core, then removed. */
-suspend fun importPlaylistFile(context: android.content.Context, uri: android.net.Uri): com.sevbify.app.Playlist {
+ *  paths, and the file name becomes the playlist's name), read by the shared core, then removed.
+ *  Returns (the file's name, its songs). */
+suspend fun readPlaylistFile(context: android.content.Context, uri: android.net.Uri): Pair<String, List<com.sevbify.app.Track>> {
     var name = "Imported playlist.txt"
     context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
         if (c.moveToFirst()) c.getString(0)?.let { n -> name = n.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(120) }
@@ -145,9 +153,6 @@ suspend fun importPlaylistFile(context: android.content.Context, uri: android.ne
             it.optJSONObject("track")?.let { t -> com.sevbify.app.Track.fromJson(t) }
         }
         if (tracks.isEmpty()) throw com.sevbify.app.CoreError("no songs found in that file")
-        val pl = Library.newPlaylist(o.optString("name").ifEmpty { name.substringBeforeLast('.') }, tracks)
-        pl.origin = "file"
-        Library.changed()
-        return pl
+        return o.optString("name").ifEmpty { name.substringBeforeLast('.') } to tracks
     } finally { file.delete() }
 }

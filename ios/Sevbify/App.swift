@@ -39,6 +39,7 @@ struct SevbifyApp: App {
                 .preferredColorScheme(.dark)
                 .tint(C.green)
                 .modifier(UpdateAlert())
+                .modifier(ImportReviewSheet())
         }
     }
 }

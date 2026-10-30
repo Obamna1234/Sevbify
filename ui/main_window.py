@@ -2187,7 +2187,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         query = query.strip()
         if not query:
             return []
-        return [s for s in self.songs if s.matches(query)]
+        exact = [s for s in self.songs if s.matches(query)]
+        if exact:
+            return exact
+        from core.models import close_matches
+        return close_matches(self.songs, query)          # small typos still find your own songs
 
     def show_browse(self):
         if self.search_input.text():
@@ -2306,11 +2310,15 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._check_spelling(self.search_input.text())
 
     def _check_spelling(self, text):
-        """After a search has settled: if its results look unrelated, offer DuckDuckGo's corrected spelling."""
+        """After a search has settled: if its results look unrelated, show results for DuckDuckGo's corrected
+        spelling instead, like Google ("Showing results for …" with "Search instead for …")."""
         from core.online import spelling
         query = (text or "").strip()
+        if query == getattr(self, "_did_you_mean_text", "") and self.did_you_mean.isVisible():
+            return                                           # already showing the corrected results
         self.did_you_mean.hide()
-        if len(query) < 3 or not self.online_enabled or self._web_query_shown != query:
+        if len(query) < 3 or not self.online_enabled or self._web_query_shown != query \
+                or query == getattr(self, "_search_as_typed", None):
             return
         shown = list(self.search_table.songs_in_view()) + list(self.web_table.songs_in_view())
         if not spelling.looks_wrong(query, shown):
@@ -2318,16 +2326,24 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         def done(better):
             if better and self.search_input.text().strip() == query:
+                from core.i18n import tr
                 self._did_you_mean_text = better
-                self.did_you_mean.setText(f"Did you mean  “{better}”?")
+                self._corrected_from = query
+                self.search_input.setText(better)            # results for the right spelling straight away
+                self.did_you_mean.setText(f"{tr('Showing results for')} “{better}”  ·  "
+                                          f"{tr('Search instead for')} “{query}”")
                 self.did_you_mean.show()
         self.online_call(spelling.did_you_mean, self.net, self.online, query, shown,
                          on_done=done, on_error=lambda _e: None)
 
     def _use_did_you_mean(self):
-        if self._did_you_mean_text:
+        """"Search instead for …": back to exactly what was typed (and don't correct it again)."""
+        original = getattr(self, "_corrected_from", "")
+        if original:
             self.did_you_mean.hide()
-            self.search_input.setText(self._did_you_mean_text)
+            self._search_as_typed = original
+            self._did_you_mean_text = ""
+            self.search_input.setText(original)
 
     def remember_search(self, text):
         q = (text or "").strip()
@@ -2962,7 +2978,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                                                   "Playlists (*.csv *.txt *.m3u *.m3u8)")
             if path:
                 d.done(2)
-                self.import_from_file(path)
+                self.import_from_file(path, ask_name=True)
         file_btn.clicked.connect(pick)
         if d.exec() == 1 and (link.text().strip() or songs_box.toPlainText().strip()):
             self.import_from_link(link.text().strip(), songs_box.toPlainText())
@@ -3020,7 +3036,9 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.show_status(f"⚠ Couldn't import: {err}", 12000)
         self.online_call(work, on_done=done, on_error=failed)
 
-    def import_from_file(self, path):
+    def import_from_file(self, path, ask_name=False, name=None):
+        """A playlist file: you name it (the file's name is filled in), then every song is checked online so a
+        spelling mistake can be fixed before you stream or download it."""
         from core import importers
         try:
             result = importers.read_playlist_file(path)
@@ -3030,9 +3048,97 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not result["items"]:
             self.show_status(f"⚠ No songs found in {os.path.basename(path)}.", 8000)
             return None
-        return self._create_imported_playlist(result["name"], result["items"], origin="file")
+        if ask_name:
+            from PyQt6.QtWidgets import QInputDialog
+            from core.i18n import tr
+            text, ok = QInputDialog.getText(self, tr("Import a playlist"), tr("Playlist name") + ":",
+                                            text=result["name"])
+            if not ok:
+                return None
+            name = text.strip() or result["name"]
+        pl = self._create_imported_playlist(name or result["name"], result["items"], origin="file", enrich=False)
+        if pl is not None:
+            self._check_imported(pl)
+        return pl
 
-    def _create_imported_playlist(self, name, items, cover_url="", truncated=False, origin="link"):
+    def _check_imported(self, pl):
+        """Look every not-yet-downloaded song of an imported file up once; offer "Did you mean" for typos."""
+        from core import import_check
+        songs = [s for s in pl.songs if getattr(s, "is_remote", False)]
+        if not songs or not self.online_enabled:
+            return
+        progress = {"done": 0, "total": len(songs)}
+        timer = QTimer(self)
+        timer.timeout.connect(lambda: self.show_status(
+            f"Checking “{pl.name}”: {progress['done']} of {progress['total']} songs", kind="info", timeout_ms=3000))
+        timer.start(800)
+        tracks = [s.track for s in songs]
+
+        def work():
+            return import_check.check_tracks(
+                self.online, self.net, tracks, progress=lambda a, b: progress.update(done=a),
+                should_stop=lambda: getattr(self, "_shut_down", False) or pl not in self.playlists)
+
+        def done(results):
+            timer.stop()
+            if pl not in self.playlists:
+                return
+            problems = []
+            for song, res in zip(songs, results):
+                if res["status"] == import_check.OK:
+                    self._apply_found(song, res["track"])
+                else:
+                    sug = res["suggestion"]
+                    problems.append((song, import_check.as_text(song.track),
+                                     import_check.as_text(sug) if sug is not None else ""))
+            self.fetch_covers(songs, limit=len(songs))
+            self.schedule_save()
+            if self.open_playlist is pl:
+                self.refresh_playlist_page()
+            if not problems:
+                self.show_status(f"All {len(songs)} songs in “{pl.name}” were found: ready to stream or download.",
+                                 kind="info", timeout_ms=8000)
+                return
+            self._review_import(pl, problems)
+
+        def failed(err):
+            timer.stop()
+            self.show_status(f"⚠ Couldn't check the songs: {err}", 8000)
+        self.online_call(work, on_done=done, on_error=failed)
+
+    def _apply_found(self, song, t):
+        for field in ("cover_url", "preview_url", "album", "genre", "duration_ms", "source_id", "artist_id"):
+            value = getattr(t, field, None)
+            if value and not getattr(song.track, field, None):
+                setattr(song.track, field, value)
+        song.album = song.album or song.track.album
+        song.duration = song.duration or song.track.duration_ms
+
+    def _review_import(self, pl, problems):
+        from .import_review import ImportReview
+        from core import import_check
+        rows = [(pl.songs.index(s) + 1 if s in pl.songs else 0, written, sug) for s, written, sug in problems]
+        dlg = ImportReview(self, pl.name, rows)
+        if not dlg.exec():
+            self.show_status(f"{len(problems)} songs in “{pl.name}” kept as written (they may not stream).",
+                             kind="info", timeout_ms=8000)
+            return
+        fixes = dlg.fixes()
+        for i, text in fixes.items():
+            song = problems[i][0]
+            if song not in pl.songs:
+                continue
+            idx = pl.songs.index(song)
+            pl.songs[idx] = RemoteSong(import_check.corrected(song.track, text))
+        self._playlists_changed(pl)
+        if self.open_playlist is pl:
+            self.refresh_playlist_page()
+        fixed = [s for s in pl.songs if getattr(s, "is_remote", False) and not s.track.cover_url]
+        self._enrich_slots(fixed)
+        self.show_status(f"Fixed {len(fixes)} song{'s' if len(fixes) != 1 else ''} in “{pl.name}”.", kind="info",
+                         timeout_ms=6000)
+
+    def _create_imported_playlist(self, name, items, cover_url="", truncated=False, origin="link", enrich=True):
         base, n = name.strip() or "Imported playlist", 2
         name = base
         while self._name_taken(name):
@@ -3065,7 +3171,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 if path and playlist in self.playlists and not playlist.custom_cover:
                     self.set_playlist_cover(playlist, path)
             self.online_call(self.net.get_image, cover_url, on_done=got_cover)
-        if pending and self.online_enabled:
+        if pending and self.online_enabled and enrich:
             self._enrich_slots(pending)
         return pl
 

@@ -230,6 +230,10 @@ struct ImportView: View {
     @State private var songs = ""
     @State private var busy = false
     @State private var pickingFile = false
+    @State private var askingName = false
+    @State private var pendingName = ""
+    @State private var pendingTracks: [Track] = []
+    @ObservedObject private var checker = ImportChecker.shared
 
     var body: some View {
         Form {
@@ -258,11 +262,27 @@ struct ImportView: View {
             guard case .success(let url) = result else { return }
             importFile(url)
         }
+        .alert("Playlist name", isPresented: $askingName) {
+            TextField("Playlist name", text: $pendingName)
+            Button("Import") { createImported() }
+            Button("Cancel", role: .cancel) { pendingTracks = [] }
+        } message: { Text("Then every song is checked, so a spelling mistake can be fixed before you stream or download it.") }
         .scrollContentBackground(.hidden).background(C.bg.ignoresSafeArea())
         .navigationTitle("Import a playlist")
     }
 
     /// Copies the picked file under its own name (it becomes the playlist's name), reads it with the shared core.
+    private func createImported() {
+        let tracks = pendingTracks
+        guard !tracks.isEmpty else { return }
+        let name = pendingName.trimmingCharacters(in: .whitespaces)
+        let pl = lib.newPlaylist(name.isEmpty ? "Imported playlist" : name, tracks: tracks, origin: "file")
+        pendingTracks = []
+        player.status = "Imported “\(pl.name)”: \(tracks.count) songs. Checking them…"
+        nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(pl.id))
+        checker.start(pl)
+    }
+
     private func importFile(_ url: URL) {
         busy = true
         Task {
@@ -285,9 +305,8 @@ struct ImportView: View {
                 let tracks = (o["items"] as? [[String: Any]] ?? []).compactMap { ($0["track"] as? [String: Any]).map(Track.init(dict:)) }
                 guard !tracks.isEmpty else { player.status = "No songs found in that file"; busy = false; return }
                 let name = (o["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? url.deletingPathExtension().lastPathComponent
-                let pl = lib.newPlaylist(name, tracks: tracks, origin: "file")
-                player.status = "Imported “\(pl.name)”: \(tracks.count) songs"
-                nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(pl.id))
+                // Name it first (the file's name is filled in), then the songs are checked.
+                pendingTracks = tracks; pendingName = name; askingName = true
             } catch {
                 player.status = "Couldn't import: \(error.localizedDescription)"
             }

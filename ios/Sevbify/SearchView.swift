@@ -11,7 +11,9 @@ struct SearchView: View {
     @State private var busy = false
     @State private var error = ""
     @State private var searchTask: Task<Void, Never>?
-    @State private var better = ""                         // "Did you mean …?"
+    @State private var better = ""                         // the corrected spelling being shown
+    @State private var correctedFrom = ""                  // what was typed ("Search instead for")
+    @State private var asTyped = ""                        // searched exactly as typed: don't correct again
 
     var body: some View {
         ScrollView {
@@ -38,9 +40,15 @@ struct SearchView: View {
                         GenreGrid(genres: genres)
                     }
                 } else {
-                    if !better.isEmpty && better != query.trimmingCharacters(in: .whitespaces) {
-                        Button { query = better } label: {
-                            Text("Did you mean  “\(better)”?").font(.body).foregroundColor(C.text)
+                    if !correctedFrom.isEmpty && better == query.trimmingCharacters(in: .whitespaces) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            (Text("Showing results for") + Text(" “\(better)”")).foregroundColor(C.text)
+                            Button {
+                                asTyped = correctedFrom; let o = correctedFrom
+                                correctedFrom = ""; better = ""; query = o
+                            } label: {
+                                (Text("Search instead for") + Text(" “\(correctedFrom)”")).font(.subheadline).foregroundColor(C.dim)
+                            }
                         }.padding(.horizontal, 16).padding(.top, 12)
                     }
                     let mine = lib.localSongs.filter { matches($0) }
@@ -91,7 +99,7 @@ struct SearchView: View {
     private func schedule() {
         searchTask?.cancel()
         let q = query.trimmingCharacters(in: .whitespaces)
-        if q != better { better = "" }
+        if q != better { better = ""; correctedFrom = "" }
         guard !q.isEmpty, lib.settings.online else { songs = []; artists = []; return }
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)          // wait until typing pauses
@@ -113,7 +121,11 @@ struct SearchView: View {
             if Task.isCancelled { return }
             lib.rememberSearch(q)
             // Only the finished search, and only when its results look unrelated, is checked for a typo (DuckDuckGo).
-            if q.count >= 3, let b = try? await Bridge.call("did_you_mean", [q]) as? String, !Task.isCancelled { better = b }
+            // Like Google: the results for the right spelling are shown straight away.
+            if q.count >= 3, q != asTyped, correctedFrom.isEmpty,
+               let b = try? await Bridge.call("did_you_mean", [q]) as? String, !b.isEmpty, !Task.isCancelled {
+                better = b; correctedFrom = q; query = b
+            }
         }
     }
 }

@@ -209,7 +209,9 @@ fun PlaylistScreen(id: String) {
     if (pl == null) { Muted(tr("This playlist was deleted.")); return }
     LaunchedEffect(pl.id) {
         pl.lastPlayed = System.currentTimeMillis()
-        // Imported songs often have no cover yet: look them up (a few at a time, like Windows).
+        // Imported songs often have no cover yet: look them up (a few at a time, like Windows). A file that's
+        // being checked for typos gets its covers from that check instead.
+        if (com.sevbify.app.ImportCheck.checking == pl.name) return@LaunchedEffect
         val bare = pl.tracks.withIndex().filter { !it.value.isLocal && it.value.coverUrl.isEmpty() }
         for (chunk in bare.chunked(8)) {
             try {
@@ -226,7 +228,9 @@ fun PlaylistScreen(id: String) {
             } catch (_: Exception) { break }
         }
     }
-    SongsPage(pl.name, "Playlist", playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl)
+    val check = com.sevbify.app.ImportCheck
+    val subtitle = if (check.checking == pl.name) "Checking the songs… ${check.done} of ${check.total}" else "Playlist"
+    SongsPage(pl.name, subtitle, playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl)
 }
 
 @Composable

@@ -45,5 +45,22 @@ def chosic_page():
     return f"chosic {st}, {len(html)} bytes, endpoints={found}, actions={actions}, scripts={scripts}"
 
 
+def chosic_js():
+    st, js = _get("https://www.chosic.com/wp-content/themes/astra-child/js/playlist-tools/playlist-export.js")
+    urls = sorted(set(_re.findall(r'["\'](https?://[^"\']+|/api[^"\']*|[^"\'\s]*ajax[^"\'\s]*)["\']', js)))[:15]
+    calls = _re.findall(r'(?:url|fetch\(|\$\.(?:get|post|ajax)\()\s*:?\s*([^,\n]{0,120})', js)[:10]
+    heads = _re.findall(r'headers\s*:\s*\{[^}]{0,200}\}', js)[:3]
+    return f"js {st} {len(js)}b urls={urls} calls={calls} headers={heads}"
+
+
+def chosic_js2():
+    st, js = _get("https://www.chosic.com/wp-content/themes/astra-child/js/all-tools.js")
+    urls = sorted(set(_re.findall(r'["\'](https?://[^"\']+|/api[^"\']*|[^"\'\s]*(?:ajax|spotify)[^"\'\s]*)["\']', js)))[:20]
+    heads = _re.findall(r'headers\s*:\s*\{[^}]{0,300}\}', js)[:3]
+    return f"all-tools {st} {len(js)}b urls={urls} headers={heads}"
+
+
 check("Spotify embed token probe", spotify_embed_token)
 check("Chosic exporter probe", chosic_page)
+check("Chosic export script", chosic_js)
+check("Chosic tools script", chosic_js2)

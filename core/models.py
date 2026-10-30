@@ -16,6 +16,29 @@ from . import paths as _paths
 from .paths import PLACEHOLDER_IMAGE, ASSETS_FOLDER, normalise_path
 
 
+def close_matches(songs, query, cutoff=0.78):
+    """Songs whose title / artist / album match every word of the query allowing small typos ("hustory" finds
+    "History"), for when nothing matches exactly. Works in any script."""
+    import difflib
+    words = fold(query).split()
+    if not words or len(fold(query).replace(" ", "")) < 4:
+        return []
+    out = []
+    for s in songs:
+        hay = fold(f"{s.title} {s.artist} {s.album}")
+        hay_words = set(hay.split())
+        ok = True
+        for w in words:
+            if w in hay:
+                continue
+            if len(w) < 3 or not difflib.get_close_matches(w, hay_words, n=1, cutoff=cutoff):
+                ok = False
+                break
+        if ok:
+            out.append(s)
+    return out
+
+
 def fold(text):
     """Lower-case without accents and with full-width forms made normal, so search works in any language
     ("beyonce" finds "Beyoncé"; Cyrillic, Arabic, CJK and so on are matched as they are)."""

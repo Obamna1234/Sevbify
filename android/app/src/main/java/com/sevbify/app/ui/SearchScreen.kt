@@ -71,7 +71,9 @@ fun SearchScreen() {
     var books by remember { mutableStateOf<List<Show>>(emptyList()) }
     var note by remember { mutableStateOf("") }
     var genres by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var better by remember { mutableStateOf("") }               // "Did you mean …?"
+    var better by remember { mutableStateOf("") }               // the corrected spelling being shown
+    var correctedFrom by remember { mutableStateOf("") }        // what was typed (for "Search instead for")
+    var asTyped by remember { mutableStateOf("") }              // searched exactly as typed: don't correct again
 
     LaunchedEffect(Library.settings.online) {
         if (Library.settings.online && genres.isEmpty()) {
@@ -80,16 +82,19 @@ fun SearchScreen() {
     }
     // Recent searches, like Spotify's: a search you stay on for a moment is remembered (only on this phone).
     LaunchedEffect(query) {
-        if (better.isNotEmpty() && query.trim() != better) better = ""
+        if (better.isNotEmpty() && query.trim() != better) { better = ""; correctedFrom = "" }
         if (query.trim().length < 2) return@LaunchedEffect
         delay(2500)
         Library.rememberSearch(query)
         // Only the finished search, and only when its results look unrelated, is checked for a typo (DuckDuckGo).
-        if (Library.settings.online && query.trim().length >= 3) {
-            better = try { (Bridge.call("did_you_mean", query.trim()) as? String).orEmpty() } catch (e: Exception) {
+        // Like Google: the results for the right spelling are shown straight away.
+        val q = query.trim()
+        if (Library.settings.online && q.length >= 3 && q != asTyped && correctedFrom.isEmpty()) {
+            val b = try { (Bridge.call("did_you_mean", q) as? String).orEmpty() } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 ""
             }
+            if (b.isNotEmpty() && query.trim() == q) { better = b; correctedFrom = q; query = b }
         }
     }
     LaunchedEffect(query, chip) {
@@ -119,9 +124,12 @@ fun SearchScreen() {
     val local = remember(query, Library.localSongs, tick) {
         // Any language: case and accents don't matter ("beyonce" finds "Beyoncé").
         val q = fold(query.trim())
-        if (q.isEmpty()) emptyList() else Library.localSongs.filter {
+        val exact = if (q.isEmpty()) emptyList() else Library.localSongs.filter {
             q in fold(it.title) || q in fold(it.artist) || q in fold(it.album)
         }.take(50)
+        // Nothing exact: small typos still find your own songs ("hustory" → "History").
+        if (exact.isNotEmpty() || q.replace(" ", "").length < 4) exact
+        else Library.localSongs.filter { closeMatch(q, fold("${it.title} ${it.artist} ${it.album}")) }.take(50)
     }
     LazyColumn {
         item {
@@ -186,14 +194,19 @@ fun SearchScreen() {
         }
         item {
             LazyRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("all" to tr("All"), "songs" to "Songs", "artists" to "Artists", "podcasts" to "Podcasts",
-                             "audiobooks" to "Audiobooks")) { (k, l) -> Chip(l, chip == k) { chip = k } }
+                items(listOf("all" to tr("All"), "songs" to tr("Songs"), "artists" to tr("Artists"), "podcasts" to tr("Podcasts"),
+                             "audiobooks" to tr("Audiobooks"))) { (k, l) -> Chip(l, chip == k) { chip = k } }
             }
         }
-        if (better.isNotEmpty() && better != query.trim()) {
+        if (correctedFrom.isNotEmpty() && better == query.trim()) {
             item {
-                androidx.compose.material3.TextButton(onClick = { query = better }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Text(tr("Did you mean") + "  “$better”?", color = C.Text, style = MaterialTheme.typography.bodyLarge)
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(tr("Showing results for") + " “$better”", color = C.Text, style = MaterialTheme.typography.bodyLarge)
+                    Text(tr("Search instead for") + " “$correctedFrom”", color = C.Sub,
+                         style = MaterialTheme.typography.bodyMedium,
+                         modifier = Modifier.clickable { asTyped = correctedFrom; val o = correctedFrom
+                                                         correctedFrom = ""; better = ""; query = o }
+                             .padding(top = 2.dp))
                 }
             }
         }
@@ -264,3 +277,22 @@ fun BrowseTile(name: String, colour: Color, picture: String?, modifier: Modifier
 /** Lower-case without accents, for searching in any language. */
 fun fold(text: String): String =
     java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD).replace(Regex("\\p{Mn}+"), "").lowercase()
+
+/** Every word of the query is in the text, or differs from one of its words by a small typo. */
+fun closeMatch(query: String, text: String): Boolean {
+    val words = text.split(' ').filter { it.isNotEmpty() }
+    return query.split(' ').filter { it.isNotEmpty() }.all { w ->
+        w in text || (w.length >= 3 && words.any { similar(w, it) >= 0.78 })
+    }
+}
+
+private fun similar(a: String, b: String): Double {
+    if (kotlin.math.abs(a.length - b.length) > 3) return 0.0
+    val d = Array(a.length + 1) { IntArray(b.length + 1) }
+    for (i in 0..a.length) d[i][0] = i
+    for (j in 0..b.length) d[0][j] = j
+    for (i in 1..a.length) for (j in 1..b.length) {
+        d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+    }
+    return 1.0 - d[a.length][b.length].toDouble() / maxOf(a.length, b.length)
+}

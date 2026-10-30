@@ -62,3 +62,32 @@ def test_podcast_search_works_in_any_language_and_adds_youtube_only_shows(tmp_pa
         return {"entries": [{"channel": "Fin vs History", "channel_url": "https://www.youtube.com/@finvshistory"}]}
     found = podcasts.search_with_youtube(net, "Fin vs History", extract=fake_extract)
     assert found[0].kind == "youtube" and found[0].title == "Fin vs History"
+
+
+def test_your_own_songs_are_found_with_small_typos():
+    from core.models import close_matches
+
+    class S:
+        def __init__(self, t, a):
+            self.title, self.artist, self.album = t, a, ""
+    songs = [S("History", "One Direction"), S("Halo", "Beyoncé")]
+    assert [s.title for s in close_matches(songs, "one directon hustory")] == ["History"]
+    assert close_matches(songs, "zzzz qqqq") == []
+
+
+def test_window_shows_results_for_the_right_spelling_and_can_go_back(window, qapp):
+    from conftest import wait_until
+    window.net._opener = FakeWeb({
+        "duckduckgo.com/ac/": ["fin vs hustory", ["fin vs history"]],
+        "api.deezer.com/search?q=fin+vs+history": {"data": [deezer_track(1, "Fin vs History", "Fin", 7)]},
+        "api.deezer.com/search?q=fin+vs+hustory": {"data": [deezer_track(2, "Money Talk", "Podcast Guy", 8)]},
+        "api.deezer.com/search": {"data": []}, "itunes.apple.com": {"results": []}})
+    window.show_search()
+    window.search_input.setText("fin vs hustory")
+    assert wait_until(qapp, lambda: window.search_input.text() == "fin vs history", 15)
+    assert "Search instead for" in window.did_you_mean.text()
+    window.did_you_mean.click()
+    assert window.search_input.text() == "fin vs hustory"
+    for _ in range(50):
+        qapp.processEvents()
+    assert window.search_input.text() == "fin vs hustory"                 # not corrected again

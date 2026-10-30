@@ -274,6 +274,21 @@ def import_link(text, song_links="", jamendo_client_id=""):
 
 
 @_call
+def check_import(tracks_json):
+    """Imported songs, looked up one by one: [{"status": ok / suggest / missing, "track", "suggestion" or None}].
+    The app sends a few at a time to show progress."""
+    from core import import_check
+    from core.online.models import OnlineTrack
+    tracks = [OnlineTrack.from_dict(d) for d in json.loads(tracks_json)]
+    out = []
+    for r in import_check.check_tracks(_state["music"], _state["net"], tracks):
+        sug = r["suggestion"]
+        out.append({"status": r["status"], "track": _track(r["track"]),
+                    "suggestion": import_check.as_text(sug) if sug is not None else ""})
+    return out
+
+
+@_call
 def import_file(path):
     from core import importers
     res = importers.read_playlist_file(path)
