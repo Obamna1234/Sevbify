@@ -63,14 +63,14 @@ final class Library: ObservableObject {
     private var byKey: [String: Track] = [:]
     private var loading = false
 
-    static var documents: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
-    static var support: URL {
+    nonisolated static var documents: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
+    nonisolated static var support: URL {
         let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Sevbify", isDirectory: true)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
     }
-    static var musicFolder: URL {
+    nonisolated static var musicFolder: URL {
         let u = documents.appendingPathComponent("Music", isDirectory: true)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
