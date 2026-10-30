@@ -198,7 +198,7 @@ private fun Dialogs() {
             containerColor = C.Elevated,
         )
     }
-    Updater.offer?.let { r -> UpdateDialog(r) }
+    com.sevbify.app.Updater.offer?.let { r -> UpdateDialog(r) }
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },
