@@ -1,22 +1,53 @@
 <img src="assets/branding/sevbify_logo_1024.png" alt="Sevbify logo" width="160">
 
-# Sevbify — Local Music Player
+# Sevbify — a private music player
 
-Sevbify is an ad-free desktop music player for your own music files, with a familiar dark,
-streaming-app-style interface. Built with Python, PyQt6 and VLC.
-Windows is the first target platform. It can also download songs you don't have yet, using the
-download engine from its sister app SEVBY (see *Downloading songs* below).
+Sevbify is an ad-free music player for **Windows, macOS, Linux, Android and iPhone**, with a familiar
+streaming-app-style design. Play your own music, stream or download full songs you don't have yet, follow
+podcasts, listen to free audiobooks, import playlists from Spotify, Apple Music, Deezer or a file, and use your own
+Jellyfin or Nextcloud server. No account, no ads, no tracking, nothing sold.
 
-Sevbify is built with AI help (Anthropic's Claude writes and tests most of the code; the owner
-decides what it does and tests it on Windows).
+> **Pre-release.** Sevbify 5.0 is in public beta: everything works, but expect rough edges. Please report problems on
+> the [Issues](https://github.com/Obamna1234/Sevbify/issues) page.
 
-**Current version:** v4.9.3 — library, search, saved playlists, volume. See `CHANGELOG.md`.
+**Download:** [latest release](https://github.com/Obamna1234/Sevbify/releases) (every platform; the install steps are
+on the release page). Sevbify updates itself after that.
+
+<p>
+  <img src="docs/screenshots/desktop-playlist.jpg" alt="Sevbify on a computer: a playlist with the now-playing panel" width="100%">
+</p>
+
+<p>
+  <img src="docs/screenshots/android-home.jpg" alt="Android: Home" width="19%">
+  <img src="docs/screenshots/android-library.jpg" alt="Android: Your Library" width="19%">
+  <img src="docs/screenshots/android-menu.jpg" alt="Android: the profile menu" width="19%">
+  <img src="docs/screenshots/android-settings.jpg" alt="Android: Settings" width="19%">
+  <img src="docs/screenshots/iphone-search.jpg" alt="iPhone: Search" width="19%">
+</p>
+
+### What it does
+
+- **Your music**: folders on your computer or phone, SD cards, cloud folders (Nextcloud, OneDrive, Dropbox… through
+  the phone's file picker), or your own **Jellyfin / Nextcloud** server.
+- **Full songs you don't have yet**: found on Bandcamp, then YouTube; stream them or download them to keep.
+  A 30-second preview only plays when you ask for one.
+- **Search** in any language, with "Did you mean…" for typos. **Song radio**, artist pages, genres, lyrics.
+- **Import playlists** from Spotify, Apple Music, Deezer or Jamendo links, or from .csv / .txt / .m3u files, with a
+  spelling check for each song.
+- **Podcasts** (including video podcasts, with sponsor segments skipped) and **free audiobooks** (LibriVox).
+- **20 languages**, a **profile file** to move your playlists between devices, **in-app updates**, **Save space**
+  downloads, Bluetooth and **Android Auto**.
+
+**Privacy:** Sevbify only contacts what a feature needs (listed in Settings → Privacy), never signs in to Spotify or
+YouTube, and keeps everything on your devices. See *Privacy* below.
+
+Built with AI help (Anthropic's Claude writes and tests most of the code; the owner decides what it does and tests it).
 
 ## Requirements
 
 | What | Version | Notes |
 |---|---|---|
-| Operating system | Windows 10/11 (64-bit), macOS, or Linux | Windows first; macOS and Linux builds are set up and will be switched on later |
+| Operating system | Windows 10/11 (64-bit), macOS, or Linux | Ready-made downloads for all three on the Releases page |
 | Python | 3.10 – 3.13, **64-bit** | https://www.python.org/downloads/ — tick "Add python.exe to PATH" |
 | VLC media player | 3.0.x, **64-bit** | **Only when running from source.** The ready-made Windows app has VLC's engine (libVLC) built in. From source: https://www.videolan.org/vlc/ (must match Python's 64-bit) |
 | Python packages | see `requirements.txt` | PyQt6, python-vlc, mutagen, Pillow, certifi, yt-dlp, pytest |

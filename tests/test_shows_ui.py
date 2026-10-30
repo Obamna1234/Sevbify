@@ -91,7 +91,8 @@ def test_download_an_episode_and_play_it_offline(win, qapp, monkeypatch, audio_d
     assert win.download_items([newest]) == 1
     assert wait_until(qapp, lambda: "podcast:ep-2" in win.user_data.offline, 10)
     path = win.user_data.offline["podcast:ep-2"]
-    assert os.path.basename(path) == "2026-10-25 - Newest episode Vikings.m4a"
+    # Save space (on by default) keeps it as a small .opus when this computer's ffmpeg can make one.
+    assert os.path.basename(path) in ("2026-10-25 - Newest episode Vikings.m4a", "2026-10-25 - Newest episode Vikings.opus")
     pods = os.path.dirname(os.path.dirname(path))
     assert not os.path.exists(os.path.join(pods, ".sevbify-noscan"))       # no hidden marker file any more
     assert os.path.normcase(os.path.abspath(pods)) in {os.path.normcase(os.path.abspath(f))

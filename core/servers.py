@@ -63,12 +63,41 @@ def _same_server(base, url):
 
 
 # --- HTTP ---------------------------------------------------------------------------------------------------
+_SECRET_HEADERS = ("authorization", "x-emby-authorization", "x-emby-token")
+
+
+class _KeepSignInHome(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect only within the same server. Anywhere else (another host, or https → http) the sign-in is
+    taken off first, so a server or proxy can never hand your password or token to someone else."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is None:
+            return None
+        a, b = urllib.parse.urlparse(req.full_url), urllib.parse.urlparse(newurl)
+        if (a.scheme, a.netloc) != (b.scheme, b.netloc):
+            for k in list(new.headers):
+                if k.lower() in _SECRET_HEADERS:
+                    del new.headers[k]
+            for k in list(new.unredirected_hdrs):
+                if k.lower() in _SECRET_HEADERS:
+                    del new.unredirected_hdrs[k]
+        return new
+
+
+_OPENER = urllib.request.build_opener(_KeepSignInHome)
+
+
+def _open(req, timeout):
+    return _OPENER.open(req, timeout=timeout)
+
+
 def _request(url, method="GET", headers=None, body=None, timeout=20, opener=None, limit=50_000_000):
     if opener is not None:
         return opener(method, url, headers or {}, body)
     req = urllib.request.Request(url, data=body, method=method, headers={"User-Agent": CLIENT, **(headers or {})})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with _open(req, timeout) as r:
             data = r.read(limit + 1)
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
@@ -225,8 +254,10 @@ def find(servers, track):
 
 
 def headers_for(server):
+    # Only the standard Authorization header: Android's and Python's HTTP clients drop it when a redirect leaves
+    # the server, so it can't follow a song to another host.
     if server["type"] == "jellyfin":
-        return {"X-Emby-Token": server["token"]}
+        return {"Authorization": f'MediaBrowser Token="{server["token"]}"'}
     return _basic(server)
 
 
@@ -251,13 +282,13 @@ def download(server, track, out_dir, limit=1_500_000_000, opener=None):
     url, headers = playable(server, track)
     path_ext = os.path.splitext(urllib.parse.urlparse(track.source_id if server["type"] == "webdav" else "")[2])[1]
     ext = path_ext.lower().lstrip(".") if path_ext.lower().lstrip(".") in AUDIO_EXT else ""
-    folder = os.path.join(out_dir, downloader.artist_folder(track.artist))
+    folder = os.path.join(out_dir, safe_name(downloader.artist_folder(track.artist)) or "Unknown Artist")
     os.makedirs(folder, exist_ok=True)
-    base = downloader.song_line(track.artist, track.title).replace("/", "-").replace("\\", "-")[:150]
-    tmp = os.path.join(folder, base + ".part")
+    base = safe_name(downloader.song_line(track.artist, track.title))[:150] or "Song"
+    tmp = os.path.join(folder, base + "." + uuid.uuid4().hex[:6] + ".part")
     req = urllib.request.Request(url, headers={"User-Agent": CLIENT, **headers})
     try:
-        with (opener(url, headers) if opener else urllib.request.urlopen(req, timeout=60)) as r, open(tmp, "wb") as f:
+        with (opener(url, headers) if opener else _open(req, 60)) as r, open(tmp, "wb") as f:
             ctype = (getattr(r, "headers", {}) or {}).get("Content-Type", "") or ""
             got = 0
             while True:
@@ -273,6 +304,10 @@ def download(server, track, out_dir, limit=1_500_000_000, opener=None):
                    "audio/aac": "m4a", "audio/ogg": "ogg", "audio/opus": "opus", "audio/wav": "wav",
                    "audio/x-wav": "wav"}.get(ctype.split(";")[0].strip().lower(), "mp3")
         final = os.path.join(folder, f"{base}.{ext}")
+        n = 2
+        while os.path.exists(final):                       # never over a song that's already there
+            final = os.path.join(folder, f"{base} ({n}).{ext}")
+            n += 1
         os.replace(tmp, final)
         return final
     except urllib.error.URLError as e:
@@ -283,6 +318,16 @@ def download(server, track, out_dir, limit=1_500_000_000, opener=None):
                 os.remove(tmp)
             except OSError:
                 pass
+
+
+def safe_name(name):
+    """A file name that works on Windows, Mac and Linux (no <>:"/\\|?* or control characters, no trailing dots)."""
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", name or "")
+    name = name.strip().rstrip(". ")
+    if name.upper().split(".")[0] in {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+                                      *(f"LPT{i}" for i in range(1, 10))}:
+        name = "_" + name
+    return name
 
 
 def public(server):

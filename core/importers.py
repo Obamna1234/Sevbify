@@ -372,8 +372,12 @@ def read_playlist_file(path):
                 continue
             if line.startswith("#"):
                 continue
-            p = line if os.path.isabs(line) else os.path.normpath(os.path.join(base, line.replace("/", os.sep)))
-            if os.path.exists(p):
+            # Network paths (\\server\share, //host/x) and links are never opened: on Windows just looking at one
+            # would send your sign-in to that computer. Such a line is treated like a song you don't have.
+            remote = line.startswith(("\\\\", "//")) or "://" in line or re.match(r"^[A-Za-z]:(?![\\/])", line)
+            p = "" if remote else (line if os.path.isabs(line) else
+                                   os.path.normpath(os.path.join(base, line.replace("/", os.sep))))
+            if p and os.path.exists(p):
                 items.append(("file", p))
             elif pending_info:
                 t = track_from_line(pending_info)

@@ -3153,6 +3153,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             old.stop()
         timer = QTimer(self)
         self._chosic_timer = timer
+        skipped = set()
         self.show_status("Waiting for the file from Chosic in Downloads…", kind="info", timeout_ms=15000)
 
         def look():
@@ -3171,13 +3172,32 @@ class MainWindow(ShowsMixin, QMainWindow):
                     st = os.stat(p)
                 except OSError:
                     continue
-                if st.st_mtime < started or _t.time() - st.st_mtime < 1.5:
-                    continue                                   # older, or still being written
+                if st.st_mtime < started or _t.time() - st.st_mtime < 1.5 or p in skipped:
+                    continue                                   # older, still being written, or already declined
+                if not self._looks_like_song_list(p):
+                    skipped.add(p)                             # e.g. a bank statement: never read further or sent
+                    continue
                 timer.stop()
-                self._fill_from_file(pl, p)
+                answer = QMessageBox.question(self, "Sevbify", f"Add the songs from “{n}” to “{pl.name}”?")
+                if answer == QMessageBox.StandardButton.Yes:
+                    self._fill_from_file(pl, p)
+                else:
+                    skipped.add(p)
+                    timer.start(2000)
                 return
         timer.timeout.connect(look)
         timer.start(2000)
+
+    @staticmethod
+    def _looks_like_song_list(path):
+        """A CSV / text export of songs (a header naming a title and an artist column), not any other file."""
+        from core import importers, downloader
+        try:
+            with open(path, "rb") as f:
+                text = importers.decode_text(f.read(256 * 1024))
+            return bool(downloader.engine()._structured_to_lines(text))
+        except Exception:
+            return False
 
     def _fill_from_file(self, pl, path):
         """Replace an imported playlist's songs with the full list from a file (keeps its name and cover)."""
@@ -5469,7 +5489,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         box = QMessageBox(self)
         box.setWindowTitle("Update Sevbify")
         box.setText(f"Sevbify {r['latest']} is available (you have {r['current']}).")
-        can = app_update.can_install() and bool(r.get("url"))
+        # Installed in place only when GitHub gave the file's checksum and Sevbify's folder is clearly its own
+        # (never a folder that also holds other things); otherwise the release page is opened instead.
+        can = (app_update.can_install() and bool(r.get("url")) and bool(r.get("sha256"))
+               and app_update.looks_like_sevbify(app_update.install_target(), exe_name=os.path.basename(sys.executable)))
         box.setInformativeText("It downloads in the background, then Sevbify restarts to finish. Your playlists, "
                                "settings and music stay as they are." if can else
                                "Open the release page to download it.")
@@ -5511,6 +5534,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             return False
         try:
             target = app_update.install_target()
+            if not app_update.looks_like_sevbify(target, exe_name=os.path.basename(sys.executable)):
+                raise app_update.UpdateError("Sevbify's folder holds other files too, so it wasn't replaced")
             cmd = app_update.restart_command(new_app, target, os.getpid(), os.path.join(self.storage.data_dir, "update"),
                                              exe_name=os.path.basename(sys.executable), reopen=reopen)
             app_update.launch_detached(cmd)

@@ -89,7 +89,8 @@ def test_install_target_is_the_app_bundle_on_a_mac_and_the_folder_elsewhere():
 def test_windows_script_waits_swaps_and_restores_on_failure(tmp_path):
     cmd = app_update.restart_command(r"C:\data\update\new\Sevbify", r"D:\Apps\Sevbify", 1234, str(tmp_path), "win32")
     text = open(cmd[2], encoding="utf-8").read()
-    assert 'PID eq 1234' in text and r'move "D:\Apps\Sevbify" "D:\Apps\Sevbify.old"' in text
+    assert 'PID eq 1234' in text and r'move "D:\Apps\Sevbify" "D:\Apps\Sevbify.sevbify-old-' in text
+    assert "chcp 65001" in text and "rmdir /s /q \"D:\\Apps\\Sevbify\"" not in text
     assert "robocopy" in text and r'start "" "D:\Apps\Sevbify\Sevbify.exe"' in text
 
 
@@ -112,5 +113,24 @@ def test_linux_update_swaps_the_folder_after_the_app_closes(tmp_path):
     while time.time() < deadline and not (target / "started").exists():
         time.sleep(0.2)
     assert (target / "_internal" / "new.txt").read_text() == "new"
-    assert not (target / "old-only.txt").exists() and not (tmp_path / "install" / "Sevbify.old").exists()
+    assert not (target / "old-only.txt").exists()
+    assert [p.name for p in (tmp_path / "install").iterdir()] == ["Sevbify"]          # the old copy is gone
     assert (target / "started").exists()                                   # reopened
+
+
+def test_percent_signs_in_windows_paths_are_kept(tmp_path):
+    cmd = app_update.restart_command(r"C:\data\new\Sevbify", r"C:\Tools\100%\Sevbify", 1, str(tmp_path), "win32")
+    assert r"C:\Tools\100%%\Sevbify" in open(cmd[2], encoding="utf-8").read()
+
+
+def test_only_a_real_sevbify_folder_is_ever_replaced(tmp_path):
+    good = tmp_path / "Sevbify"
+    (good / "_internal").mkdir(parents=True)
+    (good / "Sevbify").write_text("x")
+    assert app_update.looks_like_sevbify(str(good), "linux")
+    (good / "My holiday photos").mkdir()                     # someone keeps other things in that folder
+    assert not app_update.looks_like_sevbify(str(good), "linux")
+    desktop = tmp_path / "Desktop"
+    desktop.mkdir()
+    (desktop / "Sevbify").write_text("x")
+    assert not app_update.looks_like_sevbify(str(desktop), "linux")

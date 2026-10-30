@@ -41,8 +41,19 @@ class PlaybackService : MediaLibraryService() {
             val extra = headers[spec.uri.toString()]
             if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
         }
+        // Songs from your own server carry a sign-in. They use a connection that lets Android follow redirects
+        // itself: it drops the sign-in when a redirect leaves the server and never goes from https to http.
+        val strictHttp = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(false)
+            .setUserAgent("Sevbify")
+        val signedIn = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, strictHttp)) { spec ->
+            val extra = headers[spec.uri.toString()]
+            if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
+        }
+        val picking = androidx.media3.datasource.DataSource.Factory {
+            PickingDataSource(withHeaders.createDataSource(), signedIn.createDataSource())
+        }
         val exo = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(withHeaders))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(picking))
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
                                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
             .setHandleAudioBecomingNoisy(true)       // headphones unplugged: pause, like Spotify
@@ -95,6 +106,14 @@ class PlaybackService : MediaLibraryService() {
             else -> emptyList<Track>() to ""
         }
 
+        /** Only Sevbify itself, the phone's own media controls (lock screen, Bluetooth, notification) and Android
+         *  Auto may connect: other apps can't read your playlists or what you listened to. */
+        override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            val ok = controller.packageName == packageName || controller.isTrusted ||
+                controller.packageName == ANDROID_AUTO || controller.packageName == "com.google.android.carassistant"
+            return if (ok) super.onConnect(session, controller) else MediaSession.ConnectionResult.reject()
+        }
+
         override fun onGetLibraryRoot(session: MediaLibrarySession, browser: MediaSession.ControllerInfo,
                                       params: LibraryParams?): ListenableFuture<LibraryResult<MediaItem>> =
             Futures.immediateFuture(LibraryResult.ofItem(folder("root", "Sevbify"), params))
@@ -135,6 +154,25 @@ class PlaybackService : MediaLibraryService() {
         session?.run { player.release(); release() }
         session = null
         super.onDestroy()
+    }
+
+    /** Opens a link with the signed-in connection when it carries a server sign-in, otherwise the normal one. */
+    private class PickingDataSource(val normal: androidx.media3.datasource.DataSource,
+                                    val strict: androidx.media3.datasource.DataSource) : androidx.media3.datasource.DataSource {
+        private var current: androidx.media3.datasource.DataSource? = null
+        override fun addTransferListener(l: androidx.media3.datasource.TransferListener) {
+            normal.addTransferListener(l); strict.addTransferListener(l)
+        }
+        override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+            val signed = headers[dataSpec.uri.toString()]?.keys?.any { it.equals("Authorization", true) } == true
+            val ds = if (signed) strict else normal
+            current = ds
+            return ds.open(dataSpec)
+        }
+        override fun read(buffer: ByteArray, offset: Int, length: Int) = current!!.read(buffer, offset, length)
+        override fun getUri(): Uri? = current?.uri
+        override fun getResponseHeaders(): Map<String, List<String>> = current?.responseHeaders ?: emptyMap()
+        override fun close() { try { current?.close() } finally { current = null } }
     }
 
     companion object {

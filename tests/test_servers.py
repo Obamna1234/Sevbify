@@ -35,7 +35,7 @@ def test_jellyfin_keeps_only_a_token_and_lists_songs():
     assert "TOK" not in json.dumps(t.to_dict())                       # nothing secret in a saved song
     assert 'Token="TOK"' in calls[-1][2]["Authorization"]
     url, headers = S.playable(srv, t)
-    assert headers == {"X-Emby-Token": "TOK"} and "TOK" not in url
+    assert headers == {"Authorization": 'MediaBrowser Token="TOK"'} and "TOK" not in url
     assert S.find([srv], t) is srv
     assert "token" not in S.public(srv)
 
@@ -118,3 +118,32 @@ def test_server_song_downloads_straight_from_the_server(tmp_path):
     assert path.endswith("Band - Night Song.flac") and open(path, "rb").read(4) == b"fLaC"
     assert seen[0]["Authorization"].startswith("Basic ")
     assert not [p for p in tmp_path.rglob("*.part")]
+
+
+def test_sign_in_never_follows_a_redirect_to_another_host():
+    import urllib.request
+    h = S._KeepSignInHome()
+    req = urllib.request.Request("https://cloud.example.com/a.mp3",
+                                 headers={"Authorization": "Basic xyz", "X-Emby-Token": "T", "User-Agent": "x"})
+    other = h.redirect_request(req, None, 302, "Found", {}, "https://cdn.evil.example.com/a.mp3")
+    assert "Authorization" not in other.headers and "X-emby-token" not in other.headers
+    same = h.redirect_request(req, None, 302, "Found", {}, "https://cloud.example.com/b.mp3")
+    assert same.headers.get("Authorization") == "Basic xyz"
+
+
+def test_file_names_are_safe_and_never_overwrite(tmp_path):
+    import io
+    from core.online.models import OnlineTrack
+    assert S.safe_name('Intro: Part 1?') == "Intro- Part 1-"
+    assert S.safe_name("CON") == "_CON"
+    srv = {"id": "abcdef123456", "type": "jellyfin", "url": "https://jf.example.com", "user": "a", "token": "T"}
+    t = OnlineTrack("Song", "Band", source="jellyfin", source_id="1", page_url=srv["id"],
+                    stream_url="https://jf.example.com/Audio/1/stream?static=true")
+
+    class R(io.BytesIO):
+        headers = {"Content-Type": "audio/mpeg"}
+        def __enter__(self): return self
+        def __exit__(self, *a): self.close()
+    a = S.download(srv, t, str(tmp_path), opener=lambda u, h: R(b"one"))
+    b = S.download(srv, t, str(tmp_path), opener=lambda u, h: R(b"two"))
+    assert a != b and open(a, "rb").read() == b"one" and b.endswith("Band - Song (2).mp3")

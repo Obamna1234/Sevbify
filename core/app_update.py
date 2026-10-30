@@ -14,6 +14,7 @@ import shutil
 import stat
 import sys
 import tarfile
+import uuid
 import zipfile
 
 ALLOWED_PREFIX = "https://github.com/Obamna1234/Sevbify/releases/download/"
@@ -42,6 +43,23 @@ def install_target(executable=None, platform=None):
         if app.endswith(".app"):
             return app
     return os.path.dirname(exe)
+
+
+def looks_like_sevbify(target, platform=None, exe_name=None):
+    """Only a folder that is clearly a Sevbify install is ever replaced (never, say, the Desktop or a music folder
+    that someone put Sevbify.exe into): the app bundle on a Mac; elsewhere the program plus its _internal folder,
+    and nothing that isn't part of a Sevbify release."""
+    platform = platform or sys.platform
+    if not target or not os.path.isdir(target):
+        return False
+    if platform == "darwin":
+        return target.endswith(".app") and os.path.isfile(os.path.join(target, "Contents", "MacOS", "Sevbify"))
+    exe = exe_name or ("Sevbify.exe" if platform.startswith("win") else "Sevbify")
+    if not os.path.isfile(os.path.join(target, exe)) or not os.path.isdir(os.path.join(target, "_internal")):
+        return False
+    allowed = {exe.lower(), "_internal", "sevbify.exe", "sevbify", "deno", "deno.exe", "ffmpeg", "ffmpeg.exe",
+               "libvlc.dll", "libvlccore.dll", "plugins", "vlc", "readme.txt", "licenses"}
+    return all(n.lower() in allowed for n in os.listdir(target))
 
 
 def launch_detached(cmd):
@@ -180,17 +198,24 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
     reopen=False: just swap (an update downloaded earlier is put in place when you close Sevbify)."""
     platform = platform or sys.platform
     os.makedirs(script_dir, exist_ok=True)
-    old = target.rstrip("/\\") + ".old"
+    # A fresh name Sevbify makes itself: a folder that already exists is never removed.
+    old = target.rstrip("/\\") + ".sevbify-old-" + uuid.uuid4().hex[:8]
     if platform.startswith("win"):
-        exe = target.rstrip("\\") + "\\" + (exe_name or "Sevbify.exe")
+        def c(p):                      # cmd expands %...% even inside quotes
+            if any(ch in p for ch in '"\r\n'):
+                raise UpdateError("Sevbify's folder has a name the updater can't use; update from the release page.")
+            return p.replace("%", "%%")
+        target_c, new_c, old_c = c(target), c(new_app), c(old)
+        exe = target_c.rstrip("\\") + "\\" + c(exe_name or "Sevbify.exe")
         script = os.path.join(script_dir, "sevbify-update.cmd")
+        target, new_app, old = target_c, new_c, old_c
         lines = [
             "@echo off",
+            "chcp 65001 >NUL",            # the paths below are UTF-8 (names like José or Мария)
             "setlocal",
             f':wait',
             f'tasklist /FI "PID eq {int(pid)}" 2>NUL | find "{int(pid)}" >NUL',
             "if not errorlevel 1 ( timeout /t 1 /nobreak >NUL & goto wait )",
-            f'if exist "{old}" rmdir /s /q "{old}"',
             f'move "{target}" "{old}" >NUL',
             "if errorlevel 1 goto copy",
             f'move "{new_app}" "{target}" >NUL',
@@ -220,7 +245,6 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
     body = f"""#!/bin/sh
 # Sevbify updater: wait for Sevbify to close, swap in the new version, open it again.
 while kill -0 {int(pid)} 2>/dev/null; do sleep 0.5; done
-rm -rf {_q(old)}
 if mv {_q(target)} {_q(old)}; then
   if mv {_q(new_app)} {_q(target)}; then
     rm -rf {_q(old)}

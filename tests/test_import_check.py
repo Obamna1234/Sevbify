@@ -78,3 +78,26 @@ def test_window_fills_a_playlist_from_the_chosic_download(window, qapp, tmp_path
     window._check_imported = lambda p: None
     window._fill_from_file(pl, str(f))
     assert len(pl.songs) == 5 and pl.name == "Big"
+
+
+def test_m3u_network_paths_are_never_opened(tmp_path, monkeypatch):
+    import os
+    from core import importers
+    looked = []
+    real = os.path.exists
+    monkeypatch.setattr(importers.os.path, "exists", lambda p: looked.append(p) or real(p))
+    m = tmp_path / "x.m3u"
+    m.write_text("#EXTM3U\n#EXTINF:1,Band - One\n\\\\attacker\\share\\a.mp3\n#EXTINF:1,Band - Two\n//host/b.mp3\n",
+                 encoding="utf-8")
+    res = importers.read_playlist_file(str(m))
+    assert [v.title for k, v in res["items"]] == ["One", "Two"]
+    assert not any("attacker" in p or "host" in p for p in looked)
+
+
+def test_only_song_lists_are_picked_up_from_downloads(window, tmp_path):
+    songs = tmp_path / "playlist.csv"
+    songs.write_text("Song,Artist\nA,B\n", encoding="utf-8")
+    bank = tmp_path / "statement.csv"
+    bank.write_text("Date,Amount,Payee\n2026-10-01,12.50,Shop\n", encoding="utf-8")
+    assert window._looks_like_song_list(str(songs))
+    assert not window._looks_like_song_list(str(bank))
