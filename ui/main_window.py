@@ -1588,6 +1588,12 @@ class MainWindow(ShowsMixin, QMainWindow):
             media = self.player.get_media()
             if media is not None:
                 lengths.append(media.get_duration())
+                if max(lengths) <= 0:
+                    # Older VLC (3.0.16, Ubuntu 22.04) plays Opus but can't tell its length: audio it really
+                    # decoded means the file played, so use the length from the file's own tags.
+                    stats = vlc.MediaStats()
+                    if media.get_stats(stats) and stats.decoded_audio > 0:
+                        lengths.append(int(getattr(self.current_song, "duration", 0) or 0) or 1)
         except Exception:
             pass
         return max(lengths)

@@ -50,6 +50,8 @@ Playlists and settings are kept in `~/.local/share/Sevbify`.
 
 ## What's in this version
 
+beta.15: **Sevbify for macOS (Apple Silicon) and Linux**, alongside Windows and Android. Same app and features;
+see the install steps above. Both are new: please report anything that looks or behaves differently.
 beta.14: import playlists and albums from Deezer and Jamendo links too, and simpler border colours (Settings →
 "Show where playlists came from"): grey = made in Sevbify, blue = from a file, green = Spotify, white = Apple
 Music, purple = Deezer, orange = Jamendo.

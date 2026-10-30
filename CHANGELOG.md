@@ -2,6 +2,14 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**macOS and Linux apps (v5.0.0-beta.15):**
+- Sevbify-macOS.zip (Apple Silicon, M1 or newer): VLC's player engine, ffmpeg, yt-dlp and Deno inside the app;
+  ad-hoc signed, so the first start is right-click → Open. The build checks it plays with its own VLC.
+- Sevbify-Linux.tar.gz (64-bit, built on Ubuntu 22.04): uses the system's VLC (`sudo apt install vlc`);
+  `install.sh` adds it to the app menu. Older VLC (3.0.16) can't tell an Opus file's length: such songs now
+  still count as played (length from the file's tags) instead of being treated as unplayable.
+- The automatic build now tests, builds and smoke-tests Windows, macOS and Linux on every change.
+
 **Deezer / Jamendo imports and simpler border colours (v5.0.0-beta.14):**
 - Import a public Deezer playlist or album link (Deezer's free public API, no account; all songs, not just 100),
   or a Jamendo playlist or album link (needs the free Jamendo client ID; on Android a box for it appears when you
