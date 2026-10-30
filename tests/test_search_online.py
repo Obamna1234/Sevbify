@@ -24,7 +24,7 @@ def test_web_results_shown_and_owned_song_plays_full(window, qapp, tmp_path):
     items = window.web_table.songs_in_view()
     assert getattr(items[0], "is_remote", False) and items[0].title == "Gamechanger"
     assert window.web_table.item(0, 1).text().endswith("⬇")   # clearly not downloaded
-    assert "30-second previews" in window.search_web_status.text()
+    assert "stream in full" in window.search_web_status.text()
     window.web_table.play_requested.emit(items[0], items)
     assert window.current_song is items[0]
     assert window.pq.source_name == "Search: narc"

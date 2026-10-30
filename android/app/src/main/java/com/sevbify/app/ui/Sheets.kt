@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -62,6 +63,7 @@ fun Sheets() {
     Nav.playlistMenu?.let { PlaylistMenuSheet(it) }
     Nav.folderMenu?.let { FolderMenuSheet(it) }
     Nav.addTo?.let { AddToSheet(it) }
+    Nav.previewFor?.let { PreviewDialog(it) }
 }
 
 @Composable
@@ -111,6 +113,8 @@ private fun SongMenuSheet(m: SongMenu) {
                     }
                 }
                 SheetItem(Icons.Filled.Radio, "Go to song radio", enabled = Library.settings.online) { close(); Player.startRadio(t) }
+                SheetItem(Icons.Filled.PlayCircleOutline, "Preview (30 s)",
+                          enabled = Library.settings.online || t.previewUrl.isNotEmpty()) { close(); Nav.previewFor = t }
                 if (t.artist.isNotEmpty() && t.artist != "Unknown Artist") {
                     SheetItem(Icons.Filled.Person, "Go to artist") { close(); Nav.nowPlayingOpen = false; Nav.go(Screen.Artist(t.artist)) }
                 }
@@ -268,6 +272,7 @@ fun originColour(origin: String): Color = when (origin) {
 /** A playlist's picture: its own cover, or Spotify's 2x2 of album covers; with the optional origin border. */
 @Composable
 fun PlaylistCover(pl: com.sevbify.app.Playlist, size: Dp, modifier: Modifier = Modifier) {
+    @Suppress("UNUSED_VARIABLE") val tick = com.sevbify.app.Library.changes
     val shape = RoundedCornerShape(4.dp)
     val ring = if (com.sevbify.app.Library.settings.showPlaylistOrigin)
         Modifier.border(if (size >= 100.dp) 4.dp else 2.dp, originColour(pl.origin), shape) else Modifier

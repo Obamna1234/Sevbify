@@ -229,6 +229,7 @@ struct ImportView: View {
     @State private var link = ""
     @State private var songs = ""
     @State private var busy = false
+    @State private var pickingFile = false
 
     var body: some View {
         Form {
@@ -247,9 +248,51 @@ struct ImportView: View {
                 Text("Spotify only shares 100 songs per link without signing in. In Spotify on a computer, click a song in the playlist, press Ctrl+A then Ctrl+C, and paste the links here.")
             }
             Button(busy ? "Importing…" : "Import") { run() }.disabled(busy || (link.isEmpty && songs.isEmpty))
+            Section {
+                Button("Choose a file…") { pickingFile = true }.disabled(busy)
+            } header: { Text("Or import a file") } footer: {
+                Text("A .csv from Exportify, TuneMyMusic or Soundiiz (any number of songs), a .txt with one \"Artist - Title\" per line, or an .m3u / .m3u8 playlist.")
+            }
+        }
+        .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.plainText, .commaSeparatedText, .data, .item]) { result in
+            guard case .success(let url) = result else { return }
+            importFile(url)
         }
         .scrollContentBackground(.hidden).background(C.bg.ignoresSafeArea())
         .navigationTitle("Import a playlist")
+    }
+
+    /// Copies the picked file under its own name (it becomes the playlist's name), reads it with the shared core.
+    private func importFile(_ url: URL) {
+        busy = true
+        Task {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let ext = url.pathExtension.lowercased()
+            guard ["txt", "csv", "tsv", "m3u", "m3u8"].contains(ext) else {
+                player.status = "Choose a .txt, .csv or .m3u file"; busy = false; return
+            }
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard size < 10 * 1024 * 1024 else { player.status = "That file is too big for a playlist"; busy = false; return }
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent("import", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let copy = dir.appendingPathComponent(url.lastPathComponent)
+            try? FileManager.default.removeItem(at: copy)
+            do {
+                try FileManager.default.copyItem(at: url, to: copy)
+                defer { try? FileManager.default.removeItem(at: copy) }
+                let o = try await Bridge.object("import_file", [copy.path])
+                let tracks = (o["items"] as? [[String: Any]] ?? []).compactMap { ($0["track"] as? [String: Any]).map(Track.init(dict:)) }
+                guard !tracks.isEmpty else { player.status = "No songs found in that file"; busy = false; return }
+                let name = (o["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? url.deletingPathExtension().lastPathComponent
+                let pl = lib.newPlaylist(name, tracks: tracks, origin: "file")
+                player.status = "Imported “\(pl.name)”: \(tracks.count) songs"
+                nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(pl.id))
+            } catch {
+                player.status = "Couldn't import: \(error.localizedDescription)"
+            }
+            busy = false
+        }
     }
 
     private func run() {

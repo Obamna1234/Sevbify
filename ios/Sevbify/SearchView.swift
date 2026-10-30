@@ -11,6 +11,7 @@ struct SearchView: View {
     @State private var busy = false
     @State private var error = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var better = ""                         // "Did you mean …?"
 
     var body: some View {
         ScrollView {
@@ -37,6 +38,11 @@ struct SearchView: View {
                         GenreGrid(genres: genres)
                     }
                 } else {
+                    if !better.isEmpty && better != query.trimmingCharacters(in: .whitespaces) {
+                        Button { query = better } label: {
+                            Text("Did you mean  “\(better)”?").font(.body).foregroundColor(C.text)
+                        }.padding(.horizontal, 16).padding(.top, 12)
+                    }
                     let mine = lib.localSongs.filter { matches($0) }
                     if !mine.isEmpty {
                         SectionTitle("Your songs")
@@ -76,13 +82,16 @@ struct SearchView: View {
     }
 
     private func matches(_ t: Track) -> Bool {
-        let q = query.lowercased()
-        return t.title.lowercased().contains(q) || t.artist.lowercased().contains(q) || t.album.lowercased().contains(q)
+        // Any language: case, accents and full-/half-width forms don't matter ("beyonce" finds "Beyoncé").
+        let q = query.trimmingCharacters(in: .whitespaces)
+        let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+        return [t.title, t.artist, t.album].contains { $0.range(of: q, options: opts) != nil }
     }
 
     private func schedule() {
         searchTask?.cancel()
         let q = query.trimmingCharacters(in: .whitespaces)
+        if q != better { better = "" }
         guard !q.isEmpty, lib.settings.online else { songs = []; artists = []; return }
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)          // wait until typing pauses
@@ -101,7 +110,10 @@ struct SearchView: View {
             busy = false
             // Recent searches: remembered when you stay on the results for a moment (this task is cancelled when you type).
             try? await Task.sleep(nanoseconds: 2_500_000_000)
-            if !Task.isCancelled { lib.rememberSearch(q) }
+            if Task.isCancelled { return }
+            lib.rememberSearch(q)
+            // Only the finished search, and only when its results look unrelated, is checked for a typo (DuckDuckGo).
+            if q.count >= 3, let b = try? await Bridge.call("did_you_mean", [q]) as? String, !Task.isCancelled { better = b }
         }
     }
 }

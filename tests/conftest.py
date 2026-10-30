@@ -100,11 +100,20 @@ def open_window(qapp):
         # Tests that need online data install their own FakeWeb.
         from online_fixtures import FakeWeb
         w.net._opener = FakeWeb(offline=True)
-        # Songs you don't have play as previews in tests (full streaming would search the real web).
-        from core.online.remote_song import RemoteSong
-        w.user_data.stream_full = False
+        # The app always streams full songs; tests never search the real web, so a song's preview link stands
+        # in for its "full song" (and a song without one is "not found", like a failed lookup).
         w.user_data.auto_update_check = False          # tests never ask GitHub for updates
-        RemoteSong.stream_full = False
+        w.user_data.download_notice_accepted = True
+
+        def fake_full_song(song, _w=w):
+            if song.track.preview_url:
+                _w._set_now_playing_text(song.title, song.artist, "Full song · test · not downloaded")
+                _w._play_media(song.track.preview_url)
+            else:
+                _w._track_handled = True
+                _w._handle_failed_track("full song not found")
+        if not getattr(w, "_real_full_song_test", False):
+            w._stream_full_song = fake_full_song
         windows.append(w)
         assert wait_until(qapp, lambda: w.library_ready), "library scan did not finish"
         return w

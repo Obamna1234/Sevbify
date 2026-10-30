@@ -51,6 +51,7 @@ object Nav {
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
     var toast by mutableStateOf("")
     var shareFor by mutableStateOf<Track?>(null)               // the share sheet
+    var previewFor by mutableStateOf<Track?>(null)             // the song menu's 30-second Preview window
     var connectOpen by mutableStateOf(false)                    // Connect (audio output / Bluetooth)
     var lyricsOpen by mutableStateOf(false)                     // full-screen lyrics
     var confirm by mutableStateOf<Triple<String, String, () -> Unit>?>(null)

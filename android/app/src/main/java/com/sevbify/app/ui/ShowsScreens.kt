@@ -84,7 +84,7 @@ fun PodcastsScreen() {
                               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                               keyboardActions = KeyboardActions(onSearch = {
                                   scope.launch {
-                                      try { val a = Bridge.arr("search_podcasts", query, country); results = (0 until a.length()).map { Show(a.getJSONObject(it)) } }
+                                      try { val a = Bridge.arr("search_podcasts", query, country, true); results = (0 until a.length()).map { Show(a.getJSONObject(it)) } }
                                       catch (e: Exception) { Nav.say("⚠ ${e.message}") }
                                   }
                               }),

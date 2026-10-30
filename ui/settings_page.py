@@ -110,9 +110,6 @@ class SettingsPage(QWidget):
         self._toggle("online_enabled", "Online features",
                      "Search the web, song radio, artist info, full songs and downloads. When off, Sevbify never "
                      "connects to the internet; your own music always works.", u.online_enabled)
-        self._toggle("stream_full", "Play full songs you don't have yet",
-                     "Songs from Search and Radio stream in full (Bandcamp first, then YouTube) instead of "
-                     "30-second previews. They stay marked ⬇ until you download them.", u.stream_full)
         self._toggle("explicit_ok", "Allow explicit content",
                      "When off, songs marked explicit are left out of web search results and radios.", u.explicit_ok)
         self._toggle("private_session", "Private session",
@@ -123,7 +120,7 @@ class SettingsPage(QWidget):
                      "in Chrome, which tells YouTube who you are.", u.use_browser_cookies)
         self._text(
             "Sevbify has no account, ads or tracking and sells nothing. With online features on it contacts only: "
-            "Deezer (search, radio, previews), Wikipedia (artist info), Apple iTunes (official song names), Bandcamp "
+            "Deezer (search, radio, previews), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple iTunes (official song names), Bandcamp "
             "and YouTube (full songs and downloads), Spotify, Apple Music or Deezer only when you import a playlist link, "
             "LRCLIB for lyrics (song name and length only), song.link only when you share a song, "
             "and Last.fm / Jamendo if you add a key below. Those sites see "

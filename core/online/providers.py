@@ -110,12 +110,16 @@ class Deezer:
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
 
     def find_track(self, artist, title):
+        found = self.find_tracks(artist, title)
+        return found[0] if found else None
+
+    def find_tracks(self, artist, title, limit=5):
         q = f'artist:"{artist}" track:"{title}"'
-        data = self._get("/search", {"q": q, "limit": 5}, ttl=7 * 24 * 3600)
+        data = self._get("/search", {"q": q, "limit": limit}, ttl=7 * 24 * 3600)
         items = data.get("data", [])
         if not items:
-            items = self._get("/search", {"q": f"{artist} {title}", "limit": 5}, ttl=7 * 24 * 3600).get("data", [])
-        return self.track_from(items[0]) if items else None
+            items = self._get("/search", {"q": f"{artist} {title}", "limit": limit}, ttl=7 * 24 * 3600).get("data", [])
+        return [self.track_from(d) for d in items]
 
     def find_album(self, artist, album):
         """The album (Deezer dict: id, title, cover_xl, artist, nb_tracks...) a song is on, or None. Only an album
@@ -362,16 +366,53 @@ class OnlineMusic:
         return out
 
     def enrich(self, track):
-        """Fill in cover art / preview / album for a track that only has artist + title
-        (e.g. a Last.fm recommendation)."""
-        if track.source == "deezer" and track.cover_url:
+        """Fill in cover art / preview / album for a track that only has artist + title (an imported or Last.fm
+        song). Tries Deezer, then Apple's music catalogue, then (for a song imported from Spotify) the song's own
+        public Spotify page. The song keeps its own name and links; only what's missing is filled in."""
+        if track.cover_url and (track.source == "deezer" or track.album):
             return track
-        found = self.deezer.find_track(track.artist, track.title)
-        # Only accept the same song: search engines happily return "close" ones.
-        if found and found.key == track.key:
-            found.genre = found.genre or track.genre
-            return found
+        try:
+            for found in self.deezer.find_tracks(track.artist, track.title):
+                # Only the same song: search engines happily return "close" ones.
+                if found.key == track.key or same_song(track, found):
+                    if track.source in ("", "deezer", "lastfm"):
+                        found.genre = found.genre or track.genre
+                        return found
+                    return _fill(track, found)
+        except ServiceError:
+            pass
+        if not track.cover_url:
+            art = self.apple_artwork(track.artist, track.title)
+            if art:
+                track.cover_url = art
+        if not track.cover_url and "open.spotify.com/track/" in (track.page_url or ""):
+            try:
+                from core import importers
+                tid = track.page_url.rstrip("/").split("/track/")[1].split("?")[0]
+                t = importers.parse_spotify_track_embed(self.net.get_text(importers.spotify_embed_url("track", tid),
+                                                                          ttl=30 * 86400), tid)
+                if t and t.cover_url:
+                    track.cover_url = t.cover_url
+                    track.album = track.album or t.album
+            except Exception:
+                pass
         return track
+
+    def apple_artwork(self, artist, title):
+        """A song's cover from Apple's public catalogue search (no account), or ""."""
+        try:
+            data = self.net.get_json("https://itunes.apple.com/search",
+                                     {"term": f"{artist} {title}", "entity": "song", "limit": 8, "media": "music"},
+                                     ttl=30 * 86400)
+        except ServiceError:
+            return ""
+        want = OnlineTrack(title=title, artist=artist)
+        for r in (data or {}).get("results") or []:
+            cand = OnlineTrack(title=r.get("trackName") or "", artist=r.get("artistName") or "")
+            if cand.key == want.key or same_song(want, cand):
+                art = r.get("artworkUrl100") or ""
+                return re.sub(r"/\d+x\d+bb\.", "/600x600bb.", art)
+        return ""
 
     def genre_of(self, track):
         """A single genre name for sorting 'Save for later' lists."""
@@ -406,3 +447,30 @@ def spread_artists(tracks, first_artist=""):
         out.append(t)
         last = t.artist.casefold()
     return out
+
+
+def _words(text):
+    return set(re.findall(r"\w+", (text or "").casefold())) - {"the", "a", "feat", "ft", "remix", "mix", "version",
+                                                                  "remastered", "remaster", "edit", "radio"}
+
+
+def same_song(a, b):
+    """Loose "is this the same song" check for covers: the first artist matches and the titles share most words
+    ("Nightkiller - Wice Remix" ~ "Nightkiller (Wice Remix)")."""
+    first = lambda s: re.split(r"\s*(,|;| x | feat\.? | ft\.? |&)\s*", s or "", maxsplit=1, flags=re.I)[0]
+    if _words(first(a.artist)) != _words(first(b.artist)) or not _words(first(a.artist)):
+        return False
+    ta, tb = _words(a.title), _words(b.title)
+    if not ta or not tb:
+        return False
+    return len(ta & tb) / min(len(ta), len(tb)) >= 0.8
+
+
+def _fill(track, found):
+    """The imported song with what Deezer knows added (cover, album, preview, length), keeping its own links."""
+    track.cover_url = track.cover_url or found.cover_url
+    track.album = track.album or found.album
+    track.preview_url = track.preview_url or found.preview_url
+    track.duration_ms = track.duration_ms or found.duration_ms
+    track.genre = track.genre or found.genre
+    return track

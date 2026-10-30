@@ -14,7 +14,7 @@ from .models import OnlineTrack
 class RemoteSong:
     is_remote = True
     file_path = ""
-    stream_full = False          # set from Settings by the main window: play full songs instead of previews
+    stream_full = True           # set from Settings by the main window: play full songs instead of previews
 
     def __init__(self, track: OnlineTrack):
         self.track = track
@@ -40,8 +40,9 @@ class RemoteSong:
         return not self.track.stream_url and bool(self.track.preview_url) and not RemoteSong.stream_full
 
     def matches(self, query: str) -> bool:
-        haystack = f"{self.title} {self.artist} {self.album}".casefold()
-        return all(word in haystack for word in query.casefold().split())
+        from core.models import fold
+        haystack = fold(f"{self.title} {self.artist} {self.album}")
+        return all(word in haystack for word in fold(query).split())
 
     def __eq__(self, other):
         return getattr(other, "key", None) == self.key

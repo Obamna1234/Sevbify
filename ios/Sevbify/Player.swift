@@ -274,17 +274,14 @@ final class Player: ObservableObject {
             let o = try await Bridge.object("youtube_stream", [t.pageUrl, false])
             return (try asset(o), false)
         }
-        if lib.settings.streamFull {
-            do {
-                let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs])
-                return (try asset(o), false)
-            } catch {
-                if t.previewUrl.isEmpty { throw error }
-                NSLog("Sevbify: full song not found for %@: %@", t.title, error.localizedDescription)
-            }
+        // Always the full song: a 30-second clip only plays from the song menu's Preview, never in its place.
+        do {
+            let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs])
+            return (try asset(o), false)
+        } catch {
+            NSLog("Sevbify: full song not found for %@: %@", t.title, error.localizedDescription)
+            throw NoSource(errorDescription: "full song not found")
         }
-        if let url = URL(string: t.previewUrl), !t.previewUrl.isEmpty { return (AVURLAsset(url: url), true) }
-        throw NoSource(errorDescription: "no full song or preview found")
     }
 
     private func asset(_ o: [String: Any]) throws -> AVURLAsset {

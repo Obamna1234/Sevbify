@@ -358,6 +358,7 @@ def test_notice_is_shown_once_and_can_be_declined(window, qapp, monkeypatch):
     asked = []
     answer = [QMessageBox.StandardButton.No]
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: asked.append(a[2]) or answer[0])
+    window.user_data.download_notice_accepted = False         # conftest accepts it for the other tests
     assert window.download_songs([remote("A", "B")]) == 0
     assert not window.downloads.is_busy() and not window.user_data.download_notice_accepted
     assert "not affiliated" in asked[0] and "Sevby LLC" in asked[0]

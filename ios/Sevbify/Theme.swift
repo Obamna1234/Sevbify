@@ -157,6 +157,7 @@ struct TrackMenu: View {
     @EnvironmentObject var nav: Nav
     @Environment(\.dismiss) var dismiss
     @State private var choosing = false
+    @State private var previewing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -183,6 +184,7 @@ struct TrackMenu: View {
                     }
                     if !track.isItem {
                         item("dot.radiowaves.left.and.right", "Go to song radio") { player.startRadio(track); dismiss() }
+                        item("play.circle", "Preview (30 s)") { previewing = true }
                         item("person", "Go to artist") { dismiss(); nav.go(.artist(track.artist)) }
                         item("square.and.arrow.up", "Share") { share(); dismiss() }
                     }
@@ -192,6 +194,7 @@ struct TrackMenu: View {
         .background(C.elevated.ignoresSafeArea())
         .foregroundColor(C.text)
         .sheet(isPresented: $choosing) { AddToPlaylistSheet(tracks: [track]) { dismiss() } }
+        .sheet(isPresented: $previewing) { PreviewView(track: track) }
     }
 
     private func item(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {

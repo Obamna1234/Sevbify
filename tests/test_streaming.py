@@ -101,6 +101,7 @@ def full_streaming(window):
     window.user_data.stream_full = True
     RemoteSong.stream_full = True
     window.user_data.download_notice_accepted = True
+    window.__dict__.pop("_stream_full_song", None)      # the real lookup (conftest stands in for it elsewhere)
 
 
 def test_song_you_dont_have_streams_in_full_and_stays_not_downloaded(window, qapp, tmp_path, monkeypatch):
@@ -123,7 +124,7 @@ def test_song_you_dont_have_streams_in_full_and_stays_not_downloaded(window, qap
     assert not song.is_preview
 
 
-def test_preview_is_used_when_no_full_song_is_found(window, qapp, tmp_path, monkeypatch):
+def test_song_is_skipped_not_swapped_for_its_preview_when_no_full_song_is_found(window, qapp, tmp_path, monkeypatch):
     preview = tmp_path / "preview.wav"
     make_wav(preview, 3.0)
     full_streaming(window)
@@ -132,11 +133,13 @@ def test_preview_is_used_when_no_full_song_is_found(window, qapp, tmp_path, monk
         raise streamer.NoFullSong("not found")
 
     monkeypatch.setattr(streamer, "find_full_song", nothing)
+    played = []
+    real = window._play_media
+    monkeypatch.setattr(window, "_play_media", lambda url, *a: played.append(url) or real(url, *a))
     song = remote("Rare B-side", "Nobody", preview=str(preview))
     window.play_song(song, queue=[song], source="Search")
-    assert wait_until(qapp, lambda: "full song not found" in window.artist_info.text()
-                      or "full song not found" in window.song_info.text())
-    assert wait_until(qapp, lambda: window._reached_playing)
+    assert wait_until(qapp, lambda: "full song not found" in window.status_label.text())
+    assert str(preview) not in played
 
 
 def test_skipping_while_searching_ignores_the_late_result(window, qapp, tmp_path, monkeypatch):
@@ -162,12 +165,19 @@ def test_skipping_while_searching_ignores_the_late_result(window, qapp, tmp_path
     assert window.current_song is window.songs[0]
 
 
-def test_previews_only_when_full_songs_are_switched_off(window, qapp, tmp_path, monkeypatch):
+def test_preview_only_plays_from_the_song_menu_in_its_own_window(window, qapp, tmp_path, monkeypatch):
     preview = tmp_path / "p.wav"
     make_wav(preview, 3.0)
-    monkeypatch.setattr(streamer, "find_full_song", lambda *a: pytest.fail("must not search when switched off"))
     song = remote("Short", "Preview", preview=str(preview))
-    assert song.is_preview
-    window.play_song(song, queue=[song], source="Search")
-    assert wait_until(qapp, lambda: window._reached_playing)
-    assert "30-second preview" in window.artist_info.text() + window.song_info.text()
+    menu = window.build_song_menu(song)
+    labels = [a.text() for a in menu.actions()]
+    assert any("Preview (30 s)" in t for t in labels)
+    window.preview_song(song)
+    dlg = window._preview_window
+    assert dlg is not None and dlg.isVisible()
+    assert wait_until(qapp, lambda: dlg.player.get_time() > 0 or dlg.player.is_playing())
+    assert window.current_song is not song                    # the main player never gets the clip
+    dlg.slider.setValue(1500)
+    dlg._seek()
+    dlg.close()
+

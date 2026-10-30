@@ -345,7 +345,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._quitting = False
         self._eq = None
         self._apply_equalizer()
-        RemoteSong.stream_full = self.user_data.stream_full
+        RemoteSong.stream_full = True                # always full songs; previews only via the song menu
         if audio_folder is not None:
             self.user_data.music_folders = [str(audio_folder)]
         self._save_timer = QTimer(self)
@@ -918,6 +918,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         play = menu.addAction("▶  Play")
         play.setEnabled(song.exists or is_remote)
         play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
+        if is_remote or has_artist:
+            pv = menu.addAction("▷  Preview (30 s)")
+            pv.setEnabled(self.online_enabled or bool(is_remote and song.track.preview_url))
+            pv.triggered.connect(lambda: self.preview_song(song))
         radio = menu.addAction("◉  Go to song radio")
         radio.setEnabled(self.online_enabled and has_artist)
         if not self.online_enabled:
@@ -2117,6 +2121,18 @@ class MainWindow(ShowsMixin, QMainWindow):
         rl.addWidget(self.search_top)
         self.search_top.hide()
 
+        # "Did you mean …?" for a typo; only the finished search is checked (see core/online/spelling.py).
+        self.did_you_mean = QPushButton("")
+        self.did_you_mean.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.did_you_mean.setFlat(True)
+        self.did_you_mean.setStyleSheet(f"QPushButton {{ color: {theme.TEXT}; background: transparent; border: none;"
+                                        f" text-align: left; font-size: 15px; padding: 4px 0; }}"
+                                        f" QPushButton:hover {{ text-decoration: underline; }}")
+        self.did_you_mean.clicked.connect(self._use_did_you_mean)
+        self.did_you_mean.hide()
+        self._did_you_mean_text = ""
+        rl.addWidget(self.did_you_mean)
+
         self.search_lib_header = self._section_label("In your library")
         rl.addWidget(self.search_lib_header)
         self.search_table = TrackTable(sortable=False)
@@ -2275,9 +2291,37 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _search_memory_restart(self, _text=""):
         self._search_memory.start()
+        dym = getattr(self, "did_you_mean", None)
+        if dym is not None and (_text or "").strip() != getattr(self, "_did_you_mean_text", ""):
+            dym.hide()
 
     def _remember_typed_search(self):
         self.remember_search(self.search_input.text())
+        self._check_spelling(self.search_input.text())
+
+    def _check_spelling(self, text):
+        """After a search has settled: if its results look unrelated, offer DuckDuckGo's corrected spelling."""
+        from core.online import spelling
+        query = (text or "").strip()
+        self.did_you_mean.hide()
+        if len(query) < 3 or not self.online_enabled or self._web_query_shown != query:
+            return
+        shown = list(self.search_table.songs_in_view()) + list(self.web_table.songs_in_view())
+        if not spelling.looks_wrong(query, shown):
+            return
+
+        def done(better):
+            if better and self.search_input.text().strip() == query:
+                self._did_you_mean_text = better
+                self.did_you_mean.setText(f"Did you mean  “{better}”?")
+                self.did_you_mean.show()
+        self.online_call(spelling.did_you_mean, self.net, self.online, query, shown,
+                         on_done=done, on_error=lambda _e: None)
+
+    def _use_did_you_mean(self):
+        if self._did_you_mean_text:
+            self.did_you_mean.hide()
+            self.search_input.setText(self._did_you_mean_text)
 
     def remember_search(self, text):
         q = (text or "").strip()
@@ -2450,14 +2494,16 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core import podcasts as _pods, audiobooks as _books
         from .shows_controller import country_code
         chip = getattr(self, "search_chip", "all")
-        wanted = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts",),
+        wanted = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts_full",),
                   "audiobooks": ("audiobooks",)}.get(chip, ())
         for kind in wanted:
             if kind in self._extra_results:
                 continue
             self._extra_results[kind] = None                      # asked
             fn = {"artists": lambda q=query: self.online.deezer.search_artists(q, 10),
-                  "podcasts": lambda q=query: _pods.search(self.net, q, 10, country_code()),
+                  "podcasts": lambda q=query: _pods.relevant(q, _pods.search(self.net, q, 10, country_code())),
+                  # The Podcasts chip also looks for the show's own YouTube channel when Apple doesn't have it.
+                  "podcasts_full": lambda q=query: _pods.search_with_youtube(self.net, q, 20, country_code()),
                   "audiobooks": lambda q=query: _books.search(self.net, q, 10)}[kind]
 
             def done(res, k=kind, q=query):
@@ -2475,7 +2521,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._clear_search_more()
         chip = getattr(self, "search_chip", "all")
         res = getattr(self, "_extra_results", {}) or {}
-        order = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts",),
+        order = {"all": ("artists", "podcasts"), "artists": ("artists",), "podcasts": ("podcasts_full",),
                  "audiobooks": ("audiobooks",)}.get(chip, ())
         rows = 1 if chip == "all" else 0
         for kind in order:
@@ -2486,14 +2532,15 @@ class MainWindow(ShowsMixin, QMainWindow):
                 continue
             if not items:
                 if chip != "all":
-                    self.search_more.addWidget(self._muted_label(f"No {kind} found."))
+                    self.search_more.addWidget(self._muted_label(f"No {kind.replace('_full', '')} found."))
                 continue
-            title = {"artists": "Artists", "podcasts": "Podcasts", "audiobooks": "Audiobooks"}[kind]
+            title = {"artists": "Artists", "podcasts": "Podcasts", "podcasts_full": "Podcasts",
+                     "audiobooks": "Audiobooks"}[kind]
             self.search_more.addWidget(self._section_label(title))
             if kind == "artists":
                 cards = [self._card(a.get("name", ""), "Artist", a.get("picture_xl") or a.get("picture_big") or "",
                                     lambda n=a.get("name", ""): self.go_to_artist(n), round_art=True) for a in items]
-            elif kind == "podcasts":
+            elif kind in ("podcasts", "podcasts_full"):
                 cards = self._show_cards(items)
             else:
                 cards = self._book_cards(items)
@@ -2525,11 +2572,12 @@ class MainWindow(ShowsMixin, QMainWindow):
                 owned = sum(1 for s in items if not getattr(s, "is_remote", False))
                 self.search_web_status.setText(
                     f"{len(items)} songs  ·  double-click to play"
-                    + (("  ·  ⬇ songs stream in full while online; download them to keep" if RemoteSong.stream_full
-                        else "  ·  songs you own play in full, others as 30-second previews") if owned < len(items) else ""))
+                    + ("  ·  ⬇ songs stream in full while online; download them to keep" if owned < len(items) else ""))
             else:
                 self.search_web_status.setText(f"No web results for \"{query}\".")
             self.fetch_covers(items, limit=25)
+            if not self._search_memory.isActive():          # the search had already settled
+                self._check_spelling(query)
 
         def failed(err):
             if self.search_input.text().strip() != query:
@@ -3826,16 +3874,15 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._track_handled = True
                 self._handle_failed_track("online features are switched off")
                 return
-            if self.user_data.stream_full and not song.track.stream_url and self._accept_online_notice():
+            if not song.track.stream_url:
+                # Always the full song: a 30-second clip only plays when you pick Preview from the song's menu.
+                if not self._accept_online_notice():
+                    self.player.stop()
+                    self._track_handled = True
+                    self._handle_failed_track("full songs need the streaming notice accepted")
+                    return
                 self._stream_full_song(song)
                 return
-            if not song.playable_url:
-                self.player.stop()
-                self._track_handled = True
-                self._handle_failed_track("no preview available for this song")
-                return
-            if not song.track.stream_url:
-                self._set_now_playing_text(song.title, song.artist, "30-second preview")
         elif not song.exists:
             self.player.stop()
             self._track_handled = True
@@ -3868,7 +3915,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         return True
 
     def _stream_full_song(self, song):
-        """Find the full song online (in the background) and stream it; fall back to the preview."""
+        """Find the full song online (in the background) and stream it; if it can't be found, skip it."""
         self.player.stop()
         self._track_handled = True                   # nothing to watch until the stream is found
         self.is_playing = True
@@ -3892,15 +3939,42 @@ class MainWindow(ShowsMixin, QMainWindow):
         def failed(err):
             if not still_wanted():
                 return
-            if song.track.preview_url:
-                self._set_now_playing_text(song.title, song.artist, "30-second preview (full song not found)")
-                self._play_media(song.track.preview_url)
-            else:
-                self._track_handled = True
-                self._handle_failed_track("the full song wasn't found online")
+            self._track_handled = True                # skip it; never swap in the 30-second clip
+            self._handle_failed_track("full song not found")
 
         self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
                          self.user_data.download_source, on_done=done, on_error=failed)
+
+    def preview_song(self, song):
+        """Song menu → Preview: the 30-second clip in a small window with a seek bar (main playback pauses)."""
+        url = song.track.preview_url if getattr(song, "is_remote", False) else ""
+
+        def show(u):
+            if not u:
+                self.show_status("No preview for this song", kind="info", timeout_ms=4000)
+                return
+            if self.player.get_state() == vlc.State.Playing:
+                self.play_pause_song()
+            from .preview_dialog import PreviewDialog
+            old = getattr(self, "_preview_window", None)
+            if old is not None:
+                try:
+                    old.close()
+                except RuntimeError:
+                    pass
+            self._preview_window = PreviewDialog(self, self.vlc_instance, u, song.title, song.artist)
+            self._preview_window.show()
+
+        if url:
+            show(url)
+            return
+        if not self.online_enabled:
+            return
+
+        def found(t):
+            show(t.preview_url if t is not None else "")
+        self.online_call(self.online.deezer.find_track, song.artist, song.title,
+                         on_done=found, on_error=lambda _e: show(""))
 
     def _accept_online_notice(self):
         """Show the one-time notice about downloading/streaming from Bandcamp and YouTube. True if accepted."""
@@ -4604,8 +4678,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         "{folder}\n\n"
         "Only download music you have the right to download, for example songs you have bought or that "
         "the artist offers for free. Streaming or downloading YouTube audio outside YouTube's own player "
-        "goes against YouTube's terms of service; you decide whether to use it. You can switch full songs "
-        "off in Settings (30-second previews are used instead).\n\n"
+        "goes against YouTube's terms of service; you decide whether to use it. 30-second previews only "
+        "play when you pick Preview from a song's menu.\n\n"
         "Sevbify is not affiliated with YouTube, Bandcamp, Apple, Spotify, Deezer or Sevby LLC (sevby.com).\n\n"
         "Continue?")
 
@@ -4822,7 +4896,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._start_current()
             local = sum(1 for s in items if not getattr(s, "is_remote", False))
             self.show_status(f"{name}: {len(items)} songs ({local} from your library, others "
-                             f"{'streamed in full' if RemoteSong.stream_full else 'as previews'})",
+                             "streamed in full)",
                              kind="info", timeout_ms=6000)
             if self.user_data.right_panel == "":
                 self.set_right_panel("queue")
@@ -5210,8 +5284,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             if not u.lyrics_enabled and self.stack.currentWidget() is self.lyrics_page:
                 self.show_home()
         if "stream_full" in values:
-            u.stream_full = bool(values["stream_full"])
-            RemoteSong.stream_full = u.stream_full
+            u.stream_full = True                     # no longer a choice: songs always play in full
         if "private_session" in values:
             # Private session (like Spotify's): while on, songs aren't added to Recently played (Home, the
             # "recent" list in your save file), podcast / audiobook positions aren't saved, and Your Library's

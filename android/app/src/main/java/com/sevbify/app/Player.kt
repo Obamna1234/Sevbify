@@ -332,7 +332,7 @@ object Player {
         }
     }
 
-    /** (uri, headers, note) for a song: your file first, then a full stream, then the 30-second preview. */
+    /** (uri, headers, note) for a song: your file first, then the full stream (never the 30-second preview). */
     private suspend fun locate(t: Track): Triple<String, Map<String, String>?, String>? {
         if (t.isItem) {
             Library.offline[t.itemKey]?.let { if (File(it).exists()) return Triple(Uri.fromFile(File(it)).toString(), null, "Downloaded") }
@@ -352,19 +352,15 @@ object Player {
             return Triple(uri, null, "")
         }
         requireOnline(t) ?: return null
-        if (Library.settings.streamFull) {
-            if (!Library.settings.onlineNoticeAccepted) { noticeFor = t; return null }
-            status = "Finding the full song…"
-            try {
-                val r = Bridge.obj("resolve", t.artist, t.title, t.durationMs)
-                return Triple(r.getString("url"), headersOf(r), "Full song · ${r.optString("source")} · not downloaded")
-            } catch (e: CoreError) {
-                if (t.previewUrl.isEmpty()) throw CoreError("not found on Bandcamp or YouTube")
-                return Triple(t.previewUrl, null, "30-second preview (full song not found)")
-            }
+        // Always the full song. A 30-second clip only plays from the song menu's Preview, never in its place.
+        if (!Library.settings.onlineNoticeAccepted) { noticeFor = t; return null }
+        status = "Finding the full song…"
+        try {
+            val r = Bridge.obj("resolve", t.artist, t.title, t.durationMs)
+            return Triple(r.getString("url"), headersOf(r), "Full song · ${r.optString("source")} · not downloaded")
+        } catch (e: CoreError) {
+            throw CoreError("full song not found")
         }
-        if (t.previewUrl.isEmpty()) throw CoreError("no preview for this song")
-        return Triple(t.previewUrl, null, "30-second preview")
     }
 
     private fun requireOnline(t: Track): Unit? {
@@ -381,8 +377,8 @@ object Player {
             Library.settings.onlineNoticeAccepted = true; Library.save()
             if (current === t) start()
         } else {
-            Library.settings.streamFull = false; Library.save()     // previews only
-            if (current === t) start()
+            status = "Full songs need the notice accepted: “${t.title}” skipped"
+            if (current === t) advance(auto = false, failed = true)
         }
     }
 

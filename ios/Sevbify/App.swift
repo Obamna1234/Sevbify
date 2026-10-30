@@ -179,7 +179,7 @@ struct FirstRunNotice: View {
                 Image("Logo").resizable().scaledToFit().frame(width: 72, height: 72).cornerRadius(16)
                 Text("Welcome to Sevbify").font(.largeTitle.bold())
                 Text("Your music, Spotify-style. No account, no ads, no tracking, nothing sold.")
-                Text("Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), Apple (podcast directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs and downloads), Spotify, Apple Music or Deezer only when you import a link, LRCLIB for lyrics, song.link when you share, and GitHub for updates. You can turn online features off in Settings.")
+                Text("Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs and downloads), Spotify, Apple Music or Deezer only when you import a link, LRCLIB for lyrics, song.link when you share, and GitHub for updates. You can turn online features off in Settings.")
                     .foregroundColor(C.dim)
                 Text("Your own songs: put them in Files ▸ On My iPhone ▸ Sevbify, or add a folder in Your Library. Sevbify only looks in folders you choose.")
                     .foregroundColor(C.dim)

@@ -3,8 +3,7 @@
 - yt-dlp: YouTube changes often and an old yt-dlp is the usual reason full songs or downloads stop working. The
   newest official yt-dlp release (github.com/yt-dlp/yt-dlp) is downloaded with SEVBY's updater into
   ~/.sevby_ytdlp (shared with SEVBY) and used from the next start.
-- Sevbify: the newest release on Sevbify's GitHub page. While the project is private, GitHub doesn't answer
-  this for other people, and the check says so.
+- Sevbify: the newest release on Sevbify's GitHub page; core/app_update.py downloads and installs it.
 Only GitHub is contacted, and only when online features are on.
 """
 from core import downloader
@@ -83,12 +82,13 @@ def update_ytdlp(download=None):
     return True, f"yt-dlp {info['latest']} downloaded. Restart Sevbify to use it."
 
 
-def check_app(net, current=None):
-    """{"current", "latest", "newer", "page", "checked", "message"} for Sevbify itself."""
+def check_app(net, current=None, plat=""):
+    """{"current", "latest", "newer", "page", "url", "sha256", "size", "checked", "message"} for Sevbify itself.
+    `url` is the download for `plat` (this computer by default; "android" / "ios" from the phones)."""
     e = downloader.engine()
     current = current or app_version()
-    result = {"current": current, "latest": None, "newer": False, "page": RELEASES_PAGE, "checked": False,
-              "message": ""}
+    result = {"current": current, "latest": None, "newer": False, "page": RELEASES_PAGE, "url": "", "sha256": "",
+              "size": 0, "checked": False, "message": ""}
     try:
         data = net.get_json(RELEASES_API, {"per_page": 30}, ttl=6 * 3600)
     except Exception as err:
@@ -97,11 +97,12 @@ def check_app(net, current=None):
         return result
     result["checked"] = True
     include_pre = "-" in current                      # beta testers also hear about new betas
-    best = e.app_pick_release(data, include_pre)
+    best = e.app_pick_release(data, include_pre, plat)
     if not best:
         result["message"] = "No releases found."
         return result
-    result.update(latest=best["version"], page=best.get("page") or RELEASES_PAGE,
+    result.update(latest=best["version"], page=best.get("page") or RELEASES_PAGE, url=best.get("url") or "",
+                  sha256=best.get("sha256") or "", size=best.get("size") or 0,
                   newer=e.app_ver_cmp(best["version"], current) > 0)
     result["message"] = (f"Sevbify {best['version']} is available." if result["newer"]
                          else f"Sevbify {current} is the newest version.")

@@ -69,6 +69,7 @@ fun SearchScreen() {
     var books by remember { mutableStateOf<List<Show>>(emptyList()) }
     var note by remember { mutableStateOf("") }
     var genres by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var better by remember { mutableStateOf("") }               // "Did you mean …?"
 
     LaunchedEffect(Library.settings.online) {
         if (Library.settings.online && genres.isEmpty()) {
@@ -77,9 +78,17 @@ fun SearchScreen() {
     }
     // Recent searches, like Spotify's: a search you stay on for a moment is remembered (only on this phone).
     LaunchedEffect(query) {
+        if (better.isNotEmpty() && query.trim() != better) better = ""
         if (query.trim().length < 2) return@LaunchedEffect
         delay(2500)
         Library.rememberSearch(query)
+        // Only the finished search, and only when its results look unrelated, is checked for a typo (DuckDuckGo).
+        if (Library.settings.online && query.trim().length >= 3) {
+            better = try { (Bridge.call("did_you_mean", query.trim()) as? String).orEmpty() } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                ""
+            }
+        }
     }
     LaunchedEffect(query, chip) {
         web = emptyList(); artists = emptyList(); shows = emptyList(); books = emptyList(); note = ""
@@ -93,7 +102,7 @@ fun SearchScreen() {
                 val a = Bridge.arr("search_artists", q, 10); artists = (0 until a.length()).map { a.getJSONObject(it) }
             }
             if (chip == "all" || chip == "podcasts") {
-                val a = Bridge.arr("search_podcasts", q, "us"); shows = (0 until a.length()).map { Show(a.getJSONObject(it)) }
+                val a = Bridge.arr("search_podcasts", q, "us", chip == "podcasts"); shows = (0 until a.length()).map { Show(a.getJSONObject(it)) }
             }
             if (chip == "audiobooks") {
                 val a = Bridge.arr("books", "search", q); books = (0 until a.length()).map { Show(a.getJSONObject(it)) }
@@ -106,9 +115,10 @@ fun SearchScreen() {
     }
 
     val local = remember(query, Library.localSongs, tick) {
-        val q = query.trim().lowercase()
+        // Any language: case and accents don't matter ("beyonce" finds "Beyoncé").
+        val q = fold(query.trim())
         if (q.isEmpty()) emptyList() else Library.localSongs.filter {
-            q in it.title.lowercase() || q in it.artist.lowercase() || q in it.album.lowercase()
+            q in fold(it.title) || q in fold(it.artist) || q in fold(it.album)
         }.take(50)
     }
     LazyColumn {
@@ -178,6 +188,13 @@ fun SearchScreen() {
                              "audiobooks" to "Audiobooks")) { (k, l) -> Chip(l, chip == k) { chip = k } }
             }
         }
+        if (better.isNotEmpty() && better != query.trim()) {
+            item {
+                androidx.compose.material3.TextButton(onClick = { query = better }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                    Text("Did you mean  “$better”?", color = C.Text, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
         if (local.isNotEmpty() && (chip == "all" || chip == "songs")) {
             item { SectionTitle("In your library") }
             items(local) { t ->
@@ -241,3 +258,7 @@ fun BrowseTile(name: String, colour: Color, picture: String?, modifier: Modifier
         }
     }
 }
+
+/** Lower-case without accents, for searching in any language. */
+fun fold(text: String): String =
+    java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKD).replace(Regex("\\p{Mn}+"), "").lowercase()

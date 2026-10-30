@@ -213,6 +213,20 @@ def enrich(tracks_json):
 
 
 @_call
+def did_you_mean(query):
+    """A corrected spelling when a finished search's results look unrelated (DuckDuckGo), or ""."""
+    from core.online import spelling
+    return spelling.did_you_mean(_state["net"], _state["music"], query)
+
+
+@_call
+def preview_url(artist, title):
+    """The 30-second clip for a song (only for the song menu's Preview), or ""."""
+    t = _state["music"].deezer.find_track(artist, title)
+    return (t.preview_url if t is not None else "") or ""
+
+
+@_call
 def resolve(artist, title, duration_ms=0):
     """Full-length stream for a song you don't have: {"url", "headers", "page", "source", "duration_ms"}."""
     from core import streamer
@@ -296,9 +310,13 @@ def sponsor_segments(page_url):
 
 
 @_call
-def search_podcasts(query, country="us"):
+def search_podcasts(query, country="us", full=False):
+    """full (the Podcasts chip): also the show's own YouTube channel when Apple doesn't have it. Otherwise (the All
+    page) only shows whose name or host has the words you typed."""
     from core import podcasts
-    return [_show(s) for s in podcasts.search(_net(), query, 25, country)]
+    if full:
+        return [_show(s) for s in podcasts.search_with_youtube(_net(), query, 25, country)]
+    return [_show(s) for s in podcasts.relevant(query, podcasts.search(_net(), query, 25, country))]
 
 
 @_call
@@ -374,9 +392,10 @@ def book_chapters(book_json, quality="standard"):
 
 # --- updates ------------------------------------------------------------------------------------------------
 @_call
-def check_updates(current):
+def check_updates(current, plat="android"):
+    """Newest Sevbify for this phone: {"newer", "latest", "url" (the .apk / .ipa), "sha256", "size", "message"}."""
     from core import updates
-    return updates.check_app(_net(), current)
+    return updates.check_app(_net(), current, plat)
 
 
 @_call

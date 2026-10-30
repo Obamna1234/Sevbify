@@ -160,6 +160,8 @@ fun LibraryScreen() {
 
 @Composable
 private fun PlaylistRow(pl: Playlist, indent: Boolean = false) {
+    // Playlists are edited in place (rename, pin, covers): read the change counter so this row redraws at once.
+    @Suppress("UNUSED_VARIABLE") val tick = Library.changes
     val playing = com.sevbify.app.Player.current != null && com.sevbify.app.Player.sourceName == pl.name
     Row(Modifier.fillMaxWidth().combinedClickableCompat(onClick = { Nav.go(Screen.PlaylistPage(pl.id)) },
                                                          onLongClick = { Nav.playlistMenu = pl })

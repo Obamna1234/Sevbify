@@ -83,5 +83,69 @@ fun ImportScreen(start: String) {
            colors = ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = C.Black)) {
             Text(if (busy) "Importing…" else "Import")
         }
+        // Or a file: Exportify / TuneMyMusic / Soundiiz .csv, a .txt list ("Artist - Title" per line), .m3u / .m3u8.
+        Text("Or import a file", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+        Muted("A .csv from Exportify, TuneMyMusic or Soundiiz (any number of songs), a .txt with one \"Artist - Title\" " +
+              "per line, or an .m3u / .m3u8 playlist.")
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) {
+                busy = true
+                scope.launch {
+                    try {
+                        val pl = importPlaylistFile(context, uri)
+                        Nav.back()
+                        Nav.go(Screen.PlaylistPage(pl.id))
+                        Nav.say("Imported “${pl.name}”: ${pl.tracks.size} songs")
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Nav.say("⚠ Couldn't import: ${e.message}")
+                    } finally { busy = false }
+                }
+            }
+        }
+        androidx.compose.material3.OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !busy,
+                                                  modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text("Choose a file", color = C.Text)
+        }
     }
+}
+
+/** A playlist file picked in Android's file picker: copied to the app's cache under its own name (Python reads
+ *  paths, and the file name becomes the playlist's name), read by the shared core, then removed. */
+suspend fun importPlaylistFile(context: android.content.Context, uri: android.net.Uri): com.sevbify.app.Playlist {
+    var name = "Imported playlist.txt"
+    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) c.getString(0)?.let { n -> name = n.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(120) }
+    }
+    val ext = name.substringAfterLast('.', "").lowercase()
+    if (ext !in listOf("txt", "csv", "m3u", "m3u8", "tsv"))
+        throw com.sevbify.app.CoreError("choose a .txt, .csv or .m3u file")
+    val dir = java.io.File(context.cacheDir, "import").apply { mkdirs() }
+    val file = java.io.File(dir, name)
+    try {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            file.outputStream().use { out ->
+                val buf = ByteArray(64 * 1024); var total = 0L
+                while (true) {
+                    val n = input.read(buf); if (n < 0) break
+                    total += n
+                    if (total > 10L * 1024 * 1024) throw com.sevbify.app.CoreError("that file is too big for a playlist")
+                    out.write(buf, 0, n)
+                }
+            }
+        } ?: throw com.sevbify.app.CoreError("couldn't open the file")
+        val o = Bridge.obj("import_file", file.path)
+        val items = o.optJSONArray("items") ?: org.json.JSONArray()
+        val tracks = (0 until items.length()).mapNotNull { i ->
+            val it = items.getJSONObject(i)
+            it.optJSONObject("track")?.let { t -> com.sevbify.app.Track.fromJson(t) }
+        }
+        if (tracks.isEmpty()) throw com.sevbify.app.CoreError("no songs found in that file")
+        val pl = Library.newPlaylist(o.optString("name").ifEmpty { name.substringBeforeLast('.') }, tracks)
+        pl.origin = "file"
+        Library.changed()
+        return pl
+    } finally { file.delete() }
 }

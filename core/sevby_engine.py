@@ -2318,11 +2318,14 @@ def app_ver_cmp(a: str, b: str) -> int:
     return 0
 
 
-def app_pick_release(releases, include_pre: bool = False):
-    """Newest desktop release from GitHub's /releases list: skips drafts, android-v... releases,
-    releases with no files yet (still building) and (unless asked) pre-releases."""
+def app_pick_release(releases, include_pre: bool = False, plat: str = ""):
+    """Newest release from GitHub's /releases list: skips drafts, android-v... releases,
+    releases with no files yet (still building) and (unless asked) pre-releases. `plat` (windows / macos / linux /
+    android / ios) picks which file "url" points at; the default is this computer's. "sha256" is GitHub's checksum
+    of that file when GitHub gives one."""
     best = None
-    plat = "windows" if sys.platform.startswith("win") else "macos" if sys.platform == "darwin" else "linux"
+    plat = plat or ("windows" if sys.platform.startswith("win") else "macos" if sys.platform == "darwin" else "linux")
+    ext = {"android": ".apk", "ios": ".ipa"}.get(plat)
     for r in releases if isinstance(releases, list) else []:
         try:
             tag = str(r.get("tag_name") or "")
@@ -2336,13 +2339,19 @@ def app_pick_release(releases, include_pre: bool = False):
             ver = tag.lstrip("vV")
             if not re.match(r"\d", ver):
                 continue
-            url = ""
+            url, sha, size = "", "", 0
             for a in assets:
                 name = str(a.get("name") or "").lower()
-                if plat in name or (plat == "windows" and name.endswith(".exe")):
+                if "debug" in name:
+                    continue
+                if (name.endswith(ext) if ext else (plat in name or (plat == "windows" and name.endswith(".exe")))):
                     url = a.get("browser_download_url") or ""
+                    digest = str(a.get("digest") or "")
+                    sha = digest[7:].lower() if digest.lower().startswith("sha256:") else ""
+                    size = int(a.get("size") or 0)
                     break
-            rel = {"version": ver, "page": r.get("html_url") or APP_REPO_URL + "/releases", "url": url}
+            rel = {"version": ver, "page": r.get("html_url") or APP_REPO_URL + "/releases", "url": url,
+                   "sha256": sha, "size": size}
             if best is None or app_ver_cmp(ver, best["version"]) > 0:
                 best = rel
         except Exception:

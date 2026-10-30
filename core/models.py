@@ -2,6 +2,7 @@
 by a future mobile/other front end."""
 import os
 import re
+import unicodedata
 
 from mutagen import File as MutagenFile
 from mutagen.mp3 import MP3
@@ -13,6 +14,13 @@ from PIL import Image
 
 from . import paths as _paths
 from .paths import PLACEHOLDER_IMAGE, ASSETS_FOLDER, normalise_path
+
+
+def fold(text):
+    """Lower-case without accents and with full-width forms made normal, so search works in any language
+    ("beyonce" finds "Beyoncé"; Cyrillic, Arabic, CJK and so on are matched as they are)."""
+    text = unicodedata.normalize("NFKD", text or "").casefold()
+    return "".join(c for c in text if not unicodedata.combining(c))
 
 SUPPORTED_EXTENSIONS = ('.mp3', '.wav', '.flac', '.ogg', '.m4a')
 
@@ -80,8 +88,8 @@ class Song:
 
     def matches(self, query: str) -> bool:
         """True if every word of the query appears in title, artist or album."""
-        haystack = f"{self.title} {self.artist} {self.album}".casefold()
-        return all(word in haystack for word in query.casefold().split())
+        haystack = fold(f"{self.title} {self.artist} {self.album}")
+        return all(word in haystack for word in fold(query).split())
 
     def _extract_metadata(self):
         try:

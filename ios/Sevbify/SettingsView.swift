@@ -15,10 +15,9 @@ struct SettingsView: View {
                     lib.settings.online = v
                     Task { _ = try? await Bridge.call("set_online", [v]) }
                 }))
-                Toggle("Play full songs", isOn: $lib.settings.streamFull)
                 Toggle("Allow explicit songs", isOn: $lib.settings.explicitOk)
             } footer: {
-                Text("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), Apple (podcast directory), Bandcamp and YouTube (full songs, downloads), Spotify, Apple Music or Deezer only when you import a link, song.link when you share, and GitHub for updates.")
+                Text("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), Bandcamp and YouTube (full songs, downloads), Spotify, Apple Music or Deezer only when you import a link, song.link when you share, and GitHub for updates.")
             }
             Section("Playback") {
                 Toggle("Autoplay similar songs when your music ends", isOn: $lib.settings.autoplay)

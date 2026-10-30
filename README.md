@@ -180,7 +180,7 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 ## Privacy
 
 No account, no ads, no tracking, nothing sold. With online features on, Sevbify contacts only what each feature
-needs: Deezer (search, radio, genres, previews), Wikipedia (artist info), Apple iTunes (song names, the podcast
+needs: Deezer (search, radio, genres, previews), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple iTunes (song names, the podcast
 directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads,
 video podcasts), Spotify / Apple Music only when you import a playlist link, LRCLIB (lyrics: the song's name and
 length; can be switched off), song.link (only when you share a song) and GitHub (update checks; can be switched

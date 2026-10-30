@@ -74,10 +74,6 @@ fun SettingsScreen() {
                 s.online = it; Library.changed(); scope.launch { try { Bridge.call("set_online", it) } catch (_: Exception) {} }
             }
         }
-        item {
-            Toggle("Play full songs you don't have yet", "Stream in full from Bandcamp, then YouTube. Off: 30-second previews.",
-                   s.streamFull) { s.streamFull = it; Library.changed() }
-        }
         item { Toggle("Allow explicit content", "", s.explicitOk) { s.explicitOk = it; Library.changed() } }
         item {
             Toggle("Private session", "What you play isn't added to Recently played and podcast positions aren't saved, " +
@@ -85,7 +81,7 @@ fun SettingsScreen() {
         }
         item {
             Muted("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: " +
-                  "Deezer (search, radio, genres), Wikipedia (artist info), Apple (podcast directory), the podcasts' own " +
+                  "Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), the podcasts' own " +
                   "feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads), Spotify or Apple " +
                   "Music only when you import a link, LRCLIB for lyrics, song.link when you share a song, SponsorBlock for YouTube episodes, and GitHub for updates.")
         }

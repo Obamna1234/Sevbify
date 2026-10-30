@@ -28,12 +28,12 @@ def test_radio_builds_queue_with_local_matches_and_previews(radio_window, qapp):
     assert items[0] == seed and items.count(seed) == 1
     assert w.songs[1] in items                                  # the song you own, not a preview
     remote = [s for s in items if getattr(s, "is_remote", False)]
-    assert remote and all(s.is_preview for s in remote)
+    assert remote and not any(s.is_preview for s in remote)   # always full songs
     assert "Avalanche" not in [s.title for s in remote]
     w.set_right_panel("queue")
     texts = [lbl.text() for lbl in w.queue_panel.scroll.widget().findChildren(type(w.song_info))]
     assert "Next from: NARC Radio" in texts
-    assert any(t.endswith("preview") for t in texts)
+    assert any(t.endswith("online") for t in texts)
 
 
 def test_remote_song_plays_from_its_stream(radio_window, qapp, audio_dir):

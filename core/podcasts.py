@@ -123,10 +123,12 @@ def format_duration(ms):
 
 # --- Apple directory ----------------------------------------------------------------------------------------
 def _norm(text):
-    """Lower case, no accents or punctuation, "&" as "and": for comparing show names."""
+    """Lower case, no accents or punctuation, "&" as "and": for comparing show names. Any script counts
+    (Cyrillic, Arabic, CJK…), so searching in any language ranks shows properly."""
     import unicodedata
-    text = unicodedata.normalize("NFKD", (text or "").replace("&", " and ")).encode("ascii", "ignore").decode()
-    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+    text = unicodedata.normalize("NFKD", (text or "").replace("&", " and ")).casefold()
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return " ".join(re.findall(r"[^\W_]+", text))
 
 
 def match_score(term, title, author=""):
@@ -152,6 +154,27 @@ def match_score(term, title, author=""):
 def rank_shows(term, shows):
     """Best matches first (an exact name match always on top); Apple's order is kept within each group."""
     return [s for _i, s in sorted(enumerate(shows), key=lambda p: (-match_score(term, p[1].title, p[1].author), p[0]))]
+
+
+def relevant(term, shows):
+    """Only shows whose name or host has the words you typed (for the "All" search page, so a typo doesn't put
+    an unrelated podcast on top)."""
+    return [s for s in shows if match_score(term, s.title, s.author) > 0]
+
+
+def search_with_youtube(net, term, limit=25, country="us", extract=None):
+    """Apple's podcast directory, plus the show's own YouTube channel on top when Apple has no show by that name
+    (many podcasts are only on YouTube)."""
+    shows = search(net, term, limit, country)
+    if any(match_score(term, s.title, s.author) >= 3 for s in shows):
+        return shows
+    try:
+        channel = find_youtube_channel(term, extract=extract)
+    except Exception:
+        channel = None
+    if channel is not None and all(s.feed_url != channel.feed_url for s in shows):
+        shows.insert(0, channel)
+    return shows
 
 
 def search(net, term, limit=25, country="us"):

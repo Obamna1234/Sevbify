@@ -83,3 +83,22 @@ def test_a_crafted_profile_cant_point_at_files_or_blow_up():
     assert [s.get("feed_url") for s in d["shows"]] == ["https://f/rss"]
     with pytest.raises(profile.ProfileError):
         profile.unpack(gz.compress(b"{" + b" " * (60 * 1024 * 1024) + b"}"))
+
+
+def test_covers_for_imported_songs_deezer_doesnt_match():
+    from core.online.providers import OnlineMusic, same_song
+    from core.online.models import OnlineTrack
+    a = OnlineTrack(title="Nightkiller - Wice Remix", artist="M.A.D.E.S, Wice")
+    assert same_song(a, OnlineTrack(title="Nightkiller (Wice Remix)", artist="M.A.D.E.S"))
+    assert not same_song(a, OnlineTrack(title="Nightcall", artist="Kavinsky"))
+
+    class Net:
+        def get_json(self, url, params=None, ttl=0):
+            if "deezer" in url:
+                return {"data": []}
+            return {"results": [{"trackName": "Nightkiller (Wice Remix)", "artistName": "M.A.D.E.S",
+                                 "artworkUrl100": "https://is1.mzstatic.com/x/100x100bb.jpg"}]}
+    t = OnlineTrack(title="Nightkiller - Wice Remix", artist="M.A.D.E.S, Wice", source="spotify",
+                    page_url="https://open.spotify.com/track/abc")
+    out = OnlineMusic(Net()).enrich(t)
+    assert out.cover_url == "https://is1.mzstatic.com/x/600x600bb.jpg" and out.page_url.endswith("/abc")
