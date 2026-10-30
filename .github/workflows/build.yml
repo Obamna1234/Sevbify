@@ -15,18 +15,40 @@ permissions:
   contents: read
 
 jobs:
+  # Mac machines cost 10x the free minutes of a private repository, so macOS and iPhone are only built for a
+  # release (new VERSION), when the workflow is started by hand, or when the commit message contains [apple].
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      apple: ${{ steps.p.outputs.apple }}
+      matrix: ${{ steps.p.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          APPLE=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then APPLE=true; fi
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then APPLE=true; fi
+          case "$MSG" in *"[apple]"*) APPLE=true ;; esac
+          M='{"include":[{"name":"Windows","os":"windows-latest"},{"name":"Linux","os":"ubuntu-22.04"}'
+          if [ "$APPLE" = true ]; then M="$M"',{"name":"macOS","os":"macos-latest"}'; fi
+          echo "apple=$APPLE" >> "$GITHUB_OUTPUT"
+          echo "matrix=$M]}" >> "$GITHUB_OUTPUT"
+          echo "macOS and iPhone builds: $APPLE"
+
   build:
     name: ${{ matrix.name }}
+    needs: plan
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { name: Windows, os: windows-latest }
-          - { name: macOS,   os: macos-latest }
-          # Built on Ubuntu 22.04 so the app also runs on older Linux versions (newer ones are fine).
-          - { name: Linux,   os: ubuntu-22.04 }
+      # Windows and Linux (built on Ubuntu 22.04 so the app also runs on older Linux) always; macOS see "plan".
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       QT_QPA_PLATFORM: offscreen
       PYTHONUTF8: "1"
@@ -267,12 +289,93 @@ jobs:
           path: Sevbify-Android.apk
           retention-days: 30
 
+  iphone:
+    name: iPhone
+    needs: plan
+    if: needs.plan.outputs.apple == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 50
+    permissions:
+      contents: write          # saves the simulator screenshots to the screens-ios branch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Get Python for iOS (checksum-checked), the shared code and the Xcode project
+        run: |
+          brew install xcodegen >/dev/null
+          bash ios/prepare.sh
+      - name: Build for the iPhone simulator
+        run: |
+          set +e
+          xcodebuild -project ios/Sevbify.xcodeproj -scheme Sevbify -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGN_IDENTITY=- build > sim-build.log 2>&1
+          code=$?
+          tail -n 25 sim-build.log
+          if [ $code -ne 0 ]; then
+            grep -E "error:|fatal error|Command .* failed" sim-build.log | sort -u | head -40 \
+              | while IFS= read -r l; do echo "::error title=iPhone build::${l:0:900}"; done
+          fi
+          exit $code
+      - name: Build the iPhone app (unsigned .ipa for AltStore / SideStore)
+        run: |
+          set +e
+          xcodebuild -project ios/Sevbify.xcodeproj -scheme Sevbify -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath ios/build ARCHS=arm64 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > ipa-build.log 2>&1
+          code=$?
+          tail -n 15 ipa-build.log
+          if [ $code -ne 0 ]; then
+            grep -E "error:|fatal error|Command .* failed" ipa-build.log | sort -u | head -30 \
+              | while IFS= read -r l; do echo "::error title=iPhone (device) build::${l:0:900}"; done
+            exit $code
+          fi
+          mkdir -p Payload
+          cp -R ios/build/Build/Products/Release-iphoneos/Sevbify.app Payload/
+          zip -qry Sevbify-iOS.ipa Payload
+          ls -la Sevbify-iOS.ipa
+          du -sh Payload/Sevbify.app
+      - name: Run on the iPhone simulator (Python, online features, screenshots)
+        run: |
+          bash ios/simulator_check.sh
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open("screens/smoke.json"))
+          except Exception as e:
+              d = {"error": str(e)}
+          for k, v in d.items():
+              print(f"::notice title=iPhone smoke test::{k}: {json.dumps(v)[:600]}")
+          PY
+      - name: Save screenshots to the screens-ios branch
+        if: always()
+        run: |
+          [ -d screens ] || exit 0
+          cp sim-build.log ipa-build.log screens/ 2>/dev/null || true
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          mkdir -p /tmp/s && cp -r screens/. /tmp/s/
+          git checkout -q --orphan screens-ios-new
+          git rm -rq --cached . ; git clean -fdqx
+          rm -rf ./* .github 2>/dev/null; cp -r /tmp/s/. .
+          git add -A && git commit -qm "iPhone screenshots ${GITHUB_SHA::7}"
+          git push -qf origin HEAD:screens-ios
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sevbify-iOS
+          path: Sevbify-iOS.ipa
+          retention-days: 30
+
   release:
     name: Release
-    needs: [build, android]
+    needs: [build, android, iphone]
+    if: >-
+      always() && needs.build.result == 'success' && needs.android.result == 'success' &&
+      (needs.iphone.result == 'success' || needs.iphone.result == 'skipped') &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     permissions:
       contents: write
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -302,3 +405,4 @@ jobs:
             artifacts/Sevbify-*.zip
             artifacts/Sevbify-*.tar.gz
             artifacts/Sevbify-*.apk
+            artifacts/Sevbify-*.ipa

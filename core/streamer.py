@@ -42,7 +42,8 @@ def _extract(e, page):
     if e.yt_dlp is None:
         raise NoFullSong("yt-dlp is not installed")
     opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
-            "format": "bestaudio/best", "socket_timeout": 20, "skip_download": True}
+            "format": __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT, "socket_timeout": 20,
+            "skip_download": True}
     with e.yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(page, download=False)
     url = (info or {}).get("url")

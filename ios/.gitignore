@@ -1,0 +1,7 @@
+Python.xcframework/
+app/
+app_packages/
+Sevbify.xcodeproj/
+build/
+*.ipa
+*.tar.gz

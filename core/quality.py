@@ -24,6 +24,12 @@ SMALL_AUDIO_FORMAT = ("bestaudio[ext=m4a][abr<=72]/worstaudio[ext=m4a]/bestaudio
                       "bestaudio[ext=m4a]/bestaudio/best")
 MP3_QUALITY = "160"
 
+# The link used for *streaming* a song or episode. Windows (VLC) and Android (ExoPlayer) play anything; the
+# iPhone's player can't play YouTube's WebM/Opus, so the iPhone app switches this to AAC (.m4a) / MP3 first.
+STREAM_AUDIO_FORMAT = "bestaudio/best"
+IPHONE_STREAM_AUDIO_FORMAT = ("bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio[acodec=mp3]/"
+                              "best[ext=mp4][acodec!=none]/bestaudio/best")
+
 
 def song_quality(value):
     return value if value in SONG_QUALITIES else DEFAULT_SONG_QUALITY

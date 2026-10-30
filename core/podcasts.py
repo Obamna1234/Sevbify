@@ -398,7 +398,8 @@ def youtube_stream(page_url, video=False, extract=None, max_height=720):
     """(direct link, HTTP headers) for an episode's audio, or for its video with sound (video=True)."""
     if extract is None:
         def extract(url):
-            fmt = video_format(max_height) if video else "bestaudio/best"
+            from core import quality
+            fmt = video_format(max_height) if video else quality.STREAM_AUDIO_FORMAT
             with _ydl({"format": fmt, "skip_download": True}) as ydl:
                 return ydl.extract_info(url, download=False)
     info = extract(page_url) or {}
