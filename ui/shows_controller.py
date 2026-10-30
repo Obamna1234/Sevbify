@@ -848,9 +848,11 @@ class ShowsMixin:
         self.genre_page.show_loading(genre["name"], self._genre_colour(genre))
         self.stack.setCurrentWidget(self.genre_page)
         self._set_nav("genre", genre["id"])
+        token = self._genre_page_token = ("genre", genre["id"], time.time())
 
         def done(data):
-            if self.stack.currentWidget() is not self.genre_page:
+            # Only if this page is still the one on screen (not another genre or an artist opened meanwhile).
+            if self.stack.currentWidget() is not self.genre_page or self._genre_page_token != token:
                 return
             sections = []
             songs = self.radio_items(data["tracks"])[:10]
@@ -868,7 +870,8 @@ class ShowsMixin:
             self.genre_page.set_sections(sections, note="Popular right now, from Deezer's charts for this genre "
                                                         "(they change every day).")
         self.online_call(self.online.deezer.genre_overview, genre["id"], on_done=done,
-                         on_error=lambda e: self.genre_page.show_message(f"Couldn't load {genre['name']}: {e}"))
+                         on_error=lambda e: self._genre_page_token == token and
+                         self.genre_page.show_message(f"Couldn't load {genre['name']}: {e}"))
 
     def _songs_block(self, songs, source, radio_seed=None, shown=None):
         """Play / Shuffle (and Artist radio) buttons above a list of songs, like Spotify's genre and artist pages.
@@ -937,6 +940,7 @@ class ShowsMixin:
         self.genre_page.show_loading(name, TILE_COLOURS[sum(map(ord, name)) % len(TILE_COLOURS)])
         self.stack.setCurrentWidget(self.genre_page)
         self._set_nav("web_artist", name)
+        token = self._genre_page_token = ("artist", name, time.time())
         deezer = self.online.deezer
 
         def fetch():
@@ -950,7 +954,7 @@ class ShowsMixin:
             return {"tracks": deezer.top_tracks(a.get("id"), 50), "releases": releases}
 
         def done(data):
-            if self.stack.currentWidget() is not self.genre_page:
+            if self.stack.currentWidget() is not self.genre_page or self._genre_page_token != token:
                 return
             sections = []
             songs = self.radio_items(data["tracks"])
@@ -971,6 +975,8 @@ class ShowsMixin:
             self.genre_page.set_sections(sections)
 
         def failed(err):
+            if self._genre_page_token != token:
+                return
             if local:
                 self.show_artist(local)
             else:
