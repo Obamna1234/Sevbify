@@ -64,7 +64,7 @@ class StoredPlaylist:
     created: float = 0.0
     last_played: float = 0.0
     cover: str = ""              # custom cover picture
-    origin: str = ""             # where it came from: "" made in Sevbify | "spotify" | "apple" | "youtube" | "file"
+    origin: str = ""             # where it came from: "" made in Sevbify | "spotify" | "apple" | "deezer" | "jamendo" | "file"
 
 
 @dataclass
@@ -423,7 +423,7 @@ class Storage:
             playlists.append(StoredPlaylist(name, tracks, folder if folder in data.folders else "",
                                             num("created"), num("last_played"),
                                             from_stored_path(str(cover)) if cover else "",
-                                            origin if origin in ("spotify", "apple", "youtube", "file", "link") else ""))
+                                            origin if origin in ("spotify", "apple", "deezer", "jamendo", "youtube", "file", "link") else ""))
         data.playlists = playlists
         return data
 

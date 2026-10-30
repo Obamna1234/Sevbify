@@ -82,8 +82,9 @@ fun SettingsScreen() {
         }
         item { Heading("Your Library") }
         item {
-            Toggle("Show where playlists came from", "A coloured border around playlist pictures: blue = made in Sevbify, " +
-                   "orange = imported from a link (Spotify / Apple Music), purple = imported from a file.",
+            Toggle("Show where playlists came from", "A coloured border around playlist pictures: grey = made in Sevbify, " +
+                   "green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link, " +
+                   "blue = imported from a file.",
                    s.showPlaylistOrigin) { s.showPlaylistOrigin = it; Library.changed() }
         }
         item { Heading("Downloads") }

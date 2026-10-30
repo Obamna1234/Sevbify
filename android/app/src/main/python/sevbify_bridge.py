@@ -205,12 +205,12 @@ def download_url(url, path):
 
 # --- importing ----------------------------------------------------------------------------------------------
 @_call
-def import_link(text, song_links=""):
+def import_link(text, song_links="", jamendo_client_id=""):
     from core import importers
     head = None
     if importers.parse_link(text) is not None:
         try:
-            head = importers.fetch_from_link(_net(), text)
+            head = importers.fetch_from_link(_net(), text, jamendo_client_id)
         except importers.ImportError_:
             if not importers.parse_track_links(song_links):
                 raise
@@ -220,8 +220,9 @@ def import_link(text, song_links=""):
         head = dict(head or {"name": "Imported from Spotify", "cover_url": ""})
         head.update(tracks=got["tracks"], truncated=False, failed=got["failed"])
     if head is None:
-        raise importers.ImportError_("Paste a Spotify or Apple Music playlist or album link, or Spotify song links.")
+        raise importers.ImportError_(importers.LINK_HELP + ", or Spotify song links.")
     head["tracks"] = _tracks(head["tracks"])
+    head["origin"] = importers.origin_of(text)
     return head
 
 

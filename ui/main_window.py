@@ -2673,7 +2673,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         h = QLabel("Import a playlist")
         h.setStyleSheet("font-size: 20px; font-weight: 800;")
         v.addWidget(h)
-        sub = QLabel("Paste a link to a public Spotify or Apple Music playlist or album. The songs are added in the "
+        sub = QLabel("Paste a link to a public Spotify, Apple Music, Deezer or Jamendo playlist or album. The songs are added in the "
                      "same order with the playlist's cover; songs you already have in your music folders play from "
                      "your files, the rest stream while online and are listed under To download. Your Spotify account "
                      "isn't signed in to or changed.")
@@ -2728,7 +2728,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         ids = importers.parse_track_links(song_links) or (importers.parse_track_links(text)
                                                           if importers.parse_link(text) is None else [])
         if importers.parse_link(text) is None and not ids:
-            self.show_status("⚠ Paste a Spotify or Apple Music playlist or album link, or Spotify song links.", 8000)
+            self.show_status(f"⚠ {importers.LINK_HELP}, or Spotify song links.", 8000)
             return
         if not self.online_enabled:
             self.show_status("⚠ Importing from a link needs Online features (Settings).", 8000)
@@ -2740,7 +2740,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             head = None
             if importers.parse_link(text) is not None:
                 try:
-                    head = importers.fetch_from_link(self.net, text)
+                    head = importers.fetch_from_link(self.net, text, self.user_data.jamendo_client_id)
                 except importers.ImportError_:
                     if not ids:
                         raise

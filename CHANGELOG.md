@@ -2,13 +2,20 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Deezer / Jamendo imports and simpler border colours (v5.0.0-beta.14):**
+- Import a public Deezer playlist or album link (Deezer's free public API, no account; all songs, not just 100),
+  or a Jamendo playlist or album link (needs the free Jamendo client ID; on Android a box for it appears when you
+  paste a Jamendo link).
+- Border colours: grey = made in Sevbify (your own songs or ones found online), blue = imported from a file,
+  green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link.
+
 **Playlist pictures, origin border, totals and smarter radio (v5.0.0-beta.13):**
 - Playlists without a picture you chose get Spotify's: the covers of the first 4 *different* albums, in the
   playlist's order, as a 2x2 grid; with fewer than 4 different albums, the first song's cover. Songs you haven't
   downloaded count too (their cover is fetched), on Windows and Android. Rule shared in `core/playlist_cover.py`.
-- Settings → "Show where playlists came from" (off by default): a coloured border around playlist pictures —
-  blue = made in Sevbify, orange = imported from a Spotify / Apple Music link, purple = imported from a file.
-  Playlists made before this version count as made in Sevbify.
+- Settings → "Show where playlists came from" (off by default): a coloured border around playlist pictures
+  showing where each came from (colours changed in beta.14). Playlists made before this version count as made in
+  Sevbify.
 - Playlist length like Spotify: Windows "50 songs, about 2 hr 45 min"; Android "2h 45min".
 - Song radio reacts to skips like Spotify: skipping a radio song in its first 30 seconds removes that artist's
   other upcoming songs from this radio (a few songs are always kept). In memory only: nothing is saved or sent.

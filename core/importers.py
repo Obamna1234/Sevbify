@@ -19,6 +19,8 @@ from core.online.models import OnlineTrack
 
 SPOTIFY_RE = re.compile(r"(?:open\.spotify\.com/(?:intl-[a-z]{2}/)?(?:embed/)?|spotify:)(playlist|album)[/:]([A-Za-z0-9]{10,})")
 APPLE_RE = re.compile(r"https?://music\.apple\.com/\S+")
+DEEZER_RE = re.compile(r"(?:www\.)?deezer\.com/(?:[a-z]{2}(?:-[a-z]{2})?/)?(playlist|album)/(\d+)", re.I)
+JAMENDO_RE = re.compile(r"(?:www\.)?jamendo\.com/(?:[a-z]{2}/)?(playlist|album)/(?:[a-z]\d*/)?(\d+)", re.I)
 NEXT_DATA_RE = re.compile(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', re.S)
 DASHES = (" - ", " – ", " — ", " － ", "－", " —", " –")
 
@@ -28,11 +30,17 @@ class ImportError_(Exception):
 
 
 def parse_link(text):
-    """("spotify", kind, id) / ("apple", url, None) / None."""
+    """("spotify", kind, id) / ("apple", url, None) / ("deezer", kind, id) / ("jamendo", kind, id) / None."""
     text = (text or "").strip()
     m = SPOTIFY_RE.search(text)
     if m:
         return ("spotify", m.group(1), m.group(2))
+    m = DEEZER_RE.search(text)
+    if m:
+        return ("deezer", m.group(1).lower(), m.group(2))
+    m = JAMENDO_RE.search(text)
+    if m:
+        return ("jamendo", m.group(1).lower(), m.group(2))
     m = APPLE_RE.search(text)
     if m:
         return ("apple", m.group(0), None)
@@ -40,11 +48,12 @@ def parse_link(text):
 
 
 def origin_of(text):
-    """Where an imported playlist came from, for the optional coloured border: "spotify", "apple" or "link"."""
+    """Where an imported playlist came from, for the optional coloured border:
+    "spotify", "apple", "deezer" or "jamendo" (pasted Spotify song links count as Spotify)."""
     found = parse_link(text)
     if found:
         return found[0]
-    return "spotify" if "spotify" in (text or "").lower() else "link"
+    return "spotify"
 
 
 TRACK_LINK_RE = re.compile(r"(?:open\.spotify\.com/(?:intl-[a-z]{2}/)?(?:embed/)?track/|spotify:track:)([A-Za-z0-9]{22})")
@@ -149,14 +158,89 @@ def parse_spotify_embed(html):
             "tracks": tracks, "owner": entity.get("subtitle") or "", "truncated": len(tracks) >= 100}
 
 
-def fetch_from_link(net, text):
-    """Read a playlist from a Spotify / Apple Music link (network). Returns the same dict as parse_spotify_embed."""
+LINK_HELP = "Paste a Spotify, Apple Music, Deezer or Jamendo playlist or album link"
+DEEZER_API = "https://api.deezer.com"
+JAMENDO_API = "https://api.jamendo.com/v3.0"
+MAX_IMPORT = 2000
+
+
+def fetch_deezer(net, kind, item_id):
+    """A public Deezer playlist or album, from Deezer's free public API (no account, no key)."""
+    from core.online.providers import Deezer
+    def get(path, params=None):
+        data = net.get_json(DEEZER_API + path, params, ttl=600)
+        if not isinstance(data, dict) or "error" in data:
+            raise ImportError_("Deezer couldn't find that " + kind + " (it may be private or deleted).")
+        return data
+    head = get(f"/{kind}/{item_id}")
+    tracks, index = [], 0
+    while len(tracks) < MAX_IMPORT:
+        page = get(f"/{kind}/{item_id}/tracks", {"limit": 100, "index": index})
+        rows = [d for d in page.get("data") or [] if isinstance(d, dict)]
+        for d in rows:
+            t = Deezer.track_from(d)
+            if kind == "album":
+                t.album = t.album or head.get("title", "")
+                t.cover_url = t.cover_url or head.get("cover_xl") or head.get("cover_big") or ""
+                t.artist = t.artist or (head.get("artist") or {}).get("name", "")
+            if t.title and t.artist:
+                tracks.append(t)
+        index += len(rows)
+        if not rows or not page.get("next"):
+            break
+    if not tracks:
+        raise ImportError_("That Deezer link has no songs Sevbify can read.")
+    owner = (head.get("creator") or head.get("artist") or {}).get("name", "")
+    return {"name": head.get("title") or "Deezer " + kind, "tracks": tracks, "owner": owner, "truncated": False,
+            "cover_url": head.get("picture_xl") or head.get("cover_xl") or head.get("picture_big") or ""}
+
+
+def fetch_jamendo(net, kind, item_id, client_id):
+    """A Jamendo playlist or album (free, Creative Commons music). Jamendo's API needs the free client ID
+    from Settings → Online."""
+    if not (client_id or "").strip():
+        raise ImportError_("Importing from Jamendo needs a free Jamendo client ID: add it in Settings "
+                           "(Online → Jamendo client ID).")
+    data = net.get_json(f"{JAMENDO_API}/{kind}s/tracks/", {"client_id": client_id.strip(), "format": "json",
+                                                           "id": item_id, "limit": 200, "audioformat": "mp32"},
+                        ttl=600)
+    head = (data or {}).get("headers") or {}
+    if head.get("status") not in (None, "success"):
+        raise ImportError_(f"Jamendo: {head.get('error_message') or head.get('status')}")
+    results = (data or {}).get("results") or []
+    if not results:
+        raise ImportError_("Jamendo couldn't find that " + kind + ".")
+    info = results[0]
+    tracks = []
+    for r in info.get("tracks") or []:
+        if not isinstance(r, dict) or not r.get("name"):
+            continue
+        tracks.append(OnlineTrack(
+            title=r.get("name", ""), artist=r.get("artist_name") or info.get("artist_name", ""),
+            album=r.get("album_name") or (info.get("name", "") if kind == "album" else ""),
+            duration_ms=int(r.get("duration") or 0) * 1000,
+            cover_url=r.get("image") or r.get("album_image") or info.get("image", ""),
+            stream_url=r.get("audio", ""), source="jamendo", source_id=str(r.get("id", "")),
+            download_url=r.get("audiodownload", "") if r.get("audiodownload_allowed", True) else "",
+            page_url=r.get("shareurl", "")))
+    if not tracks:
+        raise ImportError_("That Jamendo link has no songs Sevbify can read.")
+    return {"name": info.get("name") or "Jamendo " + kind, "cover_url": info.get("image", ""), "tracks": tracks,
+            "owner": info.get("artist_name") or info.get("user_name", ""), "truncated": False}
+
+
+def fetch_from_link(net, text, jamendo_client_id=""):
+    """Read a playlist from a Spotify / Apple Music / Deezer / Jamendo link (network). Returns the same dict as
+    parse_spotify_embed."""
     link = parse_link(text)
     if link is None:
-        raise ImportError_("Paste a Spotify or Apple Music playlist or album link, e.g. "
-                           "https://open.spotify.com/playlist/…")
+        raise ImportError_(LINK_HELP + ", e.g. https://open.spotify.com/playlist/…")
     if link[0] == "spotify":
         return parse_spotify_embed(net.get_text(spotify_embed_url(link[1], link[2]), ttl=600))
+    if link[0] == "deezer":
+        return fetch_deezer(net, link[1], link[2])
+    if link[0] == "jamendo":
+        return fetch_jamendo(net, link[1], link[2], jamendo_client_id)
     from core import downloader
     try:
         name, lines = downloader.engine().fetch_apple_playlist(link[1])

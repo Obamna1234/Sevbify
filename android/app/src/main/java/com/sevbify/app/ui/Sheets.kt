@@ -228,9 +228,12 @@ fun playlistCovers(pl: com.sevbify.app.Playlist): List<String> {
 
 /** Colours for Settings ▸ "Show where playlists came from" (off by default). */
 fun originColour(origin: String): Color = when (origin) {
-    "" -> Color(0xFF509BF5)                    // made in Sevbify: blue
-    "file" -> Color(0xFFAF7BFF)                // imported from a file (.txt / .csv / .m3u): purple
-    else -> Color(0xFFFFA42B)                  // imported from a link (Spotify / Apple Music): orange
+    "file" -> Color(0xFF509BF5)                // imported from a file (.txt / .csv / .m3u): blue
+    "spotify", "link" -> Color(0xFF1ED760)     // Spotify link: green
+    "apple" -> Color(0xFFFFFFFF)               // Apple Music link: white
+    "deezer" -> Color(0xFFA238FF)              // Deezer link: purple
+    "jamendo" -> Color(0xFFFF8A1F)             // Jamendo link: orange
+    else -> Color(0xFF8A8A8A)                  // made in Sevbify: grey
 }
 
 /** A playlist's picture: its own cover, or Spotify's 2x2 of album covers; with the optional origin border. */

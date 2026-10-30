@@ -44,11 +44,18 @@ fun ImportScreen(start: String) {
             IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
             Text("Import a playlist", style = MaterialTheme.typography.headlineMedium)
         }
-        Muted("Paste a public Spotify or Apple Music playlist or album link (or Share it from Spotify to Sevbify). Same " +
+        Muted("Paste a public Spotify, Apple Music, Deezer or Jamendo playlist or album link (or Share it from Spotify to Sevbify). Same " +
               "order and cover; songs already on your phone play from your files, the rest stream while online and wait " +
               "under To download. Your Spotify account is never signed in to.")
         OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text("https://open.spotify.com/playlist/…") },
                           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+        if ("jamendo.com" in link.lowercase()) {
+            var jid by remember { mutableStateOf(Library.settings.jamendoId) }
+            Muted("Jamendo needs a free client ID (make one at devportal.jamendo.com). It's kept on this phone only.")
+            OutlinedTextField(jid, { jid = it.trim(); Library.settings.jamendoId = jid; Library.changed() }, singleLine = true,
+                              placeholder = { Text("Jamendo client ID") },
+                              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+        }
         Muted("More than 100 songs? Without signing in, Spotify only shares 100 songs per link. In Spotify on a computer, " +
               "click a song in the playlist, press Ctrl+A then Ctrl+C, and paste the links here.")
         OutlinedTextField(songs, { songs = it }, placeholder = { Text("https://open.spotify.com/track/…") },
@@ -57,11 +64,11 @@ fun ImportScreen(start: String) {
             busy = true
             scope.launch {
                 try {
-                    val o = Bridge.obj("import_link", link, songs)
+                    val o = Bridge.obj("import_link", link, songs, Library.settings.jamendoId)
                     val tracks = o.getJSONArray("tracks").tracks()
                     val pl = Library.newPlaylist(o.optString("name", "Imported playlist"), tracks)
                     pl.coverUrl = o.optString("cover_url")
-                    pl.origin = if ("music.apple.com" in link) "apple" else "spotify"
+                    pl.origin = o.optString("origin", "spotify")
                     Library.changed()
                     Nav.back()
                     Nav.go(Screen.PlaylistPage(pl.id))

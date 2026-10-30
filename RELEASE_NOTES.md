@@ -28,6 +28,9 @@ Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
 ## What's in this version
 
+beta.14: import playlists and albums from Deezer and Jamendo links too, and simpler border colours (Settings →
+"Show where playlists came from"): grey = made in Sevbify, blue = from a file, green = Spotify, white = Apple
+Music, purple = Deezer, orange = Jamendo.
 beta.13: playlist pictures made Spotify's way (the first 4 different albums as a 2x2 grid, or the first song's
 cover), an optional coloured border showing which playlists you made and which you imported (Settings, off by
 default), playlist lengths written like Spotify ("about 2 hr 45 min" / "2h 45min"), and song radio that listens

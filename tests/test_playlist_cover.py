@@ -62,3 +62,44 @@ def test_radio_skip_drops_that_artists_upcoming_songs_only_in_memory():
     short = [NS(artist=a, title=str(i)) for i, a in enumerate("SXXAB")]
     q.set_context(short, short[1], "Seed Radio")
     assert q.drop_upcoming_by_artist("x") == 0               # would leave too few songs: keep going as is
+
+
+def test_deezer_and_jamendo_links_are_recognised():
+    from core.importers import parse_link, origin_of
+    assert parse_link("https://www.deezer.com/en/playlist/1479458365") == ("deezer", "playlist", "1479458365")
+    assert parse_link("https://deezer.com/album/302127") == ("deezer", "album", "302127")
+    assert parse_link("https://www.jamendo.com/playlist/500608900/chill") == ("jamendo", "playlist", "500608900")
+    assert parse_link("https://www.jamendo.com/album/145774/x") == ("jamendo", "album", "145774")
+    assert origin_of("https://www.deezer.com/en/playlist/1") == "deezer"
+
+
+def test_import_deezer_playlist_pages_through_all_songs():
+    from core.importers import fetch_from_link
+
+    def row(i):
+        return {"id": i, "title": f"Song {i}", "duration": 200, "artist": {"name": "Band"},
+                "album": {"title": "LP", "cover_xl": "https://img/lp.jpg"}}
+
+    class Net:
+        def get_json(self, url, params=None, ttl=0):
+            if url.endswith("/playlist/7"):
+                return {"title": "Road trip", "picture_xl": "https://img/p.jpg", "creator": {"name": "Sev"}}
+            start = (params or {}).get("index", 0)
+            rows = [row(i) for i in range(start, min(start + 100, 150))]
+            return {"data": rows, **({"next": "more"} if start + 100 < 150 else {})}
+    out = fetch_from_link(Net(), "https://www.deezer.com/playlist/7")
+    assert out["name"] == "Road trip" and len(out["tracks"]) == 150 and out["tracks"][0].title == "Song 0"
+
+
+def test_jamendo_import_asks_for_the_client_id():
+    import pytest
+    from core.importers import fetch_from_link, ImportError_
+    with pytest.raises(ImportError_, match="client ID"):
+        fetch_from_link(object(), "https://www.jamendo.com/playlist/5/x")
+
+
+def test_origin_colours_follow_the_users_scheme():
+    from ui.library_panel import origin_colour
+    assert origin_colour("") == "#8a8a8a" and origin_colour("spotify") == "#1ed760"
+    assert origin_colour("apple") == "#ffffff" and origin_colour("file") == "#509bf5"
+    assert origin_colour("deezer") == "#a238ff" and origin_colour("jamendo") == "#ff8a1f"

@@ -23,6 +23,7 @@ data class Settings(
     var shuffle: Boolean = false,
     var repeat: String = "off",
     var lastfmKey: String = "",
+    var jamendoId: String = "",                // free Jamendo client ID, only for importing Jamendo playlists
     var libraryView: String = "list",
     var librarySort: String = "recents",
     var songQuality: String = "best",          // core/quality.py: "best" (original) | "small" (data saver)
@@ -37,7 +38,7 @@ data class Settings(
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
         put("explicit_ok", explicitOk); put("wifi_only", downloadOnWifiOnly)
         put("music_folders", JSONArray(musicFolders)); put("notice", onlineNoticeAccepted)
-        put("shuffle", shuffle); put("repeat", repeat); put("lastfm", lastfmKey)
+        put("shuffle", shuffle); put("repeat", repeat); put("lastfm", lastfmKey); put("jamendo_id", jamendoId)
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
@@ -55,7 +56,7 @@ data class Settings(
                 s.musicFolders = (0 until a.length()).map { a.getString(it) }.toMutableList()
             }
             s.onlineNoticeAccepted = o.optBoolean("notice"); s.shuffle = o.optBoolean("shuffle")
-            s.repeat = o.optString("repeat", "off"); s.lastfmKey = o.optString("lastfm")
+            s.repeat = o.optString("repeat", "off"); s.lastfmKey = o.optString("lastfm"); s.jamendoId = o.optString("jamendo_id")
             s.libraryView = o.optString("library_view", "list"); s.librarySort = o.optString("library_sort", "recents")
             s.songQuality = o.optString("song_quality", "best").takeIf { it in listOf("best", "small") } ?: "best"
             s.bookQuality = o.optString("book_quality", "standard").takeIf { it in listOf("standard", "high") } ?: "standard"

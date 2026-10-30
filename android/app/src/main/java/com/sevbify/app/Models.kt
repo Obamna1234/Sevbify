@@ -78,7 +78,7 @@ data class Playlist(
     var created: Long = System.currentTimeMillis(),
     var lastPlayed: Long = 0,
     var pinned: Boolean = false,
-    var origin: String = "",          // "" made in Sevbify, or imported: "spotify" | "apple" | "link" | "file"
+    var origin: String = "",          // "" made in Sevbify, or imported: "spotify" | "apple" | "deezer" | "jamendo" | "file"
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("name", name); put("tracks", tracks.toJsonArray()); put("folder", folder)
@@ -92,7 +92,7 @@ data class Playlist(
             tracks = (o.optJSONArray("tracks") ?: JSONArray()).tracks().toMutableList(),
             folder = o.optString("folder"), coverUrl = o.optString("cover_url"), created = o.optLong("created"),
             lastPlayed = o.optLong("last_played"), pinned = o.optBoolean("pinned"),
-            origin = o.optString("origin").takeIf { it in listOf("spotify", "apple", "youtube", "link", "file") } ?: "",
+            origin = o.optString("origin").takeIf { it in listOf("spotify", "apple", "deezer", "jamendo", "youtube", "link", "file") } ?: "",
         )
     }
 }

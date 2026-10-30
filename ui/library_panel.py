@@ -82,12 +82,20 @@ def rounded(pm: QPixmap, size, radius=4):
     return out
 
 
-ORIGIN_COLOURS = {"": "#509bf5", "file": "#af7bff"}      # made in Sevbify: blue; from a file: purple
-LINK_COLOUR = "#ffa42b"                                   # imported from a link (Spotify / Apple Music): orange
+# Settings ▸ "Show where playlists came from" (same colours on Android, ui/Sheets.kt originColour).
+ORIGIN_COLOURS = {
+    "": "#8a8a8a",          # made in Sevbify (your own songs or ones found online): grey
+    "file": "#509bf5",      # imported from a file (.txt / .csv / .m3u...): blue
+    "spotify": "#1ed760",   # Spotify link: green
+    "link": "#1ed760",      # pasted Spotify song links: green
+    "apple": "#ffffff",     # Apple Music link: white
+    "deezer": "#a238ff",    # Deezer link: purple
+    "jamendo": "#ff8a1f",   # Jamendo link: orange
+}
 
 
 def origin_colour(origin):
-    return ORIGIN_COLOURS.get(origin or "", LINK_COLOUR)
+    return ORIGIN_COLOURS.get(origin or "", ORIGIN_COLOURS[""])
 
 
 def with_ring(pm: QPixmap, size, colour, radius=4, width=None):
