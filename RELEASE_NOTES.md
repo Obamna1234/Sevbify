@@ -28,6 +28,8 @@ Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
 ## What's in this version
 
+beta.12: lyrics (synced, like Spotify), share songs as Spotify/YouTube links, Connect (speakers/Bluetooth), and
+Download all or choose songs for playlists.
 beta.11: Go to album opens the whole album in order; podcast episodes always play in order (never shuffled).
 beta.10: video podcasts inside the app (Audio/Video switch, movable and resizable mini player), download quality
 settings (Best original audio / MP3 / Data saver), podcast search that puts the show you typed first, and yt-dlp

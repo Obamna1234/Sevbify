@@ -396,7 +396,7 @@ private fun SelectionBar(count: Int, total: Int, onAll: () -> Unit, onNone: () -
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = Color.Black),
                 modifier = Modifier.weight(1f)) { Text("Download") }
             androidx.compose.material3.OutlinedButton(onClick = onQueue, enabled = count > 0, modifier = Modifier.weight(1f)) {
-                Text("Add to queue", color = C.Text, maxLines = 1)
+                Text("Queue", color = C.Text, maxLines = 1)
             }
             androidx.compose.material3.OutlinedButton(onClick = onAddTo, enabled = count > 0, modifier = Modifier.weight(1f)) {
                 Text("Add to…", color = C.Text, maxLines = 1)

@@ -2,6 +2,20 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Lyrics, sharing, Connect and choosing downloads (v5.0.0-beta.12):**
+- Lyrics, like Spotify: Android shows a "Lyrics preview" card under Now playing (scroll down) and full-screen
+  lyrics; Windows has a Lyrics (microphone) button next to the queue. Time-synced lyrics highlight the line being
+  sung and you can tap/click a line to jump there. From a .lrc/.txt file next to your song (offline), otherwise
+  from LRCLIB (free, no account; only the song's name and length are sent). Settings → Lyrics switches it off.
+- Share a song as a Spotify or YouTube link (Sevbify has no accounts): Android has a Spotify-style share sheet
+  (song card, Spotify, YouTube, copy links, then your phone's share menu); Windows has ••• → Share → Copy
+  Spotify / YouTube / song.link link. Exact links when they can be found, otherwise a search for the song.
+- Connect, like Spotify: Android shows where the sound is going (this phone or your Bluetooth headphones, also
+  on the mini player), Android's output picker and Bluetooth settings; Windows has a Connect button that lists
+  your speakers/headphones (Bluetooth included) and switches Sevbify's output, plus Bluetooth & sound settings.
+- A playlist's Download button asks first: Download all, or choose songs (ticked list, select all / none).
+  Android: hold a song to start choosing several, then Download, Queue or Add to playlist.
+
 **Go to album and episode order (v5.0.0-beta.11):**
 - Go to album opens the whole album in its own order, like Spotify (songs you've downloaded play from your
   files, the rest stream); offline it shows the album's songs you have. Before, a song you didn't own went to a
