@@ -16,6 +16,7 @@ class SevbifyApp : Application() {
         instance = this
         I18n.load(this)
         Library.load(this)
+        MusicServers.load(this)
         Player.connect(this)                 // your own songs play even if the online core can't start
         scope.launch {
             // Starting Python takes a few seconds the first time (it unpacks itself): done in the background

@@ -352,6 +352,11 @@ object Player {
             return Triple(uri, null, "")
         }
         requireOnline(t) ?: return null
+        if (t.source == "jellyfin" || t.source == "webdav") {
+            status = "Connecting to your server…"
+            val (url, headers) = MusicServers.playable(t) ?: throw CoreError("its server was removed in Settings")
+            return Triple(url, headers, "From your server")
+        }
         // Always the full song. A 30-second clip only plays from the song menu's Preview, never in its place.
         if (!Library.settings.onlineNoticeAccepted) { noticeFor = t; return null }
         status = "Finding the full song…"

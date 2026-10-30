@@ -479,6 +479,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         # --- Downloads (SEVBY engine, in the background) ------------------
         self.downloads = DownloadManager(self)
+        self.downloads.server_for = self._server_for_track
         self.downloads.quality = self.user_data.download_quality
         self._downloaded_paths = {}      # song key -> file the download manager saved
         self._downloads_refresh = QTimer(self)
@@ -519,6 +520,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.profile_export_requested.connect(self.export_profile)
         self.settings_page.profile_import_requested.connect(self.import_profile)
         self.settings_page.import_requested.connect(self.import_playlist_dialog)
+        self.settings_page.server_add_requested.connect(self.add_music_server)
+        self.settings_page.server_refresh_requested.connect(
+            lambda i: [self.refresh_music_server(s) for s in self.music_servers() if s["id"] == i])
+        self.settings_page.server_remove_requested.connect(self.remove_music_server)
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.settings_page.reset_requested.connect(self.reset_settings)
@@ -3038,6 +3043,88 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.show_status(f"⚠ Couldn't import: {err}", 12000)
         self.online_call(work, on_done=done, on_error=failed)
 
+    # --- Your own music servers (Jellyfin, Nextcloud / WebDAV) ------------------------------------------------
+    def _server_for_track(self, track):
+        from core import servers
+        return servers.find(self.music_servers(), track)
+
+    def music_servers(self):
+        from core import server_store
+        if not hasattr(self, "_servers"):
+            self._servers = server_store.load(self.storage.data_dir)
+        return self._servers
+
+    def add_music_server(self, kind):
+        """Settings → Music servers → Add: sign in, then the server's songs become a playlist."""
+        from PyQt6.QtWidgets import QInputDialog, QLineEdit
+        from core import servers, server_store
+        if not self.online_enabled:
+            self.show_status("Turn on Online features to connect a server.", 6000)
+            return
+        title = "Add a Jellyfin server" if kind == "jellyfin" else "Add a Nextcloud server"
+        addr, ok = QInputDialog.getText(self, title, "Server address (like https://music.example.com):")
+        if not ok or not addr.strip():
+            return
+        user, ok = QInputDialog.getText(self, title, "User name:")
+        if not ok or not user.strip():
+            return
+        label = "Password (used once to sign in; only a revocable token is kept):" if kind == "jellyfin" else \
+            "App password (Nextcloud → Settings → Security → Create new app password):"
+        secret, ok = QInputDialog.getText(self, title, label, QLineEdit.EchoMode.Password)
+        if not ok or not secret:
+            return
+        folder = ""
+        if kind == "webdav":
+            folder, ok = QInputDialog.getText(self, title, "Music folder on the server (empty = everything):", text="Music")
+            if not ok:
+                return
+        self.show_status("Connecting…", kind="info", timeout_ms=10000)
+
+        def work():
+            if kind == "jellyfin":
+                return servers.jellyfin_sign_in(addr, user.strip(), secret)
+            return servers.webdav_connect(addr, user.strip(), secret, folder)
+
+        def done(srv):
+            self.music_servers().append(srv)
+            server_store.save(self.storage.data_dir, self._servers)
+            self.show_status(f"Connected to {srv['name']}. Loading its songs…", kind="info", timeout_ms=8000)
+            self.refresh_music_server(srv)
+            if self.stack.currentWidget() is self.settings_page:
+                self.open_settings()
+
+        def failed(err):
+            self.show_status(f"⚠ Couldn't connect: {err}", 12000)
+        self.online_call(work, on_done=done, on_error=failed)
+
+    def refresh_music_server(self, srv):
+        """The server's songs as a playlist named after it (made or updated)."""
+        from core import servers
+
+        def done(tracks):
+            pl = next((p for p in self.playlists if getattr(p, "origin", "") == "server:" + srv["id"]), None)
+            items = [RemoteSong(t) for t in tracks]
+            if pl is None:
+                pl = self._create_imported_playlist(srv["name"], [("track", t) for t in tracks], origin="link",
+                                                    enrich=False)
+                if pl is None:
+                    return
+                pl.origin = "server:" + srv["id"]
+            else:
+                pl.songs = items
+            self._fill_pending_slots()
+            self._playlists_changed(pl)
+            self.show_status(f"{srv['name']}: {len(tracks)} songs", kind="info", timeout_ms=8000)
+        self.online_call(servers.songs, srv, on_done=done,
+                         on_error=lambda e: self.show_status(f"⚠ {srv['name']}: {e}", 12000))
+
+    def remove_music_server(self, server_id):
+        from core import server_store
+        self._servers = [s for s in self.music_servers() if s["id"] != server_id]
+        server_store.save(self.storage.data_dir, self._servers)
+        self.show_status("Server removed (its sign-in was deleted from this computer).", kind="info", timeout_ms=6000)
+        self.open_settings()
+
     def offer_chosic(self, pl, link, url):
         """Spotify only shared the first 100 songs: get the rest with Chosic's exporter in the browser. The link is
         copied for you, and the file Chosic downloads is picked up from Downloads by itself (for 15 minutes)."""
@@ -4078,6 +4165,17 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._handle_failed_track("file not found (moved or deleted?)")
             return
 
+        if is_remote and song.track.source in ("jellyfin", "webdav"):
+            # Your own server: the sign-in is added only here, never saved with the song.
+            from core import servers
+            srv = servers.find(self.music_servers(), song.track)
+            if srv is None:
+                self.player.stop()
+                self._track_handled = True
+                self._handle_failed_track("its server was removed in Settings")
+                return
+            self._play_media(servers.playable(srv, song.track, for_vlc=True)[0])
+            return
         self._play_media(song.playable_url if is_remote else song.file_path)
         # Note: any "Skipped …" message is left visible; it clears on its own timer.
 
@@ -5310,7 +5408,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core import shortcuts
         from core.startup_settings import can_start_at_login
         from core import updates
+        from core import servers as _servers
         info = dict(version=app_version(), private_session=self.private_session,
+                    servers=[_servers.public(s) for s in self.music_servers()],
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),

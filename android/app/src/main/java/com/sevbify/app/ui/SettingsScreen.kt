@@ -292,6 +292,7 @@ fun SettingsPageScreen(key: String) {
                 }
             }
         }
+        item { ServersSection() }
         }
         "quality" -> {
         item {

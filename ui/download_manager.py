@@ -58,6 +58,16 @@ class _Worker(QThread):
             key, line, folder, source = job
             self.song_started.emit(key)
             out = {}
+            if isinstance(source, dict):
+                # A song from your own server: copied straight from it (not searched for anywhere else).
+                try:
+                    from core import servers
+                    path = servers.download(source["server"], source["track"], source["base"])
+                    out = {"status": "ok", "path": path}
+                except Exception as e:
+                    out = {"status": "fail", "note": str(e)}
+                self.song_finished.emit(key, out)
+                continue
             res = downloader.run_download(
                 [line], folder, source, process=self.m.process,
                 on_step=lambda t: setattr(self.m, "step_text", t),
@@ -86,6 +96,7 @@ class DownloadManager(QObject):
         self.quality = "best"             # Settings -> Download quality (core/quality.py)
         self.process = None                      # tests replace the real per-song download with a fake
         self.check_tools = downloader.check_tools
+        self.server_for = lambda track: None     # main window: the music server a server song belongs to
         self.step_text = ""
         self._lock = threading.Lock()
         self._queue = deque()                    # (key, line, folder, source)
@@ -119,7 +130,9 @@ class DownloadManager(QObject):
                 self._states[key] = {"state": QUEUED, "title": t.title, "artist": t.artist, "note": ""}
                 # Filed by main artist: <download folder>/<Artist>/<Artist - Title>.mp3
                 out_dir = os.path.join(folder, downloader.artist_folder(t.artist)) if by_artist else folder
-                job = (key, downloader.song_line(t.artist, t.title), out_dir, source)
+                srv = self.server_for(t) if getattr(t, "source", "") in ("jellyfin", "webdav") else None
+                job = (key, downloader.song_line(t.artist, t.title), out_dir,
+                       {"server": srv, "track": t, "base": folder} if srv else source)
                 self._jobs[key] = job
                 self._queue.append(job)
                 added += 1

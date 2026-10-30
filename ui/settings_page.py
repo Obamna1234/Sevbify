@@ -53,6 +53,9 @@ class SettingsPage(QWidget):
     profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
     update_ytdlp_requested = pyqtSignal()
+    server_add_requested = pyqtSignal(str)          # "jellyfin" | "webdav"
+    server_refresh_requested = pyqtSignal(str)      # server id
+    server_remove_requested = pyqtSignal(str)       # server id
     reset_requested = pyqtSignal(str)          # "appearance" or "all"
 
     def __init__(self, eq_presets=None, parent=None):
@@ -141,6 +144,27 @@ class SettingsPage(QWidget):
         self._line_edit("jamendo_client_id", "Jamendo client ID (optional)",
                         "Free Creative Commons music from Jamendo. Free at devportal.jamendo.com.",
                         u.jamendo_client_id, "e.g. 1a2b3c4d")
+
+        self._section("Music servers")
+        self._text("Play music from your own Jellyfin or Nextcloud server. Sevbify talks only to the address you type; "
+                   "Jellyfin keeps just a revocable sign-in token, and for Nextcloud use an app password. The sign-in "
+                   "stays on this computer (never in playlists or your profile file).")
+        for srv in info.get("servers", []):
+            row = QHBoxLayout()
+            row.addLayout(self._name_desc(srv.get("name", "Server"), srv.get("url", ""), into=row), 1)
+            for text, sig in (("Reload songs", self.server_refresh_requested), ("Remove", self.server_remove_requested)):
+                b = QPushButton(text)
+                b.clicked.connect(lambda _=False, s=sig, i=srv["id"]: s.emit(i))
+                row.addWidget(b)
+            self._v.addLayout(row)
+        add_row = QHBoxLayout()
+        for text, kind in (("Add Jellyfin…", "jellyfin"), ("Add Nextcloud…", "webdav")):
+            b = QPushButton(text)
+            b.clicked.connect(lambda _=False, k=kind: self.server_add_requested.emit(k))
+            add_row.addWidget(b)
+            self.controls["add_" + kind] = b
+        add_row.addStretch()
+        self._v.addLayout(add_row)
 
         self._section("Your Library")
         self._toggle("library_compact", "Use compact library layout", "", u.library_view == "compact")

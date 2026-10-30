@@ -131,7 +131,10 @@ object Downloads {
 
     private suspend fun downloadSong(context: Context, t: Track) {
         val work = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "incoming").apply { mkdirs() }
-        val res = Bridge.obj("download_song", t.artist, t.title, t.durationMs, work.absolutePath, Library.settings.songQuality)
+        val res = if (t.source == "jellyfin" || t.source == "webdav") {
+            val srv = MusicServers.byId(t.pageUrl) ?: throw CoreError("its server was removed in Settings")
+            Bridge.obj("server_download", srv.toString(), t.toJson().toString(), work.absolutePath)   // from your server
+        } else Bridge.obj("download_song", t.artist, t.title, t.durationMs, work.absolutePath, Library.settings.songQuality)
         val file = File(res.getString("path"))
         val saved = publish(context, file, t)
         Library.offline[t.matchKey] = saved

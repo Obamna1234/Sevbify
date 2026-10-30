@@ -273,6 +273,39 @@ def import_link(text, song_links="", jamendo_client_id=""):
     return head
 
 
+# --- your own music servers (Jellyfin, Nextcloud / WebDAV) ------------------------------------------------------
+@_call
+def server_add(kind, address, user, secret, folder=""):
+    """Sign in. Returns the server (Jellyfin: a revocable token, not the password). The app keeps it privately."""
+    from core import servers
+    if kind == "jellyfin":
+        return servers.jellyfin_sign_in(address, user, secret)
+    return servers.webdav_connect(address, user, secret, folder)
+
+
+@_call
+def server_songs(server_json):
+    from core import servers
+    return _tracks(servers.songs(json.loads(server_json)))
+
+
+@_call
+def server_playable(server_json, track_json):
+    """{"url", "headers"} to stream one of the server's songs (the sign-in travels only in the headers)."""
+    from core import servers
+    from core.online.models import OnlineTrack
+    url, headers = servers.playable(json.loads(server_json), OnlineTrack.from_dict(json.loads(track_json)))
+    return {"url": url, "headers": headers}
+
+
+@_call
+def server_download(server_json, track_json, folder):
+    """Save a server song (straight from your server) into folder/<Artist>/. {"path"}."""
+    from core import servers
+    from core.online.models import OnlineTrack
+    return {"path": servers.download(json.loads(server_json), OnlineTrack.from_dict(json.loads(track_json)), folder)}
+
+
 @_call
 def check_import(tracks_json):
     """Imported songs, looked up one by one: [{"status": ok / suggest / missing, "track", "suggestion" or None}].
