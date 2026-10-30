@@ -142,6 +142,11 @@ jobs:
           if [ -f deno ]; then EXTRA="$EXTRA --add-binary deno${SEP}."; fi
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp --collect-all yt_dlp_ejs \
             --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." $EXTRA app.py
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            # PyInstaller copies libvlc in without VLC's plugins, and that copy can't play anything: remove it so
+            # the system's VLC (installed with the package manager, plugins and all) is used.
+            rm -fv dist/Sevbify/_internal/libvlc.so* dist/Sevbify/_internal/libvlccore.so*
+          fi
           if [ "${{ runner.os }}" = "macOS" ]; then
             # macOS: put VLC's playback engine inside Sevbify.app (same layout as VLC.app: vlc/lib + vlc/plugins),
             # then seal the app again (ad-hoc signature; Apple Silicon refuses to run apps without one).
