@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -108,7 +110,7 @@ fun ShareSheet(t: Track) {
                 Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall.copy(color = C.Sub))
             }
             Gap(16.dp)
-            if (links == null && failed.isEmpty()) Muted("Finding the song's links…")
+            if (links == null && failed.isEmpty()) Muted(tr("Finding the song's links…"))
             if (failed.isNotEmpty()) Muted("Couldn't look up links ($failed); search links are used.")
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -129,7 +131,7 @@ fun ShareSheet(t: Track) {
                 }
             }
             Gap(8.dp)
-            Muted("Spotify or YouTube opens your phone's share menu with the link. Your recent contacts there come from " +
+            Muted(tr("Spotify or YouTube opens your phone's share menu with the link. Your recent contacts there come from ") +
                   "Android itself; Sevbify never sees them.")
         }
     }
@@ -199,7 +201,7 @@ fun ConnectSheet() {
     val t = Player.current
     ModalBottomSheet(onDismissRequest = { Nav.connectOpen = false }, containerColor = C.Elevated) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text("Connect", style = MaterialTheme.typography.headlineSmall)
+            Text(tr("Connect"), style = MaterialTheme.typography.headlineSmall)
             Gap(12.dp)
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF2A2A2A)).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
@@ -207,7 +209,7 @@ fun ConnectSheet() {
                     Text(AudioOutput.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (AudioOutput.kind == "bluetooth") Icon(Icons.Filled.Bluetooth, null, tint = C.Sub, modifier = Modifier.size(16.dp))
-                        Text(" This phone", style = MaterialTheme.typography.bodyMedium.copy(color = C.Sub))
+                        Text(tr(" This phone"), style = MaterialTheme.typography.bodyMedium.copy(color = C.Sub))
                     }
                     if (t != null) Text("${t.title} – ${t.artist}", color = C.Green, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium)
@@ -215,7 +217,7 @@ fun ConnectSheet() {
                 Icon(AudioOutput.icon, null, tint = C.Green, modifier = Modifier.size(44.dp))
             }
             Gap(12.dp)
-            Muted("Sevbify plays on this phone. To play on a speaker, TV or other headphones, pick them below.")
+            Muted(tr("Sevbify plays on this phone. To play on a speaker, TV or other headphones, pick them below."))
             Gap(12.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (Build.VERSION.SDK_INT >= 34) {
@@ -234,7 +236,7 @@ fun ConnectSheet() {
 
 private fun openBluetooth(context: Context) {
     try { context.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-    catch (e: Exception) { Nav.say("Couldn't open Bluetooth settings") }
+    catch (e: Exception) { Nav.say(tr("Couldn't open Bluetooth settings")) }
 }
 
 @Composable
@@ -296,7 +298,7 @@ fun LyricsCard(t: Track) {
     val now = LyricsState.currentIndex(Player.position)
     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
                .background(Color(0xFF4A4A4A)).clickable(enabled = shown.isNotEmpty()) { Nav.lyricsOpen = true }.padding(18.dp)) {
-        Text("Lyrics preview", style = MaterialTheme.typography.titleMedium)
+        Text(tr("Lyrics preview"), style = MaterialTheme.typography.titleMedium)
         Gap(10.dp)
         if (shown.isEmpty()) {
             Text(LyricsState.status.ifEmpty { "No lyrics" }, style = MaterialTheme.typography.bodyMedium.copy(color = C.Sub))
@@ -309,7 +311,7 @@ fun LyricsCard(t: Track) {
             Gap(10.dp)
             Box(Modifier.clip(RoundedCornerShape(50)).background(Color.White).clickable { Nav.lyricsOpen = true }
                     .padding(horizontal = 18.dp, vertical = 8.dp)) {
-                Text("Show lyrics", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(tr("Show lyrics"), color = Color.Black, fontWeight = FontWeight.Bold)
             }
             if (LyricsState.source.isNotEmpty()) {
                 Gap(8.dp)

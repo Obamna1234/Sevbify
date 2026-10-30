@@ -39,4 +39,7 @@ V=$(tr -d '[:space:]' < ../VERSION)
 # tell each release apart (the marketing version stays 5.0.0 for every beta). Must match tools/altstore_source.py.
 B=$(python3 ../tools/altstore_source.py --build "$V")
 sed -i '' "s/MARKETING_VERSION: .*/MARKETING_VERSION: \"${V%%-*}\"/; s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$B\"/; s/SEVBIFY_VERSION: .*/SEVBIFY_VERSION: \"$V\"/" project.yml
+# The 20 languages (the same table as the other apps): SwiftUI shows Text("Home") in the iPhone's language for
+# Sevbify (Settings → Sevbify → Language).
+python3 ../tools/make_i18n.py ios Sevbify
 xcodegen generate

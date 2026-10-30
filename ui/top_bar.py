@@ -54,7 +54,8 @@ class TopBar(QWidget):
         c.addWidget(self.home_btn)
 
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("What do you want to play?")
+        from core.i18n import tr
+        self.search_edit.setPlaceholderText(tr("What do you want to play?"))
         self.search_edit.addAction(icons.search(theme.SUBDUED, 24), QLineEdit.ActionPosition.LeadingPosition)
         self.search_edit.setFixedHeight(48)
         self.search_edit.setMinimumWidth(260)

@@ -15,7 +15,8 @@ TILE_COLOURS = ["#e8115b", "#006450", "#1e3264", "#8400e7", "#477d95", "#e13300"
 
 
 def section_title(text):
-    lbl = QLabel(text)
+    from core.i18n import tr
+    lbl = QLabel(tr(text))
     lbl.setStyleSheet(f"color: {theme.TEXT}; font-size: 22px; font-weight: 700; background: transparent;")
     return lbl
 

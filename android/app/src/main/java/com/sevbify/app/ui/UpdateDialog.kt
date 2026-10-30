@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,7 +28,7 @@ fun UpdateDialog(r: JSONObject) {
     val ready = Updater.status == "ready"
     AlertDialog(
         onDismissRequest = { if (!busy) Updater.offer = null },
-        title = { Text("Update Sevbify") },
+        title = { Text(tr("Update Sevbify")) },
         text = {
             Column {
                 Text("Sevbify ${r.optString("latest")} is available (you have ${Library.coreVersion}). It installs over " +
@@ -43,7 +45,7 @@ fun UpdateDialog(r: JSONObject) {
             }) { Text(if (ready) "Install" else if (busy) "Downloading…" else "Download", color = C.Green) }
         },
         dismissButton = {
-            TextButton(enabled = !busy, onClick = { Updater.offer = null }) { Text("Later", color = C.Text) }
+            TextButton(enabled = !busy, onClick = { Updater.offer = null }) { Text(tr("Later"), color = C.Text) }
         },
         containerColor = C.Elevated,
     )

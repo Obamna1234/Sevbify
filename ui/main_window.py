@@ -314,6 +314,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         # --- Saved user data ---------------------------------------------
         self.storage = Storage(data_dir)
         self.user_data = self.storage.load()
+        from core import i18n
+        i18n.set_language(self.user_data.language)       # before any screen is built
+        if i18n.is_rtl():
+            QApplication.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
         # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
         # Settings → Normalize volume adds VLC's volume normaliser (applies after a restart).
@@ -1775,7 +1779,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     @staticmethod
     def _muted_label(text):
-        lbl = QLabel(text)
+        from core.i18n import tr
+        lbl = QLabel(tr(text))
         lbl.setStyleSheet("color: #b3b3b3; font-size: 14px;")
         lbl.setWordWrap(True)
         return lbl
@@ -2173,7 +2178,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     @staticmethod
     def _section_label(text):
-        lbl = QLabel(text)
+        from core.i18n import tr
+        lbl = QLabel(tr(text))
         lbl.setStyleSheet("color: white; font-size: 18px; font-weight: bold; padding-top: 6px;")
         return lbl
 
@@ -5307,7 +5313,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         was_online = u.online_enabled
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
-                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors")
+                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
+                  "language")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

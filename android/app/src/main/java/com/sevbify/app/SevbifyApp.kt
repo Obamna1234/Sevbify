@@ -14,6 +14,7 @@ class SevbifyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        I18n.load(this)
         Library.load(this)
         Player.connect(this)                 // your own songs play even if the online core can't start
         scope.launch {

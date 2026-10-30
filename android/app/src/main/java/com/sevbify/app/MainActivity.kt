@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        I18n.load(this)                       // Sevbify's language (Android's per-app language setting)
         enableEdgeToEdge()
         setContent { SevbifyTheme { AppRoot() } }
         com.sevbify.app.ui.AudioOutput.start(this)

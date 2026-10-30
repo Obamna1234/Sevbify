@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.Color
@@ -93,39 +95,39 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             HorizontalDivider(color = C.Highlight)
-            SheetItem(Icons.Filled.AddCircleOutline, "Add to playlist") { close(); Nav.addTo = listOf(t) }
+            SheetItem(Icons.Filled.AddCircleOutline, tr("Add to playlist")) { close(); Nav.addTo = listOf(t) }
             if (m.playlist != null && m.row >= 0) {
-                SheetItem(Icons.Filled.RemoveCircleOutline, "Remove from this playlist") {
+                SheetItem(Icons.Filled.RemoveCircleOutline, tr("Remove from this playlist")) {
                     close(); Library.removeAt(m.playlist, listOf(m.row))
                 }
             }
-            SheetItem(Icons.AutoMirrored.Filled.QueueMusic, "Add to queue") { close(); Player.addToQueue(t); Nav.say("Added to queue") }
+            SheetItem(Icons.AutoMirrored.Filled.QueueMusic, tr("Add to queue")) { close(); Player.addToQueue(t); Nav.say(tr("Added to queue")) }
             if (!t.isItem) {
                 val have = Library.localFor(t) != null
                 val st = Downloads.stateOf(t)
                 when {
-                    have -> SheetItem(Icons.Filled.ArrowCircleDown, "Downloaded", enabled = false) {}
+                    have -> SheetItem(Icons.Filled.ArrowCircleDown, tr("Downloaded"), enabled = false) {}
                     st == Downloads.State.QUEUED || st == Downloads.State.DOWNLOADING ->
-                        SheetItem(Icons.Filled.Cancel, "Cancel download") { close(); Downloads.cancel(t.matchKey) }
-                    else -> SheetItem(Icons.Filled.Download, if (st == Downloads.State.FAILED) "Try download again" else "Download") {
+                        SheetItem(Icons.Filled.Cancel, tr("Cancel download")) { close(); Downloads.cancel(t.matchKey) }
+                    else -> SheetItem(Icons.Filled.Download, tr(if (st == Downloads.State.FAILED) "Try download again" else "Download")) {
                         close()
                         if (Downloads.request(listOf(t)) > 0) Nav.say("Downloading ${t.title}")
                     }
                 }
-                SheetItem(Icons.Filled.Radio, "Go to song radio", enabled = Library.settings.online) { close(); Player.startRadio(t) }
-                SheetItem(Icons.Filled.PlayCircleOutline, "Preview (30 s)",
+                SheetItem(Icons.Filled.Radio, tr("Go to song radio"), enabled = Library.settings.online) { close(); Player.startRadio(t) }
+                SheetItem(Icons.Filled.PlayCircleOutline, tr("Preview (30 s)"),
                           enabled = Library.settings.online || t.previewUrl.isNotEmpty()) { close(); Nav.previewFor = t }
                 if (t.artist.isNotEmpty() && t.artist != "Unknown Artist") {
-                    SheetItem(Icons.Filled.Person, "Go to artist") { close(); Nav.nowPlayingOpen = false; Nav.go(Screen.Artist(t.artist)) }
+                    SheetItem(Icons.Filled.Person, tr("Go to artist")) { close(); Nav.nowPlayingOpen = false; Nav.go(Screen.Artist(t.artist)) }
                 }
                 if (t.album.isNotEmpty()) {
-                    SheetItem(Icons.Filled.Album, "Go to album") {
+                    SheetItem(Icons.Filled.Album, tr("Go to album")) {
                         close(); Nav.nowPlayingOpen = false
                         goToAlbum(t)
                     }
                 }
             }
-            SheetItem(Icons.Filled.Share, "Share") { close(); Nav.shareFor = t }
+            SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
         }
     }
 }
@@ -142,9 +144,9 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
                 Text(pl.name, style = MaterialTheme.typography.titleMedium)
             }
             HorizontalDivider(color = C.Highlight)
-            SheetItem(Icons.AutoMirrored.Filled.QueueMusic, "Add to queue") { close(); pl.tracks.forEach { Player.addToQueue(it) } }
-            SheetItem(Icons.Filled.Edit, "Edit details") { close(); askName(pl.name) { Library.rename(pl, it) } }
-            SheetItem(Icons.Filled.Delete, "Delete playlist") {
+            SheetItem(Icons.AutoMirrored.Filled.QueueMusic, tr("Add to queue")) { close(); pl.tracks.forEach { Player.addToQueue(it) } }
+            SheetItem(Icons.Filled.Edit, tr("Edit details")) { close(); askName(pl.name) { Library.rename(pl, it) } }
+            SheetItem(Icons.Filled.Delete, tr("Delete playlist")) {
                 close()
                 confirmDelete(pl.name) {
                     val open = (Nav.top as? Screen.PlaylistPage)?.id == pl.id
@@ -155,21 +157,21 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
             val pending = pl.tracks.filter { !it.isLocal && Library.localFor(it) == null }
             SheetItem(Icons.Filled.Download, if (pending.isEmpty()) "Downloaded" else "Download ${pending.size} songs",
                       enabled = pending.isNotEmpty()) { close(); Downloads.request(pending) }
-            SheetItem(Icons.Filled.MusicNote, "Create playlist") { close(); Nav.go(Screen.PlaylistPage(Library.newPlaylist().id)) }
-            SheetItem(Icons.Filled.CreateNewFolder, "Create folder") { close(); askNewFolder() }
-            SheetItem(if (pl.pinned) Icons.Filled.PushPin else Icons.Filled.PushPin, if (pl.pinned) "Unpin playlist" else "Pin playlist") {
+            SheetItem(Icons.Filled.MusicNote, tr("Create playlist")) { close(); Nav.go(Screen.PlaylistPage(Library.newPlaylist().id)) }
+            SheetItem(Icons.Filled.CreateNewFolder, tr("Create folder")) { close(); askNewFolder() }
+            SheetItem(if (pl.pinned) Icons.Filled.PushPin else Icons.Filled.PushPin, tr(if (pl.pinned) "Unpin playlist" else "Pin playlist")) {
                 close(); pl.pinned = !pl.pinned; Library.changed()
             }
             HorizontalDivider(color = C.Highlight)
-            Text("Move to folder", style = MaterialTheme.typography.labelMedium.copy(color = C.Sub),
+            Text(tr("Move to folder"), style = MaterialTheme.typography.labelMedium.copy(color = C.Sub),
                  modifier = Modifier.padding(start = 20.dp, top = 12.dp))
-            SheetItem(Icons.Filled.Add, "Create folder") {
+            SheetItem(Icons.Filled.Add, tr("Create folder")) {
                 close(); askNewFolder { f -> pl.folder = f; Library.changed() }
             }
             Library.folders.forEach { f ->
                 SheetItem(Icons.Filled.Folder, f, enabled = pl.folder != f) { close(); pl.folder = f; Library.changed() }
             }
-            if (pl.folder.isNotEmpty()) SheetItem(Icons.Filled.Folder, "Remove from folder") { close(); pl.folder = ""; Library.changed() }
+            if (pl.folder.isNotEmpty()) SheetItem(Icons.Filled.Folder, tr("Remove from folder")) { close(); pl.folder = ""; Library.changed() }
         }
     }
 }
@@ -183,10 +185,10 @@ private fun FolderMenuSheet(folder: String) {
         Column(Modifier.navigationBarsPadding()) {
             Text(folder, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             HorizontalDivider(color = C.Highlight)
-            SheetItem(Icons.Filled.Edit, "Rename folder") {
+            SheetItem(Icons.Filled.Edit, tr("Rename folder")) {
                 close(); askName(folder, "Rename folder") { Library.renameFolder(folder, it) }
             }
-            SheetItem(Icons.Filled.Delete, "Delete folder") {
+            SheetItem(Icons.Filled.Delete, tr("Delete folder")) {
                 close()
                 Nav.confirm = Triple("Delete folder?", "“$folder” is removed. The playlists in it stay in Your Library.",
                                      { Library.deleteFolder(folder) })
@@ -201,11 +203,11 @@ private fun FolderMenuSheet(folder: String) {
 private fun AddToSheet(tracks: List<Track>) {
     val close = { Nav.addTo = null }
     ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
-        Text("Add to playlist", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp))
+        Text(tr("Add to playlist"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp))
         Gap(8.dp)
         LazyColumn(Modifier.navigationBarsPadding()) {
             item {
-                SheetItem(Icons.Filled.Add, "New playlist") {
+                SheetItem(Icons.Filled.Add, tr("New playlist")) {
                     close(); val pl = Library.newPlaylist(tracks = tracks); Nav.say("Added to ${pl.name}")
                 }
             }
@@ -229,11 +231,11 @@ private fun AddToSheet(tracks: List<Track>) {
 fun CreateSheet(onClose: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onClose, containerColor = C.Elevated) {
         Column(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
-            SheetItem(Icons.Filled.MusicNote, "Playlist") {
+            SheetItem(Icons.Filled.MusicNote, tr("Playlist")) {
                 onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.PlaylistPage(Library.newPlaylist().id))
             }
-            SheetItem(Icons.Filled.Folder, "Folder") { onClose(); Nav.tab = Tab.LIBRARY; askNewFolder() }
-            SheetItem(Icons.Filled.Link, "Import a playlist") { onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.Import()) }
+            SheetItem(Icons.Filled.Folder, tr("Folder")) { onClose(); Nav.tab = Tab.LIBRARY; askNewFolder() }
+            SheetItem(Icons.Filled.Link, tr("Import a playlist")) { onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.Import()) }
         }
     }
 }

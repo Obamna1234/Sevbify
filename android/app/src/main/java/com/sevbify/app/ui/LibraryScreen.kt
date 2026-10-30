@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,14 +75,14 @@ fun LibraryScreen() {
                 verticalAlignment = Alignment.CenterVertically) {
                 SettingsBadge()
                 Spacer(Modifier.width(12.dp))
-                Text("Your Library", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                Text(tr("Your Library"), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = { filter = if (filter == null) "" else null }) { Icon(Icons.Filled.Search, "Search Your Library") }
                 IconButton(onClick = { createOpen = true }) { Icon(Icons.Filled.Add, "Create") }
             }
         }
         if (filter != null) {
             item {
-                OutlinedTextField(filter ?: "", { filter = it }, singleLine = true, placeholder = { Text("Search in Your Library") },
+                OutlinedTextField(filter ?: "", { filter = it }, singleLine = true, placeholder = { Text(tr("Search in Your Library")) },
                                   modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
             }
         }

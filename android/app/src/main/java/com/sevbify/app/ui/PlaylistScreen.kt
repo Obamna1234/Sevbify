@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -134,7 +136,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                 extraTop()
                 Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (pending.isEmpty() && tracks.isNotEmpty()) {
-                        IconButton(onClick = { Nav.say("Every song is downloaded") }) {
+                        IconButton(onClick = { Nav.say(tr("Every song is downloaded")) }) {
                             Icon(Icons.Filled.ArrowCircleDown, "Downloaded", tint = C.Green, modifier = Modifier.size(30.dp))
                         }
                     } else {
@@ -165,11 +167,11 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                         Icon(Icons.Filled.Add, null, tint = C.Sub)
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text("Add to this playlist", style = MaterialTheme.typography.bodyLarge)
+                    Text(tr("Add to this playlist"), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
-        if (tracks.isEmpty()) item { Muted("No songs here yet. Search for songs and use ••• → Add to playlist.") }
+        if (tracks.isEmpty()) item { Muted(tr("No songs here yet. Search for songs and use ••• → Add to playlist.")) }
         // Artist pages show the top 5 with "See more", like Spotify.
         val shown = if (limit > 0 && !showAll && !selecting) tracks.take(limit) else tracks
         itemsIndexed(shown) { i, t ->
@@ -204,7 +206,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
 fun PlaylistScreen(id: String) {
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes
     val pl = Library.playlists.firstOrNull { it.id == id }
-    if (pl == null) { Muted("This playlist was deleted."); return }
+    if (pl == null) { Muted(tr("This playlist was deleted.")); return }
     LaunchedEffect(pl.id) {
         pl.lastPlayed = System.currentTimeMillis()
         // Imported songs often have no cover yet: look them up (a few at a time, like Windows).
@@ -242,7 +244,7 @@ fun YourSongsScreen() {
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes
     SongsPage("Your Songs", "On your phone", "", Library.localSongs, "Your Songs") {
         if (Library.localSongs.isEmpty()) {
-            Muted("No songs found. Sevbify reads the Music folder (and the folders you add in Settings) once you allow " +
+            Muted(tr("No songs found. Sevbify reads the Music folder (and the folders you add in Settings) once you allow ") +
                   "access to music. Downloads land in Music/Sevbify.")
         }
     }
@@ -252,7 +254,7 @@ fun YourSongsScreen() {
 fun ToDownloadScreen() {
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes + Downloads.doneCount
     SongsPage("To download", "Not downloaded yet", "", Library.toDownload(), "To download") {
-        Muted("Every song in your playlists that isn't on the phone yet. When one arrives it fills its place in every playlist.")
+        Muted(tr("Every song in your playlists that isn't on the phone yet. When one arrives it fills its place in every playlist."))
     }
 }
 
@@ -263,17 +265,17 @@ fun DownloadsScreen() {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text("Downloads", style = MaterialTheme.typography.headlineMedium)
+                Text(tr("Downloads"), style = MaterialTheme.typography.headlineMedium)
             }
         }
         item {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (Downloads.paused) Chip("Resume", false) { Downloads.resume() } else Chip("Pause", false) { Downloads.pause() }
-                Chip("Stop all", false) { Downloads.stopAll() }
-                if (Downloads.states.values.any { it == Downloads.State.STOPPED }) Chip("Resume stopped", false) { Downloads.resume() }
+                if (Downloads.paused) Chip(tr("Resume"), false) { Downloads.resume() } else Chip(tr("Pause"), false) { Downloads.pause() }
+                Chip(tr("Stop all"), false) { Downloads.stopAll() }
+                if (Downloads.states.values.any { it == Downloads.State.STOPPED }) Chip(tr("Resume stopped"), false) { Downloads.resume() }
             }
         }
-        if (items.isEmpty()) item { Muted("Nothing is downloading.") }
+        if (items.isEmpty()) item { Muted(tr("Nothing is downloading.")) }
         items(items) { (key, state) ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -281,9 +283,9 @@ fun DownloadsScreen() {
                     Text(state.name.lowercase().replaceFirstChar { it.uppercase() } +
                              (Downloads.notes[key]?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodySmall)
                 }
-                if (state == Downloads.State.FAILED || state == Downloads.State.STOPPED) Chip("Try again", false) { Downloads.retry(key) }
+                if (state == Downloads.State.FAILED || state == Downloads.State.STOPPED) Chip(tr("Try again"), false) { Downloads.retry(key) }
                 Spacer(Modifier.width(8.dp))
-                Chip("Cancel", false) { Downloads.cancel(key) }
+                Chip(tr("Cancel"), false) { Downloads.cancel(key) }
             }
         }
     }
@@ -316,7 +318,7 @@ fun ArtistScreen(name: String) {
         val albums = list("albums"); val singles = list("singles"); val comps = list("compilations")
         val latest = (albums + singles).maxByOrNull { it.optString("release_date") }
         if (latest != null) {
-            item { SectionTitle("Latest release") }
+            item { SectionTitle(tr("Latest release")) }
             item {
                 Row(Modifier.fillMaxWidth().clickable { openWebAlbum(latest) }.padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -340,7 +342,7 @@ fun ArtistScreen(name: String) {
         }
     }) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Artist radio", false) { (mine + tracks).firstOrNull()?.let { Player.startRadio(it) } }
+            Chip(tr("Artist radio"), false) { (mine + tracks).firstOrNull()?.let { Player.startRadio(it) } }
         }
         if (about.isNotEmpty()) Text(about, style = MaterialTheme.typography.bodySmall, maxLines = 4,
                                      modifier = Modifier.padding(horizontal = 16.dp))
@@ -384,7 +386,7 @@ fun GenreScreen(g: Screen.Genre) {
                     }, playing = playingHere && Player.isPlaying)
                 }
             }
-            item { SectionTitle("Popular songs") }
+            item { SectionTitle(tr("Popular songs")) }
             items(songs.take(10)) { t ->
                 TrackRow(t, onClick = { Player.play(t, songs, "${g.name}: popular songs") },
                          onMore = { Nav.songMenu = SongMenu(t, queue = songs, source = g.name) })
@@ -406,7 +408,7 @@ fun GenreScreen(g: Screen.Genre) {
         shelf("New releases", "releases", { it.optString("cover_xl") }, { it.optJSONObject("artist")?.optString("name") ?: "" }, { a -> openWebAlbum(a) })
         shelf("Popular albums", "albums", { it.optString("cover_xl") }, { it.optJSONObject("artist")?.optString("name") ?: "" }, { a -> openWebAlbum(a) })
         shelf("Popular artists", "artists", { it.optString("picture_xl") }, { "Artist" }, { a -> Nav.go(Screen.Artist(a.optString("name"))) }, round = true)
-        item { Muted("Popular right now, from Deezer's charts for this genre (they change every day).") }
+        item { Muted(tr("Popular right now, from Deezer's charts for this genre (they change every day).")) }
         item { Gap(24.dp) }
     }
 }
@@ -450,7 +452,7 @@ private fun DownloadChoiceSheet(title: String, cover: String, count: Int, onAll:
                 containerColor = C.Green, contentColor = Color.Black), modifier = Modifier.fillMaxWidth()) { Text("Download all $count") }
             Gap(8.dp)
             androidx.compose.material3.OutlinedButton(onClick = onChoose, modifier = Modifier.fillMaxWidth()) {
-                Text("Choose songs", color = C.Text)
+                Text(tr("Choose songs"), color = C.Text)
             }
             Gap(16.dp)
         }
@@ -472,12 +474,12 @@ private fun SelectionBar(count: Int, total: Int, onAll: () -> Unit, onNone: () -
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.Button(onClick = onDownload, enabled = count > 0,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = Color.Black),
-                modifier = Modifier.weight(1f)) { Text("Download") }
+                modifier = Modifier.weight(1f)) { Text(tr("Download")) }
             androidx.compose.material3.OutlinedButton(onClick = onQueue, enabled = count > 0, modifier = Modifier.weight(1f)) {
-                Text("Queue", color = C.Text, maxLines = 1)
+                Text(tr("Queue"), color = C.Text, maxLines = 1)
             }
             androidx.compose.material3.OutlinedButton(onClick = onAddTo, enabled = count > 0, modifier = Modifier.weight(1f)) {
-                Text("Add to…", color = C.Text, maxLines = 1)
+                Text(tr("Add to…"), color = C.Text, maxLines = 1)
             }
         }
     }
@@ -490,7 +492,7 @@ fun RadioCover(title: String, cover: String, size: Dp) {
         Cover(cover, size, RoundedCornerShape(0.dp))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color(0x33000000), Color(0xCC000000)))))
         Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
-            Text("RADIO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = C.Green, letterSpacing = 2.sp)
+            Text(tr("RADIO"), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = C.Green, letterSpacing = 2.sp)
             Text(title.removeSuffix(" Radio"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontFamily = Figtree,
                  color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }

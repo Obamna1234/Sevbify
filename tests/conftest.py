@@ -10,6 +10,8 @@ import struct
 import sys
 import time
 import wave
+
+os.environ["LANGUAGE"] = "en"          # tests read English labels, whatever this computer's language is
 from pathlib import Path
 
 import pytest

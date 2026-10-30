@@ -112,6 +112,7 @@ class UserData:
     proxy_mode: str = 'auto'   # Settings: proxy (applies after restart)
     proxy_url: str = ''   # e.g. http://127.0.0.1:8080
     hw_accel: bool = True   # Settings: hardware acceleration (applies after restart)
+    language: str = ""      # Settings: Sevbify's language ("" = the computer's; applies after restart)
     auto_update_check: bool = True   # Settings: check GitHub once a day for a new Sevbify / yt-dlp
     last_update_check: float = 0.0
     update_asked: str = ""     # the newest version Sevbify already offered to install (asked once per version)
@@ -248,6 +249,7 @@ class Storage:
                 "proxy_mode": data.proxy_mode,
                 "proxy_url": data.proxy_url,
                 "hw_accel": data.hw_accel,
+                "language": data.language,
                 "auto_update_check": bool(data.auto_update_check),
                 "last_update_check": float(data.last_update_check or 0),
                 "update_asked": str(data.update_asked or "")[:40],
@@ -386,6 +388,9 @@ class Storage:
             pass
         try:
             data.hw_accel = bool(settings.get('hw_accel', True))
+            from core import i18n as _i18n
+            lang = str(settings.get("language") or "")
+            data.language = lang if lang in _i18n.CODES else ""
             data.auto_update_check = bool(settings.get("auto_update_check", True))
             try:
                 data.last_update_check = float(settings.get("last_update_check") or 0)

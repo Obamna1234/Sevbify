@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -124,14 +126,14 @@ fun SearchScreen() {
     LazyColumn {
         item {
             Column(Modifier.statusBarsPadding().padding(16.dp)) {
-                Text("Search", style = MaterialTheme.typography.headlineMedium)
+                Text(tr("Search"), style = MaterialTheme.typography.headlineMedium)
                 Gap(12.dp)
                 Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(6.dp)).background(Color.White)
                         .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Search, null, tint = Color(0xFF121212))
                     Spacer(Modifier.width(10.dp))
                     Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) Text("What do you want to listen to?", color = Color(0xFF535353),
+                        if (query.isEmpty()) Text(tr("What do you want to listen to?"), color = Color(0xFF535353),
                                                   style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                         BasicTextField(query, { query = it }, singleLine = true, cursorBrush = SolidColor(C.Green),
                                        textStyle = TextStyle(color = Color(0xFF121212), fontSize = 16.sp, fontFamily = Figtree,
@@ -145,9 +147,9 @@ fun SearchScreen() {
         if (query.isBlank() && Library.searches.isNotEmpty()) {
             item {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Recent searches", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(tr("Recent searches"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     androidx.compose.material3.TextButton(onClick = { Library.searches.clear(); Library.changed() }) {
-                        Text("Clear", color = C.Sub)
+                        Text(tr("Clear"), color = C.Sub)
                     }
                 }
             }
@@ -160,7 +162,7 @@ fun SearchScreen() {
             item { Gap(12.dp) }
         }
         if (query.isBlank()) {
-            item { Text("Browse all", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) }
+            item { Text(tr("Browse all"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) }
             val tiles = listOf(Triple("Podcasts", 0xFF006450L, -1), Triple("Audiobooks", 0xFF1E3264L, -2)) +
                 genres.mapIndexed { i, g -> Triple(g.optString("name"), TileColours[i % TileColours.size], g.optInt("id")) }
             items(tiles.chunked(2)) { pair ->
@@ -178,32 +180,32 @@ fun SearchScreen() {
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            if (!Library.settings.online) item { Muted("You're offline: music genres come back when you're online.") }
+            if (!Library.settings.online) item { Muted(tr("You're offline: music genres come back when you're online.")) }
             item { Gap(24.dp) }
             return@LazyColumn
         }
         item {
             LazyRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("all" to "All", "songs" to "Songs", "artists" to "Artists", "podcasts" to "Podcasts",
+                items(listOf("all" to tr("All"), "songs" to "Songs", "artists" to "Artists", "podcasts" to "Podcasts",
                              "audiobooks" to "Audiobooks")) { (k, l) -> Chip(l, chip == k) { chip = k } }
             }
         }
         if (better.isNotEmpty() && better != query.trim()) {
             item {
                 androidx.compose.material3.TextButton(onClick = { query = better }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Text("Did you mean  “$better”?", color = C.Text, style = MaterialTheme.typography.bodyLarge)
+                    Text(tr("Did you mean") + "  “$better”?", color = C.Text, style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
         if (local.isNotEmpty() && (chip == "all" || chip == "songs")) {
-            item { SectionTitle("In your library") }
+            item { SectionTitle(tr("In your library")) }
             items(local) { t ->
                 TrackRow(t, onClick = { Player.play(t, local, "Search: $query") },
                          onMore = { Nav.songMenu = SongMenu(t, queue = local, source = "Search: $query") })
             }
         }
         if (artists.isNotEmpty()) {
-            item { SectionTitle("Artists") }
+            item { SectionTitle(tr("Artists")) }
             item {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(artists) { a ->
@@ -215,14 +217,14 @@ fun SearchScreen() {
             }
         }
         if (web.isNotEmpty()) {
-            item { SectionTitle("Songs") }
+            item { SectionTitle(tr("Songs")) }
             items(web) { t ->
                 TrackRow(t, onClick = { Player.play(t, web, "Search: $query") },
                          onMore = { Nav.songMenu = SongMenu(t, queue = web, source = "Search: $query") })
             }
         }
         if (shows.isNotEmpty()) {
-            item { SectionTitle("Podcasts") }
+            item { SectionTitle(tr("Podcasts")) }
             item {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(shows) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
@@ -230,7 +232,7 @@ fun SearchScreen() {
             }
         }
         if (books.isNotEmpty()) {
-            item { SectionTitle("Audiobooks") }
+            item { SectionTitle(tr("Audiobooks")) }
             items(books) { b ->
                 Row(Modifier.fillMaxWidth().clickable { Nav.go(Screen.ShowPage(b)) }.padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -240,7 +242,7 @@ fun SearchScreen() {
                 }
             }
         }
-        if (!Library.settings.online) item { Muted("You're offline: showing your own songs only.") }
+        if (!Library.settings.online) item { Muted(tr("You're offline: showing your own songs only.")) }
         if (note.isNotEmpty()) item { Muted(note) }
         item { Gap(24.dp) }
     }

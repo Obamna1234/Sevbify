@@ -175,7 +175,8 @@ jobs:
           # (Git Bash on Windows says "deno" exists when deno.exe does, so only check it elsewhere.)
           if [ "${{ runner.os }}" != "Windows" ] && [ -f deno ]; then EXTRA="$EXTRA --add-binary deno${SEP}."; fi
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp --collect-all yt_dlp_ejs \
-            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." $EXTRA app.py
+            --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." \
+            --add-data "core/i18n/translations.txt${SEP}core/i18n" $EXTRA app.py
           if [ "${{ runner.os }}" = "Linux" ]; then
             # PyInstaller copies libvlc in without VLC's plugins, and that copy can't play anything: remove it so
             # the system's VLC (installed with the package manager, plugins and all) is used.

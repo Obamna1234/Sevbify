@@ -8,8 +8,8 @@ Everything is included (player engine, downloader, ffmpeg); nothing else to inst
    If Windows says "Windows protected your PC", click **More info** → **Run anyway** (the app isn't signed yet).
 4. Optional: in Sevbify, **Settings** (⚙ top right) → **Add to Desktop and Start menu**.
 
-Your playlists and settings are kept between versions (`%APPDATA%\Sevbify`). To update, download the new zip,
-extract it, and use the new `Sevbify.exe`; you can delete the old folder.
+Your playlists and settings are kept between versions (`%APPDATA%\Sevbify`). From beta.21 on, Sevbify offers new
+versions itself: **Download**, then it restarts into the new one.
 
 ## Install (Android, new and experimental) — Android 13 or newer
 
@@ -19,7 +19,7 @@ extract it, and use the new `Sevbify.exe`; you can delete the old folder.
 3. Open Sevbify, allow **Music and audio** (so it can see your songs) and **Notifications** (for the player
    and download progress).
 
-Updating: install the new APK over the old one; your playlists stay. The Android app uses the same core as
+Updating: from beta.21 on, Sevbify offers new versions itself (Download → Install); your playlists stay. The Android app uses the same core as
 the Windows app (search, radio, full-song finding, downloads, importing, podcasts, audiobooks), with a layout
 based on Spotify's phone app: Home, Search, Your Library and Create along the bottom, a mini player above them,
 and the full now-playing screen. It only reads music from the folders you choose in Settings.
@@ -57,7 +57,10 @@ signs it with your own Apple ID. Nothing is paid and Sevbify gets no access to y
    **Sevbify-iOS.ipa** to download it.
 3. In AltStore / SideStore: **My Apps → +** and choose the downloaded `Sevbify-iOS.ipa`.
 4. iOS 16+: turn on **Settings → Privacy & Security → Developer Mode** when asked (the iPhone restarts once).
-5. With a free Apple ID the app must be refreshed every **7 days** (AltStore does it on the same Wi-Fi as your
+5. For updates: in SideStore / AltStore, **Sources → +** and add
+   `https://raw.githubusercontent.com/Obamna1234/Sevbify/altstore/source.json` (or Sevbify's Settings → Sevbify
+   updates → Add Sevbify to SideStore). New versions then show up under Updates.
+6. With a free Apple ID the app must be refreshed every **7 days** (AltStore does it on the same Wi-Fi as your
    computer; SideStore on the phone), and only 3 sideloaded apps can be active at a time.
 
 Your songs: download them in Sevbify, or put files in **Files → On My iPhone → Sevbify**, or add a folder in
@@ -65,6 +68,33 @@ Your Library. What's different from Android: no podcasts, audiobooks, lyrics or 
 helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
+
+beta.21:
+- **Full songs only.** Songs from imports, playlists, search and radio always play in full. If the full song can't be
+  found, it's skipped ("Full song not found"); there's no automatic 30-second clip any more. A clip only plays when
+  you pick **Preview (30 s)** from a song's menu: it opens a small window with a seek bar.
+- **Updates inside the app.** Each new version is offered once.
+  - Windows / Mac / Linux: Download, then restart.
+  - Android: Download, then Android's installer.
+  - iPhone: through the SideStore / AltStore source.
+  Files come only from Sevbify's GitHub releases and are checksum-checked.
+- **20 languages:** English, Spanish, French, German, Portuguese, Italian, Russian, Chinese, Japanese, Korean,
+  Arabic, Hindi, Turkish, Dutch, Polish, Indonesian, Vietnamese, Thai, Ukrainian and Swedish.
+  - Android and iPhone follow the phone's language for Sevbify (Android 13+: Settings → Apps → Sevbify →
+    Language). On computers it's in Settings → Language.
+  - Menus, tabs, buttons and settings are translated; longer explanations stay in English for now.
+  - Search works in every language either way.
+- **Did you mean…?** When a finished search finds nothing like what you typed, Sevbify asks DuckDuckGo for the
+  right spelling. Only that search is sent, nothing else. A suggestion is shown only if it finds music.
+- **Search** ignores accents and case in every script. On the Podcasts tab it also finds shows that are only on
+  YouTube. Unrelated podcasts no longer show up on the All tab.
+- **Android Settings** are now Spotify-style: Data saver and Private session on top, then pages for Content and
+  display, Privacy and profile, Playback, Data-saving and offline, Media quality, and About and updates.
+- **Phones import playlist files** (.csv from Exportify / TuneMyMusic, .txt, .m3u): any number of songs, which
+  gets around Spotify's 100-songs-per-link limit.
+- **Fixed:**
+  - A renamed playlist didn't update until you tapped elsewhere.
+  - Album covers were missing for some imported songs: Apple and Spotify are now tried when Deezer has no match.
 
 beta.20: final checks before testing. A profile file from someone else can't point songs at files on your
 device or unpack into gigabytes, text from the internet (titles, lyrics, descriptions) is always shown as plain

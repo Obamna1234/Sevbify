@@ -42,23 +42,23 @@ fun ImportScreen(start: String) {
     Column(Modifier.statusBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-            Text("Import a playlist", style = MaterialTheme.typography.headlineMedium)
+            Text(tr("Import a playlist"), style = MaterialTheme.typography.headlineMedium)
         }
-        Muted("Paste a public Spotify, Apple Music, Deezer or Jamendo playlist or album link (or Share it from Spotify to Sevbify). Same " +
+        Muted(tr("Paste a public Spotify, Apple Music, Deezer or Jamendo playlist or album link (or Share it from Spotify to Sevbify). Same ") +
               "order and cover; songs already on your phone play from your files, the rest stream while online and wait " +
               "under To download. Your Spotify account is never signed in to.")
-        OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text("https://open.spotify.com/playlist/…") },
+        OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text(tr("https://open.spotify.com/playlist/…")) },
                           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
         if ("jamendo.com" in link.lowercase()) {
             var jid by remember { mutableStateOf(Library.settings.jamendoId) }
-            Muted("Jamendo needs a free client ID (make one at devportal.jamendo.com). It's kept on this phone only.")
+            Muted(tr("Jamendo needs a free client ID (make one at devportal.jamendo.com). It's kept on this phone only."))
             OutlinedTextField(jid, { jid = it.trim(); Library.settings.jamendoId = jid; Library.changed() }, singleLine = true,
-                              placeholder = { Text("Jamendo client ID") },
+                              placeholder = { Text(tr("Jamendo client ID")) },
                               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
         }
-        Muted("More than 100 songs? Without signing in, Spotify only shares 100 songs per link. In Spotify on a computer, " +
+        Muted(tr("More than 100 songs? Without signing in, Spotify only shares 100 songs per link. In Spotify on a computer, ") +
               "click a song in the playlist, press Ctrl+A then Ctrl+C, and paste the links here.")
-        OutlinedTextField(songs, { songs = it }, placeholder = { Text("https://open.spotify.com/track/…") },
+        OutlinedTextField(songs, { songs = it }, placeholder = { Text(tr("https://open.spotify.com/track/…")) },
                           modifier = Modifier.fillMaxWidth().height(120.dp).padding(horizontal = 16.dp))
         Button(onClick = {
             busy = true
@@ -84,7 +84,7 @@ fun ImportScreen(start: String) {
             Text(if (busy) "Importing…" else "Import")
         }
         // Or a file: Exportify / TuneMyMusic / Soundiiz .csv, a .txt list ("Artist - Title" per line), .m3u / .m3u8.
-        Text("Or import a file", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+        Text(tr("Or import a file"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
         Muted("A .csv from Exportify, TuneMyMusic or Soundiiz (any number of songs), a .txt with one \"Artist - Title\" " +
               "per line, or an .m3u / .m3u8 playlist.")
         val context = androidx.compose.ui.platform.LocalContext.current
@@ -107,7 +107,7 @@ fun ImportScreen(start: String) {
         }
         androidx.compose.material3.OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }, enabled = !busy,
                                                   modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text("Choose a file", color = C.Text)
+            Text(tr("Choose a file"), color = C.Text)
         }
     }
 }

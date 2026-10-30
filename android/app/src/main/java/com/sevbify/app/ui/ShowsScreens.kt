@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,7 +82,7 @@ fun PodcastsScreen() {
     LazyColumn {
         item { PageTop("Podcasts") }
         item {
-            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("What do you want to listen to?") },
+            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text(tr("What do you want to listen to?")) },
                               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                               keyboardActions = KeyboardActions(onSearch = {
                                   scope.launch {
@@ -92,27 +94,27 @@ fun PodcastsScreen() {
         }
         item {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text("YouTube channel or RSS link") },
+                OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text(tr("YouTube channel or RSS link")) },
                                   modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(onClick = {
                     scope.launch {
                         try { Nav.go(Screen.ShowPage(Show(Bridge.obj("show_link", link)))) } catch (e: Exception) { Nav.say("⚠ ${e.message}") }
                     }
-                }) { Text("Open", color = C.Text) }
+                }) { Text(tr("Open"), color = C.Text) }
             }
         }
         val mine = Library.shows.filter { !it.isBook }
         if (mine.isNotEmpty()) {
-            item { SectionTitle("Your shows") }
+            item { SectionTitle(tr("Your shows")) }
             item { LazyRow(Modifier.padding(start = 16.dp)) { items(mine) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } } } }
         }
         if (results.isNotEmpty()) {
-            item { SectionTitle("Results") }
+            item { SectionTitle(tr("Results")) }
             items(results) { s -> ShowRow(s) }
         }
         if (top.isNotEmpty() && results.isEmpty()) {
-            item { SectionTitle("Trending podcasts") }
+            item { SectionTitle(tr("Trending podcasts")) }
             item { LazyRow(Modifier.padding(start = 16.dp)) { items(top) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } } } }
         }
         if (Library.settings.online && results.isEmpty()) {
@@ -123,7 +125,7 @@ fun PodcastsScreen() {
                 }
             }
         }
-        if (!Library.settings.online) item { Muted("You're offline. Downloaded episodes still play from Your Library.") }
+        if (!Library.settings.online) item { Muted(tr("You're offline. Downloaded episodes still play from Your Library.")) }
         item { Gap(24.dp) }
     }
 }
@@ -141,7 +143,7 @@ fun AudiobooksScreen() {
     LazyColumn {
         item { PageTop("Audiobooks") }
         item {
-            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Search by title or author") },
+            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text(tr("Search by title or author")) },
                               keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                               keyboardActions = KeyboardActions(onSearch = {
                                   scope.launch {
@@ -151,7 +153,7 @@ fun AudiobooksScreen() {
                               }),
                               modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
         }
-        item { Muted("Free audiobooks of public-domain books, read by LibriVox volunteers.") }
+        item { Muted(tr("Free audiobooks of public-domain books, read by LibriVox volunteers.")) }
         item { SectionTitle(heading) }
         items(books) { b -> ShowRow(b) }
         if (Library.settings.online && heading != "Results") {
@@ -242,7 +244,7 @@ fun ShowScreen(start: Show) {
                                     else Nav.say("Couldn't find ${show.title}'s own YouTube channel. If it has one, paste its link in Podcasts.")
                                 } catch (e: Exception) { Nav.say("⚠ YouTube search didn't work: ${e.message}") }
                             }
-                        }) { Text("Watch video", color = C.Text) }
+                        }) { Text(tr("Watch video"), color = C.Text) }
                     }
                     if (start.isBook && items.isNotEmpty()) {
                         IconButton(onClick = { val n = Downloads.request(items); Nav.say("Downloading $n chapters") }) {
@@ -265,8 +267,8 @@ fun ShowScreen(start: Show) {
         if (!start.isBook && episodes.size > 1) {
             item {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("Newest first", newest) { newest = true }
-                    Chip("Oldest first", !newest) { newest = false }
+                    Chip(tr("Newest first"), newest) { newest = true }
+                    Chip(tr("Oldest first"), !newest) { newest = false }
                 }
             }
         }

@@ -26,3 +26,6 @@ android/app/build/
 android/build/
 android/local.properties
 android/app/*.jks
+
+# Made from core/i18n/translations.txt by ios/prepare.sh
+ios/Sevbify/*.lproj/

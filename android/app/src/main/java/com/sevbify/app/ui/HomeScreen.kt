@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -67,7 +69,7 @@ fun HomeScreen() {
                     .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsBadge()
-                listOf("all" to "All", "music" to "Music", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks").forEach { (k, l) ->
+                listOf("all" to tr("All"), "music" to "Music", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks").forEach { (k, l) ->
                     Chip(l, chip == k) { chip = if (chip == k) "all" else k }
                 }
             }
@@ -114,7 +116,7 @@ fun HomeScreen() {
             }
         }
         if (Library.recent.isNotEmpty()) {
-            item { SectionTitle("Recently played") }
+            item { SectionTitle(tr("Recently played")) }
             item {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(Library.recent.take(15).toList()) { t ->
@@ -124,7 +126,7 @@ fun HomeScreen() {
             }
         }
         if (Library.playlists.isNotEmpty()) {
-            item { SectionTitle("Your playlists") }
+            item { SectionTitle(tr("Your playlists")) }
             item {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(Library.playlists.toList()) { pl ->
@@ -134,7 +136,7 @@ fun HomeScreen() {
             }
         }
         if (popular.isNotEmpty()) {
-            item { SectionTitle("Popular right now") }
+            item { SectionTitle(tr("Popular right now")) }
             item {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(popular.take(15)) { t -> ShelfCard(t.title, t.artist, t.art) { Player.play(t, popular, "Popular right now") } }
@@ -143,7 +145,7 @@ fun HomeScreen() {
         }
         if (Library.playlists.isEmpty() && Library.recent.isEmpty()) {
             item {
-                Muted("Welcome to Sevbify. Search for a song, make a playlist with Create (+), or import one from Spotify " +
+                Muted(tr("Welcome to Sevbify. Search for a song, make a playlist with Create (+), or import one from Spotify ") +
                       "under Your Library. Songs on your phone show up in Your Songs.")
             }
         }
@@ -157,7 +159,7 @@ private fun QuickTile(name: String, cover: String, onClick: () -> Unit, modifier
         verticalAlignment = Alignment.CenterVertically) {
         if (name == "Your Songs" && cover.isEmpty()) {
             Box(Modifier.size(56.dp).background(Brush.linearGradient(listOf(Color(0xFF450AF5), Color(0xFFC4EFD9)))),
-                contentAlignment = Alignment.Center) { Text("♪", color = Color.White, fontWeight = FontWeight.Bold) }
+                contentAlignment = Alignment.Center) { Text(tr("♪"), color = Color.White, fontWeight = FontWeight.Bold) }
         } else {
             Cover(cover, 56.dp, RoundedCornerShape(0.dp))
         }
@@ -179,13 +181,13 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
     }
     if (chip == "podcasts") {
         if (topShows.isNotEmpty()) {
-            SectionTitle("Trending podcasts")
+            SectionTitle(tr("Trending podcasts"))
             LazyRow(Modifier.padding(start = 16.dp)) {
                 items(topShows) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
             }
         }
         Gap(12.dp)
-        Row(Modifier.padding(horizontal = 16.dp)) { Chip("Find podcasts", false) { Nav.go(Screen.Podcasts) } }
+        Row(Modifier.padding(horizontal = 16.dp)) { Chip(tr("Find podcasts"), false) { Nav.go(Screen.Podcasts) } }
     } else {
         // Popular free audiobooks (LibriVox), like the Top podcasts shelf.
         var popular by remember { mutableStateOf<List<Show>>(emptyList()) }
@@ -196,13 +198,13 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
             }
         }
         if (popular.isNotEmpty()) {
-            SectionTitle("Popular free audiobooks")
+            SectionTitle(tr("Popular free audiobooks"))
             LazyRow(Modifier.padding(start = 16.dp)) {
                 items(popular) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
             }
         }
         Gap(12.dp)
-        Row(Modifier.padding(horizontal = 16.dp)) { Chip("Find free audiobooks", false) { Nav.go(Screen.Audiobooks) } }
+        Row(Modifier.padding(horizontal = 16.dp)) { Chip(tr("Find free audiobooks"), false) { Nav.go(Screen.Audiobooks) } }
     }
 }
 

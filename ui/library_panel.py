@@ -305,7 +305,8 @@ class LibraryPanel(QFrame):
         self.collapse_btn = self._icon_btn(icons.library(theme.SUBDUED, 24), "Collapse Your Library", 32)
         self.collapse_btn.clicked.connect(lambda: self.set_collapsed(not self.collapsed))
         head.addWidget(self.collapse_btn)
-        self.title_btn = QPushButton("Your Library")
+        from core.i18n import tr
+        self.title_btn = QPushButton(tr("Your Library"))
         self.title_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.title_btn.setToolTip("Collapse Your Library")
         self.title_btn.setStyleSheet(f"QPushButton {{ color: {theme.TEXT}; background: transparent; border: none;"

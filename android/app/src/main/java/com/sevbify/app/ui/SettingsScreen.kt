@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
@@ -58,13 +60,13 @@ fun SettingsScreen() {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text("Settings", style = MaterialTheme.typography.headlineMedium)
+                Text(tr("Settings"), style = MaterialTheme.typography.headlineMedium)
             }
         }
         item {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickTile("Data saver", "Smaller downloads, lower video quality", dataSaverOn(), Modifier.weight(1f)) { setDataSaver(it) }
-                QuickTile("Private session", "Nothing added to Recently played", Library.privateSession, Modifier.weight(1f)) {
+                QuickTile(tr("Data saver"), "Smaller downloads, lower video quality", dataSaverOn(), Modifier.weight(1f)) { setDataSaver(it) }
+                QuickTile(tr("Private session"), "Nothing added to Recently played", Library.privateSession, Modifier.weight(1f)) {
                     Library.privateSession = it; Library.changed(save = false)
                 }
             }
@@ -84,8 +86,8 @@ fun SettingsScreen() {
                 Icon(icon, null, tint = C.Text, modifier = Modifier.size(26.dp))
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(text.first, style = MaterialTheme.typography.bodyLarge)
-                    Text(text.second, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    Text(tr(text.first), style = MaterialTheme.typography.bodyLarge)
+                    Text(tr(text.second), style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = C.Sub)
             }
@@ -112,7 +114,7 @@ private fun QuickTile(name: String, desc: String, on: Boolean, modifier: Modifie
             Text(name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Switch(on, onChange, colors = SwitchDefaults.colors(checkedThumbColor = C.Text, checkedTrackColor = C.Green))
         }
-        Text(desc, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+        Text(tr(desc), style = MaterialTheme.typography.bodySmall, maxLines = 2)
     }
 }
 
@@ -145,23 +147,23 @@ fun SettingsPageScreen(key: String) {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Text(tr(title), style = MaterialTheme.typography.headlineSmall)
             }
         }
         when (key) {
         "content" -> {
-        item { Toggle("Allow explicit content", "When off, songs marked explicit are left out of search and radios.", s.explicitOk) {
+        item { Toggle(tr("Allow explicit content"), "When off, songs marked explicit are left out of search and radios.", s.explicitOk) {
             s.explicitOk = it; Library.changed() } }
         item {
-            Toggle("Show where playlists came from", "A coloured border around playlist pictures: grey = made in Sevbify, " +
+            Toggle(tr("Show where playlists came from"), "A coloured border around playlist pictures: grey = made in Sevbify, " +
                    "green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link, " +
                    "blue = imported from a file.",
                    s.showPlaylistOrigin) { s.showPlaylistOrigin = it; Library.changed() }
         }
         item {
             Column(Modifier.fillMaxWidth().clickable { openAppLanguage(context) }.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Text("Language", style = MaterialTheme.typography.bodyLarge)
-                Text("Sevbify follows your phone's language. To use another one just for Sevbify, tap here (Android 13+: " +
+                Text(tr("Language"), style = MaterialTheme.typography.bodyLarge)
+                Text(tr("Sevbify follows your phone's language. To use another one just for Sevbify, tap here (Android 13+: ") +
                      "Settings → Apps → Sevbify → Language). Search works in every language either way.",
                      style = MaterialTheme.typography.bodySmall)
             }
@@ -169,63 +171,63 @@ fun SettingsPageScreen(key: String) {
         }
         "privacy" -> {
         item {
-            Toggle("Online", "Search, radio, streaming, podcasts and downloads. Off: Sevbify contacts nothing; your own " +
+            Toggle(tr("Online"), "Search, radio, streaming, podcasts and downloads. Off: Sevbify contacts nothing; your own " +
                    "and downloaded music still plays.", s.online) {
                 s.online = it; Library.changed(); scope.launch { try { Bridge.call("set_online", it) } catch (_: Exception) {} }
             }
         }
         item {
-            Toggle("Private session", "What you play and search isn't remembered (Recently played, recent searches, " +
+            Toggle(tr("Private session"), "What you play and search isn't remembered (Recently played, recent searches, " +
                    "podcast positions) until you turn it off or close Sevbify.", Library.privateSession) {
                 Library.privateSession = it; Library.changed(save = false) }
         }
         item {
-            Muted("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: " +
+            Muted(tr("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: ") +
                   "Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), the podcasts' own " +
                   "feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads), Spotify or Apple " +
                   "Music only when you import a link, LRCLIB for lyrics, song.link when you share a song, SponsorBlock for YouTube episodes, and GitHub for updates.")
         }
-        item { Heading("Your Sevbify profile") }
+        item { Heading(tr("Your Sevbify profile")) }
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("One small file with your playlists, folders, podcasts, audiobooks, where you stopped, recently " +
+                Text(tr("One small file with your playlists, folders, podcasts, audiobooks, where you stopped, recently ") +
                      "played, recent searches and settings. Open it in Sevbify on any device: Android, iPhone, " +
                      "Windows, Mac or Linux. It stays where you save it; Sevbify never uploads it.",
                      style = MaterialTheme.typography.bodySmall)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exporter.launch(com.sevbify.app.Profile.FILE_NAME) }) { Text("Export", color = C.Text) }
-                    OutlinedButton(onClick = { importer.launch(arrayOf("*/*")) }) { Text("Import", color = C.Text) }
+                    OutlinedButton(onClick = { exporter.launch(com.sevbify.app.Profile.FILE_NAME) }) { Text(tr("Export"), color = C.Text) }
+                    OutlinedButton(onClick = { importer.launch(arrayOf("*/*")) }) { Text(tr("Import"), color = C.Text) }
                 }
             }
         }
         item {
-            Toggle("Keep a copy in Downloads", "Saves your profile to Download/Sevbify whenever you leave Sevbify, so " +
+            Toggle(tr("Keep a copy in Downloads"), "Saves your profile to Download/Sevbify whenever you leave Sevbify, so " +
                    "it's still there if the app is uninstalled (then: Import, and pick it). Only on this phone.",
                    s.profileBackup) { s.profileBackup = it; Library.changed() }
         }
         }
         "playback" -> {
-        item { Toggle("Autoplay", "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
+        item { Toggle(tr("Autoplay"), "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
         item {
-            Toggle("Lyrics", "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
+            Toggle(tr("Lyrics"), "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
                    "database; only the song's name and length are sent).", s.lyrics) { s.lyrics = it; Library.changed() }
         }
         item {
-            Toggle("Skip sponsor segments in YouTube episodes", "Jumps over ad reads, \"like and subscribe\" reminders " +
+            Toggle(tr("Skip sponsor segments in YouTube episodes"), "Jumps over ad reads, \"like and subscribe\" reminders " +
                    "and self-promotion that viewers marked on SponsorBlock. Private: the episode isn't named, only a " +
                    "4-character code shared by many videos is sent. YouTube's own ads never play in Sevbify.",
                    s.skipSponsors) { s.skipSponsors = it; Library.changed() }
         }
         item {
-            Muted("Songs you don't have yet always play in full (found on Bandcamp, then YouTube). A 30-second preview " +
+            Muted(tr("Songs you don't have yet always play in full (found on Bandcamp, then YouTube). A 30-second preview ") +
                   "only plays when you pick Preview from a song's menu.")
         }
         }
         "offline" -> {
-        item { Toggle("Data saver", "Smaller song downloads and 360p video podcasts.", dataSaverOn()) { setDataSaver(it) } }
+        item { Toggle(tr("Data saver"), "Smaller song downloads and 360p video podcasts.", dataSaverOn()) { setDataSaver(it) } }
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("Download and stream from", style = MaterialTheme.typography.bodyLarge)
+                Text(tr("Download and stream from"), style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Bandcamp + YouTube", "Bandcamp only", "YouTube only").forEach { o ->
                         Chip(o, s.source == o) {
@@ -236,32 +238,32 @@ fun SettingsPageScreen(key: String) {
             }
         }
         item {
-            Muted("Songs are saved in your phone's Music folder under Sevbify/<Artist>, so other apps and your PC see them. " +
+            Muted(tr("Songs are saved in your phone's Music folder under Sevbify/<Artist>, so other apps and your PC see them. ") +
                   "Podcast episodes and audiobook chapters stay inside Sevbify.")
         }
         item {
-            Row(Modifier.padding(horizontal = 16.dp)) { OutlinedButton(onClick = { Nav.go(Screen.Downloads) }) { Text("Downloads", color = C.Text) } }
+            Row(Modifier.padding(horizontal = 16.dp)) { OutlinedButton(onClick = { Nav.go(Screen.Downloads) }) { Text(tr("Downloads"), color = C.Text) } }
         }
-        item { Heading("Your music") }
+        item { Heading(tr("Your music")) }
         item {
             var folders by remember { mutableStateOf(s.musicFolders.joinToString(", ")) }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text("Music folders", style = MaterialTheme.typography.bodyLarge)
-                Text("Folders on the phone Sevbify plays music from (separate with commas). Only these are read.",
+                Text(tr("Music folders"), style = MaterialTheme.typography.bodyLarge)
+                Text(tr("Folders on the phone Sevbify plays music from (separate with commas). Only these are read."),
                      style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(folders, { folders = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
                 OutlinedButton(onClick = {
                     s.musicFolders = folders.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
                     Library.changed()
                     (context as? com.sevbify.app.MainActivity)?.rescan()
-                    Nav.say("Music folders saved")
-                }, modifier = Modifier.padding(top = 6.dp)) { Text("Save", color = C.Text) }
+                    Nav.say(tr("Music folders saved"))
+                }, modifier = Modifier.padding(top = 6.dp)) { Text(tr("Save"), color = C.Text) }
             }
         }
         }
         "quality" -> {
         item {
-            Choice("Download quality",
+            Choice(tr("Download quality"),
                    if (s.songQuality == "small") "Data saver: a lower-bitrate original, about half the size. Slightly less " +
                        "detail with good headphones."
                    else "Best: the original audio with nothing lost (.m4a). A song can't be better than its source " +
@@ -270,13 +272,13 @@ fun SettingsPageScreen(key: String) {
                    listOf("best" to "Best quality", "small" to "Data saver"), s.songQuality) { s.songQuality = it; Library.changed() }
         }
         item {
-            Choice("Audiobook quality", "LibriVox records every chapter at both; speech sounds the same at 64 kbps.",
+            Choice(tr("Audiobook quality"), "LibriVox records every chapter at both; speech sounds the same at 64 kbps.",
                    listOf("standard" to "Standard (64 kbps)", "high" to "High (128 kbps)"), s.bookQuality) {
                 s.bookQuality = it; Library.changed()
             }
         }
         item {
-            Choice("Video podcast quality", "When watching. Higher uses more data; the best YouTube has up to your choice is used.",
+            Choice(tr("Video podcast quality"), "When watching. Higher uses more data; the best YouTube has up to your choice is used.",
                    listOf("auto" to "Auto", "360" to "360p", "480" to "480p", "720" to "720p", "1080" to "1080p"), s.videoQuality) {
                 s.videoQuality = it; Library.changed()
             }
@@ -297,13 +299,13 @@ fun SettingsPageScreen(key: String) {
                                      "Couldn't check: ${e.message}"
                                  }
                     }
-                }) { Text("Check for updates", color = C.Text) }
+                }) { Text(tr("Check for updates"), color = C.Text) }
                 Spacer(Modifier.width(12.dp))
                 Text(update, style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
-            Toggle("Keep yt-dlp up to date", "yt-dlp is what finds and downloads songs on YouTube; YouTube changes often. " +
+            Toggle(tr("Keep yt-dlp up to date"), "yt-dlp is what finds and downloads songs on YouTube; YouTube changes often. " +
                    "Once a week, when online, the newest official release is fetched and checked against its published " +
                    "checksum. Used from the next start.", s.autoUpdateYtdlp) { s.autoUpdateYtdlp = it; Library.changed() }
         }
@@ -315,7 +317,7 @@ fun SettingsPageScreen(key: String) {
                     scope.launch {
                         ytdlp = try { Bridge.obj("update_ytdlp").optString("message") } catch (e: Exception) { "Couldn't update: ${e.message}" }
                     }
-                }) { Text("Update yt-dlp now", color = C.Text) }
+                }) { Text(tr("Update yt-dlp now"), color = C.Text) }
                 Spacer(Modifier.width(12.dp))
                 Text(ytdlp, style = MaterialTheme.typography.bodySmall)
             }
@@ -332,7 +334,7 @@ private fun openAppLanguage(context: android.content.Context) {
         android.content.Intent(android.provider.Settings.ACTION_APP_LOCALE_SETTINGS, android.net.Uri.parse("package:${context.packageName}"))
     else android.content.Intent(android.provider.Settings.ACTION_LOCALE_SETTINGS)
     try { context.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {
-        Nav.say("Change Sevbify's language in your phone's Settings → Apps → Sevbify → Language")
+        Nav.say(tr("Change Sevbify's language in your phone's Settings → Apps → Sevbify → Language"))
     }
 }
 

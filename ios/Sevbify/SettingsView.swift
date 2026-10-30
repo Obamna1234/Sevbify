@@ -66,6 +66,13 @@ struct SettingsView: View {
             } header: { Text("Sevbify updates") } footer: {
                 Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
+            Section {
+                Button("Language") {
+                    if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
+                }
+            } footer: {
+                Text("Sevbify follows your iPhone's language. To use another one just for Sevbify: Settings → Sevbify → Language. Search works in every language either way.")
+            }
             Section("About") {
                 LabeledContent("Sevbify", value: Bundle.main.object(forInfoDictionaryKey: "SevbifyVersion") as? String ?? "")
                 LabeledContent("Python", value: python)

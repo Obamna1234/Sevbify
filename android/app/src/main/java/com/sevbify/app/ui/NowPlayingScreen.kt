@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +86,7 @@ fun NowPlayingScreen() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { Nav.nowPlayingOpen = false }) { Icon(Icons.Filled.KeyboardArrowDown, "Close", Modifier.size(32.dp), tint = C.Text) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("PLAYING FROM", style = MaterialTheme.typography.labelSmall.copy(color = C.Text))
+                Text(tr("PLAYING FROM"), style = MaterialTheme.typography.labelSmall.copy(color = C.Text))
                 Text(Player.sourceName.ifEmpty { "Sevbify" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
                      style = MaterialTheme.typography.labelLarge)
             }
@@ -187,13 +189,13 @@ fun NowPlayingScreen() {
 private fun QueueSheet() {
     ModalBottomSheet(onDismissRequest = { Nav.queueOpen = false }, containerColor = C.Elevated) {
         LazyColumn(Modifier.navigationBarsPadding()) {
-            item { Text("Queue", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 16.dp)) }
+            item { Text(tr("Queue"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 16.dp)) }
             Player.current?.let { cur ->
-                item { SectionTitle("Now playing") }
+                item { SectionTitle(tr("Now playing")) }
                 item { TrackRow(cur, onClick = {}, onMore = { Nav.songMenu = SongMenu(cur) }) }
             }
             if (Player.userQueue.isNotEmpty()) {
-                item { SectionTitle("Next in queue") }
+                item { SectionTitle(tr("Next in queue")) }
                 itemsIndexed(Player.userQueue.toList()) { i, t ->
                     TrackRow(t, onClick = {}, onMore = { Player.userQueue.removeAt(i) })
                 }

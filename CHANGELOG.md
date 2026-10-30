@@ -2,6 +2,20 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Full songs, updates, 20 languages (v5.0.0-beta.21):**
+- Songs you don't have always stream in full; when the full song isn't found they're skipped, never swapped for the
+  30-second clip. "Preview (30 s)" in the song menu opens a small player with a seek bar (desktop, Android, iPhone).
+- In-app updates. Desktop: download, check GitHub's SHA-256, unpack (paths outside the folder refused), then a
+  script swaps the app after it closes and reopens it. Android: the APK is checksum-checked and handed to the
+  installer through a FileProvider. iPhone: an AltStore / SideStore source is published to the `altstore` branch on
+  every release. Each version is offered once.
+- 20 languages from one shared table (core/i18n/translations.txt): Android per-app language (localeConfig, RTL),
+  iPhone Localizable.strings made at build time, desktop Settings → Language.
+- "Did you mean" through DuckDuckGo, only for a finished search whose results look unrelated. Accent- and
+  script-insensitive matching. YouTube-only podcasts on the Podcasts tab; unrelated ones are left off All.
+- Android Settings split into Spotify-style category pages with Data saver / Private session tiles.
+- Phones import .csv / .txt / .m3u files. Fixed playlist rename lag and missing covers for imported songs.
+
 **Final checks (v5.0.0-beta.20):**
 - Profile files are untrusted input: unpacking stops at 50 MB (a tiny file made to expand into gigabytes is refused
   without being read), Android reads at most 20 MB of a picked file and iPhone checks the size first, and only http(s)

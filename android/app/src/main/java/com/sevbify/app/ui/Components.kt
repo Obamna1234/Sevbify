@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -130,7 +132,7 @@ fun TrackRow(t: Track, onClick: () -> Unit, onMore: () -> Unit, number: Int? = n
                 }
                 if (t.explicit) {
                     Box(Modifier.background(C.Sub, RoundedCornerShape(2.dp)).padding(horizontal = 3.dp)) {
-                        Text("E", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = C.Black)
+                        Text(tr("E"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = C.Black)
                     }
                     Spacer(Modifier.width(4.dp))
                 }

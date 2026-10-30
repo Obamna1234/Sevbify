@@ -14,6 +14,7 @@ plugins {
 val repoRoot: File = rootProject.projectDir.parentFile
 val sharedPython = layout.buildDirectory.dir("shared-python").get().asFile
 val sharedRes = layout.buildDirectory.dir("shared-res").get().asFile
+val sharedAssets = layout.buildDirectory.dir("shared-assets").get().asFile
 
 fun syncShared() {
     delete(sharedPython)
@@ -42,6 +43,9 @@ fun syncShared() {
         into(File(sharedRes, "drawable"))
         rename { "sevbify_logo.png" }
     }
+    // The 20 languages: the same table the computer and iPhone apps use.
+    delete(sharedAssets)
+    copy { from(File(repoRoot, "core/i18n/translations.txt")); into(File(sharedAssets, "i18n")) }
 }
 syncShared()
 
@@ -92,6 +96,7 @@ android {
     }
 
     sourceSets["main"].res.srcDir(sharedRes)
+    sourceSets["main"].assets.srcDir(sharedAssets)
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

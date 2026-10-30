@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import com.sevbify.app.tr
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -123,12 +125,12 @@ private fun BottomArea() {
                .navigationBarsPadding()) {
         if (Player.current != null) MiniPlayer()
         Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-            NavItem("Home", Icons.Filled.Home, Icons.Outlined.Home, Nav.tab == Tab.HOME) { Nav.switch(Tab.HOME) }
-            NavItem("Search", Icons.Filled.Search, Icons.Outlined.Search, Nav.tab == Tab.SEARCH) { Nav.switch(Tab.SEARCH) }
-            NavItem("Your Library", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic, Nav.tab == Tab.LIBRARY) {
+            NavItem(tr("Home"), Icons.Filled.Home, Icons.Outlined.Home, Nav.tab == Tab.HOME) { Nav.switch(Tab.HOME) }
+            NavItem(tr("Search"), Icons.Filled.Search, Icons.Outlined.Search, Nav.tab == Tab.SEARCH) { Nav.switch(Tab.SEARCH) }
+            NavItem(tr("Your Library"), Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic, Nav.tab == Tab.LIBRARY) {
                 Nav.switch(Tab.LIBRARY)
             }
-            NavItem("Create", Icons.Filled.Add, Icons.Filled.Add, false) { createOpen = true }
+            NavItem(tr("Create"), Icons.Filled.Add, Icons.Filled.Add, false) { createOpen = true }
         }
     }
     if (createOpen) CreateSheet { createOpen = false }
@@ -158,7 +160,7 @@ private fun MiniPlayer() {
                 if (AudioOutput.kind != "speaker" && Player.status.isEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(AudioOutput.icon, null, tint = C.Green, modifier = Modifier.size(14.dp))
-                        Text(" " + AudioOutput.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(tr(" ") + AudioOutput.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
                              style = MaterialTheme.typography.bodySmall.copy(color = C.Green))
                     }
                 } else {
@@ -185,14 +187,14 @@ private fun Dialogs() {
     Player.noticeFor?.let {
         AlertDialog(
             onDismissRequest = { Player.acceptNotice(false) },
-            title = { Text("Play full songs?") },
+            title = { Text(tr("Play full songs?")) },
             text = {
-                Text("Songs you don't have yet can stream in full from Bandcamp or YouTube (found by Sevbify, nothing " +
+                Text(tr("Songs you don't have yet can stream in full from Bandcamp or YouTube (found by Sevbify, nothing ") +
                      "is signed in to). Streaming YouTube without its own player and ads goes against YouTube's terms. " +
                      "Songs you have on your phone always play from your files.")
             },
-            confirmButton = { TextButton(onClick = { Player.acceptNotice(true) }) { Text("Play full songs") } },
-            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text("Not now") } },
+            confirmButton = { TextButton(onClick = { Player.acceptNotice(true) }) { Text(tr("Play full songs")) } },
+            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text(tr("Not now")) } },
             containerColor = C.Elevated,
         )
     }
@@ -200,8 +202,8 @@ private fun Dialogs() {
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },
-                    confirmButton = { TextButton(onClick = { Nav.confirm = null; action() }) { Text("Delete", color = C.Green) } },
-                    dismissButton = { TextButton(onClick = { Nav.confirm = null }) { Text("Cancel", color = C.Text) } },
+                    confirmButton = { TextButton(onClick = { Nav.confirm = null; action() }) { Text(tr("Delete"), color = C.Green) } },
+                    dismissButton = { TextButton(onClick = { Nav.confirm = null }) { Text(tr("Cancel"), color = C.Text) } },
                     containerColor = C.Elevated)
     }
     Nav.rename?.let { (start, done) ->
@@ -217,7 +219,7 @@ private fun Dialogs() {
                                                modifier = Modifier.focusRequester(focus)) },
                     confirmButton = { TextButton(onClick = { Nav.rename = null; done(text.text.trim().ifEmpty { start }) }) {
                         Text(Nav.renameButton, color = C.Green) } },
-                    dismissButton = { TextButton(onClick = { Nav.rename = null }) { Text("Cancel", color = C.Text) } },
+                    dismissButton = { TextButton(onClick = { Nav.rename = null }) { Text(tr("Cancel"), color = C.Text) } },
                     containerColor = C.Elevated)
     }
 }

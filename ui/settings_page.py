@@ -13,7 +13,7 @@ from . import theme
 from .widgets import ToggleSwitch, EqualizerCurve, ZoomPreview
 from core.audio_settings import BAND_LABELS
 
-RESTART_KEYS = ("zoom", "normalize", "proxy_mode", "proxy_url", "hw_accel")
+RESTART_KEYS = ("zoom", "normalize", "proxy_mode", "proxy_url", "hw_accel", "language")
 SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
 
 STYLE = f"""
@@ -92,7 +92,8 @@ class SettingsPage(QWidget):
         self._v = v
         u = user_data
 
-        h1 = QLabel("Settings")
+        from core.i18n import tr
+        h1 = QLabel(tr("Settings"))
         h1.setObjectName("h1")
         v.addWidget(h1)
         self.restart_bar = QFrame()
@@ -105,6 +106,14 @@ class SettingsPage(QWidget):
         rb.addWidget(restart)
         self.restart_bar.setVisible(self.needs_restart)
         v.addWidget(self.restart_bar)
+
+        # Like Spotify's: the language comes first.
+        from core import i18n
+        self._section("Language")
+        names = ["Same as this computer"] + [n for _c, n in i18n.LANGUAGES]
+        current = dict(i18n.LANGUAGES).get(getattr(u, "language", ""), "Same as this computer")
+        self._combo("language", "Choose language", "Changes apply after Sevbify restarts. Search works in every "
+                    "language either way.", names, current)
 
         self._section("Online and privacy")
         self._toggle("online_enabled", "Online features",
@@ -334,7 +343,8 @@ class SettingsPage(QWidget):
 
     # --- pieces -------------------------------------------------------------------------------------
     def _section(self, title):
-        lbl = QLabel(title)
+        from core.i18n import tr
+        lbl = QLabel(tr(title))
         lbl.setObjectName("h2")
         self._v.addWidget(lbl)
 
@@ -361,6 +371,8 @@ class SettingsPage(QWidget):
         return box
 
     def _row(self, key, name, desc, control):
+        from core.i18n import tr
+        name = tr(name)
         row = QHBoxLayout()
         row.setSpacing(16)
         row.addLayout(self._name_desc(name, desc, into=row), 1)
@@ -504,7 +516,10 @@ class SettingsPage(QWidget):
         self.changed.emit(values)
 
     def _combo_changed(self, key, text):
-        if key == "fade_seconds":
+        if key == "language":
+            from core import i18n
+            self._emit({key: next((c for c, n in i18n.LANGUAGES if n == text), "")})
+        elif key == "fade_seconds":
             self._emit({key: 0 if text == "Off" else int(text.split()[0])})
         elif key == "startup":
             self._emit({key: text.lower()})
