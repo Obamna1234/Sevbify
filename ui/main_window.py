@@ -2021,8 +2021,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._search_memory = QTimer(self)
         self._search_memory.setSingleShot(True)
         self._search_memory.setInterval(2500)
-        self._search_memory.timeout.connect(lambda: self.remember_search(self.search_input.text()))
-        self.search_input.textChanged.connect(lambda _t: self._search_memory.start())
+        self._search_memory.timeout.connect(self._remember_typed_search)
+        self.search_input.textChanged.connect(self._search_memory_restart)
 
         self.search_summary = self._muted_label("Search your library by song, artist or album.")
         layout.addWidget(self.search_summary)
@@ -2272,6 +2272,12 @@ class MainWindow(ShowsMixin, QMainWindow):
                          f"{' (the rest were already here)' if added < len(d['playlists']) else ''}.",
                          kind="info", timeout_ms=8000)
         return added
+
+    def _search_memory_restart(self, _text=""):
+        self._search_memory.start()
+
+    def _remember_typed_search(self):
+        self.remember_search(self.search_input.text())
 
     def remember_search(self, text):
         q = (text or "").strip()
@@ -5338,6 +5344,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             super().closeEvent(event)
             return
         self._shut_down = True
+        if getattr(self, "_search_memory", None) is not None:
+            self._search_memory.stop()
         if getattr(self, "video_page", None) is not None:
             self.video_page.stop()                      # also closes the video mini player
         for view in (getattr(self, "mini_player", None), getattr(self, "full_screen_view", None)):
