@@ -23,6 +23,7 @@ struct SevbifyApp: App {
                 await Library.shared.scan()
             }
             Smoke.runIfAsked()
+            if ok && !Smoke.args.contains("-SEVSmoke") { await AppUpdates.shared.check() }
         }
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
@@ -37,6 +38,7 @@ struct SevbifyApp: App {
                 .environmentObject(lib).environmentObject(player).environmentObject(downloads).environmentObject(nav)
                 .preferredColorScheme(.dark)
                 .tint(C.green)
+                .modifier(UpdateAlert())
         }
     }
 }

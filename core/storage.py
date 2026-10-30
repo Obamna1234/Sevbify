@@ -114,6 +114,7 @@ class UserData:
     hw_accel: bool = True   # Settings: hardware acceleration (applies after restart)
     auto_update_check: bool = True   # Settings: check GitHub once a day for a new Sevbify / yt-dlp
     last_update_check: float = 0.0
+    update_asked: str = ""     # the newest version Sevbify already offered to install (asked once per version)
     disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
     recent_searches: List[str] = field(default_factory=list)  # Search ▸ Recent searches (newest first, max 30)
@@ -249,6 +250,7 @@ class Storage:
                 "hw_accel": data.hw_accel,
                 "auto_update_check": bool(data.auto_update_check),
                 "last_update_check": float(data.last_update_check or 0),
+                "update_asked": str(data.update_asked or "")[:40],
                 "disabled_folders": [to_stored_path(p) for p in data.disabled_folders],
             },
             "playlists": [
@@ -389,6 +391,7 @@ class Storage:
                 data.last_update_check = float(settings.get("last_update_check") or 0)
             except (TypeError, ValueError):
                 data.last_update_check = 0.0
+            data.update_asked = str(settings.get("update_asked") or "")[:40]
         except (TypeError, ValueError):
             pass
         try:

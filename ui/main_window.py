@@ -5146,10 +5146,12 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         def got_app(r):
             if r["newer"]:
-                text = (f"Sevbify {r['latest']} is available: <a style='color:{theme.GREEN}' href='{r['page']}'>"
-                        "open the download page</a>.")
-                self.show_status(f"Sevbify {r['latest']} is available (Settings → About and updates)", kind="info",
-                                 timeout_ms=15000)
+                text = f"Sevbify {r['latest']} is available."
+                # Asked once per new version (or whenever you press Check for updates).
+                if manual or self.user_data.update_asked != r["latest"]:
+                    self.user_data.update_asked = r["latest"]
+                    self.schedule_save()
+                    QTimer.singleShot(0, lambda: self.offer_update(r))
             else:
                 text = r["message"]
             self._app_update_text = text
@@ -5169,6 +5171,69 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self.settings_page.set_update_status(ytdlp=f"yt-dlp {r['current']} is up to date."
                                                      if r["latest"] else "Couldn't reach GitHub to check yt-dlp.")
         self.online_call(updates.check_ytdlp, on_done=got_ytdlp)
+
+    def offer_update(self, r):
+        """"Sevbify X is out": Download (then restart) / Later. Running from source: open the release page."""
+        from core import app_update
+        if getattr(self, "_shut_down", False) or getattr(self, "_update_busy", False):
+            return
+        box = QMessageBox(self)
+        box.setWindowTitle("Update Sevbify")
+        box.setText(f"Sevbify {r['latest']} is available (you have {r['current']}).")
+        can = app_update.can_install() and bool(r.get("url"))
+        box.setInformativeText("It downloads in the background, then Sevbify restarts to finish. Your playlists, "
+                               "settings and music stay as they are." if can else
+                               "Open the release page to download it.")
+        go = box.addButton("Download" if can else "Open the release page", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is not go:
+            return
+        if not can:
+            QDesktopServices.openUrl(QUrl(r.get("page") or app_update.ALLOWED_PREFIX))
+            return
+        self._update_busy = True
+        self.show_status(f"Downloading Sevbify {r['latest']}…", kind="info", timeout_ms=600000)
+        self.settings_page.set_update_status(app=f"Downloading Sevbify {r['latest']}…")
+
+        def ready(new_app):
+            self._update_busy = False
+            self._pending_update = new_app
+            self.settings_page.set_update_status(app=f"Sevbify {r['latest']} is ready: it's installed when you restart.")
+            self.show_status(f"Sevbify {r['latest']} is ready", kind="info", timeout_ms=8000)
+            ask = QMessageBox.question(self, "Update Sevbify",
+                                       f"Sevbify {r['latest']} is downloaded. Restart now to finish?\n\n"
+                                       "(Later: it's put in place when you close Sevbify.)")
+            if ask == QMessageBox.StandardButton.Yes:
+                self.install_update_and_quit(reopen=True)
+
+        def failed(err):
+            self._update_busy = False
+            self.settings_page.set_update_status(app=f"The update couldn't be downloaded ({err}).")
+            self.show_status(f"⚠ The update couldn't be downloaded: {err}", timeout_ms=10000)
+        self.online_call(app_update.prepare, r["url"], self.storage.data_dir, r.get("sha256", ""), r.get("size", 0),
+                         on_done=ready, on_error=failed)
+
+    def install_update_and_quit(self, reopen=True):
+        """Hand over to the updater script (it waits for Sevbify to close, swaps the app, reopens it) and quit."""
+        from core import app_update
+        new_app = getattr(self, "_pending_update", None)
+        if not new_app or not os.path.exists(new_app):
+            return False
+        try:
+            target = app_update.install_target()
+            cmd = app_update.restart_command(new_app, target, os.getpid(), os.path.join(self.storage.data_dir, "update"),
+                                             exe_name=os.path.basename(sys.executable), reopen=reopen)
+            app_update.launch_detached(cmd)
+        except Exception as e:
+            self.show_status(f"⚠ Couldn't install the update: {e}", timeout_ms=10000)
+            return False
+        self._pending_update = None
+        if reopen:
+            self._quitting = True
+            self.close()
+            QApplication.quit()
+        return True
 
     def _auto_update_check(self):
         if self.user_data.auto_update_check and time.time() - (self.user_data.last_update_check or 0) > 86400:
@@ -5418,6 +5483,14 @@ class MainWindow(ShowsMixin, QMainWindow):
             super().closeEvent(event)
             return
         self._shut_down = True
+        if getattr(self, "_pending_update", None):
+            self.install_update_and_quit(reopen=False)       # downloaded earlier: put in place now
+        preview = getattr(self, "_preview_window", None)
+        if preview is not None:
+            try:
+                preview.close()                              # its player must go before VLC is released
+            except RuntimeError:
+                pass
         if getattr(self, "_search_memory", None) is not None:
             self._search_memory.stop()
         if getattr(self, "video_page", None) is not None:

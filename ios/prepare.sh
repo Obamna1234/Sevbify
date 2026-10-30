@@ -35,5 +35,8 @@ rm -rf app_packages/bin
 ls app_packages
 
 V=$(tr -d '[:space:]' < ../VERSION)
-sed -i '' "s/MARKETING_VERSION: .*/MARKETING_VERSION: \"${V%%-*}\"/; s/SEVBIFY_VERSION: .*/SEVBIFY_VERSION: \"$V\"/" project.yml
+# Build number: the beta number (5.0.0-beta.21 -> 21), or 1000 for a final version, so AltStore / SideStore can
+# tell each release apart (the marketing version stays 5.0.0 for every beta). Must match tools/altstore_source.py.
+B=$(python3 ../tools/altstore_source.py --build "$V")
+sed -i '' "s/MARKETING_VERSION: .*/MARKETING_VERSION: \"${V%%-*}\"/; s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$B\"/; s/SEVBIFY_VERSION: .*/SEVBIFY_VERSION: \"$V\"/" project.yml
 xcodegen generate

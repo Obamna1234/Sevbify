@@ -237,6 +237,20 @@ Install steps are in the release notes. The release signing key is not in the re
 from the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets (building it yourself without them gives
 a debug-signed APK).
 
+## Updates
+
+Once a day, when online, every version asks GitHub for the newest release and offers it once (or whenever you
+press Check for updates):
+
+- **Windows, macOS, Linux:** Download, then restart. The file comes only from this repository's releases and is
+  checked against GitHub's SHA-256 before it's unpacked; a small script swaps the old app for the new one after
+  Sevbify closes and opens it again. Playlists, settings and music are kept (they're stored elsewhere).
+- **Android:** the APK is downloaded (checksum-checked) and Android's installer opens. It's signed with the same
+  key, so it installs over the old one and keeps everything.
+- **iPhone:** add this source to SideStore or AltStore once (Settings → Sevbify updates has buttons for it):
+  `https://raw.githubusercontent.com/Obamna1234/Sevbify/altstore/source.json`. Each release updates it, and they
+  offer the new version like an App Store update.
+
 ## Known limitations
 
 - The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).

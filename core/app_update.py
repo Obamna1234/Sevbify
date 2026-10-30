@@ -44,6 +44,30 @@ def install_target(executable=None, platform=None):
     return os.path.dirname(exe)
 
 
+def launch_detached(cmd):
+    """Start the updater so it keeps running after Sevbify quits."""
+    import subprocess
+    kw = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "close_fds": True}
+    if sys.platform.startswith("win"):
+        kw["creationflags"] = 0x00000008 | 0x00000200 | 0x08000000   # detached, new group, no window
+    else:
+        kw["start_new_session"] = True
+    subprocess.Popen(cmd, **kw)
+
+
+def prepare(url, data_dir, sha256="", size=0):
+    """Download and unpack an update into the data folder. Returns the new app's path."""
+    folder = os.path.join(data_dir, "update")
+    archive = download(url, folder, sha256, size)
+    try:
+        return unpack(archive, os.path.join(folder, "new"))
+    finally:
+        try:
+            os.remove(archive)
+        except OSError:
+            pass
+
+
 def _fetch(url, timeout=60):
     import urllib.request
     req = urllib.request.Request(url, headers={"User-Agent": "Sevbify-updater"})
@@ -151,8 +175,9 @@ def _q(path):
     return "'" + path.replace("'", "'\\''") + "'"
 
 
-def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=None):
-    """Write the swap-and-reopen script; returns the command that starts it (run it detached, then quit)."""
+def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=None, reopen=True):
+    """Write the swap-and-reopen script; returns the command that starts it (run it detached, then quit).
+    reopen=False: just swap (an update downloaded earlier is put in place when you close Sevbify)."""
     platform = platform or sys.platform
     os.makedirs(script_dir, exist_ok=True)
     old = target.rstrip("/\\") + ".old"
@@ -179,14 +204,16 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
             # The folder couldn't be renamed (something has it open): copy the new files over instead.
             f'robocopy "{new_app}" "{target}" /E /NFL /NDL /NJH /NJS >NUL',
             ":start",
-            f'start "" "{exe}"',
+            f'start "" "{exe}"' if reopen else "rem not reopened",
             '(goto) 2>nul & del "%~f0"',
         ]
         with open(script, "w", encoding="utf-8", newline="\r\n") as f:
             f.write("\n".join(lines) + "\n")
         return ["cmd.exe", "/c", script]
     script = os.path.join(script_dir, "sevbify-update.sh")
-    if platform == "darwin":
+    if not reopen:
+        reopen = ":"
+    elif platform == "darwin":
         reopen = f"open {_q(target)}"
     else:
         reopen = f"( {_q(os.path.join(target, exe_name or 'Sevbify'))} >/dev/null 2>&1 & )"

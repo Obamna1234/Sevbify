@@ -106,6 +106,7 @@ private fun CurrentScreen(screen: Screen) {
         Screen.Audiobooks -> AudiobooksScreen()
         is Screen.ShowPage -> ShowScreen(screen.show)
         Screen.Settings -> SettingsScreen()
+        is Screen.SettingsPage -> SettingsPageScreen(screen.key)
         is Screen.Import -> ImportScreen(screen.text)
         Screen.ToDownload -> ToDownloadScreen()
         Screen.YourSongs -> YourSongsScreen()
@@ -188,13 +189,14 @@ private fun Dialogs() {
             text = {
                 Text("Songs you don't have yet can stream in full from Bandcamp or YouTube (found by Sevbify, nothing " +
                      "is signed in to). Streaming YouTube without its own player and ads goes against YouTube's terms. " +
-                     "Choose Previews to hear 30-second previews instead. You can change this in Settings.")
+                     "Songs you have on your phone always play from your files.")
             },
             confirmButton = { TextButton(onClick = { Player.acceptNotice(true) }) { Text("Play full songs") } },
-            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text("Previews") } },
+            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text("Not now") } },
             containerColor = C.Elevated,
         )
     }
+    Updater.offer?.let { r -> UpdateDialog(r) }
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },

@@ -14,11 +14,13 @@ struct Settings: Codable {
     var lastfmKey = ""
     var jamendoId = ""
     var noticeAccepted = false
+    var lastAppCheck: Double = 0          // last daily check for a new Sevbify
+    var updateAsked = ""                  // newest version already offered (asked once per version)
 
     init() {}
     enum CodingKeys: String, CodingKey {
         case online, streamFull, source, autoplay, explicitOk, songQuality, shuffle, repeatMode, showPlaylistOrigin,
-             lastfmKey, jamendoId, noticeAccepted
+             lastfmKey, jamendoId, noticeAccepted, lastAppCheck, updateAsked
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -28,6 +30,7 @@ struct Settings: Codable {
         autoplay = b(.autoplay, true); explicitOk = b(.explicitOk, true); songQuality = s(.songQuality, "best")
         shuffle = b(.shuffle, false); repeatMode = s(.repeatMode, "off"); showPlaylistOrigin = b(.showPlaylistOrigin, false)
         lastfmKey = s(.lastfmKey, ""); jamendoId = s(.jamendoId, ""); noticeAccepted = b(.noticeAccepted, false)
+        lastAppCheck = (try? c.decode(Double.self, forKey: .lastAppCheck)) ?? 0; updateAsked = s(.updateAsked, "")
     }
 }
 

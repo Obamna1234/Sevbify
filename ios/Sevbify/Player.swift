@@ -5,7 +5,7 @@ import UIKit
 
 /// Sevbify's queue and playback, like the other apps: a context (playlist, album, radio, search...), "Add to
 /// queue" songs that play next, shuffle and repeat. Songs you have play from the iPhone; others stream in full
-/// while online (found on Bandcamp, then YouTube), or as 30-second previews. Lock screen and Control Centre work.
+/// while online (found on Bandcamp, then YouTube); a 30-second clip only from the song menu (Preview). Lock screen and Control Centre work.
 @MainActor
 final class Player: ObservableObject {
     static let shared = Player()

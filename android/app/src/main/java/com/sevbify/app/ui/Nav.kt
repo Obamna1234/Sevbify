@@ -23,6 +23,7 @@ sealed class Screen {
     data object Audiobooks : Screen()
     data class ShowPage(val show: Show) : Screen()
     data object Settings : Screen()
+    data class SettingsPage(val key: String) : Screen()       // one Settings category (Spotify-style pages)
     data class Import(val text: String = "") : Screen()
     data object ToDownload : Screen()
     data object YourSongs : Screen()

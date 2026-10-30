@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var python = ""
     @State private var updating = false
     @State private var updateMessage = ""
+    @State private var appUpdate = ""
     private let sources = ["Bandcamp + YouTube", "Bandcamp only", "YouTube only"]
 
     var body: some View {
@@ -54,6 +55,16 @@ struct SettingsView: View {
                 if !updateMessage.isEmpty { Text(updateMessage).font(.caption).foregroundColor(C.dim) }
             } header: { Text("Updates") } footer: {
                 Text("YouTube changes often; a newer yt-dlp (the official release, checksum-checked) fixes most \"couldn't find the full song\" problems. It's used after Sevbify restarts.")
+            }
+            Section {
+                Button("Check for Sevbify updates") {
+                    Task { appUpdate = await AppUpdates.shared.check(manual: true) }
+                }
+                Button("Add Sevbify to SideStore") { AppUpdates.shared.openStore("sidestore") }
+                Button("Add Sevbify to AltStore") { AppUpdates.shared.openStore("altstore") }
+                if !appUpdate.isEmpty { Text(appUpdate).font(.caption).foregroundColor(C.dim) }
+            } header: { Text("Sevbify updates") } footer: {
+                Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
             Section("About") {
                 LabeledContent("Sevbify", value: Bundle.main.object(forInfoDictionaryKey: "SevbifyVersion") as? String ?? "")

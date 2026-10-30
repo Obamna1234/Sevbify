@@ -73,3 +73,23 @@ def test_ytdlp_update_is_checked_against_the_official_checksum(tmp_path):
     assert not ok and "checksum" in msg and not (tmp_path / "yt-dlp").exists()
     ok, msg = updates.download_verified_ytdlp("../../evil", fetch=fetch(good), dest_dir=str(tmp_path))
     assert not ok
+
+
+def test_a_new_version_is_offered_once_then_only_when_you_check(window, qapp, monkeypatch):
+    from conftest import wait_until
+    from core import updates
+    found = {"current": "5.0.0-beta.20", "latest": "5.0.0-beta.21", "newer": True, "page": "https://x",
+             "url": "", "sha256": "", "size": 0, "checked": True, "message": ""}
+    monkeypatch.setattr(updates, "check_app", lambda net, *a, **k: dict(found))
+    monkeypatch.setattr(updates, "check_ytdlp", lambda *a, **k: {"current": "1", "latest": "1", "newer": False})
+    offered = []
+    monkeypatch.setattr(window, "offer_update", lambda r: offered.append(r["latest"]))
+    window.check_for_updates(manual=False)
+    assert wait_until(qapp, lambda: offered == ["5.0.0-beta.21"])
+    window.check_for_updates(manual=False)                 # the daily check doesn't ask again
+    for _ in range(20):
+        qapp.processEvents()
+    assert wait_until(qapp, lambda: window.user_data.update_asked == "5.0.0-beta.21")
+    assert offered == ["5.0.0-beta.21"]
+    window.check_for_updates(manual=True)                  # pressing Check for updates does
+    assert wait_until(qapp, lambda: len(offered) == 2)

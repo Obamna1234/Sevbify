@@ -21,6 +21,7 @@ class SevbifyApp : Application() {
             // inside Bridge.setup, so the app never freezes ("isn't responding") on its first start.
             try { Bridge.setup(this@SevbifyApp) } catch (e: Exception) { Nav.say("Online features couldn't start: ${e.message}") }
             autoUpdateYtdlp()
+            try { Updater.check() } catch (_: Exception) { /* offline: try again tomorrow */ }
         }
     }
 
