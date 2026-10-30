@@ -139,7 +139,8 @@ jobs:
             *)       ICON=assets/branding/sevbify_256.png ;;
           esac
           if [ -f deno.exe ]; then EXTRA="$EXTRA --add-binary deno.exe${SEP}."; fi
-          if [ -f deno ]; then EXTRA="$EXTRA --add-binary deno${SEP}."; fi
+          # (Git Bash on Windows says "deno" exists when deno.exe does, so only check it elsewhere.)
+          if [ "${{ runner.os }}" != "Windows" ] && [ -f deno ]; then EXTRA="$EXTRA --add-binary deno${SEP}."; fi
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp --collect-all yt_dlp_ejs \
             --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." $EXTRA app.py
           if [ "${{ runner.os }}" = "Linux" ]; then
