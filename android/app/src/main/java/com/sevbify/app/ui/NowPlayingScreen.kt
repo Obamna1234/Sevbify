@@ -87,8 +87,26 @@ fun NowPlayingScreen() {
                 Icon(Icons.Filled.MoreVert, "More")
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Cover(t.art, 340.dp, RoundedCornerShape(8.dp), Modifier.aspectRatio(1f))
+        Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+               verticalArrangement = Arrangement.Center) {
+            if (Player.canWatch(t)) {
+                AudioVideoSwitch()        // cover art or the video, like Spotify's video podcasts
+                Spacer(Modifier.size(16.dp))
+            }
+            if (Player.videoMode) {
+                Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Color.Black),
+                    contentAlignment = Alignment.Center) {
+                    VideoSurface(showControls = false)
+                    if (com.sevbify.app.VideoPlayer.loading) androidx.compose.material3.CircularProgressIndicator(color = C.Green)
+                }
+                val v = com.sevbify.app.VideoPlayer
+                Text(v.error.ifEmpty { "Close this screen and the video keeps playing in a small window you can move and resize." +
+                         (v.height.takeIf { it > 0 }?.let { " Playing ${it}p." } ?: "") },
+                     style = MaterialTheme.typography.bodySmall.copy(color = if (v.error.isNotEmpty()) C.Red else C.Sub),
+                     textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+            } else {
+                Cover(t.art, 340.dp, RoundedCornerShape(8.dp), Modifier.aspectRatio(1f))
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

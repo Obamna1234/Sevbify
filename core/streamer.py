@@ -96,7 +96,7 @@ def clear_cache():
         _cache.clear()
 
 
-def download_original_audio(page, out_without_ext, progress=None):
+def download_original_audio(page, out_without_ext, progress=None, quality="best"):
     """Save a Bandcamp / YouTube page's audio as it comes (m4a, webm/opus or mp3), with no conversion, so it
     works where there's no ffmpeg (the Android app). Returns the saved file's path."""
     import os
@@ -111,7 +111,7 @@ def download_original_audio(page, out_without_ext, progress=None):
         hooks.append(hook)
     opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
             # m4a first: every phone plays it and it carries cover art; then whatever audio there is
-            "format": "bestaudio[ext=m4a]/bestaudio[acodec=mp3]/bestaudio/best", "socket_timeout": 20,
+            "format": __import__("core.quality", fromlist=["x"]).audio_format(quality), "socket_timeout": 20,
             "outtmpl": out_without_ext + ".%(ext)s", "progress_hooks": hooks, "postprocessors": []}
     with e.yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(page, download=True)
@@ -126,7 +126,29 @@ def download_original_audio(page, out_without_ext, progress=None):
     return path
 
 
-def download_full_song(artist, title, duration_ms, out_without_ext, source=downloader.SOURCE_BOTH, progress=None):
+def download_full_song(artist, title, duration_ms, out_without_ext, source=downloader.SOURCE_BOTH, progress=None,
+                       quality="best"):
     """Find the full song (same matching as streaming) and save its original audio. Returns (path, source)."""
     found = find_full_song(artist, title, duration_ms, source)
-    return download_original_audio(found["page"], out_without_ext, progress), found["source"]
+    try:
+        return download_original_audio(found["page"], out_without_ext, progress, quality), found["source"]
+    finally:
+        cleanup_leftovers(out_without_ext)
+
+
+def cleanup_leftovers(out_without_ext):
+    """Remove half-finished files a download left behind (.part, .ytdl, thumbnails...)."""
+    import os
+    folder = os.path.dirname(out_without_ext) or "."
+    base = os.path.basename(out_without_ext)
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return
+    for name in names:
+        if name.startswith(base + ".") and name.lower().endswith((".part", ".ytdl", ".temp", ".jpg", ".jpeg",
+                                                                    ".webp", ".png")):
+            try:
+                os.remove(os.path.join(folder, name))
+            except OSError:
+                pass

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -175,3 +176,14 @@ fun Modifier.combinedClickableCompat(onClick: () -> Unit, onLongClick: (() -> Un
 
 val Pill = RoundedCornerShape(50)
 val Rows = Arrangement.spacedBy(8.dp)
+
+
+/** Top-left of Home and Your Library (where Spotify shows your profile picture): Sevbify has no accounts, so
+ *  it's the Sevbify logo, and it opens Settings. */
+@androidx.compose.runtime.Composable
+fun SettingsBadge() {
+    androidx.compose.foundation.Image(
+        androidx.compose.ui.res.painterResource(com.sevbify.app.R.drawable.sevbify_logo), "Settings",
+        modifier = androidx.compose.ui.Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape)
+            .clickable { Nav.go(Screen.Settings) })
+}

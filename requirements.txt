@@ -5,7 +5,7 @@ python-vlc>=3.0.18122   # also needs the VLC media player itself (64-bit) instal
 mutagen>=1.47
 Pillow>=10.0
 certifi           # up-to-date web certificates for online features (needed on macOS)
-yt-dlp>=2025.1.1  # downloading songs (SEVBY engine)
+yt-dlp[default]>=2025.11.12  # downloading songs (SEVBY engine); [default] adds yt-dlp-ejs (YouTube's JS challenges)
 imageio-ffmpeg    # provides ffmpeg for downloads, so nothing else has to be installed
 
 # Development / tests

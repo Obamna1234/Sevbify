@@ -465,6 +465,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         # --- Downloads (SEVBY engine, in the background) ------------------
         self.downloads = DownloadManager(self)
+        self.downloads.quality = self.user_data.download_quality
         self._downloaded_paths = {}      # song key -> file the download manager saved
         self._downloads_refresh = QTimer(self)
         self._downloads_refresh.setSingleShot(True)
@@ -3533,6 +3534,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         source: name shown as "Next from: <source>" in the queue panel.
         """
         self.cancel_crossfade()
+        self._pause_popped_video()
         if queue is not None:
             self.pq.set_context(queue, song, source if source is not None else self.pq.source_name)
         elif song in self.pq.items:
@@ -3714,6 +3716,12 @@ class MainWindow(ShowsMixin, QMainWindow):
             return
         self._start_current()
 
+    def _pause_popped_video(self):
+        """Music starting while a video plays in the mini player: pause the video (not both at once)."""
+        page = getattr(self, "video_page", None)
+        if page is not None and page.popped_out and page.player is not None:
+            page.player.pause()
+
     def play_pause_song(self):
         try:
             if not self.pq.items:
@@ -3730,6 +3738,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self.is_playing = False
                 self.now_playing_panel.set_playing(False)
             elif state == vlc.State.Paused:
+                self._pause_popped_video()
                 self.player.set_pause(0)
                 self._set_play_icon(True)
                 self.is_playing = True
@@ -4640,6 +4649,26 @@ class MainWindow(ShowsMixin, QMainWindow):
     def _auto_update_check(self):
         if self.user_data.auto_update_check and time.time() - (self.user_data.last_update_check or 0) > 86400:
             self.check_for_updates(manual=False)
+            self._auto_update_ytdlp()
+
+    def _auto_update_ytdlp(self):
+        """YouTube changes all the time and an old yt-dlp is the usual reason streaming or downloads stop: when
+        it's more than a week old, fetch the newest official one in the background (checksum-checked)."""
+        from core import updates
+        if not self.online_enabled:
+            return
+        try:
+            age = updates.ytdlp_age_days()
+        except Exception:
+            age = None
+        if age is None or age <= 7:
+            return
+
+        def done(result):
+            if result and result[0]:
+                self.show_status("yt-dlp was updated in the background; it's used from the next start.",
+                                 kind="info", timeout_ms=8000)
+        self.online_call(updates.update_ytdlp, on_done=done, on_error=lambda _e: None)
 
     def update_ytdlp(self):
         from core import updates
@@ -4712,6 +4741,14 @@ class MainWindow(ShowsMixin, QMainWindow):
             downloader.ALLOW_BROWSER_COOKIES = u.use_browser_cookies
         if values.get("download_source") in downloader.SOURCES:
             u.download_source = values["download_source"]
+        from core import quality as _q
+        if values.get("download_quality") in _q.SONG_QUALITIES:
+            u.download_quality = values["download_quality"]
+            self.downloads.quality = u.download_quality
+        if values.get("audiobook_quality") in _q.AUDIOBOOK_QUALITIES:
+            u.audiobook_quality = values["audiobook_quality"]
+        if values.get("video_quality") in _q.VIDEO_QUALITIES:
+            u.video_quality = values["video_quality"]
         if "stream_full" in values:
             u.stream_full = bool(values["stream_full"])
             RemoteSong.stream_full = u.stream_full
@@ -4848,6 +4885,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             super().closeEvent(event)
             return
         self._shut_down = True
+        if getattr(self, "video_page", None) is not None:
+            self.video_page.stop()                      # also closes the video mini player
         for view in (getattr(self, "mini_player", None), getattr(self, "full_screen_view", None)):
             if view is not None:
                 view.timer.stop()

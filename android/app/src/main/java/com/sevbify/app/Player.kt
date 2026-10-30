@@ -85,6 +85,17 @@ object Player {
         ticker?.cancel()
         ticker = SevbifyApp.instance.scope.launch {
             while (isActive) {
+                if (videoMode) {
+                    VideoPlayer.player?.let { v ->
+                        position = v.currentPosition.coerceAtLeast(0)
+                        if (v.duration > 0) duration = v.duration
+                        isPlaying = v.isPlaying
+                        if (v.isPlaying && System.currentTimeMillis() - lastResumeSave > 5000) {
+                            VideoPlayer.savePosition(); lastResumeSave = System.currentTimeMillis()
+                        }
+                    }
+                    delay(500); continue
+                }
                 controller?.let { c ->
                     position = c.currentPosition.coerceAtLeast(0)
                     if (c.duration > 0) duration = c.duration
@@ -121,12 +132,40 @@ object Player {
     fun addToQueue(t: Track) { userQueue.add(t) }
 
     fun playPause() {
+        if (videoMode) { VideoPlayer.player?.let { if (it.isPlaying) it.pause() else it.play() }; return }
         val c = controller ?: return
         if (current == null && context.isNotEmpty()) { start(); return }
         if (c.isPlaying) c.pause() else c.play()
     }
 
-    fun seekTo(ms: Long) { controller?.seekTo(ms) }
+    fun seekTo(ms: Long) { if (videoMode) VideoPlayer.player?.seekTo(ms) else controller?.seekTo(ms) }
+
+    fun pause() { controller?.pause() }
+
+    // --- video podcasts: the same episode as a video (Now playing's Audio / Video switch) -------------------
+    /** The episode playing now is being watched (the video player has it). */
+    val videoMode: Boolean get() = current?.let { VideoPlayer.track?.itemKey == it.itemKey } == true && VideoPlayer.player != null
+
+    fun canWatch(t: Track?) = t != null && t.source == "youtube" && t.pageUrl.isNotEmpty()
+
+    /** Switch from listening to watching, at the same point. */
+    fun switchToVideo(context: Context) {
+        val t = current ?: return
+        if (!canWatch(t)) return
+        val at = position
+        controller?.pause()
+        SevbifyApp.instance.scope.launch { VideoPlayer.load(context, t, Library.settings.videoQuality, at.takeIf { it > 0 }) }
+    }
+
+    /** Switch from watching back to listening, at the same point. */
+    fun switchToAudio() {
+        val t = current ?: return
+        val at = VideoPlayer.position()
+        VideoPlayer.stop()
+        if (at > 0) Library.resume[t.itemKey] = at
+        val c = controller ?: return
+        if (c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == t.matchKey) { c.seekTo(at); c.play() } else start()
+    }
 
     fun next() = advance(auto = false)
 
@@ -208,6 +247,7 @@ object Player {
     // --- getting a song to play --------------------------------------------------------------------------------
     private fun start() {
         val t = context.getOrNull(index) ?: return
+        if (VideoPlayer.track != null && VideoPlayer.track?.itemKey != t.itemKey) VideoPlayer.stop()
         current = t
         handledEnd = false
         position = 0; duration = t.durationMs
@@ -222,7 +262,10 @@ object Player {
                 val meta = MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
                     .setArtworkUri(t.art.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }).setExtras(Bundle()).build()
                 val item = MediaItem.Builder().setUri(uri).setMediaId(t.matchKey).setMediaMetadata(meta).build()
-                controller?.run { setMediaItem(item); prepare(); play() }
+                controller?.run {
+                    setMediaItem(item); prepare()
+                    if (!videoMode) play()          // being watched: the sound comes with the video
+                }
             } catch (e: Exception) {
                 status = "⚠ ${t.title}: ${e.message}"
             }

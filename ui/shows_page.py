@@ -351,6 +351,7 @@ class ShowPage(QWidget):
     follow_clicked = pyqtSignal()
     download_all_clicked = pyqtSignal()
     sort_changed = pyqtSignal(str)          # "newest" / "oldest"
+    video_clicked = pyqtSignal()            # "Watch video": the show's video version, played inside Sevbify
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -365,7 +366,7 @@ class ShowPage(QWidget):
         self.rows = []
 
     def build(self, kind, title, author, description, followed, rows, top_colour="#3a3a3a", can_download_all=False,
-              follow_text=("Follow", "Following"), message="", sort=None, count_text=""):
+              follow_text=("Follow", "Following"), message="", sort=None, count_text="", video_button=False):
         content = QWidget()
         content.setObjectName("showPage")
         content.setStyleSheet("#showPage { background: transparent; }")
@@ -430,6 +431,14 @@ class ShowPage(QWidget):
             dl.setCursor(Qt.CursorShape.PointingHandCursor)
             dl.clicked.connect(self.download_all_clicked.emit)
             actions.addWidget(dl)
+        if video_button:
+            vid = QPushButton("Watch video")
+            vid.setToolTip("Watch this show's episodes as videos inside Sevbify (from the show's own YouTube channel)")
+            vid.setStyleSheet(theme.PILL)
+            vid.setFixedHeight(32)
+            vid.setCursor(Qt.CursorShape.PointingHandCursor)
+            vid.clicked.connect(self.video_clicked.emit)
+            actions.addWidget(vid)
         actions.addStretch()
         if sort is not None:
             from PyQt6.QtWidgets import QComboBox

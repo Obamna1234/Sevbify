@@ -293,7 +293,15 @@ def main():
                 from core import downloader
                 problems = downloader.check_tools()
                 e = downloader.engine()
-                details = f"yt-dlp {e.ytdlp_version()}, ffmpeg at {e.ffmpeg_path()}"
+                js = downloader.js_runtime()
+                details = f"yt-dlp {e.ytdlp_version()}, ffmpeg at {e.ffmpeg_path()}, JavaScript: {js or 'none'}"
+                try:
+                    import yt_dlp_ejs  # noqa: F401  (YouTube's challenge scripts, used with Deno)
+                    details += ", yt-dlp-ejs bundled"
+                except ImportError:
+                    problems.append("yt-dlp-ejs is missing from the app (YouTube needs it)")
+                if getattr(sys, "frozen", False) and os.name == "nt" and not js:
+                    problems.append("the bundled Deno (YouTube's JavaScript engine) didn't start")
             except Exception:
                 problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""
             # Playback must work with the VLC engine inside the app (no separately installed VLC).

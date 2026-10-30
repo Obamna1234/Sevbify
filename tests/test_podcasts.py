@@ -162,3 +162,23 @@ def test_youtube_source_note_uses_youtube_facts_not_names():
     show2, _ = fetch_youtube_channel("https://www.youtube.com/@fvhclips", extract=lambda u: copy)
     assert source_note(show2).startswith("⚠ Not verified by YouTube")
     assert "official feed" in source_note(Show("A Podcast", feed_url="https://feed"))
+
+
+def test_search_puts_the_exact_show_first():
+    from core.podcasts import Show, rank_shows
+    shows = [Show("Friends Like Us"), Show("Bad Friends Reacts"), Show("Bad Friends"), Show("Good Friends, Bad Times")]
+    assert [s.title for s in rank_shows("bad friends", shows)][:2] == ["Bad Friends", "Bad Friends Reacts"]
+    shows = [Show("History Hit"), Show("Fin vs History", "Fin Taylor")]
+    assert rank_shows("fin vs history", shows)[0].title == "Fin vs History"
+
+
+def test_find_youtube_channel_only_accepts_the_shows_own_channel():
+    from core.podcasts import find_youtube_channel
+    entries = [{"channel": "Clips Daily", "channel_url": "https://www.youtube.com/@clips"},
+               {"channel": "Bad Friends", "channel_url": "https://www.youtube.com/@BadFriends", "channel_is_verified": True},
+               {"channel": "Bad Friends", "channel_url": "https://www.youtube.com/@BadFriends"}]
+    show = find_youtube_channel("Bad Friends", "Bobby Lee", extract=lambda q: {"entries": entries})
+    assert show.kind == "youtube" and show.feed_url == "https://www.youtube.com/@BadFriends" and show.verified
+    assert find_youtube_channel("Some Quiet Show", extract=lambda q: {"entries": entries[:1]}) is None
+    bad = [{"channel": "Bad Friends", "channel_url": "file:///C:/x.exe"}]
+    assert find_youtube_channel("Bad Friends", extract=lambda q: {"entries": bad}) is None

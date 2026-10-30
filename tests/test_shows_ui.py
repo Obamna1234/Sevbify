@@ -130,7 +130,7 @@ def test_youtube_video_podcast_watch_and_switch_to_audio(win, qapp, monkeypatch)
                                   youtube_id="abc123", duration_ms=3_600_000))
     asked = []
     monkeypatch.setattr(podcasts, "youtube_stream",
-                        lambda page, video=False, extract=None: asked.append(video) or
+                        lambda page, video=False, extract=None, max_height=720: asked.append(video) or
                         ("https://video.example/v.mp4" if video else "https://audio.example/a.webm", {"User-Agent": "UA"}))
     shown = []
     monkeypatch.setattr(win.video_page, "play", lambda url, title, start_ms=0, volume=80: shown.append((url, start_ms)))
@@ -182,3 +182,42 @@ def test_home_chips(win, qapp):
     labels = [l.text() for l in win.home_scroll.widget().findChildren(type(win.song_info))]
     assert "Your shows" in labels
     assert wait_until(qapp, lambda: win._top_shows)
+
+
+def test_video_mini_player_keeps_playing_while_browsing(win, qapp, monkeypatch):
+    from core import podcasts
+    from core.online.models import OnlineTrack
+    from core.online.remote_song import RemoteSong
+    from ui.video_page import HAVE_VIDEO
+    if not HAVE_VIDEO:
+        return
+    song = RemoteSong(OnlineTrack("Ep", "Show", album="Show", source="youtube", source_id="v1",
+                                  page_url="https://www.youtube.com/watch?v=v1", youtube_id="v1"))
+    monkeypatch.setattr(podcasts, "youtube_stream", lambda page, video=False, extract=None, max_height=720:
+                        ("https://video.example/v.mp4", {}))
+    monkeypatch.setattr(win.video_page, "play", lambda url, title, start_ms=0, volume=80: True)
+    win.show_home()
+    win.watch_item(song)
+    assert wait_until(qapp, lambda: win.stack.currentWidget() is win.video_page)
+    win.video_page.pop_out()
+    assert win.video_page.popped_out
+    win.show_home()                                           # browsing elsewhere: the video carries on
+    qapp.processEvents()
+    assert win._video_song is song and win.video_page.popped_out
+    win.video_page.pop_in()                                   # "Back to Sevbify"
+    assert wait_until(qapp, lambda: win.stack.currentWidget() is win.video_page) and not win.video_page.popped_out
+    win.show_home()                                           # leaving the full page normally still stops it
+    qapp.processEvents()
+    assert win._video_song is None
+
+
+def test_show_page_offers_the_video_version(win, qapp, monkeypatch):
+    from core import podcasts
+    found = podcasts.Show(title="Bad Friends", feed_url="https://www.youtube.com/@BadFriends", kind="youtube")
+    monkeypatch.setattr(podcasts, "find_youtube_channel", lambda title, author="": found)
+    opened = []
+    monkeypatch.setattr(win, "open_show", lambda show, follow=False: opened.append(show))
+    win._show_ctx = dict(kind="show", obj=podcasts.Show(title="Bad Friends", feed_url="https://feeds.example/bf"),
+                         items=[], episodes=[])
+    win.open_video_version()
+    assert wait_until(qapp, lambda: opened == [found])

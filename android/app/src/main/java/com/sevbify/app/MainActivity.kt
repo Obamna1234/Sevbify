@@ -37,6 +37,30 @@ class MainActivity : ComponentActivity() {
         handleShare(intent)
     }
 
+    /** Leaving Sevbify (home button) while a video podcast plays: keep watching in a small window. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Player.videoMode && VideoPlayer.playing) enterSystemPip()
+    }
+
+    private fun enterSystemPip() {
+        try {
+            enterPictureInPictureMode(
+                android.app.PictureInPictureParams.Builder().setAspectRatio(android.util.Rational(16, 9)).build())
+        } catch (e: Exception) { /* picture-in-picture is switched off for Sevbify in Android's settings */ }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        VideoPlayer.inPip = isInPictureInPictureMode
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // The picture-in-picture window was closed (or Sevbify went away without it): pause the video.
+        if (!isInPictureInPictureMode) { VideoPlayer.inPip = false; VideoPlayer.pause() }
+    }
+
     override fun onResume() {
         super.onResume()
         rescan()

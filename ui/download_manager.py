@@ -61,9 +61,11 @@ class _Worker(QThread):
             res = downloader.run_download(
                 [line], folder, source, process=self.m.process,
                 on_step=lambda t: setattr(self.m, "step_text", t),
-                on_result=lambda _i, _n, _s, r: out.update(r))
+                on_result=lambda _i, _n, _s, r: out.update(r), quality=self.m.quality)
             if res["stopped"]:
                 out = {"status": "fail", "note": "stopped"}
+            if (out or {}).get("status") == "fail" and self.m.process is None:
+                downloader.cleanup_partial(folder, line)      # no half-finished files left in the folder
             self.song_finished.emit(key, out or {"status": "fail", "note": "couldn't be downloaded"})
             if res["stopped"]:
                 if self.m._cancel_one == key:          # only this song was cancelled: carry on with the rest
@@ -81,6 +83,7 @@ class DownloadManager(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.quality = "best"             # Settings -> Download quality (core/quality.py)
         self.process = None                      # tests replace the real per-song download with a fake
         self.check_tools = downloader.check_tools
         self.step_text = ""

@@ -168,6 +168,19 @@ class SettingsPage(QWidget):
         self._section("Downloads")
         self._combo("download_source", "Download and stream from", "Where full songs are looked for.",
                     list(SOURCES), u.download_source)
+        from core import quality as Q
+        self._combo("download_quality", "Download quality",
+                    "A song can't be better than its source (YouTube ~128-160 kbps, Bandcamp 128 kbps), so the "
+                    "original audio is both the best quality and the smallest full-quality file. "
+                    + Q.SONG_QUALITIES[Q.song_quality(u.download_quality)][1],
+                    [v[0] for v in Q.SONG_QUALITIES.values()], Q.SONG_QUALITIES[Q.song_quality(u.download_quality)][0])
+        self._combo("audiobook_quality", "Audiobook quality", "LibriVox records every chapter at both; speech "
+                    "sounds the same at 64 kbps.", list(Q.AUDIOBOOK_QUALITIES.values()),
+                    Q.AUDIOBOOK_QUALITIES.get(u.audiobook_quality, Q.AUDIOBOOK_QUALITIES["standard"]))
+        self._combo("video_quality", "Video podcast quality", "When watching a video podcast. Windows' video "
+                    "player needs picture and sound in one stream, which YouTube may only offer up to 360p for some "
+                    "videos; the best available up to your choice is used.", list(Q.VIDEO_QUALITIES.values()),
+                    Q.VIDEO_QUALITIES.get(u.video_quality, Q.VIDEO_QUALITIES["auto"]))
         folder_row = QHBoxLayout()
         box = QVBoxLayout()
         box.setSpacing(2)
@@ -245,7 +258,8 @@ class SettingsPage(QWidget):
         self._text(f"Sevbify {info.get('version', '')}. Built with AI help. Not affiliated with Spotify, YouTube, "
                    "Bandcamp, Apple, Deezer or Sevby LLC.")
         self._toggle("auto_update_check", "Check for updates automatically",
-                     "Once a day, when online: tells you when a new Sevbify is out and when yt-dlp needs updating.",
+                     "Once a day, when online: tells you when a new Sevbify is out, and keeps yt-dlp (what finds and "
+                     "downloads songs on YouTube) up to date with the official, checksum-checked release.",
                      getattr(u, "auto_update_check", True))
         row = QHBoxLayout()
         check = QPushButton("Check for Sevbify updates")
@@ -467,6 +481,13 @@ class SettingsPage(QWidget):
             self._emit({key: 0 if text == "Off" else int(text.split()[0])})
         elif key == "startup":
             self._emit({key: text.lower()})
+        elif key in ("download_quality", "audiobook_quality", "video_quality"):
+            from core import quality as Q
+            table = {"download_quality": {v[0]: k for k, v in Q.SONG_QUALITIES.items()},
+                     "audiobook_quality": {v: k for k, v in Q.AUDIOBOOK_QUALITIES.items()},
+                     "video_quality": {v: k for k, v in Q.VIDEO_QUALITIES.items()}}[key]
+            if text in table:
+                self._emit({key: table[text]})
         elif key == "proxy_mode":
             self._emit({key: {"Automatic (system settings)": "auto", "No proxy": "none", "HTTP proxy": "http"}[text]})
         else:

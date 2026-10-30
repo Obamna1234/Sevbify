@@ -1149,23 +1149,29 @@ def _ensure_cover(out_dir: str, safe: str, info: dict | None, log) -> None:
                     pass
 
 
+# Set by Sevbify: which audio to keep when saving the original (smaller files: a lower-bitrate original), and
+# the MP3 quality when converting (yt-dlp/ffmpeg: a bitrate like "160" or a VBR level "0"-"9").
+AUDIO_FORMAT_ORIGINAL = "bestaudio[ext=m4a]/bestaudio/best"
+MP3_QUALITY = "0"
+
+
 def _run_ytdlp_module(
     target: str, out_dir: str, safe: str, cookies: bool, embed: bool = True, original: bool = False
 ) -> tuple[bool, str]:
     opts = {
-        "format": "bestaudio[ext=m4a]/bestaudio/best" if original else "bestaudio/best",
+        "format": AUDIO_FORMAT_ORIGINAL if original else "bestaudio/best",
         "noplaylist": True,
         "outtmpl": os.path.join(out_dir, safe.replace("%", "%%") + ".%(ext)s"),
         "writethumbnail": embed,
         "postprocessors": [] if original else (
             [
-                {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "0"},
+                {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": MP3_QUALITY},
                 {"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"},
                 {"key": "FFmpegMetadata", "add_metadata": True},
                 {"key": "EmbedThumbnail"},
             ]
             if embed
-            else [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "0"}]
+            else [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": MP3_QUALITY}]
         ),
         "quiet": True,
         "no_warnings": True,

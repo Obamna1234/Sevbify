@@ -25,6 +25,11 @@ data class Settings(
     var lastfmKey: String = "",
     var libraryView: String = "list",
     var librarySort: String = "recents",
+    var songQuality: String = "best",          // core/quality.py: "best" (original) | "small" (data saver)
+    var bookQuality: String = "standard",      // audiobooks: "standard" (64 kbps) | "high" (128 kbps)
+    var videoQuality: String = "auto",         // video podcasts: "auto" | "360" | "480" | "720" | "1080"
+    var autoUpdateYtdlp: Boolean = true,       // keep yt-dlp up to date (official release, checksum-checked)
+    var lastYtdlpCheck: Long = 0,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -32,6 +37,8 @@ data class Settings(
         put("music_folders", JSONArray(musicFolders)); put("notice", onlineNoticeAccepted)
         put("shuffle", shuffle); put("repeat", repeat); put("lastfm", lastfmKey)
         put("library_view", libraryView); put("library_sort", librarySort)
+        put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
+        put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck)
     }
 
     companion object {
@@ -47,6 +54,10 @@ data class Settings(
             s.onlineNoticeAccepted = o.optBoolean("notice"); s.shuffle = o.optBoolean("shuffle")
             s.repeat = o.optString("repeat", "off"); s.lastfmKey = o.optString("lastfm")
             s.libraryView = o.optString("library_view", "list"); s.librarySort = o.optString("library_sort", "recents")
+            s.songQuality = o.optString("song_quality", "best").takeIf { it in listOf("best", "small") } ?: "best"
+            s.bookQuality = o.optString("book_quality", "standard").takeIf { it in listOf("standard", "high") } ?: "standard"
+            s.videoQuality = o.optString("video_quality", "auto").takeIf { it in listOf("auto", "360", "480", "720", "1080") } ?: "auto"
+            s.autoUpdateYtdlp = o.optBoolean("auto_update_ytdlp", true); s.lastYtdlpCheck = o.optLong("last_ytdlp_check")
             return s
         }
     }

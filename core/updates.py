@@ -31,6 +31,45 @@ def check_ytdlp(latest_tag=None):
     return {"current": current, "latest": latest, "newer": newer}
 
 
+def _get(url, timeout=60):
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": "Sevbify"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def download_verified_ytdlp(tag, fetch=None, dest_dir=None):
+    """Download the official yt-dlp release file and check it against the SHA-256 that yt-dlp publishes with
+    the release (SHA2-256SUMS) before it's ever used. A file that doesn't match is thrown away.
+    Returns (ok, message)."""
+    import hashlib
+    import os
+    import re
+    fetch = fetch or _get
+    if not re.fullmatch(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?", tag or ""):
+        return False, "GitHub gave an unexpected yt-dlp version name."
+    base = f"https://github.com/yt-dlp/yt-dlp/releases/download/{tag}/"
+    try:
+        sums = fetch(base + "SHA2-256SUMS").decode("utf-8", "replace")
+        expected = next((line.split()[0].lower() for line in sums.splitlines()
+                         if line.split()[-1:] == ["yt-dlp"]), "")
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            return False, "Couldn't find yt-dlp's checksum, so the update wasn't installed."
+        data = fetch(base + "yt-dlp")
+    except Exception as e:
+        return False, f"Couldn't download the update ({e})."
+    if hashlib.sha256(data).hexdigest() != expected:
+        return False, "The downloaded yt-dlp didn't match its official checksum, so it was thrown away."
+    e = downloader.engine()
+    folder = dest_dir or str(e.YTDLP_UPDATE_DIR)
+    os.makedirs(folder, exist_ok=True)
+    tmp = os.path.join(folder, "yt-dlp.part")
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, os.path.join(folder, "yt-dlp"))
+    return True, "ok"
+
+
 def update_ytdlp(download=None):
     """Download the newest yt-dlp if it's newer. Returns (changed, message)."""
     info = check_ytdlp()
@@ -38,7 +77,7 @@ def update_ytdlp(download=None):
         return False, "Couldn't reach GitHub to check yt-dlp. Try again later."
     if not info["newer"]:
         return False, f"yt-dlp {info['current']} is the newest version."
-    ok, msg = (download or downloader.engine().download_ytdlp_update)(info["latest"])
+    ok, msg = (download or download_verified_ytdlp)(info["latest"])
     if not ok:
         return False, msg
     return True, f"yt-dlp {info['latest']} downloaded. Restart Sevbify to use it."

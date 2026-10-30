@@ -468,3 +468,23 @@ def test_manager_waits_instead_of_failing_when_the_internet_drops(qapp, tmp_path
     assert wait_until(qapp, lambda: len(done) == 2, 10)
     m.wait()
     assert calls.count("Artist - a") == 2 and m.failed_count() == 0
+
+
+def test_failed_download_leftovers_are_removed_but_songs_kept(tmp_path):
+    from core import downloader
+    for name in ("Band - Song.mp3.part", "Band - Song.webm.part", "Band - Song.jpg", "Band - Song.f251.webm.ytdl",
+                 "Band - Song.m4a", "Band - Other.part", "Band - Song.webm"):
+        (tmp_path / name).write_text("x")
+    downloader.cleanup_partial(str(tmp_path), "Band - Song")
+    assert sorted(p.name for p in tmp_path.iterdir() if p.is_file()) == ["Band - Other.part", "Band - Song.m4a", "Band - Song.webm"]
+
+
+def test_quality_settings_reach_the_engine():
+    from core import downloader, quality
+    e = downloader.engine()
+    quality.apply_to_engine(e, "small")
+    assert e.QUALITY["best"] and "abr<=72" in e.AUDIO_FORMAT_ORIGINAL
+    quality.apply_to_engine(e, "mp3")
+    assert not e.QUALITY["best"] and e.MP3_QUALITY == "160"
+    quality.apply_to_engine(e, "nonsense")
+    assert e.QUALITY["best"] and "abr<=72" not in e.AUDIO_FORMAT_ORIGINAL

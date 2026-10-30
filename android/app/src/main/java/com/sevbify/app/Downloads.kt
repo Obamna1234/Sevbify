@@ -81,6 +81,7 @@ object Downloads {
             ContextCompat.startForegroundService(app, Intent(app, DownloadService::class.java))
         } catch (e: Exception) { /* Android refused (app in the background): downloads still run while open */ }
         worker = app.scope.launch {
+            cleanIncoming(app)
             while (true) {
                 if (paused) { delay(500); continue }
                 val key = states.entries.firstOrNull { it.value == State.QUEUED }?.key ?: break
@@ -118,9 +119,18 @@ object Downloads {
 
     private fun stopService() = DownloadService.requestStop()
 
+    /** Half-finished files from downloads that failed or were stopped (they're never visible, but take space). */
+    private fun cleanIncoming(context: Context) {
+        val work = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "incoming")
+        val old = System.currentTimeMillis() - 60 * 60 * 1000
+        work.walkBottomUp().forEach { f ->
+            if (f != work && f.lastModified() < old) f.delete()     // folders only go when they're empty
+        }
+    }
+
     private suspend fun downloadSong(context: Context, t: Track) {
         val work = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "incoming").apply { mkdirs() }
-        val res = Bridge.obj("download_song", t.artist, t.title, t.durationMs, work.absolutePath)
+        val res = Bridge.obj("download_song", t.artist, t.title, t.durationMs, work.absolutePath, Library.settings.songQuality)
         val file = File(res.getString("path"))
         val saved = publish(context, file, t)
         Library.offline[t.matchKey] = saved
@@ -131,7 +141,7 @@ object Downloads {
         val dir = File(context.getExternalFilesDir(null), if (t.source == "audiobook") "Audiobooks" else "Podcasts").apply { mkdirs() }
         val safe = safeName(t.album.ifEmpty { t.artist } + " - " + t.title, "Episode").take(120)
         val path = if (t.source == "youtube") {
-            Bridge.call("download_youtube", t.pageUrl, File(dir, safe).absolutePath) as String
+            Bridge.call("download_youtube", t.pageUrl, File(dir, safe).absolutePath, Library.settings.songQuality) as String
         } else {
             // The extension of the file in the link ("…/episode.m4a?x=1" → m4a); mp3 when there isn't a clear one.
             val last = t.downloadUrl.ifEmpty { t.streamUrl }.substringBefore("?").substringBefore("#").substringAfterLast('/')

@@ -67,6 +67,11 @@ fun AppRoot() {
     }
     BackHandler(enabled = true) { if (!Nav.back()) Nav.tab = Tab.HOME }
 
+    if (com.sevbify.app.VideoPlayer.inPip) {
+        // The picture-in-picture mini player: only the video.
+        Box(Modifier.fillMaxSize().background(C.Black)) { VideoSurface(showControls = false) }
+        return
+    }
     Box(Modifier.fillMaxSize().background(C.Black)) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth().background(C.Bg)) { CurrentScreen(Nav.top) }
@@ -75,6 +80,7 @@ fun AppRoot() {
         AnimatedVisibility(Nav.nowPlayingOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
             NowPlayingScreen()
         }
+        if (Player.videoMode && !Nav.nowPlayingOpen) FloatingVideo()    // keeps playing while you browse
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         Sheets()
         Dialogs()

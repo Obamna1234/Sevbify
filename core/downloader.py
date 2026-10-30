@@ -32,7 +32,33 @@ def engine():
         except Exception as exc:  # never stop the app over this; check_tools() will report it
             print(f"Could not set up the bundled ffmpeg: {exc}")
         _respect_cookie_setting(_engine)
+        _ensure_js_runtime()
     return _engine
+
+
+def _ensure_js_runtime():
+    """YouTube now needs a JavaScript engine to unlock its audio (yt-dlp uses Deno for this). The Windows app
+    ships Deno next to Sevbify.exe: put that folder on PATH, where yt-dlp looks for it."""
+    import sys
+    base = getattr(sys, "_MEIPASS", "")
+    exe = "deno.exe" if os.name == "nt" else "deno"
+    if base and os.path.isfile(os.path.join(base, exe)) and base not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = base + os.pathsep + os.environ.get("PATH", "")
+
+
+def js_runtime():
+    """The JavaScript engine yt-dlp will use for YouTube ("deno 2.x"), or "" when there is none."""
+    import shutil
+    import subprocess
+    path = shutil.which("deno")
+    if not path:
+        return ""
+    try:
+        out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=15,
+                             creationflags=0x08000000 if os.name == "nt" else 0).stdout
+        return (out.splitlines()[0] if out else "deno").strip()
+    except Exception:
+        return ""
 
 
 def _respect_cookie_setting(e):
@@ -145,6 +171,23 @@ class Controls:
         return engine().PAUSE_EVENT.is_set()
 
 
+def cleanup_partial(out_dir: str, line: str) -> None:
+    """Remove what a failed or stopped download of `line` left in `out_dir`: half-downloaded parts, the not yet
+    thumbnails. Finished songs (.mp3 / .m4a / .opus / .webm audio) are never touched."""
+    safe = engine().sanitize_filename(line)
+    try:
+        names = os.listdir(out_dir)
+    except OSError:
+        return
+    for name in names:
+        low = name.lower()
+        if name.startswith(safe + ".") and low.endswith((".part", ".ytdl", ".temp", ".jpg", ".jpeg", ".webp", ".png")):
+            try:
+                os.remove(os.path.join(out_dir, name))
+            except OSError:
+                pass
+
+
 def run_download(
     songs: list,
     out_dir: str,
@@ -155,6 +198,7 @@ def run_download(
     on_step: Callable[[str], None] = lambda _t: None,
     on_result: Callable[[int, int, str, dict], None] = lambda _i, _n, _s, _r: None,
     process: Optional[Callable] = None,
+    quality: str = "best",
 ) -> dict:
     """Download every song in `songs` into `out_dir`, one after another.
 
@@ -170,8 +214,8 @@ def run_download(
         "use_yt": source != SOURCE_BANDCAMP,
         "free": False,
     }
-    e.QUALITY["best"] = False       # Sevbify saves plain 128 kbps MP3s
-    e.QUALITY["free"] = False
+    from core import quality as _quality
+    _quality.apply_to_engine(e, quality)          # Settings -> Download quality
     e.HQ_SONGS.clear()
 
     state: dict = {}

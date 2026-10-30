@@ -1,6 +1,8 @@
 package com.sevbify.app.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -78,13 +80,34 @@ fun SettingsScreen() {
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text("Download and stream from", style = MaterialTheme.typography.bodyLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Bandcamp + YouTube", "Bandcamp only", "YouTube only").forEach { o ->
                         Chip(o, s.source == o) {
                             s.source = o; Library.changed(); scope.launch { try { Bridge.call("set_source", o) } catch (_: Exception) {} }
                         }
                     }
                 }
+            }
+        }
+        item {
+            Choice("Download quality",
+                   if (s.songQuality == "small") "Data saver: a lower-bitrate original, about half the size. Slightly less " +
+                       "detail with good headphones."
+                   else "Best: the original audio with nothing lost (.m4a). A song can't be better than its source " +
+                       "(YouTube ~128-160 kbps, Bandcamp 128 kbps), so this is also the smallest full-quality file. " +
+                       "Plays in Samsung Music, VLC and on your PC.",
+                   listOf("best" to "Best quality", "small" to "Data saver"), s.songQuality) { s.songQuality = it; Library.changed() }
+        }
+        item {
+            Choice("Audiobook quality", "LibriVox records every chapter at both; speech sounds the same at 64 kbps.",
+                   listOf("standard" to "Standard (64 kbps)", "high" to "High (128 kbps)"), s.bookQuality) {
+                s.bookQuality = it; Library.changed()
+            }
+        }
+        item {
+            Choice("Video podcast quality", "When watching. Higher uses more data; the best YouTube has up to your choice is used.",
+                   listOf("auto" to "Auto", "360" to "360p", "480" to "480p", "720" to "720p", "1080" to "1080p"), s.videoQuality) {
+                s.videoQuality = it; Library.changed()
             }
         }
         item {
@@ -127,7 +150,36 @@ fun SettingsScreen() {
                 Text(update, style = MaterialTheme.typography.bodySmall)
             }
         }
+        item {
+            Toggle("Keep yt-dlp up to date", "yt-dlp is what finds and downloads songs on YouTube; YouTube changes often. " +
+                   "Once a week, when online, the newest official release is fetched and checked against its published " +
+                   "checksum. Used from the next start.", s.autoUpdateYtdlp) { s.autoUpdateYtdlp = it; Library.changed() }
+        }
+        item {
+            var ytdlp by remember { mutableStateOf("") }
+            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = {
+                    ytdlp = "Checking…"
+                    scope.launch {
+                        ytdlp = try { Bridge.obj("update_ytdlp").optString("message") } catch (e: Exception) { "Couldn't update: ${e.message}" }
+                    }
+                }) { Text("Update yt-dlp now", color = C.Text) }
+                Spacer(Modifier.width(12.dp))
+                Text(ytdlp, style = MaterialTheme.typography.bodySmall)
+            }
+        }
         item { Gap(32.dp) }
+    }
+}
+
+@Composable
+private fun Choice(name: String, desc: String, options: List<Pair<String, String>>, value: String, onPick: (String) -> Unit) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(name, style = MaterialTheme.typography.bodyLarge)
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { (key, label) -> Chip(label, value == key) { onPick(key) } }
+        }
+        if (desc.isNotEmpty()) Text(desc, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

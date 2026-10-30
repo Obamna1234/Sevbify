@@ -56,3 +56,17 @@ def test_bridge_errors_are_readable(bridge):
         pass
     out = json.loads(bridge._fail(E("ERROR: [youtube] abc: Sign in to confirm you\u2019re not a bot. Use --cookies")))
     assert out["error"].startswith("YouTube is blocking") and "--cookies" not in out["error"]
+
+
+def test_bridge_book_chapters_and_quality(bridge, monkeypatch):
+    from core import audiobooks
+    from core.online.models import OnlineTrack
+    seen = {}
+
+    def fake(net, book, quality="standard"):
+        seen["quality"] = quality
+        return book, [OnlineTrack("Chapter 1", "Author", source="audiobook", stream_url="https://archive.org/a.mp3")]
+    monkeypatch.setattr(audiobooks, "chapters", fake)
+    book = audiobooks.Book(identifier="x", title="A Book")
+    got = call(bridge, "book_chapters", json.dumps(book.to_dict()), "high")
+    assert [t["title"] for t in got] == ["Chapter 1"] and seen["quality"] == "high"

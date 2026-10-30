@@ -55,3 +55,21 @@ def test_settings_buttons(window, qapp, tmp_path, monkeypatch):
     assert wait_until(qapp, lambda: "9.0.0 is available" in window.settings_page.app_update_label.text())
     assert wait_until(qapp, lambda: "yt-dlp 2 is available" in window.settings_page.ytdlp_label.text())
     assert window.user_data.last_update_check > 0
+
+
+def test_ytdlp_update_is_checked_against_the_official_checksum(tmp_path):
+    import hashlib
+    from core import updates
+    good = b"PK\x03\x04 pretend yt-dlp"
+    sums = f"{hashlib.sha256(good).hexdigest()}  yt-dlp\n{'0' * 64}  yt-dlp.exe\n".encode()
+
+    def fetch(body):
+        return lambda url: sums if url.endswith("SHA2-256SUMS") else body
+
+    ok, msg = updates.download_verified_ytdlp("2026.10.26", fetch=fetch(good), dest_dir=str(tmp_path))
+    assert ok and (tmp_path / "yt-dlp").read_bytes() == good
+    (tmp_path / "yt-dlp").unlink()
+    ok, msg = updates.download_verified_ytdlp("2026.10.26", fetch=fetch(b"tampered"), dest_dir=str(tmp_path))
+    assert not ok and "checksum" in msg and not (tmp_path / "yt-dlp").exists()
+    ok, msg = updates.download_verified_ytdlp("../../evil", fetch=fetch(good), dest_dir=str(tmp_path))
+    assert not ok

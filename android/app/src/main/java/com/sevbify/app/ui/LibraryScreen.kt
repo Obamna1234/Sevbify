@@ -71,8 +71,7 @@ fun LibraryScreen() {
         item {
             Row(Modifier.statusBarsPadding().padding(start = 16.dp, end = 4.dp, top = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(32.dp).clip(CircleShape).background(C.Green).clickable { Nav.go(Screen.Settings) },
-                    contentAlignment = Alignment.Center) { Text("S", color = C.Black, fontWeight = FontWeight.ExtraBold) }
+                SettingsBadge()
                 Spacer(Modifier.width(12.dp))
                 Text("Your Library", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = { filter = if (filter == null) "" else null }) { Icon(Icons.Filled.Search, "Search Your Library") }

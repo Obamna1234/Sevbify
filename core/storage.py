@@ -83,6 +83,9 @@ class UserData:
     stream_full: bool = True                      # Settings: play full songs you don't have (else previews)
     download_folder: str = ""                     # Settings: where downloads go ("" = automatic)
     use_browser_cookies: bool = False             # Settings: let YouTube downloads use Chrome's sign-in
+    download_quality: str = "best"                # Settings: "best" (original) | "mp3" | "small" (core/quality)
+    audiobook_quality: str = "standard"           # Settings: "standard" (64 kbps) | "high" (128 kbps)
+    video_quality: str = "auto"                   # Settings: video podcasts "auto" | "360" | "480" | "720" | "1080"
     playlist_files: bool = True                   # Settings: keep .m3u8 playlist files next to downloads
     folders: List[str] = field(default_factory=list)   # Your Library folders, in order
     library_sort: str = "recents"                 # "recents" | "added" | "alpha"
@@ -125,6 +128,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
                        "canvas_enabled")
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
+    "download_quality", "audiobook_quality", "video_quality",
     "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders")
@@ -209,6 +213,9 @@ class Storage:
                 "stream_full": bool(data.stream_full),
                 "download_folder": to_stored_path(data.download_folder) if data.download_folder else "",
                 "use_browser_cookies": bool(data.use_browser_cookies),
+                "download_quality": data.download_quality,
+                "audiobook_quality": data.audiobook_quality,
+                "video_quality": data.video_quality,
                 "playlist_files": bool(data.playlist_files),
                 "folders": list(data.folders),
                 "library_sort": data.library_sort,
@@ -286,6 +293,12 @@ class Storage:
         folder = settings.get("download_folder") or ""
         data.download_folder = from_stored_path(folder) if folder else ""
         data.use_browser_cookies = bool(settings.get("use_browser_cookies", False))
+        from core import quality as _q
+        data.download_quality = _q.song_quality(settings.get("download_quality"))
+        data.audiobook_quality = settings.get("audiobook_quality") if settings.get("audiobook_quality") in \
+            _q.AUDIOBOOK_QUALITIES else _q.DEFAULT_AUDIOBOOK_QUALITY
+        data.video_quality = str(settings.get("video_quality")) if str(settings.get("video_quality")) in \
+            _q.VIDEO_QUALITIES else _q.DEFAULT_VIDEO_QUALITY
         data.playlist_files = bool(settings.get("playlist_files", True))
         data.folders = [str(f) for f in settings.get("folders", []) or [] if str(f).strip()]
         data.library_sort = settings.get("library_sort") if settings.get("library_sort") in ("recents", "added", "alpha") \

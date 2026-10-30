@@ -122,6 +122,38 @@ def format_duration(ms):
 
 
 # --- Apple directory ----------------------------------------------------------------------------------------
+def _norm(text):
+    """Lower case, no accents or punctuation, "&" as "and": for comparing show names."""
+    import unicodedata
+    text = unicodedata.normalize("NFKD", (text or "").replace("&", " and ")).encode("ascii", "ignore").decode()
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def match_score(term, title, author=""):
+    """How well a show matches what was typed: 4 exact name, 3 name starts with it, 2 every word in the name,
+    1 every word in the name or host, 0 otherwise."""
+    q, t, a = _norm(term), _norm(title), _norm(author)
+    t_bare = re.sub(r"\b(the|podcast|show)\b", " ", t)
+    q_bare = re.sub(r"\b(the|podcast|show)\b", " ", q)
+    if not q:
+        return 0
+    if q == t or " ".join(q_bare.split()) == " ".join(t_bare.split()):
+        return 4
+    if t.startswith(q):
+        return 3
+    words = q.split()
+    if all(w in t.split() for w in words):
+        return 2
+    if all(w in (t + " " + a).split() for w in words):
+        return 1
+    return 0
+
+
+def rank_shows(term, shows):
+    """Best matches first (an exact name match always on top); Apple's order is kept within each group."""
+    return [s for _i, s in sorted(enumerate(shows), key=lambda p: (-match_score(term, p[1].title, p[1].author), p[0]))]
+
+
 def search(net, term, limit=25, country="us"):
     data = net.get_json("https://itunes.apple.com/search",
                         {"media": "podcast", "entity": "podcast", "term": term, "limit": limit, "country": country},
@@ -133,7 +165,43 @@ def search(net, term, limit=25, country="us"):
         out.append(Show(title=r.get("collectionName") or r.get("trackName") or "", author=r.get("artistName") or "",
                         feed_url=r["feedUrl"], image_url=r.get("artworkUrl600") or r.get("artworkUrl100") or "",
                         apple_id=str(r.get("collectionId") or ""), genre=r.get("primaryGenreName") or ""))
-    return out
+    return rank_shows(term, out)
+
+
+def find_youtube_channel(title, author="", extract=None):
+    """The show's own YouTube channel (its video version), or None. Searches YouTube for the show and only
+    accepts a channel whose name is the show's name (or its host's), so an unrelated channel isn't picked.
+    Returns a Show of kind "youtube". `extract` replaces yt-dlp in tests."""
+    if extract is None:
+        from core import downloader
+        e = downloader.engine()
+        if e.yt_dlp is None:
+            return None
+
+        def extract(query):
+            opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+                    "skip_download": True, "socket_timeout": 20}
+            with e.yt_dlp.YoutubeDL(opts) as ydl:
+                return ydl.extract_info(query, download=False)
+    info = extract(f"ytsearch15:{title} podcast") or {}
+    wanted = {_norm(title), re.sub(r"\b(the|podcast|show)\b", " ", _norm(title)).strip()}
+    if author:
+        wanted.add(_norm(author))
+    wanted = {" ".join(w.split()) for w in wanted if w}
+    votes = {}
+    for entry in info.get("entries") or []:
+        name = entry.get("channel") or entry.get("uploader") or ""
+        url = entry.get("channel_url") or entry.get("uploader_url") or ""
+        if not url and entry.get("channel_id"):
+            url = f"https://www.youtube.com/channel/{entry['channel_id']}"
+        n = " ".join(re.sub(r"\b(the|podcast|show|official|tv)\b", " ", _norm(name)).split())
+        if url and is_web_url(url) and (n in wanted or _norm(name) in wanted):
+            v = votes.setdefault(url, [0, name, bool(entry.get("channel_is_verified"))])
+            v[0] += 1
+    if not votes:
+        return None
+    url, (_count, name, verified) = max(votes.items(), key=lambda kv: (kv[1][0], kv[1][2]))
+    return Show(title=name, author=name, feed_url=url, kind="youtube", link=url, verified=verified, channel=name)
 
 
 def top_shows(net, country="us", limit=25):
@@ -319,16 +387,45 @@ def _ydl(extra):
 VIDEO_FORMAT = "best[ext=mp4][vcodec!=none][acodec!=none][height<=720]/best[vcodec!=none][acodec!=none]"
 
 
-def youtube_stream(page_url, video=False, extract=None):
+def video_format(max_height=720):
+    """One link with picture and sound (what Windows' video player needs), at most `max_height` lines."""
+    h = int(max_height or 720)
+    return (f"best[vcodec!=none][acodec!=none][height<={h}][ext=mp4]/best[vcodec!=none][acodec!=none][height<={h}]/"
+            "best[vcodec!=none][acodec!=none]")
+
+
+def youtube_stream(page_url, video=False, extract=None, max_height=720):
     """(direct link, HTTP headers) for an episode's audio, or for its video with sound (video=True)."""
     if extract is None:
         def extract(url):
-            with _ydl({"format": VIDEO_FORMAT if video else "bestaudio/best", "skip_download": True}) as ydl:
+            fmt = video_format(max_height) if video else "bestaudio/best"
+            with _ydl({"format": fmt, "skip_download": True}) as ydl:
                 return ydl.extract_info(url, download=False)
     info = extract(page_url) or {}
     if not info.get("url"):
         raise ValueError("YouTube didn't give a playable link for this video.")
     return info["url"], dict(info.get("http_headers") or {})
+
+
+def youtube_video_streams(page_url, max_height=720, extract=None):
+    """Separate video and audio links (YouTube's HD needs both), for players that can join them (the Android
+    app). Returns {"video", "audio", "headers", "height"}; "audio" is "" when the one link has both."""
+    h = int(max_height or 720)
+    if extract is None:
+        def extract(url):
+            fmt = (f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]/bv*[height<={h}]+ba/"
+                   f"b[height<={h}]/b")
+            with _ydl({"format": fmt, "skip_download": True}) as ydl:
+                return ydl.extract_info(url, download=False)
+    info = extract(page_url) or {}
+    parts = info.get("requested_formats") or []
+    headers = dict(info.get("http_headers") or {})
+    if len(parts) >= 2 and parts[0].get("url") and parts[1].get("url"):
+        return {"video": parts[0]["url"], "audio": parts[1]["url"], "headers": headers,
+                "height": int(parts[0].get("height") or 0)}
+    if not info.get("url"):
+        raise ValueError("YouTube didn't give a playable link for this video.")
+    return {"video": info["url"], "audio": "", "headers": headers, "height": int(info.get("height") or 0)}
 
 
 def download_youtube_audio(page_url, out_path_without_ext):

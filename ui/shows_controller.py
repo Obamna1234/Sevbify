@@ -69,9 +69,11 @@ class ShowsMixin:
         self.show_page.download_all_clicked.connect(self._download_whole_show)
         self.show_page.sort_changed.connect(self._sort_show)
         self.genre_page = GenrePage()
+        self.show_page.video_clicked.connect(self.open_video_version)
         self.video_page = VideoPage()
         self.video_page.audio_only_requested.connect(self._video_to_audio)
         self.video_page.error.connect(lambda msg: self.show_status(f"⚠ Video: {msg}", 10000))
+        self.video_page.show_requested.connect(self._show_video_page)
         self._video_song = None
         for page in (self.podcasts_page, self.audiobooks_page, self.show_page, self.video_page, self.genre_page):
             page.setObjectName("page")
@@ -82,7 +84,8 @@ class ShowsMixin:
 
     def _page_changed(self, _index):
         # Leaving the video: stop it, remember where it was.
-        if self.stack.currentWidget() is not self.video_page and self._video_song is not None:
+        if self.stack.currentWidget() is not self.video_page and self._video_song is not None \
+                and not self.video_page.popped_out:            # the mini player keeps it playing elsewhere
             self._remember_position(self._video_song, self.video_page.position())
             self.video_page.stop()
             self._video_song = None
@@ -212,6 +215,27 @@ class ShowsMixin:
         else:
             offline_episodes("You're offline.")
 
+    def open_video_version(self):
+        """A podcast's video version: find the show's own YouTube channel and open it (episodes as videos)."""
+        ctx = self._show_ctx
+        if not ctx or ctx["kind"] != "show":
+            return
+        show = ctx["obj"]
+        if not self.online_enabled:
+            self.show_status("⚠ Finding the video version needs the internet.", 6000)
+            return
+        self.show_status(f"Looking for {show.title} on YouTube…", kind="info", timeout_ms=10000)
+
+        def done(channel):
+            if channel is None:
+                self.show_status(f"Couldn't find {show.title}'s own YouTube channel. If it has one, paste its link "
+                                 "in Podcasts.", 10000)
+                return
+            self.show_status(f"Opening {channel.title} on YouTube", kind="info", timeout_ms=4000)
+            self.open_show(channel)
+        self.online_call(podcasts.find_youtube_channel, show.title, show.author, on_done=done,
+                         on_error=lambda e: self.show_status(f"⚠ YouTube search didn't work: {e}", 10000))
+
     def open_book(self, book):
         self._show_ctx = dict(kind="book", obj=book, items=[], episodes=[])
         self._render_show(loading=True)
@@ -224,7 +248,7 @@ class ShowsMixin:
                 self._show_ctx.update(obj=fresh, items=[RemoteSong(t) for t in tracks])
                 self._render_show()
         if self.online_enabled:
-            self.online_call(audiobooks.chapters, self.net, book, on_done=done,
+            self.online_call(audiobooks.chapters, self.net, book, self.user_data.audiobook_quality, on_done=done,
                              on_error=lambda e: self._render_show(message=f"Couldn't load this book: {e}"))
         else:
             self._render_show(message="You're offline or online features are off.")
@@ -273,7 +297,7 @@ class ShowsMixin:
                              top_colour="#2d4a5a" if kind != "book" else "#5a3d2d",
                              can_download_all=kind == "book" and bool(rows), follow_text=follow_text, message=message,
                              sort=ctx.get("sort", "newest") if kind != "book" and len(rows) > 1 else None,
-                             count_text=count)
+                             count_text=count, video_button=kind != "book" and obj.kind != "youtube")
         self._with_image(image, self.show_page.set_cover)
         if kind == "book":
             return
@@ -561,8 +585,18 @@ class ShowsMixin:
             self.stack.setCurrentWidget(self.video_page)
             self._set_nav("video", item_key(song))
             self.video_page.play(res[0], song.title, saved["ms"] if saved else 0, self.user_data.volume)
-        self.online_call(podcasts.youtube_stream, song.track.page_url, True, on_done=done,
+        from core.quality import video_height
+        height = video_height(self.user_data.video_quality)
+        self.online_call(lambda: podcasts.youtube_stream(song.track.page_url, True, max_height=height), on_done=done,
                          on_error=lambda e: self.show_status(f"⚠ Couldn't load the video: {e}", 10000))
+
+    def _show_video_page(self):
+        if self._video_song is None:
+            return
+        self.stack.setCurrentWidget(self.video_page)
+        self._set_nav("video", item_key(self._video_song))
+        self.raise_()
+        self.activateWindow()
 
     def _video_to_audio(self, position_ms):
         song = self._video_song

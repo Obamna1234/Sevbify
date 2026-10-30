@@ -15,11 +15,26 @@ def can_create():
     return os.name == "nt" and getattr(sys, "frozen", False)
 
 
+def _desktop_folder(home):
+    """The real Desktop folder: on many PCs OneDrive moves it to OneDrive\\Desktop, so ask Windows."""
+    if os.name == "nt":
+        try:
+            import winreg
+            key = r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as k:
+                value = os.path.expandvars(winreg.QueryValueEx(k, "Desktop")[0])
+            if value and os.path.isdir(value):
+                return value
+        except OSError:
+            pass
+    return os.path.join(home, "Desktop")
+
+
 def shortcut_paths():
     home = os.path.expanduser("~")
     appdata = os.environ.get("APPDATA", os.path.join(home, "AppData", "Roaming"))
     return [
-        os.path.join(home, "Desktop", NAME + ".lnk"),
+        os.path.join(_desktop_folder(home), NAME + ".lnk"),
         os.path.join(appdata, "Microsoft", "Windows", "Start Menu", "Programs", NAME + ".lnk"),
     ]
 

@@ -181,13 +181,13 @@ def resolve(artist, title, duration_ms=0):
 
 
 @_call
-def download_song(artist, title, duration_ms, folder):
+def download_song(artist, title, duration_ms, folder, quality="best"):
     from core import streamer, downloader
     out_dir = os.path.join(folder, downloader.artist_folder(artist))
     os.makedirs(out_dir, exist_ok=True)
     base = downloader.song_line(artist, title).replace("/", "-").replace("\\", "-")
     path, source = streamer.download_full_song(artist, title, int(duration_ms or 0), os.path.join(out_dir, base),
-                                               _state["source"])
+                                               _state["source"], quality=quality)
     return {"path": path, "source": source}
 
 
@@ -271,10 +271,28 @@ def youtube_stream(page_url, video=False):
 
 
 @_call
-def download_youtube(page_url, out_without_ext):
+def download_youtube(page_url, out_without_ext, quality="best"):
     from core import streamer
     os.makedirs(os.path.dirname(out_without_ext), exist_ok=True)
-    return streamer.download_original_audio(page_url, out_without_ext)
+    try:
+        return streamer.download_original_audio(page_url, out_without_ext, quality=quality)
+    finally:
+        streamer.cleanup_leftovers(out_without_ext)
+
+
+@_call
+def youtube_video(page_url, quality="auto"):
+    """Video + audio links for watching a video podcast at the chosen quality (Settings)."""
+    from core import podcasts, quality as q
+    return podcasts.youtube_video_streams(page_url, q.video_height(quality))
+
+
+@_call
+def youtube_channel_for(title, author=""):
+    """A podcast's own YouTube channel (its video version), or None."""
+    from core import podcasts
+    show = podcasts.find_youtube_channel(title, author)
+    return _show(show) if show else None
 
 
 # --- audiobooks ---------------------------------------------------------------------------------------------
@@ -287,10 +305,11 @@ def books(kind="popular", query=""):
 
 
 @_call
-def book_chapters(book_json):
+def book_chapters(book_json, quality="standard"):
     from core import audiobooks
     book = audiobooks.Book.from_dict(json.loads(book_json))
-    return _tracks(audiobooks.chapters(_net(), book))
+    _book_details, tracks = audiobooks.chapters(_net(), book, quality)     # (book, [chapters])
+    return _tracks(tracks)
 
 
 # --- updates ------------------------------------------------------------------------------------------------
@@ -298,6 +317,21 @@ def book_chapters(book_json):
 def check_updates(current):
     from core import updates
     return updates.check_app(_net(), current)
+
+
+@_call
+def update_ytdlp():
+    """Fetch the newest official yt-dlp (checksum-checked); it's used from the next start."""
+    from core import updates
+    changed, message = updates.update_ytdlp()
+    return {"changed": changed, "message": message}
+
+
+@_call
+def ytdlp_info():
+    from core import downloader
+    e = downloader.engine()
+    return {"version": e.ytdlp_version(), "age_days": e.ytdlp_age_days(), "updated_copy": bool(e.YTDLP_ACTIVE)}
 
 
 @_call

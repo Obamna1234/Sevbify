@@ -63,10 +63,7 @@ fun HomeScreen() {
         item {
             Row(Modifier.statusBarsPadding().padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(32.dp).clip(CircleShape).background(C.Green).clickable { Nav.go(Screen.Settings) },
-                    contentAlignment = Alignment.Center) {
-                    Text("S", color = C.Black, fontWeight = FontWeight.ExtraBold)
-                }
+                SettingsBadge()
                 listOf("all" to "All", "music" to "Music", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks").forEach { (k, l) ->
                     Chip(l, chip == k) { chip = if (chip == k) "all" else k }
                 }

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.outlined.ArrowCircleDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -174,7 +175,7 @@ fun ShowScreen(start: Show) {
     LaunchedEffect(start.key) {
         try {
             if (start.isBook) {
-                val a = Bridge.arr("book_chapters", start.json.toString())
+                val a = Bridge.arr("book_chapters", start.json.toString(), Library.settings.bookQuality)
                 episodes = (0 until a.length()).map { Episode(Track.fromJson(a.getJSONObject(it)), it.toDouble(), "", "") }
             } else {
                 val o = Bridge.obj("fetch_show", start.json.toString())
@@ -211,6 +212,20 @@ fun ShowScreen(start: Show) {
                     OutlinedButton(onClick = { if (following) Library.unfollow(show.key) else Library.follow(show) }) {
                         Text(if (following) (if (start.isBook) "In Your Library" else "Following")
                              else (if (start.isBook) "Add to Your Library" else "Follow"), color = C.Text)
+                    }
+                    if (!start.isBook && !show.isYoutube) {
+                        // The show's video version: its own YouTube channel, if it has one.
+                        val scope = androidx.compose.runtime.rememberCoroutineScope()
+                        OutlinedButton(onClick = {
+                            Nav.say("Looking for ${show.title} on YouTube…")
+                            scope.launch {
+                                try {
+                                    val found = Bridge.call("youtube_channel_for", show.title, show.author)
+                                    if (found is org.json.JSONObject) Nav.go(Screen.ShowPage(Show(found)))
+                                    else Nav.say("Couldn't find ${show.title}'s own YouTube channel. If it has one, paste its link in Podcasts.")
+                                } catch (e: Exception) { Nav.say("⚠ YouTube search didn't work: ${e.message}") }
+                            }
+                        }) { Text("Watch video", color = C.Text) }
                     }
                     if (start.isBook && items.isNotEmpty()) {
                         IconButton(onClick = { val n = Downloads.request(items); Nav.say("Downloading $n chapters") }) {
@@ -268,6 +283,16 @@ private fun EpisodeRow(e: Episode, all: List<Track>, show: Show) {
                 Icon(when { downloaded -> Icons.Filled.ArrowCircleDown; else -> Icons.Outlined.ArrowCircleDown },
                      if (downloaded) "Downloaded" else "Download",
                      tint = if (downloaded) C.Green else if (state != null) C.Text else C.Sub)
+            }
+            if (show.isYoutube) {
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                IconButton(onClick = {
+                    Player.play(t, all, show.title)
+                    Player.switchToVideo(ctx)
+                    Nav.nowPlayingOpen = true
+                }) {
+                    Icon(Icons.Filled.OndemandVideo, "Watch the video", tint = C.Text)
+                }
             }
             Surface(onClick = { Player.play(t, all, show.title) }, shape = androidx.compose.foundation.shape.CircleShape, color = Color.White,
                     modifier = Modifier.size(32.dp)) {

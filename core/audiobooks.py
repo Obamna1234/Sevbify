@@ -93,7 +93,7 @@ def newest(net, rows=30):
     return _search(net, f"collection:{COLLECTION}", "addeddate desc", rows)
 
 
-def chapters(net, book):
+def chapters(net, book, quality="standard"):
     """(Book with details, [OnlineTrack chapters in order])."""
     meta = net.get_json(f"https://archive.org/metadata/{book.identifier}", ttl=7 * 86400)
     md = meta.get("metadata") or {}
@@ -102,8 +102,9 @@ def chapters(net, book):
                 description=clean_text(_first(md.get("description")), 800) or book.description,
                 downloads=book.downloads)
     files = [f for f in (meta.get("files") or []) if str(f.get("name", "")).lower().endswith(".mp3")]
-    # LibriVox items have each chapter in several qualities: prefer 64 kbps, then 128 kbps, then any MP3.
-    for preferred in ("64Kbps MP3", "128Kbps MP3", "VBR MP3", "MP3"):
+    # LibriVox items have each chapter in several qualities: Settings -> Audiobook quality picks 64 or 128 kbps.
+    from core.quality import audiobook_formats
+    for preferred in audiobook_formats(quality):
         chosen = [f for f in files if f.get("format") == preferred]
         if chosen:
             files = chosen
