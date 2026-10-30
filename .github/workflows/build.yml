@@ -267,7 +267,19 @@ jobs:
         with:
           gradle-version: "8.11.1"
       - name: Build the APK (shares the repository's core/ with Windows)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SEVBIFY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
+          # The release signing key comes from the repository's secrets (never stored in the code).
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$SEVBIFY_KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export SEVBIFY_KEYSTORE="$RUNNER_TEMP/release.jks"
+            echo "Signing with the release key from the repository secrets."
+          else
+            echo "::warning title=Android signing::No ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD secrets: the APK is signed with a debug key and won't be released."
+            touch "$RUNNER_TEMP/debug-signed"
+          fi
           set +e
           gradle -p android assembleRelease --stacktrace --no-daemon > gradle.log 2>&1
           code=$?
@@ -281,6 +293,12 @@ jobs:
           exit $code
       - name: Name the APK
         run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          if [ -f "$RUNNER_TEMP/debug-signed" ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk Sevbify-Android-debug-signed.apk
+            ls -la Sevbify-Android-debug-signed.apk
+            exit 0
+          fi
           cp android/app/build/outputs/apk/release/app-release.apk Sevbify-Android.apk
           ls -la Sevbify-Android.apk
       - uses: actions/upload-artifact@v4
@@ -399,6 +417,14 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Every download is there (the Android one needs the signing-key secrets)
+        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
+        run: |
+          ls -la artifacts
+          if [ ! -f artifacts/Sevbify-Android.apk ]; then
+            echo "::error title=Release::No release-signed Android app: add the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD secrets."
+            exit 1
+          fi
       - name: Publish release (new VERSION or a pushed tag)
         if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2

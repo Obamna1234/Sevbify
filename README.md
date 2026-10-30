@@ -233,13 +233,13 @@ is contacted at all.
 `core/` Python code through Chaquopy, so the Windows app and the phone app share search, matching, downloads,
 importing, podcasts and audiobooks; only the screens differ (modelled on Spotify's phone app). GitHub builds
 it on every push (`gradle -p android assembleRelease`) and each release carries `Sevbify-Android.apk`.
-Install steps are in the release notes. The signing key (`android/app/sevbify-release.jks`) must move to a
-GitHub secret before this repository is ever made public.
+Install steps are in the release notes. The release signing key is not in the repository: GitHub's build reads it
+from the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets (building it yourself without them gives
+a debug-signed APK).
 
 ## Known limitations
 
 - The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).
-- Updates: "Check for Sevbify updates" can't see new releases while the GitHub project is private (it says so).
 - Video podcasts (YouTube) and full songs from YouTube depend on yt-dlp keeping up with YouTube's changes: use
   Settings → Update yt-dlp if they stop working.
 - A Spotify playlist link brings in 100 songs; paste the songs copied in Spotify (Ctrl+A, Ctrl+C) to get them all.

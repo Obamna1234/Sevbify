@@ -13,11 +13,10 @@ extract it, and use the new `Sevbify.exe`; you can delete the old folder.
 
 ## Install (Android, new and experimental) — Android 13 or newer
 
-1. On your phone, sign in to GitHub in the browser (the project is private, so downloads need you signed in).
-2. Open this release and, under **Assets**, tap **Sevbify-Android.apk**.
-3. Open the downloaded file. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
+1. On your phone, open this release and, under **Assets**, tap **Sevbify-Android.apk**.
+2. Open the downloaded file. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.
    Play Protect may warn that the app is unknown — tap **Install anyway** (it's your own app, not from the Play Store).
-4. Open Sevbify, allow **Music and audio** (so it can see your songs) and **Notifications** (for the player
+3. Open Sevbify, allow **Music and audio** (so it can see your songs) and **Notifications** (for the player
    and download progress).
 
 Updating: install the new APK over the old one; your playlists stay. The Android app uses the same core as
@@ -54,7 +53,7 @@ Apple doesn't let apps be installed straight from a website, so the iPhone app i
 signs it with your own Apple ID. Nothing is paid and Sevbify gets no access to your Apple ID.
 
 1. Install **AltStore** (altstore.io, needs a Windows PC or Mac once) or **SideStore** (sidestore.io).
-2. On your iPhone, sign in to GitHub in Safari (the project is private), open this release and tap
+2. On your iPhone, open this release in Safari and tap
    **Sevbify-iOS.ipa** to download it.
 3. In AltStore / SideStore: **My Apps → +** and choose the downloaded `Sevbify-iOS.ipa`.
 4. iOS 16+: turn on **Settings → Privacy & Security → Developer Mode** when asked (the iPhone restarts once).
@@ -66,6 +65,10 @@ Your Library. What's different from Android: no podcasts, audiobooks, lyrics or 
 helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
+
+**Android: new signing key.** Sevbify's code is now public, so the app is signed with a new key kept only in
+GitHub's secrets. Android won't install it over an older Sevbify: **uninstall the old one first** (your playlists in
+the app are removed with it; songs you downloaded stay in Music/Sevbify).
 
 beta.18: the same Spotify features on the other apps. Windows / macOS / Linux: "Go to artist" opens a full artist
 page (popular songs with Play, Shuffle and Artist radio, your own songs by them, latest release, albums, singles &

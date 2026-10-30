@@ -67,24 +67,27 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
+    // The release key is never in the repository: the automatic build gets it from the GitHub secrets
+    // ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD (written to a temporary file, see build.yml).
+    // Without them (someone else building from the code) the APK is signed with Android's debug key instead.
+    val keystorePath = System.getenv("SEVBIFY_KEYSTORE") ?: ""
+    val keystorePassword = System.getenv("SEVBIFY_KEYSTORE_PASSWORD") ?: ""
+    val haveReleaseKey = keystorePath.isNotEmpty() && file(keystorePath).exists() && keystorePassword.isNotEmpty()
     signingConfigs {
-        // Kept in the private repository so every build can update the last one on your phone.
-        // Before the repository is ever made public, this key moves into a GitHub secret.
-        create("release") {
-            storeFile = file("sevbify-release.jks")
-            storePassword = "sevbify-android"
-            keyAlias = "sevbify"
-            keyPassword = "sevbify-android"
+        if (haveReleaseKey) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = "sevbify"
+                keyPassword = keystorePassword
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
-        }
-        debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (haveReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 
