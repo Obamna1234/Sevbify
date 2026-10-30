@@ -108,14 +108,25 @@ def _smoke_playback():
             while time.time() < end and player.get_state() not in (vlc.State.Ended, vlc.State.Error):
                 time.sleep(0.05)
             state, length = player.get_state(), media.get_duration()
+            decoded = 0
+            try:
+                stats = vlc.MediaStats()
+                if media.get_stats(stats):
+                    decoded = stats.decoded_audio
+            except Exception:
+                pass
             player.stop(); player.release()
             label = "web stream" if path.startswith("http") else os.path.splitext(path)[1][1:].upper()
-            if state != vlc.State.Ended or length <= 0:
+            # Older VLC (e.g. 3.0.16 on Ubuntu 22.04) plays Opus fine but can't tell its length: audio that
+            # was really decoded counts as played.
+            if state == vlc.State.Ended and length <= 0 and decoded > 0:
+                length = -decoded
+            if state != vlc.State.Ended or length == 0:
                 inst.release()
                 why = _vlc_log_for(vlc, path)
                 server.shutdown()
                 return False, f"{label} did not play ({state}, length {length} ms, libVLC: {lib}). VLC said: {why}"
-            results.append(f"{label} {length} ms")
+            results.append(f"{label} {length} ms" if length > 0 else f"{label} played ({-length} audio blocks; length unknown to this VLC)")
         inst.release()
         server.shutdown()
         return True, f"played {', '.join(results)} with libVLC {vlc.libvlc_get_version().decode()} from {lib}"
