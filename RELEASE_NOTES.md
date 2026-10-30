@@ -48,8 +48,28 @@ Everything is included (VLC's player engine, ffmpeg, the downloader). Playlists 
 
 Playlists and settings are kept in `~/.local/share/Sevbify`.
 
+## Install (iPhone / iPad, new and experimental) — iOS 16 or newer, free with AltStore or SideStore
+
+Apple doesn't let apps be installed straight from a website, so the iPhone app is **sideloaded**: a free helper app
+signs it with your own Apple ID. Nothing is paid and Sevbify gets no access to your Apple ID.
+
+1. Install **AltStore** (altstore.io, needs a Windows PC or Mac once) or **SideStore** (sidestore.io).
+2. On your iPhone, sign in to GitHub in Safari (the project is private), open this release and tap
+   **Sevbify-iOS.ipa** to download it.
+3. In AltStore / SideStore: **My Apps → +** and choose the downloaded `Sevbify-iOS.ipa`.
+4. iOS 16+: turn on **Settings → Privacy & Security → Developer Mode** when asked (the iPhone restarts once).
+5. With a free Apple ID the app must be refreshed every **7 days** (AltStore does it on the same Wi-Fi as your
+   computer; SideStore on the phone), and only 3 sideloaded apps can be active at a time.
+
+Your songs: download them in Sevbify, or put files in **Files → On My iPhone → Sevbify**, or add a folder in
+Your Library. What's different from Android: no podcasts, audiobooks, lyrics or video yet, and iPhones can't run
+helper programs, so YouTube may fail more often (Bandcamp is tried first).
+
 ## What's in this version
 
+beta.16: **Sevbify for iPhone and iPad** (sideloaded with AltStore or SideStore; see above). It runs the same
+shared core as the other apps: search, full songs, downloads, playlists, imports, song radio, autoplay, lock-screen
+controls and AirPlay. Mac and iPhone builds now run only for releases, to save GitHub's paid minutes.
 beta.15: **Sevbify for macOS (Apple Silicon) and Linux**, alongside Windows and Android. Same app and features;
 see the install steps above. Both are new: please report anything that looks or behaves differently.
 beta.14: import playlists and albums from Deezer and Jamendo links too, and simpler border colours (Settings →

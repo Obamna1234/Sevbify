@@ -2,6 +2,19 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**iPhone app (v5.0.0-beta.16):**
+- New `ios/` app (SwiftUI) running the shared Python core with Python 3.13 for iOS (BeeWare's support package,
+  checksum-checked), the same bridge as Android. Built on GitHub's Mac as an unsigned `Sevbify-iOS.ipa` for
+  AltStore / SideStore, and checked on the iPhone simulator every release (Python, search, genres, radio, finding
+  a full song, screenshots on the `screens-ios` branch).
+- Home, Search (songs, artists), artist / album / genre pages, Your Library (Your Songs, playlists with the
+  Spotify-style picture and origin colours, folders added from Files), Now Playing with queue, shuffle, repeat,
+  song radio and AirPlay; lock screen and Control Centre; downloads to Files ▸ Sevbify ▸ Music; imports from
+  Spotify / Apple Music / Deezer / Jamendo links; Settings (online, sources, quality, yt-dlp update).
+- Streams ask for AAC/MP3 on the iPhone (`core/quality.STREAM_AUDIO_FORMAT`): its player can't play WebM/Opus.
+- Mac machines cost 10x GitHub's free minutes on a private repository, so macOS and iPhone are built only for
+  releases, manual runs, or commits whose message contains `[apple]`.
+
 **macOS and Linux apps (v5.0.0-beta.15):**
 - Sevbify-macOS.zip (Apple Silicon, M1 or newer): VLC's player engine, ffmpeg, yt-dlp and Deno inside the app;
   ad-hoc signed, so the first start is right-click → Open. The build checks it plays with its own VLC.

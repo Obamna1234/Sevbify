@@ -38,8 +38,25 @@ enum Bridge {
         }
     }
 
+    // Pages may ask for things (genres, search...) before start-up has told Python where its data lives;
+    // those calls wait for markReady() (at most 60 s) instead of failing.
+    private static let ready = NSCondition()
+    private static var isReady = false
+    private static let beforeSetup: Set<String> = ["setup", "set_online", "set_source", "python_info", "scan_folder",
+                                                   "read_tags", "cover_art"]
+
+    static func markReady() {
+        ready.lock(); isReady = true; ready.broadcast(); ready.unlock()
+    }
+
     static func callSync(_ name: String, _ args: [Any] = []) throws -> Any {
         guard start() else { throw Failure(message: startError ?? "Python didn't start") }
+        if !beforeSetup.contains(name) {
+            ready.lock()
+            let deadline = Date().addingTimeInterval(60)
+            while !isReady && ready.wait(until: deadline) {}
+            ready.unlock()
+        }
         let data = try JSONSerialization.data(withJSONObject: args.map(jsonSafe), options: [])
         let argText = String(data: data, encoding: .utf8) ?? "[]"
         guard let raw = sev_py_call(name, argText) else { throw Failure(message: "No answer from Python") }

@@ -17,6 +17,7 @@ struct SevbifyApp: App {
                 guard Bridge.start() else { return false }
                 return (try? Bridge.callSync("setup", [data, cache, s.online, s.lastfmKey, version])) != nil
             }.value
+            Bridge.markReady()
             if ok {
                 _ = try? await Bridge.call("set_source", [s.source])
                 await Library.shared.scan()
