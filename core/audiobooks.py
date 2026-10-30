@@ -89,6 +89,22 @@ def popular(net, rows=30):
     return _search(net, f"collection:{COLLECTION}", "downloads desc", rows)
 
 
+# LibriVox subjects for the Audiobooks page (free, public-domain books read by volunteers).
+BOOK_CATEGORIES = [
+    ("Fiction", "fiction"), ("Mystery", "mystery"), ("Science fiction", "science fiction"), ("Adventure", "adventure"),
+    ("Romance", "romance"), ("Horror", "horror"), ("Fantasy", "fantasy"), ("Children", "children"),
+    ("History", "history"), ("Poetry", "poetry"), ("Philosophy", "philosophy"), ("Biography", "biography"),
+]
+
+
+def in_category(net, subject, rows=30):
+    """Most-listened books with this subject."""
+    words = _quote_query(subject)
+    if not words:
+        return []
+    return _search(net, f"collection:{COLLECTION} AND subject:({words})", "downloads desc", rows)
+
+
 def newest(net, rows=30):
     return _search(net, f"collection:{COLLECTION}", "addeddate desc", rows)
 

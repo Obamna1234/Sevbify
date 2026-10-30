@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -68,7 +70,9 @@ fun totalTime(tracks: List<Track>): String {
 @Composable
 fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, source: String,
               onMore: (() -> Unit)? = null, onSave: (() -> Unit)? = null, playlist: com.sevbify.app.Playlist? = null,
+              limit: Int = 0, bottom: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {},
               extraTop: @Composable () -> Unit = {}) {
+    var showAll by remember(title) { mutableStateOf(false) }
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes + Downloads.doneCount
     val colour = rememberCoverColour(cover, Color(0xFF404040))
     val pending = tracks.filter { !it.isItem && !it.isLocal && Library.localFor(it) == null }
@@ -107,10 +111,23 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                        .statusBarsPadding().padding(bottom = 8.dp)) {
                 IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    if (playlist != null) PlaylistCover(playlist, 230.dp) else Cover(cover, 230.dp)
+                    when {
+                        playlist != null -> PlaylistCover(playlist, 230.dp)
+                        kind == "Radio" -> RadioCover(title, cover, 230.dp)
+                        else -> Cover(cover, 230.dp)
+                    }
                 }
                 Gap(16.dp)
                 Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 16.dp))
+                if (kind == "Radio") {
+                    // Like Spotify: "With Turboslash, Isidor, Nightstop and more"
+                    val seedArtist = tracks.firstOrNull()?.artist ?: ""
+                    val others = tracks.map { it.artist }.filter { it.isNotBlank() && it != seedArtist }.distinct().take(3)
+                    if (others.isNotEmpty()) {
+                        Text("With ${others.joinToString(", ")} and more", style = MaterialTheme.typography.bodySmall,
+                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+                    }
+                }
                 Gap(6.dp)
                 Text(listOf(kind, "${tracks.size} songs", totalTime(tracks)).filter { it.isNotEmpty() }.joinToString(" • "),
                      style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp))
@@ -153,7 +170,9 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
             }
         }
         if (tracks.isEmpty()) item { Muted("No songs here yet. Search for songs and use ••• → Add to playlist.") }
-        itemsIndexed(tracks) { i, t ->
+        // Artist pages show the top 5 with "See more", like Spotify.
+        val shown = if (limit > 0 && !showAll && !selecting) tracks.take(limit) else tracks
+        itemsIndexed(shown) { i, t ->
             val toggle = { selection = if (i in selection) selection - i else selection + i }
             if (selecting) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -169,6 +188,14 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                          onLongClick = { selecting = true; selection = setOf(i) })
             }
         }
+        if (limit > 0 && tracks.size > limit && !selecting) {
+            item {
+                androidx.compose.material3.TextButton(onClick = { showAll = !showAll }, modifier = Modifier.padding(start = 8.dp)) {
+                    Text(if (showAll) "Show less" else "See more", color = C.Sub, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        bottom()
         item { Gap(24.dp) }
     }
 }
@@ -267,18 +294,51 @@ fun ArtistScreen(name: String) {
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var picture by remember { mutableStateOf("") }
     var about by remember { mutableStateOf("") }
+    var releases by remember { mutableStateOf<JSONObject?>(null) }
     val mine = Library.localSongs.filter { it.artist.equals(name, true) || it.artist.startsWith("$name ", true) }
     LaunchedEffect(name) {
         if (!Library.settings.online) return@LaunchedEffect
         try {
-            val o = Bridge.obj("artist_top", name, 10)
+            val o = Bridge.obj("artist_top", name, 50)
             o.optJSONObject("artist")?.let { picture = it.optString("picture_xl") }
             val a = o.optJSONArray("tracks")
             if (a != null) tracks = (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) }
             about = Bridge.obj("artist_card", name).optString("summary")
         } catch (_: Exception) {}
+        try { releases = Bridge.obj("artist_releases", name) } catch (_: Exception) {}
     }
-    SongsPage(name, "Artist", picture, mine + tracks.filter { t -> mine.none { it.matchKey == t.matchKey } }, "$name") {
+    val all = tracks + mine.filter { m -> tracks.none { it.matchKey == m.matchKey } }
+    SongsPage(name, "Artist", picture, all, "$name", limit = 5, bottom = {
+        // Spotify's artist page: the newest releases, then albums, singles & EPs and compilations.
+        val r = releases
+        fun list(key: String) = r?.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } } ?: emptyList()
+        fun year(o: JSONObject) = o.optString("release_date").take(4)
+        val albums = list("albums"); val singles = list("singles"); val comps = list("compilations")
+        val latest = (albums + singles).maxByOrNull { it.optString("release_date") }
+        if (latest != null) {
+            item { SectionTitle("Latest release") }
+            item {
+                Row(Modifier.fillMaxWidth().clickable { openWebAlbum(latest) }.padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Cover(latest.optString("cover_xl"), 72.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(latest.optString("title"), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
+                        Text("${kindOf(latest)} • ${year(latest)}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        for ((heading, group) in listOf("Albums" to albums, "Singles and EPs" to singles, "Compilations" to comps)) {
+            if (group.isEmpty()) continue
+            item { SectionTitle(heading) }
+            item {
+                LazyRow(Modifier.padding(start = 16.dp)) {
+                    items(group) { a -> ShelfCard(a.optString("title"), year(a), a.optString("cover_xl")) { openWebAlbum(a) } }
+                }
+            }
+        }
+    }) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Artist radio", false) { (mine + tracks).firstOrNull()?.let { Player.startRadio(it) } }
         }
@@ -309,6 +369,21 @@ fun GenreScreen(g: Screen.Genre) {
         if (d == null) { item { Muted(if (error.isNotEmpty()) "Couldn't load ${g.name}: $error" else "Loading…") }; return@LazyColumn }
         val songs = d.optJSONArray("tracks")?.let { a -> (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) } } ?: emptyList()
         if (songs.isNotEmpty()) {
+            item {
+                // Play / shuffle the genre's popular songs, like Spotify's genre pages.
+                val source = "${g.name}: popular songs"
+                val playingHere = Player.current != null && Player.sourceName == source
+                Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = { Player.toggleShuffle() }) {
+                        Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    GreenPlay(onClick = {
+                        if (playingHere) Player.playPause() else Player.playAll(songs, source, shuffled = Player.shuffle)
+                    }, playing = playingHere && Player.isPlaying)
+                }
+            }
             item { SectionTitle("Popular songs") }
             items(songs.take(10)) { t ->
                 TrackRow(t, onClick = { Player.play(t, songs, "${g.name}: popular songs") },
@@ -406,4 +481,22 @@ private fun SelectionBar(count: Int, total: Int, onAll: () -> Unit, onNone: () -
             }
         }
     }
+}
+
+/** A song radio's picture, like Spotify's: the song's cover darkened, with RADIO and the song's name on it. */
+@Composable
+fun RadioCover(title: String, cover: String, size: Dp) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(4.dp))) {
+        Cover(cover, size, RoundedCornerShape(0.dp))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color(0x33000000), Color(0xCC000000)))))
+        Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
+            Text("RADIO", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = C.Green, letterSpacing = 2.sp)
+            Text(title.removeSuffix(" Radio"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontFamily = Figtree,
+                 color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+private fun kindOf(a: JSONObject) = when (a.optString("record_type")) {
+    "single" -> "Single"; "ep" -> "EP"; "compile" -> "Compilation"; else -> "Album"
 }

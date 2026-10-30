@@ -128,7 +128,8 @@ fun LibraryScreen() {
             for (f in inFolders) {
                 val kids = sorted(all.filter { it.folder == f })
                 item {
-                    Row(Modifier.fillMaxWidth().clickable { open = if (f in open) open - f else open + f }
+                    Row(Modifier.fillMaxWidth().combinedClickableCompat(onClick = { open = if (f in open) open - f else open + f },
+                                                                        onLongClick = { Nav.folderMenu = f })
                             .padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(64.dp).clip(RoundedCornerShape(4.dp)).background(C.Card), contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.Folder, null, tint = C.Sub, modifier = Modifier.size(30.dp))

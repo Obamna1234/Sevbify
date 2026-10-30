@@ -31,6 +31,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
@@ -77,7 +87,8 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     Surface(onClick = onClick, shape = RoundedCornerShape(50), color = if (selected) C.Green else C.Card) {
         Text(text, style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-             color = if (selected) C.Black else C.Text, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
+             color = if (selected) C.Black else C.Text, maxLines = 1, softWrap = false,
+             modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
     }
 }
 
@@ -186,4 +197,48 @@ fun SettingsBadge() {
         androidx.compose.ui.res.painterResource(com.sevbify.app.R.drawable.sevbify_logo), "Settings",
         modifier = androidx.compose.ui.Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .clickable { Nav.go(Screen.Settings) })
+}
+
+/** Spotify's progress bar: a thin line (white played, grey left) with a small round dot that grows while you drag.
+ *  Tap or drag anywhere on it to move through the song. `onSeek` gets 0..1 when you let go. */
+@Composable
+fun SeekBar(progress: Float, onSeek: (Float) -> Unit, onDrag: (Float?) -> Unit = {}, modifier: Modifier = Modifier) {
+    var width by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(1) }
+    var drag by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Float?>(null) }
+    val shown = (drag ?: progress).coerceIn(0f, 1f)
+    fun at(x: Float) = (x / width.coerceAtLeast(1)).coerceIn(0f, 1f)
+    androidx.compose.foundation.Canvas(
+        modifier.fillMaxWidth().height(24.dp)
+            .onSizeChanged { width = it.width }
+            .pointerInput(Unit) {
+                detectTapGestures { o -> onSeek(at(o.x)) }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { o -> drag = at(o.x); onDrag(drag) },
+                    onHorizontalDrag = { change, _ -> drag = at(change.position.x); onDrag(drag) },
+                    onDragEnd = { drag?.let(onSeek); drag = null; onDrag(null) },
+                    onDragCancel = { drag = null; onDrag(null) },
+                )
+            }
+            .semantics { contentDescription = "Song position"; stateDescription = "${(shown * 100).toInt()}%" }
+    ) {
+        val y = size.height / 2
+        val line = 4.dp.toPx()
+        val x = size.width * shown
+        drawLine(Color(0x4DFFFFFF), Offset(0f, y), Offset(size.width, y), strokeWidth = line, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(0f, y), Offset(x, y), strokeWidth = line, cap = StrokeCap.Round)
+        drawCircle(Color.White, radius = (if (drag != null) 8.dp else 6.dp).toPx(), center = Offset(x, y))
+    }
+}
+
+/** The mini player's thin progress line (no dot), like Spotify's. */
+@Composable
+fun ThinProgress(progress: Float, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.fillMaxWidth().height(2.dp)) {
+        val y = size.height / 2
+        drawLine(Color(0x33FFFFFF), Offset(0f, y), Offset(size.width, y), strokeWidth = size.height, cap = StrokeCap.Round)
+        drawLine(Color.White, Offset(0f, y), Offset(size.width * progress.coerceIn(0f, 1f), y), strokeWidth = size.height,
+                 cap = StrokeCap.Round)
+    }
 }

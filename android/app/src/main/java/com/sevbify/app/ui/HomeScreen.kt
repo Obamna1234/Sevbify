@@ -1,6 +1,8 @@
 package com.sevbify.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,7 +63,8 @@ fun HomeScreen() {
     }
     LazyColumn(Modifier.background(Brush.verticalGradient(0f to Color(0xFF1E3264).copy(alpha = 0.55f), 0.25f to C.Bg))) {
         item {
-            Row(Modifier.statusBarsPadding().padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
+            Row(Modifier.statusBarsPadding().horizontalScroll(rememberScrollState())
+                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingsBadge()
                 listOf("all" to "All", "music" to "Music", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks").forEach { (k, l) ->
@@ -71,6 +74,26 @@ fun HomeScreen() {
         }
         if (chip == "podcasts" || chip == "audiobooks") {
             item { ShowsHomePart(chip, topShows) }
+            // Explore, like Spotify's: a shelf per category (each loads when you scroll to it).
+            if (Library.settings.online) {
+                if (chip == "podcasts") {
+                    items(PODCAST_CATEGORIES, key = { "pc" + it.first }) { (id, name) ->
+                        CategoryShelf("Top in $name") {
+                            val a = Bridge.arr("top_in_category", id, java.util.Locale.getDefault().country.lowercase().ifEmpty { "us" })
+                            (0 until a.length()).map { Show(a.getJSONObject(it)) }
+                        }
+                    }
+                } else {
+                    item { CategoryShelf("New free audiobooks") {
+                        val a = Bridge.arr("books", "newest", ""); (0 until a.length()).map { Show(a.getJSONObject(it)) } } }
+                    items(BOOK_CATEGORIES, key = { "bc" + it.second }) { (name, subject) ->
+                        CategoryShelf(name) {
+                            val a = Bridge.arr("books", "category", subject)
+                            (0 until a.length()).map { Show(a.getJSONObject(it)) }
+                        }
+                    }
+                }
+            }
             item { Gap(24.dp) }
             return@LazyColumn
         }
@@ -156,7 +179,7 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
     }
     if (chip == "podcasts") {
         if (topShows.isNotEmpty()) {
-            SectionTitle("Top podcasts")
+            SectionTitle("Trending podcasts")
             LazyRow(Modifier.padding(start = 16.dp)) {
                 items(topShows) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
             }
@@ -180,5 +203,32 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
         }
         Gap(12.dp)
         Row(Modifier.padding(horizontal = 16.dp)) { Chip("Find free audiobooks", false) { Nav.go(Screen.Audiobooks) } }
+    }
+}
+
+// Same lists as core/podcasts.PODCAST_CATEGORIES and core/audiobooks.BOOK_CATEGORIES.
+internal val PODCAST_CATEGORIES = listOf(
+    1303 to "Comedy", 1489 to "News", 1488 to "True Crime", 1324 to "Society & Culture", 1545 to "Sports",
+    1512 to "Health & Fitness", 1321 to "Business", 1487 to "History", 1318 to "Technology", 1309 to "TV & Film",
+    1533 to "Science", 1304 to "Education", 1301 to "Arts", 1310 to "Music", 1502 to "Leisure",
+    1483 to "Fiction", 1305 to "Kids & Family", 1314 to "Religion & Spirituality",
+)
+internal val BOOK_CATEGORIES = listOf(
+    "Fiction" to "fiction", "Mystery" to "mystery", "Science fiction" to "science fiction", "Adventure" to "adventure",
+    "Romance" to "romance", "Horror" to "horror", "Fantasy" to "fantasy", "Children" to "children",
+    "History" to "history", "Poetry" to "poetry", "Philosophy" to "philosophy", "Biography" to "biography",
+)
+
+/** One Explore shelf; nothing is shown when the list is empty or can't be loaded. */
+@Composable
+internal fun CategoryShelf(title: String, load: suspend () -> List<Show>) {
+    var shows by remember(title) { mutableStateOf<List<Show>>(emptyList()) }
+    LaunchedEffect(title) { shows = try { load() } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() } }
+    if (shows.isNotEmpty()) {
+        SectionTitle(title)
+        LazyRow(Modifier.padding(start = 16.dp)) {
+            items(shows) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } }
+        }
     }
 }

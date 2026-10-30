@@ -32,7 +32,8 @@ data class Settings(
     var autoUpdateYtdlp: Boolean = true,       // keep yt-dlp up to date (official release, checksum-checked)
     var lastYtdlpCheck: Long = 0,
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
-    var showPlaylistOrigin: Boolean = false,   // coloured border: made in Sevbify / imported from a link / from a file
+    var showPlaylistOrigin: Boolean = false,
+    var skipSponsors: Boolean = true,          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -42,7 +43,7 @@ data class Settings(
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
-        put("show_playlist_origin", showPlaylistOrigin)
+        put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors)
     }
 
     companion object {
@@ -64,6 +65,7 @@ data class Settings(
             s.autoUpdateYtdlp = o.optBoolean("auto_update_ytdlp", true); s.lastYtdlpCheck = o.optLong("last_ytdlp_check")
             s.lyrics = o.optBoolean("lyrics", true)
             s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
+            s.skipSponsors = o.optBoolean("skip_sponsors", true)
             return s
         }
     }
@@ -99,11 +101,13 @@ object Library {
         } catch (e: java.io.FileNotFoundException) {
             JSONObject()                                       // first start
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             keepDamagedCopy(); JSONObject()
         }
         try {
             read(o)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             // Something in the file isn't what this version expects: keep a copy instead of crashing or
             // overwriting it, and start with what could be read.
             keepDamagedCopy()
@@ -196,6 +200,16 @@ object Library {
         var f = name
         while (folders.any { it.equals(f, true) }) f = "$name ${n++}"
         folders.add(f); changed(); return f
+    }
+
+    fun renameFolder(old: String, new: String) {
+        val name = new.trim()
+        if (name.isEmpty() || name == old || folders.any { it.equals(name, true) && it != old }) return
+        val i = folders.indexOf(old)
+        if (i < 0) return
+        folders[i] = name
+        playlists.forEach { if (it.folder == old) it.folder = name }
+        changed()
     }
 
     fun deleteFolder(name: String) {

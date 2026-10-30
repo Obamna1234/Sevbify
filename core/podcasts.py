@@ -216,6 +216,38 @@ def top_shows(net, country="us", limit=25):
     return out
 
 
+# Apple's podcast categories (its public chart for each one; no account).
+PODCAST_CATEGORIES = [
+    (1303, "Comedy"), (1489, "News"), (1488, "True Crime"), (1324, "Society & Culture"), (1545, "Sports"),
+    (1512, "Health & Fitness"), (1321, "Business"), (1487, "History"), (1318, "Technology"), (1309, "TV & Film"),
+    (1533, "Science"), (1304, "Education"), (1301, "Arts"), (1310, "Music"), (1502, "Leisure"),
+    (1483, "Fiction"), (1305, "Kids & Family"), (1314, "Religion & Spirituality"),
+]
+
+
+def top_in_category(net, genre_id, country="us", limit=25):
+    """The chart of one category ("Comedy", "True Crime"...), from Apple's public chart feed."""
+    url = f"https://itunes.apple.com/{country}/rss/toppodcasts/limit={int(limit)}/genre={int(genre_id)}/json"
+    data = net.get_json(url, ttl=12 * 3600)
+    out = []
+    entries = ((data or {}).get("feed") or {}).get("entry") or []
+    if isinstance(entries, dict):
+        entries = [entries]
+    for e in entries:
+        def label(key):
+            v = e.get(key) or {}
+            return v.get("label", "") if isinstance(v, dict) else ""
+        images = e.get("im:image") or []
+        art = images[-1].get("label", "") if images and isinstance(images[-1], dict) else ""
+        art = re.sub(r"/\d+x\d+bb\.", "/600x600bb.", art)
+        apple_id = (((e.get("id") or {}).get("attributes") or {}).get("im:id") or "")
+        cat = (((e.get("category") or {}).get("attributes") or {}).get("label") or "")
+        if label("im:name"):
+            out.append(Show(title=label("im:name"), author=label("im:artist"), apple_id=str(apple_id),
+                            image_url=art, genre=cat))
+    return out
+
+
 def resolve_feed(net, show):
     """Shows from the Apple chart have no feed URL yet: look it up by id."""
     if show.feed_url or not show.apple_id:

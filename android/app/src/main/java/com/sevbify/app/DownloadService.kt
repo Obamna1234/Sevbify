@@ -24,6 +24,7 @@ class DownloadService : Service() {
         try {
             ServiceCompat.startForeground(this, ID, build(this), type)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             // Android 12+ can refuse a foreground start from the background: downloads continue while Sevbify
             // is open, without the notification.
         }

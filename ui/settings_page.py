@@ -217,6 +217,10 @@ class SettingsPage(QWidget):
                      "Shows the Lyrics button next to the queue. Lyrics come from a .lrc or .txt file next to your song "
                      "(works offline), otherwise from LRCLIB, a free lyrics database (only the song's name and length "
                      "are sent).", getattr(u, "lyrics_enabled", True))
+        self._toggle("skip_sponsors", "Skip sponsor segments in YouTube episodes",
+                     "Jumps over ad reads, \"like and subscribe\" reminders and self-promotion that viewers marked on "
+                     "SponsorBlock. Private: the episode isn't named, only a 4-character code shared by many videos is "
+                     "sent. YouTube's own ads never play in Sevbify.", getattr(u, "skip_sponsors", True))
         self._toggle("autoplay", "Autoplay",
                      "When your music ends, keep playing similar songs (song radio from the last one).", u.autoplay)
         self._combo("fade_seconds", "Fade between songs",

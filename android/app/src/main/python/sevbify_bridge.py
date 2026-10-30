@@ -137,6 +137,26 @@ def artist_top(name, limit=10):
 
 
 @_call
+def book_categories():
+    from core import audiobooks
+    return [{"name": n, "subject": q} for n, q in audiobooks.BOOK_CATEGORIES]
+
+
+@_call
+def artist_releases(name):
+    """Albums, singles & EPs and compilations of an artist, newest first (for the artist page)."""
+    d = _state["music"].deezer
+    a = d.find_artist(name)
+    if not a:
+        return {"albums": [], "singles": [], "compilations": []}
+    out = d.artist_albums(a.get("id"))
+    for group in out.values():
+        for album in group:
+            album.setdefault("artist", {"name": a.get("name", name), "id": a.get("id")})
+    return out
+
+
+@_call
 def genres():
     return _state["music"].deezer.genres()
 
@@ -244,6 +264,25 @@ def top_shows(country="us"):
 
 
 @_call
+def podcast_categories():
+    from core import podcasts
+    return [{"id": i, "name": n} for i, n in podcasts.PODCAST_CATEGORIES]
+
+
+@_call
+def top_in_category(genre_id, country="us"):
+    from core import podcasts
+    return [_show(s) for s in podcasts.top_in_category(_net(), int(genre_id), country)]
+
+
+@_call
+def sponsor_segments(page_url):
+    """Sponsor reads to skip in a YouTube episode (SponsorBlock; only a 4-character hash prefix is sent)."""
+    from core import sponsorblock
+    return sponsorblock.segments(_net(), page_url)
+
+
+@_call
 def search_podcasts(query, country="us"):
     from core import podcasts
     return [_show(s) for s in podcasts.search(_net(), query, 25, country)]
@@ -307,7 +346,8 @@ def youtube_channel_for(title, author=""):
 def books(kind="popular", query=""):
     from core import audiobooks
     fn = {"popular": lambda: audiobooks.popular(_net()), "newest": lambda: audiobooks.newest(_net()),
-          "search": lambda: audiobooks.search(_net(), query)}[kind]
+          "search": lambda: audiobooks.search(_net(), query),
+          "category": lambda: audiobooks.in_category(_net(), query)}[kind]
     return [_book(b) for b in fn()]
 
 

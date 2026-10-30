@@ -57,6 +57,10 @@ fun SevbifyTheme(content: @Composable () -> Unit) {
                                       onBackground = C.Text, onSurface = C.Text, surfaceVariant = C.Card,
                                       onSurfaceVariant = C.Sub, secondaryContainer = C.Card),
         typography = Type,
-        content = content,
-    )
+    ) {
+        // Icons and text outside a Surface default to black in Compose; make white the default everywhere
+        // (dark icons on dark backgrounds were hard to see).
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides C.Text,
+                                                          content = content)
+    }
 }

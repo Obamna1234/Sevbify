@@ -78,6 +78,7 @@ object VideoPlayer {
             if (at > 0) p.seekTo(at)
             p.play()
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             error = "Couldn't load the video: ${e.message}"
         } finally {
             loading = false

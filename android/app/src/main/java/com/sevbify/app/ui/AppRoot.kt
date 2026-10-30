@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -173,10 +174,8 @@ private fun MiniPlayer() {
             }
         }
         val d = Player.duration
-        LinearProgressIndicator(progress = { if (d > 0) (Player.position.toFloat() / d).coerceIn(0f, 1f) else 0f },
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp)
-                                    .height(2.dp),
-                                color = C.Text, trackColor = Color(0x33FFFFFF))
+        ThinProgress(if (d > 0) Player.position.toFloat() / d else 0f,
+                     Modifier.align(Alignment.BottomCenter).padding(horizontal = 8.dp))
     }
 }
 
@@ -204,11 +203,18 @@ private fun Dialogs() {
                     containerColor = C.Elevated)
     }
     Nav.rename?.let { (start, done) ->
-        var text by remember(start) { mutableStateOf(start) }
+        // Like Spotify: the name is selected, so typing replaces it straight away.
+        var text by remember(start) {
+            mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(start, androidx.compose.ui.text.TextRange(0, start.length)))
+        }
+        val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+        LaunchedEffect(start) { focus.requestFocus() }
         AlertDialog(onDismissRequest = { Nav.rename = null },
-                    title = { Text("Name") },
-                    text = { OutlinedTextField(text, { text = it }, singleLine = true) },
-                    confirmButton = { TextButton(onClick = { Nav.rename = null; done(text) }) { Text("Save", color = C.Green) } },
+                    title = { Text(Nav.renameTitle) },
+                    text = { OutlinedTextField(text, { text = it }, singleLine = true,
+                                               modifier = Modifier.focusRequester(focus)) },
+                    confirmButton = { TextButton(onClick = { Nav.rename = null; done(text.text.trim().ifEmpty { start }) }) {
+                        Text(Nav.renameButton, color = C.Green) } },
                     dismissButton = { TextButton(onClick = { Nav.rename = null }) { Text("Cancel", color = C.Text) } },
                     containerColor = C.Elevated)
     }
@@ -219,7 +225,15 @@ fun confirmDelete(what: String, action: () -> Unit) {
     Nav.confirm = Triple("Delete from Your Library?", "This will delete $what from Your Library. Your music files stay where they are.", action)
 }
 
-fun askName(start: String, done: (String) -> Unit) { Nav.rename = start to done }
+fun askName(start: String, title: String = "Name", button: String = "Save", done: (String) -> Unit) {
+    Nav.renameTitle = title; Nav.renameButton = button
+    Nav.rename = start to done
+}
+
+/** Spotify's way: name the folder first, then it's made. */
+fun askNewFolder(then: (String) -> Unit = {}) {
+    askName("New Folder", "Name your folder", "Create") { then(Library.createFolder(it)) }
+}
 
 @Suppress("unused")
 private fun keepLibrary() = Library.changes

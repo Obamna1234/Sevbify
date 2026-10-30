@@ -67,6 +67,12 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.17 (from the first Android test): Spotify-style progress bar, white Now Playing buttons, song radio opens its
+own "… Radio" page, folders are named before they're made (and can be renamed or deleted by holding them), Explore
+for podcasts and audiobooks (trending plus a shelf per category), a Play button on genre pages, artist pages with
+more songs ("See more") and their albums, singles and compilations, sponsor reads skipped in YouTube episodes
+(SponsorBlock, private), and the "Audiobooks" tab no longer breaks onto two lines. Fixed: the first song could say
+it was "cancelled".
 beta.16: **Sevbify for iPhone and iPad** (sideloaded with AltStore or SideStore; see above). It runs the same
 shared core as the other apps: search, full songs, downloads, playlists, imports, song radio, autoplay, lock-screen
 controls and AirPlay. Mac and iPhone builds now run only for releases, to save GitHub's paid minutes.

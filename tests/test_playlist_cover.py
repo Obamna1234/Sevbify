@@ -103,3 +103,50 @@ def test_origin_colours_follow_the_users_scheme():
     assert origin_colour("") == "#8a8a8a" and origin_colour("spotify") == "#1ed760"
     assert origin_colour("apple") == "#ffffff" and origin_colour("file") == "#509bf5"
     assert origin_colour("deezer") == "#a238ff" and origin_colour("jamendo") == "#ff8a1f"
+
+
+def test_sponsorblock_uses_a_hash_prefix_and_picks_the_right_video():
+    import hashlib
+    from core import sponsorblock
+    asked = {}
+
+    class Net:
+        def get_json(self, url, params=None, ttl=0):
+            asked["url"] = url
+            return [{"videoID": "other000000", "segments": [{"segment": [1, 50], "actionType": "skip"}]},
+                    {"videoID": "dQw4w9WgXcQ", "segments": [{"segment": [30.5, 90.0], "category": "sponsor",
+                                                             "actionType": "skip"},
+                                                            {"segment": [5, 5.2], "actionType": "skip"}]}]
+    segs = sponsorblock.segments(Net(), "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    assert segs == [[30500, 90000, "sponsor"]]
+    assert asked["url"].endswith(hashlib.sha256(b"dQw4w9WgXcQ").hexdigest()[:4])
+    assert "dQw4w9WgXcQ" not in asked["url"]              # the video itself is never named
+    assert sponsorblock.segments(Net(), "not a youtube link") == []
+
+
+def test_artist_releases_are_grouped_and_newest_first():
+    from core.online.providers import Deezer
+
+    class Net:
+        def get_json(self, url, params=None, ttl=0):
+            return {"data": [{"title": "Old LP", "record_type": "album", "release_date": "2001-01-01"},
+                             {"title": "New LP", "record_type": "album", "release_date": "2024-01-01"},
+                             {"title": "Hit", "record_type": "single", "release_date": "2023-05-05"},
+                             {"title": "Best Of", "record_type": "compile", "release_date": "2010-01-01"}]}
+    r = Deezer(Net()).artist_albums(1)
+    assert [a["title"] for a in r["albums"]] == ["New LP", "Old LP"]
+    assert [a["title"] for a in r["singles"]] == ["Hit"] and [a["title"] for a in r["compilations"]] == ["Best Of"]
+
+
+def test_podcast_category_chart_is_read():
+    from core import podcasts
+
+    class Net:
+        def get_json(self, url, params=None, ttl=0):
+            assert "genre=1303" in url
+            return {"feed": {"entry": [{"im:name": {"label": "Funny Show"}, "im:artist": {"label": "Host"},
+                                        "id": {"attributes": {"im:id": "123"}},
+                                        "im:image": [{"label": "https://a/55x55bb.png"}, {"label": "https://a/170x170bb.png"}],
+                                        "category": {"attributes": {"label": "Comedy"}}}]}}
+    shows = podcasts.top_in_category(Net(), 1303)
+    assert shows[0].title == "Funny Show" and shows[0].apple_id == "123" and shows[0].image_url.endswith("600x600bb.png")

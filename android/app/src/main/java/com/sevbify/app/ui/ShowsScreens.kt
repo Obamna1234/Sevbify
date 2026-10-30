@@ -111,9 +111,17 @@ fun PodcastsScreen() {
             item { SectionTitle("Results") }
             items(results) { s -> ShowRow(s) }
         }
-        if (top.isNotEmpty()) {
-            item { SectionTitle("Top podcasts") }
-            items(top) { s -> ShowRow(s) }
+        if (top.isNotEmpty() && results.isEmpty()) {
+            item { SectionTitle("Trending podcasts") }
+            item { LazyRow(Modifier.padding(start = 16.dp)) { items(top) { s -> ShelfCard(s.title, s.author, s.image) { Nav.go(Screen.ShowPage(s)) } } } }
+        }
+        if (Library.settings.online && results.isEmpty()) {
+            items(PODCAST_CATEGORIES, key = { "pc" + it.first }) { (id, name) ->
+                CategoryShelf("Top in $name") {
+                    val a = Bridge.arr("top_in_category", id, country)
+                    (0 until a.length()).map { Show(a.getJSONObject(it)) }
+                }
+            }
         }
         if (!Library.settings.online) item { Muted("You're offline. Downloaded episodes still play from Your Library.") }
         item { Gap(24.dp) }
@@ -146,6 +154,14 @@ fun AudiobooksScreen() {
         item { Muted("Free audiobooks of public-domain books, read by LibriVox volunteers.") }
         item { SectionTitle(heading) }
         items(books) { b -> ShowRow(b) }
+        if (Library.settings.online && heading != "Results") {
+            items(BOOK_CATEGORIES, key = { "bc" + it.second }) { (name, subject) ->
+                CategoryShelf(name) {
+                    val a = Bridge.arr("books", "category", subject)
+                    (0 until a.length()).map { Show(a.getJSONObject(it)) }
+                }
+            }
+        }
         item { Gap(24.dp) }
     }
 }
@@ -189,6 +205,7 @@ fun ShowScreen(start: Show) {
             }
             note = if (episodes.isEmpty()) "No episodes found." else ""
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             note = if (Library.settings.online) "Couldn't load this: ${e.message}" else "You're offline."
         }
     }

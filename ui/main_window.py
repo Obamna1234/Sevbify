@@ -1598,10 +1598,38 @@ class MainWindow(ShowsMixin, QMainWindow):
             pass
         return max(lengths)
 
+    # --- SponsorBlock: skip ad reads in YouTube episodes (Settings; only a 4-character hash prefix is sent) ---
+    def _load_sponsor_segments(self, song):
+        self._sponsor = (song, [], set())
+        track = getattr(song, "track", None)
+        if (track is None or track.source != "youtube" or not track.page_url or not self.online_enabled
+                or not getattr(self.user_data, "skip_sponsors", True)):
+            return
+        from core import sponsorblock
+
+        def done(segs):
+            if self.current_song is song:
+                self._sponsor = (song, segs, set())
+        self.online_call(sponsorblock.segments, self.net, track.page_url, on_done=done, on_error=lambda _e: None)
+
+    def _skip_sponsor(self):
+        song, segs, done = getattr(self, "_sponsor", (None, [], set()))
+        if song is not self.current_song or not segs:
+            return
+        at = self.player.get_time()
+        for start, end, _cat in segs:
+            if start <= at < end - 500 and start not in done:
+                done.add(start)
+                self.player.set_time(int(end))
+                self.show_status("Skipped a sponsor segment", kind="info", timeout_ms=2500)
+                return
+
     def update_progress(self):
         """Runs every 100 ms on the UI thread. Only uses non-blocking VLC calls."""
         if self.current_song is None:
             return
+        if getattr(self, "_sponsor", None) and self.player.get_state() == vlc.State.Playing:
+            self._skip_sponsor()
         if self.stack.currentWidget() is self.lyrics_page:
             self._lyrics_follow()
 
@@ -3634,6 +3662,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         is_remote = getattr(song, "is_remote", False)
         if is_remote and song.track.source in ("podcast", "audiobook", "youtube"):
+            self._load_sponsor_segments(song)
             self.start_item(song)                       # podcast episode / audiobook chapter (shows_controller)
             return
         if is_remote:
@@ -4984,7 +5013,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         was_online = u.online_enabled
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
-                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check")
+                  "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

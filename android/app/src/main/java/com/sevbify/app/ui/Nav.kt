@@ -45,6 +45,9 @@ object Nav {
     var queueOpen by mutableStateOf(false)
     var songMenu by mutableStateOf<SongMenu?>(null)
     var playlistMenu by mutableStateOf<Playlist?>(null)
+    var folderMenu by mutableStateOf<String?>(null)
+    var renameTitle by mutableStateOf("Name")
+    var renameButton by mutableStateOf("Save")
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
     var toast by mutableStateOf("")
     var shareFor by mutableStateOf<Track?>(null)               // the share sheet

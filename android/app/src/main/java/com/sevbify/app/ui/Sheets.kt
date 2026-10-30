@@ -60,6 +60,7 @@ import com.sevbify.app.Track
 fun Sheets() {
     Nav.songMenu?.let { SongMenuSheet(it) }
     Nav.playlistMenu?.let { PlaylistMenuSheet(it) }
+    Nav.folderMenu?.let { FolderMenuSheet(it) }
     Nav.addTo?.let { AddToSheet(it) }
 }
 
@@ -139,12 +140,19 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
             HorizontalDivider(color = C.Highlight)
             SheetItem(Icons.AutoMirrored.Filled.QueueMusic, "Add to queue") { close(); pl.tracks.forEach { Player.addToQueue(it) } }
             SheetItem(Icons.Filled.Edit, "Edit details") { close(); askName(pl.name) { Library.rename(pl, it) } }
-            SheetItem(Icons.Filled.Delete, "Delete") { close(); confirmDelete(pl.name) { Library.delete(pl); Nav.back() } }
+            SheetItem(Icons.Filled.Delete, "Delete playlist") {
+                close()
+                confirmDelete(pl.name) {
+                    val open = (Nav.top as? Screen.PlaylistPage)?.id == pl.id
+                    Library.delete(pl)
+                    if (open) Nav.back()
+                }
+            }
             val pending = pl.tracks.filter { !it.isLocal && Library.localFor(it) == null }
             SheetItem(Icons.Filled.Download, if (pending.isEmpty()) "Downloaded" else "Download ${pending.size} songs",
                       enabled = pending.isNotEmpty()) { close(); Downloads.request(pending) }
             SheetItem(Icons.Filled.MusicNote, "Create playlist") { close(); Nav.go(Screen.PlaylistPage(Library.newPlaylist().id)) }
-            SheetItem(Icons.Filled.CreateNewFolder, "Create folder") { close(); Library.createFolder() }
+            SheetItem(Icons.Filled.CreateNewFolder, "Create folder") { close(); askNewFolder() }
             SheetItem(if (pl.pinned) Icons.Filled.PushPin else Icons.Filled.PushPin, if (pl.pinned) "Unpin playlist" else "Pin playlist") {
                 close(); pl.pinned = !pl.pinned; Library.changed()
             }
@@ -152,12 +160,33 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
             Text("Move to folder", style = MaterialTheme.typography.labelMedium.copy(color = C.Sub),
                  modifier = Modifier.padding(start = 20.dp, top = 12.dp))
             SheetItem(Icons.Filled.Add, "Create folder") {
-                close(); val f = Library.createFolder(); pl.folder = f; Library.changed()
+                close(); askNewFolder { f -> pl.folder = f; Library.changed() }
             }
             Library.folders.forEach { f ->
                 SheetItem(Icons.Filled.Folder, f, enabled = pl.folder != f) { close(); pl.folder = f; Library.changed() }
             }
             if (pl.folder.isNotEmpty()) SheetItem(Icons.Filled.Folder, "Remove from folder") { close(); pl.folder = ""; Library.changed() }
+        }
+    }
+}
+
+/** Long-press a folder in Your Library: rename or delete it (its playlists are kept). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FolderMenuSheet(folder: String) {
+    val close = { Nav.folderMenu = null }
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
+        Column(Modifier.navigationBarsPadding()) {
+            Text(folder, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            HorizontalDivider(color = C.Highlight)
+            SheetItem(Icons.Filled.Edit, "Rename folder") {
+                close(); askName(folder, "Rename folder") { Library.renameFolder(folder, it) }
+            }
+            SheetItem(Icons.Filled.Delete, "Delete folder") {
+                close()
+                Nav.confirm = Triple("Delete folder?", "“$folder” is removed. The playlists in it stay in Your Library.",
+                                     { Library.deleteFolder(folder) })
+            }
         }
     }
 }
@@ -199,7 +228,7 @@ fun CreateSheet(onClose: () -> Unit) {
             SheetItem(Icons.Filled.MusicNote, "Playlist") {
                 onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.PlaylistPage(Library.newPlaylist().id))
             }
-            SheetItem(Icons.Filled.Folder, "Folder") { onClose(); Library.createFolder(); Nav.tab = Tab.LIBRARY }
+            SheetItem(Icons.Filled.Folder, "Folder") { onClose(); Nav.tab = Tab.LIBRARY; askNewFolder() }
             SheetItem(Icons.Filled.Link, "Import a playlist") { onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.Import()) }
         }
     }

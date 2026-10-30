@@ -2,6 +2,21 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**From the first Android test (v5.0.0-beta.17):**
+- Fixed: starting a song could show "<song>: StandaloneCoroutine was cancelled" (an earlier attempt being replaced
+  was reported as an error).
+- Spotify's progress bar (thin line, small round dot) on Now Playing and a thin line on the mini player; Now
+  Playing's buttons (previous, next, share, queue...) are white, and icons default to white everywhere.
+- Song radio opens a "<song> Radio" page (radio cover, "With … and more", Play / Shuffle, the songs).
+- Folders: named before they're made (Spotify's "Name your folder"), and holding a folder offers Rename / Delete;
+  the playlist menu says "Delete playlist".
+- Home ▸ Podcasts / Audiobooks and the Podcasts / Audiobooks pages: trending, then a shelf per category (Apple's
+  public charts per category; LibriVox subjects), loaded as you scroll. The tab row scrolls and never wraps.
+- Genre pages have Play and Shuffle. Artist pages: top 50 songs (5 shown, "See more"), latest release, albums,
+  singles & EPs and compilations (Deezer).
+- Sponsor segments in YouTube episodes are skipped (SponsorBlock; Settings, on by default) on Android and Windows.
+  Only the first 4 characters of the video id's SHA-256 are sent, never the video itself.
+
 **iPhone app (v5.0.0-beta.16):**
 - New `ios/` app (SwiftUI) running the shared Python core with Python 3.13 for iOS (BeeWare's support package,
   checksum-checked), the same bridge as Android. Built on GitHub's Mac as an unsigned `Sevbify-iOS.ipa` for

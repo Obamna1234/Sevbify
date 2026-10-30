@@ -103,6 +103,7 @@ object Downloads {
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                     val msg = e.message ?: "couldn't be downloaded"
                     if (Regex("timed out|unreachable|resolve|connection|offline", RegexOption.IGNORE_CASE).containsMatchIn(msg)) {
                         // Not the song's fault: wait for the internet and try again (like the Windows app).
@@ -176,6 +177,7 @@ object Downloads {
             file.delete()
             uri.toString()
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             resolver.delete(uri, null, null)
             file.absolutePath
         }

@@ -92,6 +92,7 @@ fun SearchScreen() {
             }
             note = ""
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             note = "Web search isn't available right now (${e.message})."
         }
     }

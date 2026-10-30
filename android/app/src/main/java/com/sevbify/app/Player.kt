@@ -94,10 +94,12 @@ object Player {
                             VideoPlayer.savePosition(); lastResumeSave = System.currentTimeMillis()
                         }
                     }
+                    skipSponsor(position)?.let { v.seekTo(it) }
                     delay(500); continue
                 }
                 controller?.let { c ->
                     position = c.currentPosition.coerceAtLeast(0)
+                    if (c.isPlaying) skipSponsor(position)?.let { c.seekTo(it); position = it }
                     if (c.duration > 0) duration = c.duration
                     val t = current
                     if (t != null && t.isItem && c.isPlaying && !Library.privateSession &&
@@ -137,6 +139,34 @@ object Player {
         val c = controller ?: return
         if (current == null && context.isNotEmpty()) { start(); return }
         if (c.isPlaying) c.pause() else c.play()
+    }
+
+    // --- SponsorBlock: skip the ad reads in YouTube episodes (Settings; only a 4-character hash is sent) --------
+    private var sponsor: Pair<String, List<LongArray>> = "" to emptyList()
+    private var skipped = mutableSetOf<Long>()
+
+    private fun loadSponsor(t: Track) {
+        sponsor = t.itemKey to emptyList(); skipped.clear()
+        if (t.source != "youtube" || t.pageUrl.isEmpty() || !Library.settings.skipSponsors || !Library.settings.online) return
+        SevbifyApp.instance.scope.launch {
+            try {
+                val a = Bridge.arr("sponsor_segments", t.pageUrl)
+                val segs = (0 until a.length()).map { i -> a.getJSONArray(i).let { s -> longArrayOf(s.getLong(0), s.getLong(1)) } }
+                if (current?.itemKey == t.itemKey) sponsor = t.itemKey to segs
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+            }
+        }
+    }
+
+    /** Where to jump to when the episode is inside a sponsor segment (each one is skipped once). */
+    private fun skipSponsor(at: Long): Long? {
+        val t = current ?: return null
+        if (sponsor.first != t.itemKey) return null
+        val seg = sponsor.second.firstOrNull { at >= it[0] && at < it[1] - 500 && it[0] !in skipped } ?: return null
+        skipped.add(seg[0])
+        status = "Skipped a sponsor segment"
+        return seg[1]
     }
 
     fun seekTo(ms: Long) { if (videoMode) VideoPlayer.player?.seekTo(ms) else controller?.seekTo(ms) }
@@ -260,7 +290,13 @@ object Player {
                 val list = if (autoplay) songs else listOf(seed) + songs
                 play(list.first(), list, "${seed.title} Radio")
                 status = ""
+                if (!autoplay) {
+                    // Open the radio's own page, so it's obvious what's playing (like Spotify's "… Radio").
+                    com.sevbify.app.ui.Nav.nowPlayingOpen = false
+                    com.sevbify.app.ui.Nav.go(com.sevbify.app.ui.Screen.Collection("Radio", "${seed.title} Radio", list, seed.art))
+                }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                 status = "Radio needs the internet (${e.message})"
             }
         }
@@ -273,6 +309,7 @@ object Player {
         current = t
         handledEnd = false
         position = 0; duration = t.durationMs
+        loadSponsor(t)
         Library.played(t)
         loadJob?.cancel()
         loadJob = SevbifyApp.instance.scope.launch {
@@ -289,6 +326,7 @@ object Player {
                     if (!videoMode) play()          // being watched: the sound comes with the video
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                 status = "⚠ ${t.title}: ${e.message}"
             }
         }

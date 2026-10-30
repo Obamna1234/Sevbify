@@ -161,6 +161,24 @@ class Deezer:
         data = self._get(f"/artist/{artist_id}/top", {"limit": limit}, ttl=24 * 3600)
         return [self.track_from(d) for d in data.get("data", [])]
 
+    def artist_albums(self, artist_id, limit=100):
+        """An artist's releases, newest first, sorted like Spotify's Releases page:
+        {"albums": [...], "singles": [...], "compilations": [...]} (Deezer album dicts with release_date)."""
+        data = self._get(f"/artist/{artist_id}/albums", {"limit": limit}, ttl=24 * 3600)
+        out = {"albums": [], "singles": [], "compilations": []}
+        seen = set()
+        items = sorted((a for a in data.get("data", []) if a.get("title")),
+                       key=lambda a: a.get("release_date") or "", reverse=True)
+        for a in items:
+            key = (a["title"].casefold(), a.get("record_type"))
+            if key in seen:
+                continue
+            seen.add(key)
+            kind = a.get("record_type") or "album"
+            group = "singles" if kind in ("single", "ep") else ("compilations" if kind == "compile" else "albums")
+            out[group].append(a)
+        return out
+
     def artist_radio(self, artist_id, limit=25):
         data = self._get(f"/artist/{artist_id}/radio", {"limit": limit}, ttl=6 * 3600)
         return [self.track_from(d) for d in data.get("data", [])]

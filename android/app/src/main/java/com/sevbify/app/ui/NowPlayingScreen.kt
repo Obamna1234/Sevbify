@@ -82,14 +82,14 @@ fun NowPlayingScreen() {
     item {
     Column(Modifier.fillParentMaxHeight().padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { Nav.nowPlayingOpen = false }) { Icon(Icons.Filled.KeyboardArrowDown, "Close", Modifier.size(32.dp)) }
+            IconButton(onClick = { Nav.nowPlayingOpen = false }) { Icon(Icons.Filled.KeyboardArrowDown, "Close", Modifier.size(32.dp), tint = C.Text) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("PLAYING FROM", style = MaterialTheme.typography.labelSmall.copy(color = C.Text))
                 Text(Player.sourceName.ifEmpty { "Sevbify" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
                      style = MaterialTheme.typography.labelLarge)
             }
             IconButton(onClick = { Nav.songMenu = SongMenu(t, queue = Player.context.toList(), source = Player.sourceName) }) {
-                Icon(Icons.Filled.MoreVert, "More")
+                Icon(Icons.Filled.MoreVert, "More", tint = C.Text)
             }
         }
         Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
@@ -132,11 +132,9 @@ fun NowPlayingScreen() {
             }
         }
         val d = Player.duration.coerceAtLeast(1)
-        Slider(value = if (dragging) dragValue else (Player.position.toFloat() / d).coerceIn(0f, 1f),
-               onValueChange = { dragging = true; dragValue = it },
-               onValueChangeFinished = { Player.seekTo((dragValue * d).toLong()); dragging = false },
-               colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White,
-                                              inactiveTrackColor = Color(0x4DFFFFFF)))
+        SeekBar(progress = (Player.position.toFloat() / d).coerceIn(0f, 1f),
+                onSeek = { Player.seekTo((it * d).toLong()) },
+                onDrag = { v -> dragging = v != null; if (v != null) dragValue = v })
         Row {
             Text(clock(if (dragging) (dragValue * d).toLong() else Player.position), style = MaterialTheme.typography.labelSmall)
             Spacer(Modifier.weight(1f))
@@ -151,14 +149,14 @@ fun NowPlayingScreen() {
             IconButton(onClick = { Player.toggleShuffle() }) {
                 Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Text)
             }
-            IconButton(onClick = { Player.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", Modifier.size(40.dp)) }
+            IconButton(onClick = { Player.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", Modifier.size(40.dp), tint = C.Text) }
             Surface(onClick = { Player.playPause() }, shape = CircleShape, color = Color.White, modifier = Modifier.size(68.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(if (Player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                          if (Player.isPlaying) "Pause" else "Play", tint = Color.Black, modifier = Modifier.size(38.dp))
                 }
             }
-            IconButton(onClick = { Player.next() }) { Icon(Icons.Filled.SkipNext, "Next", Modifier.size(40.dp)) }
+            IconButton(onClick = { Player.next() }) { Icon(Icons.Filled.SkipNext, "Next", Modifier.size(40.dp), tint = C.Text) }
             IconButton(onClick = { Player.cycleRepeat() }) {
                 Icon(if (Player.repeat == "one") Icons.Filled.RepeatOne else Icons.Filled.Repeat, "Repeat",
                      tint = if (Player.repeat == "off") C.Text else C.Green)
@@ -173,8 +171,8 @@ fun NowPlayingScreen() {
                 Text(AudioOutput.name, color = C.Green, style = MaterialTheme.typography.labelMedium, maxLines = 1,
                      overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             } else Spacer(Modifier.weight(1f))
-            IconButton(onClick = { Nav.shareFor = t }) { Icon(Icons.Filled.Share, "Share") }
-            IconButton(onClick = { Nav.queueOpen = true }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Queue") }
+            IconButton(onClick = { Nav.shareFor = t }) { Icon(Icons.Filled.Share, "Share", tint = C.Text) }
+            IconButton(onClick = { Nav.queueOpen = true }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Queue", tint = C.Text) }
         }
     }
     }

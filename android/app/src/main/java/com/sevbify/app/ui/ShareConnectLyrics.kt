@@ -273,6 +273,7 @@ object LyricsState {
                 status = if (r.optBoolean("instrumental") && plain.isBlank()) "Instrumental: no lyrics" else ""
             } else status = if (Library.settings.online) "No lyrics found for this song" else "Lyrics need the internet"
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             if (key == t.matchKey) status = "Lyrics aren't available right now"
         }
     }
