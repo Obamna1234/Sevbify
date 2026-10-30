@@ -26,6 +26,28 @@ based on Spotify's phone app: Home, Search, Your Library and Create along the bo
 and the full now-playing screen. It only reads music from the folders you choose in Settings.
 Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
+## Install (macOS, new and experimental) — Apple Silicon Macs (M1 or newer)
+
+1. Under **Assets**, download **Sevbify-macOS.zip** and double-click it to unzip.
+2. Drag **Sevbify** into **Applications**.
+3. The first time, **right-click Sevbify → Open → Open** (the app isn't from the App Store or signed by Apple,
+   so a plain double-click is blocked once). If macOS still refuses: **System Settings → Privacy & Security →
+   Open Anyway**.
+
+Everything is included (VLC's player engine, ffmpeg, the downloader). Playlists and settings are kept in
+`~/Library/Application Support/Sevbify`. Older Intel Macs aren't supported by this download yet.
+
+## Install (Linux, new and experimental) — 64-bit, Ubuntu 22.04 or newer (or similar)
+
+1. Install VLC (Sevbify plays music with it): `sudo apt install vlc` (Fedora: `sudo dnf install vlc`, Arch:
+   `sudo pacman -S vlc`).
+2. Under **Assets**, download **Sevbify-Linux.tar.gz** and extract it (right-click → Extract, or
+   `tar xzf Sevbify-Linux.tar.gz`).
+3. Open the `Sevbify` folder and run `./Sevbify`. To add it to your app menu, run `./install.sh` once.
+   If it doesn't start on a very minimal system, also install `libxcb-cursor0`.
+
+Playlists and settings are kept in `~/.local/share/Sevbify`.
+
 ## What's in this version
 
 beta.14: import playlists and albums from Deezer and Jamendo links too, and simpler border colours (Settings →

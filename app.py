@@ -24,13 +24,24 @@ from PyQt6.QtCore import QTimer
 SMOKE_TEST = "--smoke-test" in sys.argv
 
 
-VLC_HELP = (
-    "The music player needs the VLC media player to be installed.\n\n"
-    "1. Download VLC from https://www.videolan.org/vlc/\n"
-    "2. Install the 64-bit version (it must match your 64-bit Python).\n"
-    "3. Start this app again.\n\n"
-    "Technical details:\n{details}"
-)
+if sys.platform.startswith("linux"):
+    VLC_HELP = (
+        "The music player needs the VLC media player to be installed.\n\n"
+        "Install it from your system's software centre, or in a terminal:\n"
+        "  Ubuntu / Debian / Mint:  sudo apt install vlc\n"
+        "  Fedora:  sudo dnf install vlc   (needs RPM Fusion)\n"
+        "  Arch:  sudo pacman -S vlc\n"
+        "Then start Sevbify again.\n\n"
+        "Technical details:\n{details}"
+    )
+else:
+    VLC_HELP = (
+        "The music player needs the VLC media player to be installed.\n\n"
+        "1. Download VLC from https://www.videolan.org/vlc/\n"
+        "2. Install the 64-bit version (it must match your 64-bit Python).\n"
+        "3. Start this app again.\n\n"
+        "Technical details:\n{details}"
+    )
 
 
 def _log_stderr(text: str):
@@ -60,7 +71,7 @@ def _smoke_playback():
     try:
         import vlc
         lib = getattr(getattr(vlc, "dll", None), "_name", "?")
-        if getattr(sys, "frozen", False) and os.name == "nt" and not BUNDLED_VLC:
+        if getattr(sys, "frozen", False) and (os.name == "nt" or sys.platform == "darwin") and not BUNDLED_VLC:
             return False, f"the app has no bundled VLC (loaded {lib})"
         folder = tempfile.mkdtemp()
         files = [os.path.join(folder, "smoke.wav")]
@@ -300,7 +311,7 @@ def main():
                     details += ", yt-dlp-ejs bundled"
                 except ImportError:
                     problems.append("yt-dlp-ejs is missing from the app (YouTube needs it)")
-                if getattr(sys, "frozen", False) and os.name == "nt" and not js:
+                if getattr(sys, "frozen", False) and not js:
                     problems.append("the bundled Deno (YouTube's JavaScript engine) didn't start")
             except Exception:
                 problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""

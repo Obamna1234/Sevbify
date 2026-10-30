@@ -1,8 +1,8 @@
 name: Build & test
 
-# On every push: runs the automated tests on real Windows (macOS/Linux ready,
-# switched off for now — see the matrix below) machines (with VLC installed), builds the app for each, checks the built app
-# actually starts and loads a library, and uploads a download for each system.
+# On every push: runs the automated tests on real Windows, macOS (Apple Silicon) and Linux machines (with VLC
+# installed), builds the app for each, checks the built app actually starts, plays audio and loads a library,
+# and uploads a download for each system.
 # Releases: when the VERSION file holds a version that has no release yet (and the push is to main),
 # a green build publishes it as a GitHub Release tagged v<VERSION>, with RELEASE_NOTES.md as its text.
 # Pushing a tag like v5.0 by hand does the same.
@@ -24,10 +24,9 @@ jobs:
       matrix:
         include:
           - { name: Windows, os: windows-latest }
-          # macOS and Linux are ready but switched off until the Windows app is
-          # finished (saves GitHub Actions minutes). Remove the "#" to enable:
-          # - { name: macOS,   os: macos-latest }
-          # - { name: Linux,   os: ubuntu-latest }
+          - { name: macOS,   os: macos-latest }
+          # Built on Ubuntu 22.04 so the app also runs on older Linux versions (newer ones are fine).
+          - { name: Linux,   os: ubuntu-22.04 }
     env:
       QT_QPA_PLATFORM: offscreen
       PYTHONUTF8: "1"
@@ -60,7 +59,7 @@ jobs:
             macOS)   brew install --cask vlc ;;
             Linux)   sudo apt-get update -q
                      sudo apt-get install -y -q vlc libvlc-dev libegl1 libgl1 libxkbcommon0 \
-                       libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libglib2.0-0 ;;
+                       libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libglib2.0-0 libxcb-cursor0 ;;
           esac
 
       - name: Install Python packages
@@ -88,14 +87,16 @@ jobs:
         run: python tools/download_check.py
 
       - name: Get Deno (YouTube's JavaScript engine for yt-dlp), checksum-checked
-        if: runner.os == 'Windows'
         run: |
           python - <<'PY'
-          import hashlib, io, json, re, urllib.request, zipfile
+          import hashlib, io, json, os, platform, re, stat, sys, urllib.request, zipfile
           def get(u):
               return urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Sevbify-CI"}), timeout=120).read()
           rel = json.loads(get("https://api.github.com/repos/denoland/deno/releases/latest"))
-          name = "deno-x86_64-pc-windows-msvc.zip"
+          arch = "aarch64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
+          target = {"win32": "pc-windows-msvc", "darwin": "apple-darwin"}.get(sys.platform, "unknown-linux-gnu")
+          name = f"deno-{arch}-{target}.zip"
+          exe = "deno.exe" if os.name == "nt" else "deno"
           asset = next(a for a in rel["assets"] if a["name"] == name)
           data = get(asset["browser_download_url"])
           expected = (asset.get("digest") or "").removeprefix("sha256:")
@@ -104,10 +105,11 @@ jobs:
               expected = re.search(r"[0-9a-fA-F]{64}", get(side["browser_download_url"]).decode("utf-8", "replace")).group(0)
           actual = hashlib.sha256(data).hexdigest()
           assert actual.lower() == expected.lower(), f"Deno checksum mismatch: {actual} != {expected}"
-          zipfile.ZipFile(io.BytesIO(data)).extract("deno.exe", ".")
-          print("Deno", rel["tag_name"], "verified", actual)
+          zipfile.ZipFile(io.BytesIO(data)).extract(exe, ".")
+          os.chmod(exe, os.stat(exe).st_mode | stat.S_IEXEC)
+          print("Deno", rel["tag_name"], name, "verified", actual)
           PY
-          ./deno.exe --version
+          if [ -f deno.exe ]; then ./deno.exe --version; else ./deno --version; fi
 
       - name: Build the app
         run: |
@@ -137,8 +139,22 @@ jobs:
             *)       ICON=assets/branding/sevbify_256.png ;;
           esac
           if [ -f deno.exe ]; then EXTRA="$EXTRA --add-binary deno.exe${SEP}."; fi
+          if [ -f deno ]; then EXTRA="$EXTRA --add-binary deno${SEP}."; fi
           pyinstaller --noconfirm --windowed --name Sevbify --icon "$ICON" --collect-all yt_dlp --collect-all yt_dlp_ejs \
             --add-binary "${FF}${SEP}." --add-data "assets${SEP}assets" --add-data "VERSION${SEP}." $EXTRA app.py
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # macOS: put VLC's playback engine inside Sevbify.app (same layout as VLC.app: vlc/lib + vlc/plugins),
+            # then seal the app again (ad-hoc signature; Apple Silicon refuses to run apps without one).
+            SRC="/Applications/VLC.app/Contents/MacOS"
+            DST="dist/Sevbify.app/Contents/Frameworks/vlc"
+            mkdir -p "$DST/lib"
+            cp -RL "$SRC/lib/." "$DST/lib/"
+            cp -RL "$SRC/plugins" "$DST/"
+            cp "/Applications/VLC.app/Contents/Resources/COPYING" "$DST/VLC-COPYING.txt" 2>/dev/null || true
+            ls "$DST/lib"; du -sh "$DST"
+            codesign --force --deep --sign - dist/Sevbify.app
+            codesign --verify --deep dist/Sevbify.app && echo "signature OK"
+          fi
 
       - name: Check the built app starts (Windows)
         if: runner.os == 'Windows'
@@ -156,12 +172,16 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
+            # Hide the VLC installed on this machine: the app must play with the copy inside it.
+            sudo mv /Applications/VLC.app /Applications/VLC-hidden.app
             APP="dist/Sevbify.app/Contents/MacOS/Sevbify"; LOG="$HOME/Library/Application Support/Sevbify/smoke-test.log"
           else
             APP="dist/Sevbify/Sevbify"; LOG="$HOME/.local/share/Sevbify/smoke-test.log"
           fi
           set +e; "$APP" --smoke-test; CODE=$?; set -e
           echo "Exit code: $CODE"; cat "$LOG" 2>/dev/null || true
+          if [ -f "$LOG" ]; then while IFS= read -r l; do echo "::notice title=Smoke test (${{ runner.os }})::$l"; done < "$LOG"; fi
+          if [ $CODE -ne 0 ]; then echo "::error title=Smoke test (${{ runner.os }})::exit code $CODE"; fi
           exit $CODE
 
       - name: Package the download
@@ -170,7 +190,7 @@ jobs:
             Windows) cp README.md CHANGELOG.md dist/Sevbify/
                      pwsh -Command 'Compress-Archive -Path "dist\Sevbify" -DestinationPath "Sevbify-Windows.zip"' ;;
             macOS)   ditto -c -k --keepParent dist/Sevbify.app Sevbify-macOS.zip ;;
-            Linux)   cp README.md CHANGELOG.md packaging/sevbify.desktop dist/Sevbify/
+            Linux)   cp README.md CHANGELOG.md packaging/sevbify.desktop packaging/install.sh dist/Sevbify/
                      cp assets/branding/sevbify_256.png dist/Sevbify/sevbify.png
                      tar czf Sevbify-Linux.tar.gz -C dist Sevbify ;;
           esac
