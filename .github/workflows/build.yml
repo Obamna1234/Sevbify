@@ -348,19 +348,27 @@ jobs:
               d = {"error": str(e)}
           for k, v in d.items():
               print(f"::notice title=iPhone smoke test::{k}: {json.dumps(v)[:600]}")
+          import glob
+          for f in sorted(glob.glob("screens/*.err.txt") + glob.glob("screens/*.out.txt"))[:4]:
+              lines = [l for l in open(f, errors="replace").read().splitlines() if l.strip()]
+              if lines:
+                  print(f"::warning title=iPhone {f}::" + "%0A".join(x.replace("%", "%25")[:300] for x in lines[-12:]))
           PY
+          ls -la screens
       - name: Save screenshots to the screens-ios branch
         if: always()
         run: |
           [ -d screens ] || exit 0
           cp sim-build.log ipa-build.log screens/ 2>/dev/null || true
+          set -x
+          rm -rf /tmp/s && mkdir -p /tmp/s && cp -r screens/. /tmp/s/
+          cd /tmp/s
+          git init -q -b screens-ios
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-          mkdir -p /tmp/s && cp -r screens/. /tmp/s/
-          git checkout -q --orphan screens-ios-new
-          git rm -rq --cached . ; git clean -fdqx
-          rm -rf ./* .github 2>/dev/null; cp -r /tmp/s/. .
           git add -A && git commit -qm "iPhone screenshots ${GITHUB_SHA::7}"
-          git push -qf origin HEAD:screens-ios
+          AUTH=$(git -C "$GITHUB_WORKSPACE" config --get http.https://github.com/.extraheader || true)
+          git -c http.https://github.com/.extraheader="$AUTH" push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:screens-ios \
+            || echo "::error title=screens-ios::push failed"
       - uses: actions/upload-artifact@v4
         with:
           name: Sevbify-iOS
