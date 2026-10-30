@@ -195,6 +195,17 @@ def main():
         if tap("More"):
             shot("now_playing_menu")
             back()
+        if tap("Share", tries=2):
+            shot("share_sheet", 8)
+            back()
+        if tap("Connect to a device", tries=2):
+            shot("connect_sheet", 3)
+            back()
+        swipe_up(); swipe_up()
+        shot("lyrics_card", 6)
+        if tap("Show lyrics", tries=1):
+            shot("lyrics_full", 3)
+            back()
         back()
         shot("after_closing_now_playing")
     step("now_playing", now_playing)
@@ -256,6 +267,11 @@ def main():
         shot("import_from_share", 6)
         tap("Import", tries=2)
         shot("import_result", 20)
+        if tap("Download", tries=2):
+            shot("download_choice", 3)
+            if tap("Choose songs", tries=2):
+                shot("choose_songs", 3)
+                back()
         back()
     step("import", import_link)
 

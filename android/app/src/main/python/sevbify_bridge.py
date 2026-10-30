@@ -326,6 +326,25 @@ def check_updates(current):
 
 
 @_call
+def lyrics(artist, title, album="", duration_ms=0):
+    """Lyrics for a song from LRCLIB ({"lines": [[ms, text]], "plain", "source", "synced"}), or None."""
+    from core import lyrics as L
+    net = _net() if _state["online_on"] else None
+    got = L.find(net, artist, title, album or "", int(duration_ms or 0))
+    return got.to_dict() if got else None
+
+
+@_call
+def share_links(artist, title, page_url="", duration_ms=0):
+    """Spotify / YouTube / song.link links for sharing a song (looked up only when you press Share)."""
+    from core import share, streamer
+    if not _state["online_on"]:
+        return dict(share.search_links(artist, title), songlink="", exact={"spotify": False, "youtube": False})
+    yt = streamer.youtube_page(artist, title, int(duration_ms or 0))
+    return share.links(_net(), artist, title, page_url or "", yt)
+
+
+@_call
 def update_ytdlp():
     """Fetch the newest official yt-dlp (checksum-checked); it's used from the next start."""
     from core import updates

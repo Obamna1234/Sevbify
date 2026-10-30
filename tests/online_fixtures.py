@@ -74,6 +74,8 @@ class FakeWeb:
         if best is None:
             raise urllib.error.HTTPError(url, 404, "not found", {}, None)
         value = self.routes[best]
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 400:   # an HTTP error status
+            raise urllib.error.HTTPError(url, value, "error", {}, None)
         if isinstance(value, bytes):
             return value
         if isinstance(value, str):                 # a web page (HTML / XML / text)

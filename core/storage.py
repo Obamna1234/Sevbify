@@ -86,6 +86,8 @@ class UserData:
     download_quality: str = "best"                # Settings: "best" (original) | "mp3" | "small" (core/quality)
     audiobook_quality: str = "standard"           # Settings: "standard" (64 kbps) | "high" (128 kbps)
     video_quality: str = "auto"                   # Settings: video podcasts "auto" | "360" | "480" | "720" | "1080"
+    lyrics_enabled: bool = True                   # Settings: Lyrics button (your .lrc files, or LRCLIB online)
+    audio_device: str = ""                        # Connect: VLC output device id ("" = Windows' default)
     playlist_files: bool = True                   # Settings: keep .m3u8 playlist files next to downloads
     folders: List[str] = field(default_factory=list)   # Your Library folders, in order
     library_sort: str = "recents"                 # "recents" | "added" | "alpha"
@@ -128,7 +130,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
                        "canvas_enabled")
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
-    "download_quality", "audiobook_quality", "video_quality",
+    "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled",
     "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders")
@@ -216,6 +218,8 @@ class Storage:
                 "download_quality": data.download_quality,
                 "audiobook_quality": data.audiobook_quality,
                 "video_quality": data.video_quality,
+                "lyrics_enabled": bool(data.lyrics_enabled),
+                "audio_device": data.audio_device,
                 "playlist_files": bool(data.playlist_files),
                 "folders": list(data.folders),
                 "library_sort": data.library_sort,
@@ -299,6 +303,8 @@ class Storage:
             _q.AUDIOBOOK_QUALITIES else _q.DEFAULT_AUDIOBOOK_QUALITY
         data.video_quality = str(settings.get("video_quality")) if str(settings.get("video_quality")) in \
             _q.VIDEO_QUALITIES else _q.DEFAULT_VIDEO_QUALITY
+        data.lyrics_enabled = bool(settings.get("lyrics_enabled", True))
+        data.audio_device = str(settings.get("audio_device") or "")
         data.playlist_files = bool(settings.get("playlist_files", True))
         data.folders = [str(f) for f in settings.get("folders", []) or [] if str(f).strip()]
         data.library_sort = settings.get("library_sort") if settings.get("library_sort") in ("recents", "added", "alpha") \

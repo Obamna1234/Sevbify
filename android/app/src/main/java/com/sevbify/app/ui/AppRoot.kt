@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
@@ -81,6 +82,9 @@ fun AppRoot() {
             NowPlayingScreen()
         }
         if (Player.videoMode && !Nav.nowPlayingOpen) FloatingVideo()    // keeps playing while you browse
+        AnimatedVisibility(Nav.lyricsOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) { LyricsScreen() }
+        Nav.shareFor?.let { ShareSheet(it) }
+        if (Nav.connectOpen) ConnectSheet()
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         Sheets()
         Dialogs()
@@ -149,8 +153,19 @@ private fun MiniPlayer() {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                Text(Player.status.takeIf { it.endsWith("…") } ?: t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                     style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFDDDDDD)))
+                if (AudioOutput.kind != "speaker" && Player.status.isEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(AudioOutput.icon, null, tint = C.Green, modifier = Modifier.size(14.dp))
+                        Text(" " + AudioOutput.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                             style = MaterialTheme.typography.bodySmall.copy(color = C.Green))
+                    }
+                } else {
+                    Text(Player.status.takeIf { it.endsWith("…") } ?: t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                         style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFDDDDDD)))
+                }
+            }
+            IconButton(onClick = { Nav.connectOpen = true }) {
+                Icon(Icons.Filled.Devices, "Connect to a device", tint = if (AudioOutput.kind != "speaker") C.Green else C.Text)
             }
             IconButton(onClick = { Player.playPause() }) {
                 Icon(if (Player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,

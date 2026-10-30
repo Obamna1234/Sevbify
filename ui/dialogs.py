@@ -154,3 +154,67 @@ def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_l
     if d.exec() != QDialog.DialogCode.Accepted:
         return None
     return edit.text().strip(), choice["cover"]
+
+
+def choose_downloads(parent, title, songs):
+    """Spotify-like "Download …?" card without the Premium part: Download all, or tick the songs you want.
+    `songs`: the songs not downloaded yet. Returns the chosen songs ([] = cancelled)."""
+    from PyQt6.QtWidgets import QListWidget, QListWidgetItem
+    if getattr(parent, "_auto_answer_dialogs", None) is not None:          # tests
+        answer = parent._auto_answer_dialogs
+        return list(songs) if answer is True else (list(answer) if isinstance(answer, (list, tuple)) else [])
+    d = _Card(parent, light=False)
+    d.setMinimumWidth(520)
+    h = QLabel(f"Download {title}?")
+    h.setWordWrap(True)
+    h.setStyleSheet("font-size: 22px; font-weight: 800; color: white;")
+    d.body.addWidget(h)
+    t = QLabel(f"{len(songs)} song{'s' if len(songs) != 1 else ''} aren't on your computer yet. Download them all, "
+               "or untick the ones you don't want.")
+    t.setWordWrap(True)
+    t.setStyleSheet(f"font-size: 14px; color: {theme.SUBDUED};")
+    d.body.addWidget(t)
+    lst = QListWidget()
+    lst.setMinimumHeight(260)
+    lst.setStyleSheet(f"QListWidget {{ background: #1f1f1f; color: white; border: none; border-radius: 6px; font-size: 14px; }}"
+                      f" QListWidget::item {{ padding: 6px; }} QListWidget::item:hover {{ background: {theme.HOVER}; }}")
+    for s in songs:
+        it = QListWidgetItem(f"{s.title}  —  {s.artist}")
+        it.setFlags(it.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        it.setCheckState(Qt.CheckState.Checked)
+        lst.addItem(it)
+    d.body.addWidget(lst)
+    row = QHBoxLayout()
+    pill = (f"QPushButton {{ color: white; background: transparent; border: 1px solid {theme.DIM}; border-radius: 16px;"
+            f" font-weight: 700; padding: 7px 16px; }} QPushButton:hover {{ border-color: white; }}")
+    all_btn, none_btn = QPushButton("Select all"), QPushButton("Select none")
+    for b, state in ((all_btn, Qt.CheckState.Checked), (none_btn, Qt.CheckState.Unchecked)):
+        b.setStyleSheet(pill)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.clicked.connect(lambda _=False, st=state: [lst.item(i).setCheckState(st) for i in range(lst.count())])
+        row.addWidget(b)
+    row.addStretch()
+    cancel = QPushButton("Cancel")
+    cancel.setStyleSheet("QPushButton { color: white; background: transparent; border: none; font-weight: 700;"
+                         " padding: 10px 14px; }")
+    ok = QPushButton()
+    ok.setDefault(True)
+    ok.setCursor(Qt.CursorShape.PointingHandCursor)
+    ok.setStyleSheet(f"QPushButton {{ color: #000000; background: {theme.GREEN}; border: none; border-radius: 20px;"
+                     f" font-size: 15px; font-weight: 700; padding: 10px 26px; }} QPushButton:hover {{ background: #3be477; }}"
+                     f" QPushButton:disabled {{ background: #535353; }}")
+
+    def count():
+        n = sum(1 for i in range(lst.count()) if lst.item(i).checkState() == Qt.CheckState.Checked)
+        ok.setText("Download all" if n == lst.count() else f"Download {n}")
+        ok.setEnabled(n > 0)
+    lst.itemChanged.connect(lambda _it: count())
+    count()
+    cancel.clicked.connect(d.reject)
+    ok.clicked.connect(d.accept)
+    row.addWidget(cancel)
+    row.addWidget(ok)
+    d.body.addLayout(row)
+    if d.exec() != QDialog.DialogCode.Accepted:
+        return []
+    return [s for i, s in enumerate(songs) if lst.item(i).checkState() == Qt.CheckState.Checked]

@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { SevbifyTheme { AppRoot() } }
+        com.sevbify.app.ui.AudioOutput.start(this)
         val wanted = if (Build.VERSION.SDK_INT >= 33)
             arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)

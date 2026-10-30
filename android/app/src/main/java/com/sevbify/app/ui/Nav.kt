@@ -47,6 +47,9 @@ object Nav {
     var playlistMenu by mutableStateOf<Playlist?>(null)
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
     var toast by mutableStateOf("")
+    var shareFor by mutableStateOf<Track?>(null)               // the share sheet
+    var connectOpen by mutableStateOf(false)                    // Connect (audio output / Bluetooth)
+    var lyricsOpen by mutableStateOf(false)                     // full-screen lyrics
     var confirm by mutableStateOf<Triple<String, String, () -> Unit>?>(null)
     var rename by mutableStateOf<Pair<String, (String) -> Unit>?>(null)
 
@@ -56,6 +59,7 @@ object Nav {
         tab = t
     }
     fun back(): Boolean {
+        if (lyricsOpen) { lyricsOpen = false; return true }
         if (nowPlayingOpen) { nowPlayingOpen = false; return true }
         if (stack.size > 1) { stack.removeAt(stack.size - 1); return true }
         if (tab != Tab.HOME) { tab = Tab.HOME; return true }

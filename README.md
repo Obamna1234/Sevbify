@@ -182,8 +182,9 @@ hidden window, so they make no sound and don't touch your music. They need VLC i
 No account, no ads, no tracking, nothing sold. With online features on, Sevbify contacts only what each feature
 needs: Deezer (search, radio, genres, previews), Wikipedia (artist info), Apple iTunes (song names, the podcast
 directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads,
-video podcasts), Spotify / Apple Music only when you import a playlist link, and GitHub (update checks; can be
-switched off). Those sites see your IP address and what you look up, like a web browser would. Sevbify only looks
+video podcasts), Spotify / Apple Music only when you import a playlist link, LRCLIB (lyrics: the song's name and
+length; can be switched off), song.link (only when you share a song) and GitHub (update checks; can be switched
+off). Those sites see your IP address and what you look up, like a web browser would. Sevbify only looks
 at the music folders you add; it never searches the rest of your computer. Settings → Online features off: nothing
 is contacted at all.
 

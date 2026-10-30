@@ -91,6 +91,23 @@ def find_full_song(artist, title, duration_ms=0, source=downloader.SOURCE_BOTH, 
     raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
 
 
+def youtube_page(artist, title, duration_ms=0, search=True):
+    """The YouTube video matched to a song (for sharing): the one already used for streaming if there is one,
+    otherwise found with the same matching (only when `search`). "" if none."""
+    line = downloader.song_line(artist, title)
+    with _lock:
+        for (key_line, _src), (_t, res) in _cache.items():
+            if key_line == line.casefold() and res.get("source") == "YouTube":
+                return res.get("page", "")
+    if not search:
+        return ""
+    try:
+        e = downloader.engine()
+        return _pick_youtube(e, line, int((duration_ms or 0) / 1000)) or ""
+    except Exception:
+        return ""
+
+
 def clear_cache():
     with _lock:
         _cache.clear()

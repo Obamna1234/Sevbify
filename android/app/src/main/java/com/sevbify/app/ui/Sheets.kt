@@ -113,13 +113,7 @@ private fun SongMenuSheet(m: SongMenu) {
                     }
                 }
             }
-            SheetItem(Icons.Filled.Share, "Share") {
-                close()
-                val text = "${t.artist} - ${t.title}" + (t.pageUrl.takeIf { it.isNotEmpty() }?.let { "\n$it" } ?: "")
-                context.startActivity(android.content.Intent.createChooser(
-                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(android.content.Intent.EXTRA_TEXT, text), "Share"))
-            }
+            SheetItem(Icons.Filled.Share, "Share") { close(); Nav.shareFor = t }
         }
     }
 }

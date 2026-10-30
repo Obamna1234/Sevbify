@@ -72,10 +72,14 @@ fun SettingsScreen() {
             Muted("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: " +
                   "Deezer (search, radio, genres), Wikipedia (artist info), Apple (podcast directory), the podcasts' own " +
                   "feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads), Spotify or Apple " +
-                  "Music only when you import a link, and GitHub for update checks.")
+                  "Music only when you import a link, LRCLIB for lyrics, song.link when you share a song, and GitHub for updates.")
         }
         item { Heading("Playback") }
         item { Toggle("Autoplay", "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
+        item {
+            Toggle("Lyrics", "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
+                   "database; only the song's name and length are sent).", s.lyrics) { s.lyrics = it; Library.changed() }
+        }
         item { Heading("Downloads") }
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {

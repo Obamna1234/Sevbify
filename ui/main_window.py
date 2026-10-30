@@ -327,6 +327,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         # A second player for crossfading: the next song starts on it while the current one fades out
         # (Settings → Fade between songs). self.player is always the song you hear "now".
         self._spare_player = self.vlc_instance.media_player_new()
+        if getattr(self.user_data, "audio_device", ""):        # Connect: the output you picked last time
+            for _p in (self.player, self._spare_player):
+                try:
+                    _p.audio_output_device_set(None, self.user_data.audio_device)
+                except Exception:
+                    pass
         self._zoom_at_start = self.user_data.zoom          # the zoom Sevbify is drawn at in this run
         self._xf = None                    # crossfade in progress: dict(out=player, start=time, ms=length)
         self._xf_timer = QTimer(self)
@@ -507,6 +513,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.settings_page.reset_requested.connect(self.reset_settings)
         self.stack.addWidget(self.settings_page)
+        from .lyrics_page import LyricsPage
+        self.lyrics_page = LyricsPage()
+        self.lyrics_page.seek_requested.connect(lambda ms: self.player.set_time(int(ms)))
+        self.stack.addWidget(self.lyrics_page)
+        self._lyrics_key = None
 
         for page in [self.home_page, self.search_page, self.library_page, self.playlists_page,
                      self.playlist_page, self.saved_page, self.radio_page, self.collection_page]:
@@ -917,6 +928,12 @@ class MainWindow(ShowsMixin, QMainWindow):
                 if not is_web_url(url):
                     continue
                 open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
+            share_menu = menu.addMenu("Share")
+            share_menu.setIcon(icons.share(theme.SUBDUED))
+            share_menu.setStyleSheet(MENU_STYLE)
+            for label, kind in (("Copy Spotify link", "spotify"), ("Copy YouTube link", "youtube"),
+                                ("Copy song.link (opens in any music app)", "songlink")):
+                share_menu.addAction(label).triggered.connect(lambda _=False, k=kind: self.share_song(song, k))
 
         try:
             has_canvas = bool(find_canvas(song, self.storage.data_dir))
@@ -1299,10 +1316,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         rh.setContentsMargins(0, 0, 0, 0)
         rh.setSpacing(4)
         rh.addStretch()
+        self.lyrics_btn = self._icon_button("Lyrics", self.toggle_lyrics)
+        self.lyrics_btn.setIcon(icons.lyrics(icons.GREY))
+        self.lyrics_btn.setVisible(bool(getattr(self.user_data, "lyrics_enabled", True)))
+        rh.addWidget(self.lyrics_btn)
         self.nowplaying_btn = self._icon_button("Now playing view", lambda: self.toggle_right_panel("nowplaying"))
         rh.addWidget(self.nowplaying_btn)
         self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
         rh.addWidget(self.queue_btn)
+        self.devices_btn = self._icon_button("Connect to a device", self.show_devices_menu)
+        self.devices_btn.setIcon(icons.devices(icons.GREY))
+        rh.addWidget(self.devices_btn)
         self.mute_btn = self._icon_button("Mute / unmute", self.toggle_mute)
         rh.addWidget(self.mute_btn)
         self.volume_slider = ClickSlider(Qt.Orientation.Horizontal)
@@ -1567,6 +1591,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         """Runs every 100 ms on the UI thread. Only uses non-blocking VLC calls."""
         if self.current_song is None:
             return
+        if self.stack.currentWidget() is self.lyrics_page:
+            self._lyrics_follow()
 
         state = self.player.get_state()
 
@@ -2874,7 +2900,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         dl = menu.addAction(f"⬇  Download {len(pending)} song{'s' if len(pending) != 1 else ''}" if pending
                             else "⬇  Downloaded")
         dl.setEnabled(bool(pending))
-        dl.triggered.connect(lambda: self.download_songs(playlist.songs))
+        dl.triggered.connect(lambda: self.download_with_choice(playlist.songs, playlist.name))
         menu.addSeparator()
         menu.addAction("♫  Create playlist").triggered.connect(lambda: self.new_playlist())
         menu.addAction("＋  Create folder").triggered.connect(lambda: self.create_folder())
@@ -3310,7 +3336,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.pl_shuffle_btn = round_btn(icons.shuffle(theme.SUBDUED, 28), "Shuffle play", self._shuffle_open_playlist)
         actions.addWidget(self.pl_shuffle_btn)
         self.pl_download_btn = round_btn(icons.download(theme.SUBDUED, 30), "Download",
-                                         lambda: self.open_playlist and self.download_songs(self.open_playlist.songs))
+                                         lambda: self.open_playlist and self.download_with_choice(
+                                             self.open_playlist.songs, self.open_playlist.name))
         actions.addWidget(self.pl_download_btn)
         self.pl_more_btn = round_btn(icons.more(theme.SUBDUED, 28), "More options for this playlist",
                                      self._show_open_playlist_menu)
@@ -3730,6 +3757,142 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._queue_changed()
             return
         self._start_current()
+
+    # --- Lyrics (like Spotify's lyrics view) --------------------------------------------------------------
+    def toggle_lyrics(self):
+        if self.stack.currentWidget() is self.lyrics_page:
+            self.go_back()
+            return
+        self.stack.setCurrentWidget(self.lyrics_page)
+        self._set_nav("lyrics")
+        self.lyrics_btn.setIcon(icons.lyrics(icons.GREEN, dot=True))
+        self._lyrics_key = None
+        self._lyrics_follow()
+
+    def _lyrics_follow(self):
+        """Load the lyrics when the song changes; highlight the line being sung."""
+        song = self.current_song
+        if song is None:
+            return
+        key = (song.artist, song.title)
+        if key != self._lyrics_key:
+            self._lyrics_key = key
+            self._load_lyrics(song)
+            return
+        try:
+            self.lyrics_page.set_position(max(0, self.player.get_time()))
+        except Exception:
+            pass
+
+    def _load_lyrics(self, song):
+        from core import lyrics as L
+        title = f"{song.title} · {song.artist}"
+        path = "" if getattr(song, "is_remote", False) else getattr(song, "file_path", "")
+        local = L.from_file(path)
+        if local:
+            self.lyrics_page.show_lyrics(local, title)
+            return
+        if not self.online_enabled:
+            self.lyrics_page.show_message("Lyrics need the internet (or a .lrc file next to your song).", title)
+            return
+        self.lyrics_page.show_message("Loading lyrics…", title)
+        album = song.album if song.album and song.album != "Unknown Album" else ""
+        duration = getattr(getattr(song, "track", None), "duration_ms", 0) or int(getattr(song, "duration", 0) or 0)
+
+        def done(lyr, key=self._lyrics_key):
+            if key != self._lyrics_key:
+                return
+            if lyr is None:
+                self.lyrics_page.show_message("No lyrics found for this song.", title)
+            elif lyr.instrumental and not lyr.plain.strip():
+                self.lyrics_page.show_message("Instrumental: no lyrics.", title)
+            else:
+                self.lyrics_page.show_lyrics(lyr, title)
+        self.online_call(L.find, self.net, song.artist, song.title, album, duration, on_done=done,
+                         on_error=lambda e: self.lyrics_page.show_message(f"Lyrics aren't available right now ({e}).", title))
+
+    # --- Share (Sevbify has no accounts: a shared song is its Spotify / YouTube link) ----------------------
+    def share_song(self, song, kind="spotify"):
+        from core import share, streamer
+        from PyQt6.QtWidgets import QApplication
+        track = getattr(song, "track", None)
+        page = getattr(track, "page_url", "") if track is not None else ""
+        names = {"spotify": "Spotify", "youtube": "YouTube", "songlink": "song.link"}
+
+        def copy(links):
+            url = links.get(kind) or (links.get("spotify") if kind == "songlink" else "")
+            if not url:
+                self.show_status("song.link didn't answer; copied the Spotify link instead.", 6000)
+                url = links.get("spotify", "")
+            QApplication.clipboard().setText(url)
+            exact = links.get("exact", {}).get(kind, kind == "songlink")
+            self.show_status(f"{names[kind]} link copied" + ("" if exact else " (a search for the song)"),
+                             kind="info", timeout_ms=5000)
+        if not self.online_enabled:
+            copy(dict(share.search_links(song.artist, song.title), exact={}))
+            return
+        self.show_status("Finding the song's link…", kind="info", timeout_ms=10000)
+
+        def work():
+            yt = streamer.youtube_page(song.artist, song.title, getattr(track, "duration_ms", 0) or 0,
+                                       search=kind == "youtube")
+            return share.links(self.net, song.artist, song.title, page, yt)
+        self.online_call(work, on_done=copy,
+                         on_error=lambda _e: copy(dict(share.search_links(song.artist, song.title), exact={})))
+
+    # --- Connect: which speakers / headphones Sevbify plays through ----------------------------------------
+    def audio_devices(self):
+        """[(id, name)] of the sound outputs VLC can use (speakers, headphones, Bluetooth...)."""
+        out = []
+        try:
+            mods = self.player.audio_output_device_enum()
+            mod = mods
+            while mod:
+                d = mod.contents
+                dev = d.device.decode("utf-8", "replace") if isinstance(d.device, bytes) else str(d.device or "")
+                name = d.description.decode("utf-8", "replace") if isinstance(d.description, bytes) else str(d.description or "")
+                out.append((dev, name or dev or "Default"))
+                mod = d.next
+            if mods:
+                vlc.libvlc_audio_output_device_list_release(mods)
+        except Exception:
+            pass
+        return out
+
+    def set_audio_device(self, device_id):
+        for p in (self.player, getattr(self, "_spare_player", None)):
+            if p is not None:
+                try:
+                    p.audio_output_device_set(None, device_id)
+                except Exception:
+                    pass
+        self.user_data.audio_device = device_id
+        self.schedule_save()
+        self.devices_btn.setIcon(icons.devices(icons.GREEN if device_id else icons.GREY))
+
+    def show_devices_menu(self):
+        menu = self._new_menu()
+        title = menu.addAction("Connect to a device")
+        title.setEnabled(False)
+        menu.addSeparator()
+        current = getattr(self.user_data, "audio_device", "")
+        devices = self.audio_devices()
+        if not devices:
+            menu.addAction("This computer (Windows' default)").setEnabled(False)
+        for dev, name in devices:
+            a = menu.addAction(name or "Default")
+            a.setCheckable(True)
+            a.setChecked(dev == current or (not current and not dev))
+            a.triggered.connect(lambda _=False, d=dev: self.set_audio_device(d))
+        menu.addSeparator()
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        if os.name == "nt":
+            menu.addAction("Bluetooth & devices settings…").triggered.connect(
+                lambda: QDesktopServices.openUrl(QUrl("ms-settings:bluetooth")))
+            menu.addAction("Sound settings…").triggered.connect(
+                lambda: QDesktopServices.openUrl(QUrl("ms-settings:sound")))
+        menu.exec(self.devices_btn.mapToGlobal(self.devices_btn.rect().topLeft()))
 
     def _pause_popped_video(self):
         """Music starting while a video plays in the mini player: pause the video (not both at once)."""
@@ -4227,6 +4390,22 @@ class MainWindow(ShowsMixin, QMainWindow):
         "Sevbify is not affiliated with YouTube, Bandcamp, Apple, Spotify, Deezer or Sevby LLC (sevby.com).\n\n"
         "Continue?")
 
+    def download_with_choice(self, songs, title="these songs"):
+        """The playlist's Download button: download everything, or pick the songs first (Spotify-style card)."""
+        pending = [s for s in songs if getattr(s, "is_remote", False)]
+        seen, unique = set(), []
+        for s in pending:                                  # the same song twice in a playlist downloads once
+            key = (s.artist.casefold(), s.title.casefold())
+            if key not in seen:
+                seen.add(key)
+                unique.append(s)
+        if not unique:
+            self.show_status("Every song here is already on your computer.", kind="info", timeout_ms=3000)
+            return 0
+        from . import dialogs
+        chosen = dialogs.choose_downloads(self, title, unique)
+        return self.download_songs(chosen) if chosen else 0
+
     def download_songs(self, songs):
         """Queue the not-downloaded songs among `songs` for download. Returns how many were queued."""
         tracks = [s.track for s in songs if getattr(s, "is_remote", False)]
@@ -4480,7 +4659,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             cover, "Song radio", self._radio_name, top.name(),
             lambda: self.play_song(songs[0], queue=songs, source=self._radio_name),
             extra_buttons=[("Save as playlist", lambda: self.save_songs_as_playlist(self._radio_name, songs), False),
-                           ("⬇ Download", lambda: self.download_songs(songs), False)])
+                           ("⬇ Download", lambda: self.download_with_choice(songs, self._radio_name), False)])
         artists = list(dict.fromkeys(s.artist for s in songs if s.artist and s.artist != seed.artist))
         with_text = ("With " + ", ".join(artists[:3]) + (" and more" if len(artists) > 3 else "")) if artists else ""
         pending = sum(1 for s in songs if getattr(s, "is_remote", False))
@@ -4764,6 +4943,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             u.audiobook_quality = values["audiobook_quality"]
         if values.get("video_quality") in _q.VIDEO_QUALITIES:
             u.video_quality = values["video_quality"]
+        if "lyrics_enabled" in values:
+            u.lyrics_enabled = bool(values["lyrics_enabled"])
+            self.lyrics_btn.setVisible(u.lyrics_enabled)
+            if not u.lyrics_enabled and self.stack.currentWidget() is self.lyrics_page:
+                self.show_home()
         if "stream_full" in values:
             u.stream_full = bool(values["stream_full"])
             RemoteSong.stream_full = u.stream_full
@@ -4968,6 +5152,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                  "webcollection": self.show_home,
                  "preview": lambda: self.show_playlist(arg) if arg in self.playlists else self.show_home(),
                  "video": self.show_home,
+                 "lyrics": self.toggle_lyrics,
                  "album": lambda: (self.show_album(self.find_album(arg)) if self.find_album(arg) else self.show_home()),
                  "artist": lambda: (self.show_artist(next((a for a in self._library_collections()[1]
                                                            if a["key"] == arg), None))
@@ -4986,6 +5171,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _set_nav(self, kind, arg=None):
         self.top_bar.set_home_active(kind == "home")
+        if hasattr(self, "lyrics_btn"):
+            self.lyrics_btn.setIcon(icons.lyrics(icons.GREEN if kind == "lyrics" else icons.GREY, dot=kind == "lyrics"))
         if self.library_panel.expanded:
             self.library_panel.set_expanded(False)            # opening something leaves the expanded library
         active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist", "show") else kind)

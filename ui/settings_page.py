@@ -123,6 +123,7 @@ class SettingsPage(QWidget):
             "Sevbify has no account, ads or tracking and sells nothing. With online features on it contacts only: "
             "Deezer (search, radio, previews), Wikipedia (artist info), Apple iTunes (official song names), Bandcamp "
             "and YouTube (full songs and downloads), Spotify or Apple Music only when you import a playlist link, "
+            "LRCLIB for lyrics (song name and length only), song.link only when you share a song, "
             "and Last.fm / Jamendo if you add a key below. Those sites see "
             "your IP address and what you look up, like a web browser would. Sevbify only looks at the music folders "
             "you add; it never searches the rest of your computer.")
@@ -206,6 +207,10 @@ class SettingsPage(QWidget):
                      "keeps your playlists.", u.playlist_files)
 
         self._section("Playback")
+        self._toggle("lyrics_enabled", "Lyrics",
+                     "Shows the Lyrics button next to the queue. Lyrics come from a .lrc or .txt file next to your song "
+                     "(works offline), otherwise from LRCLIB, a free lyrics database (only the song's name and length "
+                     "are sent).", getattr(u, "lyrics_enabled", True))
         self._toggle("autoplay", "Autoplay",
                      "When your music ends, keep playing similar songs (song radio from the last one).", u.autoplay)
         self._combo("fade_seconds", "Fade between songs",

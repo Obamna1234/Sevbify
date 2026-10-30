@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
@@ -74,8 +76,11 @@ fun NowPlayingScreen() {
     var dragging by remember { mutableStateOf(false) }
     var dragValue by remember { mutableFloatStateOf(0f) }
     val have = t.isLocal || Library.localFor(t) != null
-    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colour, Color(0xFF121212))))
-               .statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
+    // Like Spotify: the player fills the screen; scroll down for the lyrics preview.
+    LazyColumn(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colour, Color(0xFF121212))))
+                   .statusBarsPadding().navigationBarsPadding()) {
+    item {
+    Column(Modifier.fillParentMaxHeight().padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { Nav.nowPlayingOpen = false }) { Icon(Icons.Filled.KeyboardArrowDown, "Close", Modifier.size(32.dp)) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -159,10 +164,22 @@ fun NowPlayingScreen() {
                      tint = if (Player.repeat == "off") C.Text else C.Green)
             }
         }
-        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-            Spacer(Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { Nav.connectOpen = true }) {
+                Icon(Icons.Filled.Devices, "Connect to a device",
+                     tint = if (AudioOutput.kind != "speaker") C.Green else C.Text)
+            }
+            if (AudioOutput.kind != "speaker") {
+                Text(AudioOutput.name, color = C.Green, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            } else Spacer(Modifier.weight(1f))
+            IconButton(onClick = { Nav.shareFor = t }) { Icon(Icons.Filled.Share, "Share") }
             IconButton(onClick = { Nav.queueOpen = true }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Queue") }
         }
+    }
+    }
+    item { LyricsCard(t) }
+    item { Gap(24.dp) }
     }
     if (Nav.queueOpen) QueueSheet()
 }

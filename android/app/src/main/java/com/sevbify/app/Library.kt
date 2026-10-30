@@ -30,6 +30,7 @@ data class Settings(
     var videoQuality: String = "auto",         // video podcasts: "auto" | "360" | "480" | "720" | "1080"
     var autoUpdateYtdlp: Boolean = true,       // keep yt-dlp up to date (official release, checksum-checked)
     var lastYtdlpCheck: Long = 0,
+    var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -38,7 +39,7 @@ data class Settings(
         put("shuffle", shuffle); put("repeat", repeat); put("lastfm", lastfmKey)
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
-        put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck)
+        put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
     }
 
     companion object {
@@ -58,6 +59,7 @@ data class Settings(
             s.bookQuality = o.optString("book_quality", "standard").takeIf { it in listOf("standard", "high") } ?: "standard"
             s.videoQuality = o.optString("video_quality", "auto").takeIf { it in listOf("auto", "360", "480", "720", "1080") } ?: "auto"
             s.autoUpdateYtdlp = o.optBoolean("auto_update_ytdlp", true); s.lastYtdlpCheck = o.optLong("last_ytdlp_check")
+            s.lyrics = o.optBoolean("lyrics", true)
             return s
         }
     }

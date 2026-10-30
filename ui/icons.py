@@ -439,3 +439,47 @@ def close(color=GREY, size=18):
     p.drawLine(QPointF(s * 0.75, s * 0.25), QPointF(s * 0.25, s * 0.75))
     p.end()
     return QIcon(pm)
+
+
+def lyrics(color=GREY, size=20, dot=False):
+    """A microphone (Spotify's Lyrics button)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(QPointF(s * 0.62, s * 0.36), s * 0.20, s * 0.20)
+    p.drawLine(QPointF(s * 0.48, s * 0.50), QPointF(s * 0.16, s * 0.84))
+    p.drawLine(QPointF(s * 0.30, s * 0.62), QPointF(s * 0.40, s * 0.72))
+    if dot:
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+        p.drawEllipse(QPointF(s * 0.5, s * 0.97), s * 0.05, s * 0.05)
+    p.end()
+    return QIcon(pm)
+
+
+def devices(color=GREY, size=20, dot=False):
+    """A screen with a speaker beside it (Spotify's 'Connect to a device')."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08)); p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawRoundedRect(QRectF(s * 0.10, s * 0.20, s * 0.46, s * 0.56), s * 0.05, s * 0.05)
+    p.drawRoundedRect(QRectF(s * 0.62, s * 0.30, s * 0.28, s * 0.46), s * 0.05, s * 0.05)
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    p.drawEllipse(QPointF(s * 0.76, s * 0.60), s * 0.07, s * 0.07)
+    if dot:
+        p.drawEllipse(QPointF(s * 0.5, s * 0.97), s * 0.05, s * 0.05)
+    p.end()
+    return QIcon(pm)
+
+
+def share(color=GREY, size=18):
+    """Three connected dots (Share)."""
+    pm, p = _canvas(size)
+    s = size
+    pts = [QPointF(s * 0.74, s * 0.22), QPointF(s * 0.26, s * 0.50), QPointF(s * 0.74, s * 0.78)]
+    p.setPen(_pen(color, s * 0.08))
+    p.drawLine(pts[0], pts[1]); p.drawLine(pts[1], pts[2])
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(color))
+    for pt in pts:
+        p.drawEllipse(pt, s * 0.12, s * 0.12)
+    p.end()
+    return QIcon(pm)

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -61,6 +63,7 @@ fun totalTime(tracks: List<Track>): String {
 }
 
 /** The page shared by playlists, albums, artist songs, genre playlists...: Spotify's Android layout. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, source: String,
               onMore: (() -> Unit)? = null, onSave: (() -> Unit)? = null, playlist: com.sevbify.app.Playlist? = null,
@@ -69,7 +72,35 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
     val colour = rememberCoverColour(cover, Color(0xFF404040))
     val pending = tracks.filter { !it.isItem && !it.isLocal && Library.localFor(it) == null }
     val playingHere = Player.sourceName == source && Player.current != null
+    // Choosing songs: hold a song (or Download → Choose songs) to tick several, then download / queue / add them.
+    var selection by remember(source) { mutableStateOf(setOf<Int>()) }
+    var selecting by remember(source) { mutableStateOf(false) }
+    var askDownload by remember(source) { mutableStateOf(false) }
+    if (askDownload) DownloadChoiceSheet(title, cover, pending.size, onAll = {
+        askDownload = false
+        val n = Downloads.request(pending); Nav.say(if (n > 0) "Downloading $n songs" else "Already downloading")
+    }, onChoose = {
+        askDownload = false
+        selection = tracks.indices.filter { tracks[it] in pending }.toSet(); selecting = true
+    }, onDismiss = { askDownload = false })
+    androidx.activity.compose.BackHandler(enabled = selecting) { selecting = false; selection = emptySet() }
     LazyColumn {
+        if (selecting) {
+            stickyHeader {
+                SelectionBar(selection.size, tracks.size,
+                    onAll = { selection = tracks.indices.toSet() }, onNone = { selection = emptySet() },
+                    onDownload = {
+                        val chosen = selection.sorted().map { tracks[it] }
+                        val n = Downloads.request(chosen)
+                        Nav.say(if (n > 0) "Downloading $n songs" else "Those songs are downloaded already")
+                        selecting = false; selection = emptySet()
+                    },
+                    onQueue = { selection.sorted().forEach { Player.addToQueue(tracks[it]) }; Nav.say("Added ${selection.size} to queue")
+                                selecting = false; selection = emptySet() },
+                    onAddTo = { Nav.addTo = selection.sorted().map { tracks[it] }; selecting = false; selection = emptySet() },
+                    onCancel = { selecting = false; selection = emptySet() })
+            }
+        }
         item {
             Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colour, C.Bg)))
                        .statusBarsPadding().padding(bottom = 8.dp)) {
@@ -87,7 +118,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                             Icon(Icons.Filled.ArrowCircleDown, "Downloaded", tint = C.Green, modifier = Modifier.size(30.dp))
                         }
                     } else {
-                        IconButton(onClick = { val n = Downloads.request(pending); Nav.say(if (n > 0) "Downloading $n songs" else "Already downloading") }) {
+                        IconButton(onClick = { askDownload = true }) {
                             Icon(Icons.Outlined.ArrowCircleDown, "Download", tint = C.Sub, modifier = Modifier.size(30.dp))
                         }
                     }
@@ -120,8 +151,20 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
         }
         if (tracks.isEmpty()) item { Muted("No songs here yet. Search for songs and use ••• → Add to playlist.") }
         itemsIndexed(tracks) { i, t ->
-            TrackRow(t, onClick = { Player.play(t, tracks, source) },
-                     onMore = { Nav.songMenu = SongMenu(t, playlist, if (playlist != null) i else -1, tracks, source) })
+            val toggle = { selection = if (i in selection) selection - i else selection + i }
+            if (selecting) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(i in selection, { toggle() },
+                        colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = C.Green, checkmarkColor = Color.Black))
+                    Box(Modifier.weight(1f)) {
+                        TrackRow(t, onClick = toggle, onMore = toggle, selected = i in selection, onLongClick = toggle)
+                    }
+                }
+            } else {
+                TrackRow(t, onClick = { Player.play(t, tracks, source) },
+                         onMore = { Nav.songMenu = SongMenu(t, playlist, if (playlist != null) i else -1, tracks, source) },
+                         onLongClick = { selecting = true; selection = setOf(i) })
+            }
         }
         item { Gap(24.dp) }
     }
@@ -307,5 +350,57 @@ fun openWebAlbum(a: JSONObject) {
 fun kotlinx.coroutines.CoroutineScope.launchSafely(block: suspend () -> Unit) {
     launch {
         try { block() } catch (e: Exception) { Nav.say("⚠ ${e.message}") }
+    }
+}
+
+
+/** Spotify's "Want to download …?" sheet, without the Premium part: everything at once, or pick the songs. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DownloadChoiceSheet(title: String, cover: String, count: Int, onAll: () -> Unit, onChoose: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = C.Elevated) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp).navigationBarsPadding(),
+               horizontalAlignment = Alignment.CenterHorizontally) {
+            Cover(cover, 150.dp)
+            Gap(16.dp)
+            Text("Download $title?", style = MaterialTheme.typography.headlineSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Gap(6.dp)
+            Muted("$count songs aren't on your phone yet. They're saved to Music/Sevbify so they play without internet " +
+                  "(and in other music apps).")
+            Gap(16.dp)
+            androidx.compose.material3.Button(onClick = onAll, colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = C.Green, contentColor = Color.Black), modifier = Modifier.fillMaxWidth()) { Text("Download all $count") }
+            Gap(8.dp)
+            androidx.compose.material3.OutlinedButton(onClick = onChoose, modifier = Modifier.fillMaxWidth()) {
+                Text("Choose songs", color = C.Text)
+            }
+            Gap(16.dp)
+        }
+    }
+}
+
+/** Shown while choosing songs: how many, select all / none, and what to do with them. */
+@Composable
+private fun SelectionBar(count: Int, total: Int, onAll: () -> Unit, onNone: () -> Unit, onDownload: () -> Unit,
+                         onQueue: () -> Unit, onAddTo: () -> Unit, onCancel: () -> Unit) {
+    Column(Modifier.fillMaxWidth().background(C.Elevated).statusBarsPadding().padding(horizontal = 8.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onCancel) { Icon(Icons.Filled.Close, "Stop choosing") }
+            Text("$count selected", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = if (count == total) onNone else onAll) {
+                Text(if (count == total) "Select none" else "Select all", color = C.Green)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.Button(onClick = onDownload, enabled = count > 0,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = Color.Black),
+                modifier = Modifier.weight(1f)) { Text("Download") }
+            androidx.compose.material3.OutlinedButton(onClick = onQueue, enabled = count > 0, modifier = Modifier.weight(1f)) {
+                Text("Add to queue", color = C.Text, maxLines = 1)
+            }
+            androidx.compose.material3.OutlinedButton(onClick = onAddTo, enabled = count > 0, modifier = Modifier.weight(1f)) {
+                Text("Add to…", color = C.Text, maxLines = 1)
+            }
+        }
     }
 }
