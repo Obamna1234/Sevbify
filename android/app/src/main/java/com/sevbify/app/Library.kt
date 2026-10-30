@@ -19,6 +19,7 @@ data class Settings(
     var explicitOk: Boolean = true,
     var downloadOnWifiOnly: Boolean = false,
     var musicFolders: MutableList<String> = mutableListOf("Music"),
+    var cloudFolders: MutableList<String> = mutableListOf(),   // folders picked in Android's file picker (SD card, cloud apps)
     var onlineNoticeAccepted: Boolean = false,
     var shuffle: Boolean = false,
     var repeat: String = "off",
@@ -43,6 +44,7 @@ data class Settings(
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
         put("explicit_ok", explicitOk); put("wifi_only", downloadOnWifiOnly)
         put("music_folders", JSONArray(musicFolders)); put("notice", onlineNoticeAccepted)
+        put("cloud_folders", JSONArray(cloudFolders))
         put("shuffle", shuffle); put("repeat", repeat); put("lastfm", lastfmKey); put("jamendo_id", jamendoId)
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
@@ -61,6 +63,10 @@ data class Settings(
             s.explicitOk = o.optBoolean("explicit_ok", true); s.downloadOnWifiOnly = o.optBoolean("wifi_only")
             o.optJSONArray("music_folders")?.let { a ->
                 s.musicFolders = (0 until a.length()).map { a.getString(it) }.toMutableList()
+            }
+            o.optJSONArray("cloud_folders")?.let { a ->
+                s.cloudFolders = (0 until a.length()).map { a.getString(it) }
+                    .filter { it.startsWith("content://") }.toMutableList()
             }
             s.onlineNoticeAccepted = o.optBoolean("notice"); s.shuffle = o.optBoolean("shuffle")
             s.repeat = o.optString("repeat", "off"); s.lastfmKey = o.optString("lastfm"); s.jamendoId = o.optString("jamendo_id")

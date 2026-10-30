@@ -5497,7 +5497,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
-                  "language")
+                  "language", "save_space")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

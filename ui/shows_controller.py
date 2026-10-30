@@ -706,10 +706,17 @@ class ShowsMixin:
         self._item_active = (song, path)
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
+        save_space = getattr(self.user_data, "save_space", True)
+
         def work():
             if song.track.source == "youtube":
-                return podcasts.download_youtube_audio(song.track.page_url, os.path.splitext(path)[0])
-            return self.net.download(song.track.download_url or song.track.stream_url, path)
+                got = podcasts.download_youtube_audio(song.track.page_url, os.path.splitext(path)[0])
+            else:
+                got = self.net.download(song.track.download_url or song.track.stream_url, path)
+            if save_space and isinstance(got, str):
+                from core import space
+                got = space.shrink_speech(got)        # small Opus copy; the original stays if anything fails
+            return got
 
         ctx = self._show_ctx
         info = {"track": song.track.to_dict(), "t": time.time(), "show_key": "", "show": None}

@@ -99,6 +99,14 @@ def type_text(text):
     sh("input keyevent 66")
 
 
+def open_settings(page=None):
+    """Logo → profile menu (slides in) → Settings and privacy → a category page."""
+    tap("Home"); tap("Settings", tries=2)
+    tap("Settings and privacy", tries=2)
+    if page:
+        tap(page, tries=2)
+
+
 def swipe_up():
     sh("input swipe 540 1700 540 700 300")
 
@@ -292,30 +300,33 @@ def main():
     def settings():
         tap("Home")
         tap("Settings")
+        shot("profile_menu", 2)                      # the profile menu sliding in
+        tap("Settings and privacy", tries=2)
         shot("settings")
-        swipe_up()
-        shot("settings_more")
-        swipe_up()
-        shot("settings_end")
+        tap("Privacy and profile", tries=2)
+        shot("settings_privacy")
+        back()
+        tap("Playback", tries=2)
+        shot("settings_playback")
+        back()
         back()
     step("settings", settings)
 
     def offline():
-        tap("Home")
-        tap("Settings")
+        open_settings("Privacy and profile")
         found = [nd for nd in nodes() if nd[0] == "Online"]
         if found:
             w, _ = screen_size()
             sh(f"input tap {int(w * 0.9)} {found[0][3] + 30}")
-            back()
+            back(); back()
             tap("Search")
             sh("input text radiohead")
             time.sleep(6)
             hide_keyboard()
             shot("offline_search", 2)
-            tap("Home"); tap("Settings")
+            open_settings("Privacy and profile")
             sh(f"input tap {int(w * 0.9)} {found[0][3] + 30}")
-            back()
+            back(); back()
     step("offline", offline)
 
     def background_and_return():
@@ -368,14 +379,12 @@ def main():
     step("watch_video", watch_video_button)
 
     def settings_quality():
-        tap("Home")
-        tap("Settings", tries=2)
-        swipe_up()
-        swipe_up()
+        open_settings("Media quality")
         shot("settings_quality")
-        swipe_up()
-        shot("settings_quality_more")
         back()
+        tap("Data-saving and offline", tries=2)
+        shot("settings_offline")
+        back(); back()
     step("settings_quality", settings_quality)
 
     def new_features():
@@ -428,10 +437,22 @@ def main():
             shot("folder_menu", 3)
             back()
         # Settings: profile section
-        tap("Home"); tap("Settings", tries=2)
-        for i in range(3):
-            swipe_up()
+        open_settings("Privacy and profile")
+        swipe_up()
         shot("settings_profile", 3)
+        back(); back()
+        # Spotify-style motion: swipe between Home's filters, Library grid and Sort by
+        tap("Home")
+        w, h = screen_size()
+        sh(f"input swipe {int(w * 0.8)} {int(h * 0.5)} {int(w * 0.15)} {int(h * 0.5)} 250")
+        shot("home_swiped_to_music", 3)
+        sh(f"input swipe {int(w * 0.15)} {int(h * 0.5)} {int(w * 0.8)} {int(h * 0.5)} 250")
+        tap("Your Library")
+        tap("Show as grid", tries=2)
+        shot("library_grid", 2)
+        tap("Show as list", tries=2)
+        tap("Recents", tries=2)
+        shot("sort_by_sheet", 2)
         back()
     step("new_features", new_features)
 

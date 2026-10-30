@@ -77,7 +77,11 @@ class MainActivity : ComponentActivity() {
 
     fun rescan() {
         lifecycleScope.launch {
-            val songs = withContext(Dispatchers.IO) { LocalMusic.scan(this@MainActivity) }
+            val songs = withContext(Dispatchers.IO) {
+                val phone = LocalMusic.scan(this@MainActivity)
+                val keys = phone.map { it.matchKey }.toHashSet()
+                phone + CloudFolders.scan(this@MainActivity).filter { it.matchKey !in keys }   // phone copy first
+            }
             Library.localSongs = songs
             Library.changed(save = false)
         }

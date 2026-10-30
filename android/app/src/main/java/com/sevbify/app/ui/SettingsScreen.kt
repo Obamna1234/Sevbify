@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -260,16 +261,47 @@ fun SettingsPageScreen(key: String) {
                 }, modifier = Modifier.padding(top = 6.dp)) { Text(tr("Save"), color = C.Text) }
             }
         }
+        item {
+            val treePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { uri ->
+                if (uri != null) {
+                    if (com.sevbify.app.CloudFolders.add(context, uri)) {
+                        (context as? com.sevbify.app.MainActivity)?.rescan()
+                        Nav.say("Folder added: its songs appear in Your Songs")
+                    } else Nav.say("⚠ That app didn't allow Sevbify to read the folder")
+                }
+            }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(tr("Folders from other apps"), style = MaterialTheme.typography.bodyLarge)
+                Text("An SD card, or a cloud app that offers folders in Android's file picker: Nextcloud, OneDrive, " +
+                     "Dropbox, Proton Drive and others. Sevbify can only read the folders you pick, and your sign-in " +
+                     "stays in that app. Cloud songs need the internet unless that app keeps them offline. (Google " +
+                     "Drive's picker only allows single files, not folders.)", style = MaterialTheme.typography.bodySmall)
+                s.cloudFolders.toList().forEach { f ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(com.sevbify.app.CloudFolders.name(context, f), maxLines = 1,
+                             style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            com.sevbify.app.CloudFolders.remove(context, f)
+                            (context as? com.sevbify.app.MainActivity)?.rescan()
+                        }) { Icon(Icons.Filled.Close, "Remove", tint = C.Sub) }
+                    }
+                }
+                OutlinedButton(onClick = { treePicker.launch(null) }, modifier = Modifier.padding(top = 6.dp)) {
+                    Text(tr("Add a folder"), color = C.Text)
+                }
+            }
+        }
         }
         "quality" -> {
         item {
             Choice(tr("Download quality"),
-                   if (s.songQuality == "small") "Data saver: a lower-bitrate original, about half the size. Slightly less " +
+                   if (s.songQuality == "small") "Save space: a lower-bitrate original, about half the size. Slightly less " +
                        "detail with good headphones."
                    else "Best: the original audio with nothing lost (.m4a). A song can't be better than its source " +
                        "(YouTube ~128-160 kbps, Bandcamp 128 kbps), so this is also the smallest full-quality file. " +
                        "Plays in Samsung Music, VLC and on your PC.",
-                   listOf("best" to "Best quality", "small" to "Data saver"), s.songQuality) { s.songQuality = it; Library.changed() }
+                   listOf("best" to tr("Best quality"), "small" to tr("Save space")), s.songQuality) { s.songQuality = it; Library.changed() }
         }
         item {
             Choice(tr("Audiobook quality"), "LibriVox records every chapter at both; speech sounds the same at 64 kbps.",

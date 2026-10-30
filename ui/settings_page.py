@@ -196,6 +196,9 @@ class SettingsPage(QWidget):
                     "original audio is both the best quality and the smallest full-quality file. "
                     + Q.SONG_QUALITIES[Q.song_quality(u.download_quality)][1],
                     [v[0] for v in Q.SONG_QUALITIES.values()], Q.SONG_QUALITIES[Q.song_quality(u.download_quality)][0])
+        self._toggle("save_space", "Save space",
+                     "Keep downloaded podcast episodes and audiobook chapters as small Opus files (about a third of the "
+                     "size; speech sounds the same). Your own music is never changed.", getattr(u, "save_space", True))
         self._combo("audiobook_quality", "Audiobook quality", "LibriVox records every chapter at both; speech "
                     "sounds the same at 64 kbps.", list(Q.AUDIOBOOK_QUALITIES.values()),
                     Q.AUDIOBOOK_QUALITIES.get(u.audiobook_quality, Q.AUDIOBOOK_QUALITIES["standard"]))

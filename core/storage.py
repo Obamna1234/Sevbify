@@ -113,6 +113,7 @@ class UserData:
     proxy_url: str = ''   # e.g. http://127.0.0.1:8080
     hw_accel: bool = True   # Settings: hardware acceleration (applies after restart)
     language: str = ""      # Settings: Sevbify's language ("" = the computer's; applies after restart)
+    save_space: bool = True  # Settings: keep downloaded podcasts / audiobooks as small Opus files
     auto_update_check: bool = True   # Settings: check GitHub once a day for a new Sevbify / yt-dlp
     last_update_check: float = 0.0
     update_asked: str = ""     # the newest version Sevbify already offered to install (asked once per version)
@@ -139,7 +140,7 @@ ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
     "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
-    "disabled_folders")
+    "disabled_folders", "language", "save_space")
 
 
 def default_settings(which="all"):
@@ -250,6 +251,7 @@ class Storage:
                 "proxy_url": data.proxy_url,
                 "hw_accel": data.hw_accel,
                 "language": data.language,
+                "save_space": bool(data.save_space),
                 "auto_update_check": bool(data.auto_update_check),
                 "last_update_check": float(data.last_update_check or 0),
                 "update_asked": str(data.update_asked or "")[:40],
@@ -391,6 +393,7 @@ class Storage:
             from core import i18n as _i18n
             lang = str(settings.get("language") or "")
             data.language = lang if lang in _i18n.CODES else ""
+            data.save_space = bool(settings.get("save_space", True))
             data.auto_update_check = bool(settings.get("auto_update_check", True))
             try:
                 data.last_update_check = float(settings.get("last_update_check") or 0)

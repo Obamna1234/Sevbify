@@ -12,7 +12,7 @@ SONG_QUALITIES = {
              "(.m4a; plays in Samsung Music, VLC, Windows Media Player and phones)."),
     "mp3": ("MP3 (plays everywhere)",
             "Converted to a 160 kbps MP3 for very old players and car stereos. A bit bigger, no better."),
-    "small": ("Data saver (smallest files)",
+    "small": ("Save space (smallest files)",
               "A lower-bitrate original (about half the size). Good for phones with little space; slightly less "
               "detail with good headphones."),
 }
