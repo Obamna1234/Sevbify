@@ -72,15 +72,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        rescan()
+        rescan(cloud = CloudFolders.cached == null)
+        CarHelp.check(this)
+        window.decorView.postDelayed({ CarHelp.checkInCar(this) }, 30_000)   // in a car, but no Android Auto?
     }
 
-    fun rescan() {
+    /** cloud = also list the folders from other apps again (slow for cloud apps, so not on every return). */
+    fun rescan(cloud: Boolean = true) {
         lifecycleScope.launch {
             val songs = withContext(Dispatchers.IO) {
                 val phone = LocalMusic.scan(this@MainActivity)
                 val keys = phone.map { it.matchKey }.toHashSet()
-                phone + CloudFolders.scan(this@MainActivity).filter { it.matchKey !in keys }   // phone copy first
+                if (cloud || CloudFolders.cached == null) CloudFolders.cached = CloudFolders.scan(this@MainActivity)
+                phone + CloudFolders.cached.orEmpty().filter { it.matchKey !in keys }   // phone copy first
             }
             Library.localSongs = songs
             Library.changed(save = false)

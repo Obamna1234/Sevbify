@@ -32,7 +32,9 @@ data class Settings(
     var videoQuality: String = "auto",         // video podcasts: "auto" | "360" | "480" | "720" | "1080"
     var autoUpdateYtdlp: Boolean = true,       // keep yt-dlp up to date (official release, checksum-checked)
     var lastYtdlpCheck: Long = 0,
-    var lastAppCheck: Long = 0,                // last daily check for a new Sevbify
+    var lastAppCheck: Long = 0,
+    var carTipShown: Boolean = false,          // the Android Auto "Unknown sources" tip was shown once
+    var carTipAt: Long = 0,                    // last time it was shown because the phone was in a car                // last daily check for a new Sevbify
     var updateAsked: String = "",              // newest version already offered (asked once per version)
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
     var showPlaylistOrigin: Boolean = false,
@@ -52,6 +54,7 @@ data class Settings(
         put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked)
+        put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
     }
 
     companion object {
@@ -80,6 +83,7 @@ data class Settings(
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
             s.profileBackup = o.optBoolean("profile_backup", true); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
+            s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             return s
         }
     }

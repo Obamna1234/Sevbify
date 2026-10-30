@@ -13,8 +13,14 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -23,8 +29,9 @@ import java.util.concurrent.ConcurrentHashMap
  * ever holds the current song; Next / Previous on the lock screen go back to Sevbify's queue.
  */
 @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
-class PlaybackService : MediaSessionService() {
-    private var session: MediaSession? = null
+class PlaybackService : MediaLibraryService() {
+    private var session: MediaLibrarySession? = null
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -59,10 +66,65 @@ class PlaybackService : MediaSessionService() {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java)
                                                  .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                                              PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        session = MediaSession.Builder(this, player).setSessionActivity(open).build()
+        session = MediaLibrarySession.Builder(this, player, CarLibrary()).setSessionActivity(open).build()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
+        if (controllerInfo.packageName == ANDROID_AUTO) carConnected = true      // Android Auto found Sevbify
+        return session
+    }
+
+    /** What Android Auto shows on the car's screen: Recently played, Your Songs, your playlists. Picking a song
+     *  plays it through Sevbify's own queue (full songs looked up as usual). */
+    private inner class CarLibrary : MediaLibrarySession.Callback {
+        private fun folder(id: String, title: String) = MediaItem.Builder().setMediaId(id).setMediaMetadata(
+            MediaMetadata.Builder().setTitle(title).setIsBrowsable(true).setIsPlayable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED).build()).build()
+
+        private fun song(id: String, t: Track) = MediaItem.Builder().setMediaId(id).setMediaMetadata(
+            MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
+                .setArtworkUri(t.art.takeIf { it.startsWith("content:") || it.startsWith("https:") }?.let { Uri.parse(it) })
+                .setIsBrowsable(false).setIsPlayable(true).setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC).build()).build()
+
+        /** (songs, source name) for a folder id. */
+        private fun list(id: String): Pair<List<Track>, String> = when {
+            id == "recent" -> Library.recent.toList() to "Recently played"
+            id == "songs" -> Library.localSongs to "Your Songs"
+            id.startsWith("pl:") -> Library.playlists.firstOrNull { it.id == id.removePrefix("pl:") }
+                ?.let { it.tracks.toList() to it.name } ?: (emptyList<Track>() to "")
+            else -> emptyList<Track>() to ""
+        }
+
+        override fun onGetLibraryRoot(session: MediaLibrarySession, browser: MediaSession.ControllerInfo,
+                                      params: LibraryParams?): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(folder("root", "Sevbify"), params))
+
+        override fun onGetChildren(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String,
+                                   page: Int, pageSize: Int, params: LibraryParams?):
+            ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val items: List<MediaItem> = when (parentId) {
+                "root" -> listOf(folder("recent", "Recently played"), folder("songs", "Your Songs"),
+                                 folder("playlists", "Your playlists"))
+                "playlists" -> Library.playlists.map { folder("pl:" + it.id, it.name) }
+                else -> list(parentId).first.mapIndexed { i, t -> song("$parentId#$i", t) }
+            }
+            val from = (page * pageSize).coerceAtMost(items.size)
+            val to = (from + pageSize.coerceAtLeast(1)).coerceAtMost(items.size)
+            return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(items.subList(from, to)), params))
+        }
+
+        override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo,
+                                     mediaItems: MutableList<MediaItem>): ListenableFuture<MutableList<MediaItem>> {
+            val id = mediaItems.firstOrNull()?.mediaId.orEmpty()
+            val folderId = id.substringBeforeLast('#', "")
+            val index = id.substringAfterLast('#', "").toIntOrNull()
+            val (tracks, source) = list(folderId)
+            if (index != null && index in tracks.indices) {
+                main.post { Player.play(tracks[index], tracks, source) }   // after the session has applied this answer
+            }
+            return Futures.immediateFuture(mutableListOf())
+        }
+    }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val p = session?.player
@@ -76,6 +138,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     companion object {
+        const val ANDROID_AUTO = "com.google.android.projection.gearhead"
+        @Volatile var carConnected = false
         /** HTTP headers some streams need (yt-dlp gives them with the link). */
         val headers = ConcurrentHashMap<String, Map<String, String>>()
     }

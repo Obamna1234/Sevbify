@@ -66,6 +66,9 @@ struct SettingsView: View {
             } header: { Text("Sevbify updates") } footer: {
                 Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
+            Section("Car") {
+                Text(CarPlayInfo.text).font(.footnote).foregroundColor(C.dim)
+            }
             Section {
                 Button("Language") {
                     if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }

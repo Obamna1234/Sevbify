@@ -267,6 +267,7 @@ private fun Dialogs() {
     com.sevbify.app.Updater.offer?.let { r -> UpdateDialog(r) }
     com.sevbify.app.ImportCheck.review?.let { (pl, problems) -> ImportReviewDialog(pl, problems) }
     Nav.chosicFor?.let { (id, link) -> ChosicDialog(id, link) }
+    if (Nav.carTip) CarTipDialog()
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },

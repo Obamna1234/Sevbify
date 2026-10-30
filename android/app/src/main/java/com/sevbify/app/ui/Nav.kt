@@ -37,7 +37,8 @@ data class SongMenu(val track: Track, val playlist: Playlist? = null, val row: I
 
 object Nav {
     var tab by mutableStateOf(Tab.HOME)
-    var drawerOpen by mutableStateOf(false)                     // the profile menu (slides in from the left)
+    var drawerOpen by mutableStateOf(false)
+    var carTip by mutableStateOf(false)                         // how to get Sevbify onto Android Auto                     // the profile menu (slides in from the left)
     var motion by mutableStateOf("tab")                         // last move: "push" / "pop" / "tab" (page animations)
     private val stacks = mapOf(Tab.HOME to mutableStateListOf<Screen>(Screen.Home),
                                Tab.SEARCH to mutableStateListOf<Screen>(Screen.Search),

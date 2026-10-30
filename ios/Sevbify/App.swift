@@ -40,6 +40,7 @@ struct SevbifyApp: App {
                 .tint(C.green)
                 .modifier(UpdateAlert())
                 .modifier(ImportReviewSheet())
+                .modifier(CarPlayAlert())
         }
     }
 }

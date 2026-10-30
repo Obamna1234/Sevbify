@@ -15,6 +15,7 @@ import android.provider.DocumentsContract
 object CloudFolders {
     private val AUDIO = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav", "wma", "alac", "aiff", "aif")
     private const val MAX_FILES = 10_000
+    @Volatile var cached: List<Track>? = null      // the last listing (refreshed on start and when folders change)
 
     fun add(context: Context, tree: Uri): Boolean {
         return try {

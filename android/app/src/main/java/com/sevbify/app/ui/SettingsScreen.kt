@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
@@ -78,6 +79,7 @@ fun SettingsScreen() {
             Triple("playback", Icons.Filled.PlayCircleOutline, "Playback" to "Autoplay, lyrics, sponsor skipping"),
             Triple("offline", Icons.Filled.CloudDownload, "Data-saving and offline" to "Where songs come from, downloads, music folders"),
             Triple("quality", Icons.Filled.GraphicEq, "Media quality" to "Song, audiobook and video quality"),
+            Triple("car", Icons.Filled.DirectionsCar, "Car" to "Android Auto, Bluetooth"),
             Triple("about", Icons.Filled.Info, "About and updates" to "Version, updates, yt-dlp"),
         )
         items(pages.size) { i ->
@@ -143,7 +145,8 @@ fun SettingsPageScreen(key: String) {
         }
     }
     val title = mapOf("content" to "Content and display", "privacy" to "Privacy and profile", "playback" to "Playback",
-                      "offline" to "Data-saving and offline", "quality" to "Media quality", "about" to "About and updates")[key] ?: "Settings"
+                      "offline" to "Data-saving and offline", "quality" to "Media quality", "car" to "Car",
+                      "about" to "About and updates")[key] ?: "Settings"
     LazyColumn {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
@@ -293,6 +296,9 @@ fun SettingsPageScreen(key: String) {
             }
         }
         item { ServersSection() }
+        }
+        "car" -> {
+        item { CarSettings() }
         }
         "quality" -> {
         item {
