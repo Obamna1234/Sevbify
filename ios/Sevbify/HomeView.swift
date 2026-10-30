@@ -16,6 +16,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Image("Logo").resizable().frame(width: 32, height: 32).clipShape(Circle())
+                        .onTapGesture { nav.drawer = true }                    // the profile menu slides in
                     Text(greeting).font(.title.bold())
                     Spacer()
                     Button { nav.go(.settings) } label: { Image(systemName: "gearshape").font(.title3) }

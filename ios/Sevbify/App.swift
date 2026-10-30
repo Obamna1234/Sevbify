@@ -53,6 +53,7 @@ final class Nav: ObservableObject {
     @Published var search = NavigationPath()
     @Published var library = NavigationPath()
     @Published var nowPlaying = false
+    @Published var drawer = false                     // Spotify's profile menu, sliding in from the left
     static weak var current: Nav?
     init() { Nav.current = self }
 
@@ -71,7 +72,49 @@ struct RootView: View {
     @EnvironmentObject var player: Player
     @EnvironmentObject var lib: Library
 
+    @GestureState private var drag: CGFloat = 0
+
     var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width * 0.82
+            let shift = min(w, max(0, (nav.drawer ? w : 0) + drag))
+            ZStack(alignment: .leading) {
+                if shift > 0 { ProfileMenu().frame(width: w).offset(x: -(w - shift) * 0.35) }
+                tabs
+                    .offset(x: shift)
+                    .overlay {
+                        if shift > 0 {
+                            Color.black.opacity(0.45 * shift / w).offset(x: shift)
+                                .onTapGesture { withAnimation(.easeOut(duration: 0.25)) { nav.drawer = false } }
+                        }
+                    }
+                    .gesture(DragGesture(minimumDistance: 15)
+                        .updating($drag) { v, s, _ in
+                            // Open: a swipe from the left edge; close: a swipe left anywhere while it's open.
+                            if nav.drawer { s = min(0, v.translation.width) }
+                            else if v.startLocation.x < 24 && atRoot { s = max(0, v.translation.width) }
+                        }
+                        .onEnded { v in
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                if nav.drawer { if v.translation.width < -w * 0.3 { nav.drawer = false } }
+                                else if v.startLocation.x < 24 && atRoot && v.translation.width > w * 0.3 { nav.drawer = true }
+                            }
+                        })
+            }
+            .animation(.easeOut(duration: 0.25), value: nav.drawer)
+        }
+    }
+
+    /// Only on a tab's first page: on other pages the left edge is iOS's swipe back.
+    private var atRoot: Bool {
+        switch nav.tab {
+        case .home: return nav.home.isEmpty
+        case .search: return nav.search.isEmpty
+        case .library: return nav.library.isEmpty
+        }
+    }
+
+    private var tabs: some View {
         TabView(selection: $nav.tab) {
             NavigationStack(path: $nav.home) { HomeView().destinations() }
                 .withMiniPlayer()
@@ -86,6 +129,48 @@ struct RootView: View {
         .fullScreenCover(isPresented: $nav.nowPlaying) { NowPlayingView() }
         .overlay(alignment: .top) { Toast() }
         .sheet(isPresented: Binding(get: { !lib.settings.noticeAccepted }, set: { _ in })) { FirstRunNotice() }
+    }
+}
+
+/// The profile menu (Sevbify has no account): your profile file, recently played, downloads, settings.
+struct ProfileMenu: View {
+    @EnvironmentObject var nav: Nav
+    @EnvironmentObject var lib: Library
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Image("Logo").resizable().frame(width: 44, height: 44).clipShape(Circle())
+                VStack(alignment: .leading) {
+                    Text("Sevbify").font(.title3.bold())
+                    Text("Your Sevbify profile").font(.caption).foregroundColor(C.dim)
+                }
+            }.padding(16).contentShape(Rectangle()).onTapGesture { open(.settings) }
+            Divider().background(C.card)
+            item("sparkles", "What's new") {
+                nav.drawer = false
+                if let u = URL(string: "https://github.com/Obamna1234/Sevbify/releases") { UIApplication.shared.open(u) }
+            }
+            item("clock.arrow.circlepath", "Recently played") { open(.songs("Recently played", Array(lib.recent))) }
+            item("arrow.down.circle", "Downloads") { open(.downloads) }
+            item("gearshape", "Settings and privacy") { open(.settings) }
+            Spacer()
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(C.elevated.ignoresSafeArea())
+        .foregroundColor(C.text)
+    }
+
+    private func open(_ r: Route) { nav.drawer = false; nav.go(r) }
+
+    private func item(_ icon: String, _ label: LocalizedStringKey, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon).frame(width: 24)
+                Text(label)
+                Spacer()
+            }.padding(.horizontal, 16).padding(.vertical, 14).contentShape(Rectangle())
+        }.buttonStyle(.plain)
     }
 }
 
