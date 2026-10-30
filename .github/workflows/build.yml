@@ -183,14 +183,23 @@ jobs:
           if [ -f "$LOG" ]; then while IFS= read -r l; do echo "::notice title=Smoke test (${{ runner.os }})::$l"; done < "$LOG"; fi
           if [ $CODE -ne 0 ]; then
             echo "::error title=Smoke test (${{ runner.os }})::exit code $CODE"
-            # Once more with VLC's own messages, to see why.
-            SEVBIFY_VLC_DEBUG=1 "$APP" --smoke-test > vlc-debug.txt 2>&1 || true
-            python -c "import ctypes.util; print('find_library(vlc) =', ctypes.util.find_library('vlc'))"
-            grep -iE "error|warning|cannot|failed|no such|undefined" vlc-debug.txt | tail -n 40 \
-              | while IFS= read -r l; do echo "::notice title=VLC debug::$l"; done
-            tail -n 15 vlc-debug.txt | while IFS= read -r l; do echo "::notice title=VLC tail::$l"; done
           fi
           exit $CODE
+
+      - name: Why VLC didn't start (only when the check above failed)
+        if: failure() && runner.os != 'Windows'
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then APP="dist/Sevbify.app/Contents/MacOS/Sevbify"; else APP="dist/Sevbify/Sevbify"; fi
+          SEVBIFY_VLC_DEBUG=1 "$APP" --smoke-test > vlc-debug.txt 2>&1 || true
+          { python -c "import ctypes.util; print('find_library(vlc) =', ctypes.util.find_library('vlc'))"
+            ls dist/Sevbify/_internal 2>/dev/null | grep -iE "vlc|libstdc|libgcc|libz|glib|dbus|libav|libx|libva|libdrm|libgl" | tr '\n' ' '; echo
+            grep -iE "error|cannot|failed|no such|undefined|symbol" vlc-debug.txt | sort | uniq -c | sort -rn | head -n 40
+            echo ----; tail -n 25 vlc-debug.txt; } > summary.txt
+          python - <<'PY'
+          t = open("summary.txt", encoding="utf-8", errors="replace").read().splitlines()
+          for i in range(0, min(len(t), 72), 8):
+              print("::warning title=VLC debug " + str(i // 8) + "::" + "%0A".join(x.replace("%", "%25")[:400] for x in t[i:i + 8]))
+          PY
 
       - name: Package the download
         run: |
