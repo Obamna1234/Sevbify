@@ -154,8 +154,13 @@ def parse_spotify_embed(html):
                                   explicit=bool(row.get("isExplicit"))))
     if not tracks:
         raise ImportError_("That Spotify link has no songs Sevbify can read.")
+    token = ""
+    m2 = re.search(r'"accessToken":\s*"([A-Za-z0-9_\-]{20,})"', m.group(1))
+    if m2:
+        token = m2.group(1)
     return {"name": entity.get("name") or entity.get("title") or "Spotify playlist", "cover_url": cover,
-            "tracks": tracks, "owner": entity.get("subtitle") or "", "truncated": len(tracks) >= 100}
+            "tracks": tracks, "owner": entity.get("subtitle") or "", "truncated": len(tracks) >= 100,
+            "_token": token}
 
 
 LINK_HELP = "Paste a Spotify, Apple Music, Deezer or Jamendo playlist or album link"
@@ -229,6 +234,44 @@ def fetch_jamendo(net, kind, item_id, client_id):
             "owner": info.get("artist_name") or info.get("user_name", ""), "truncated": False}
 
 
+CHOSIC_EXPORTER = "https://www.chosic.com/spotify-playlist-exporter/"
+
+
+def fetch_spotify_rest(net, playlist_id, token, have, opener=None):
+    """Songs after the first `have` of a public Spotify playlist, read with the embed page's anonymous key.
+    Raises on any refusal (the caller falls back to Chosic)."""
+    import urllib.request
+    if not token or not re.fullmatch(r"[A-Za-z0-9]{10,40}", playlist_id or ""):
+        raise ImportError_("no key")
+    out, offset = [], have
+    while offset < MAX_IMPORT:
+        url = (f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?offset={offset}&limit=100"
+               "&fields=next,items(track(name,duration_ms,explicit,id,artists(name),album(name,images)))")
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token, "User-Agent": "Mozilla/5.0"})
+        if opener is not None:
+            body = opener(url)
+        else:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                body = r.read(5_000_000)
+        data = json.loads(body.decode("utf-8") if isinstance(body, bytes) else body)
+        items = data.get("items") or []
+        for it in items:
+            t = (it or {}).get("track") or {}
+            if not t.get("name"):
+                continue
+            images = (t.get("album") or {}).get("images") or []
+            out.append(OnlineTrack(title=t["name"], artist=", ".join(a.get("name", "") for a in t.get("artists") or []),
+                                   album=(t.get("album") or {}).get("name") or "",
+                                   duration_ms=int(t.get("duration_ms") or 0), source="spotify",
+                                   cover_url=images[0].get("url", "") if images else "",
+                                   page_url=f"https://open.spotify.com/track/{t['id']}" if t.get("id") else "",
+                                   explicit=bool(t.get("explicit"))))
+        if not data.get("next") or not items:
+            break
+        offset += len(items)
+    return out
+
+
 def fetch_from_link(net, text, jamendo_client_id=""):
     """Read a playlist from a Spotify / Apple Music / Deezer / Jamendo link (network). Returns the same dict as
     parse_spotify_embed."""
@@ -236,7 +279,20 @@ def fetch_from_link(net, text, jamendo_client_id=""):
     if link is None:
         raise ImportError_(LINK_HELP + ", e.g. https://open.spotify.com/playlist/…")
     if link[0] == "spotify":
-        return parse_spotify_embed(net.get_text(spotify_embed_url(link[1], link[2]), ttl=600))
+        res = parse_spotify_embed(net.get_text(spotify_embed_url(link[1], link[2]), ttl=600))
+        token = res.pop("_token", "")
+        if res["truncated"] and link[1] == "playlist":
+            # More than 100 songs: try the rest with the embed player's own anonymous key (no account). Spotify
+            # often refuses this ("quota exceeded"); then the app offers Chosic's exporter instead.
+            try:
+                more = fetch_spotify_rest(net, link[2], token, len(res["tracks"]))
+                if more:
+                    res["tracks"] = res["tracks"] + more
+                    res["truncated"] = len(res["tracks"]) >= MAX_IMPORT
+            except Exception:
+                pass
+        res["chosic_url"] = CHOSIC_EXPORTER if res["truncated"] and link[1] == "playlist" else ""
+        return res
     if link[0] == "deezer":
         return fetch_deezer(net, link[1], link[2])
     if link[0] == "jamendo":

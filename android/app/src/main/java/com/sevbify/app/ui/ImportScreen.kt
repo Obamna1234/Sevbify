@@ -74,8 +74,8 @@ fun ImportScreen(start: String) {
                     Library.changed()
                     Nav.back()
                     Nav.go(Screen.PlaylistPage(pl.id))
-                    Nav.say("Imported “${pl.name}”: ${tracks.size} songs" +
-                            if (o.optBoolean("truncated")) " (Spotify shares 100 per link: paste the copied songs for the rest)" else "")
+                    Nav.say("Imported “${pl.name}”: ${tracks.size} songs")
+                    if (o.optString("chosic_url").isNotEmpty()) Nav.chosicFor = pl.id to link
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                     Nav.say("⚠ Couldn't import: ${e.message}")

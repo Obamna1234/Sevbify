@@ -54,6 +54,7 @@ object Nav {
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
     var toast by mutableStateOf("")
     var shareFor by mutableStateOf<Track?>(null)               // the share sheet
+    var chosicFor by mutableStateOf<Pair<String, String>?>(null)   // (playlist id, Spotify link): get past 100 songs
     var previewFor by mutableStateOf<Track?>(null)             // the song menu's 30-second Preview window
     var connectOpen by mutableStateOf(false)                    // Connect (audio output / Bluetooth)
     var lyricsOpen by mutableStateOf(false)                     // full-screen lyrics

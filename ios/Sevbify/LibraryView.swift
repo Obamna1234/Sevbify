@@ -328,6 +328,7 @@ struct ImportView: View {
                 nav.library = NavigationPath()
                 nav.tab = .library
                 nav.library.append(Route.playlist(pl.id))
+                if let c = o["chosic_url"] as? String, !c.isEmpty { ImportChecker.shared.offerChosic(pl.id, link) }
             } catch {
                 player.status = "Couldn't import: \(error.localizedDescription)"
             }

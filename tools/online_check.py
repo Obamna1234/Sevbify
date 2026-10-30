@@ -70,7 +70,7 @@ check("Radio", deezer_radio)
 check("Genre", deezer_genre)
 check("Wikipedia", wikipedia)
 
-for extra in ("archive", "jamendo", "spotify_probe"):
+for extra in ("archive", "jamendo"):
     mod_path = os.path.join(os.path.dirname(__file__), f"online_check_{extra}.py")
     if os.path.exists(mod_path):
         exec(open(mod_path, encoding="utf-8").read())

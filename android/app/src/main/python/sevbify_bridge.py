@@ -265,7 +265,7 @@ def import_link(text, song_links="", jamendo_client_id=""):
     if ids:
         got = importers.fetch_tracks_from_links(_net(), song_links or text)
         head = dict(head or {"name": "Imported from Spotify", "cover_url": ""})
-        head.update(tracks=got["tracks"], truncated=False, failed=got["failed"])
+        head.update(tracks=got["tracks"], truncated=False, failed=got["failed"], chosic_url="")
     if head is None:
         raise importers.ImportError_(importers.LINK_HELP + ", or Spotify song links.")
     head["tracks"] = _tracks(head["tracks"])

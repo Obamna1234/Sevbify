@@ -3012,7 +3012,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 if not got["tracks"]:
                     raise importers.ImportError_("Spotify didn't answer for those song links. Try again later.")
                 head = dict(head or {"name": "Imported from Spotify", "cover_url": ""})
-                head.update(tracks=got["tracks"], truncated=False, failed=got["failed"])
+                head.update(tracks=got["tracks"], truncated=False, failed=got["failed"], chosic_url="")
             return head
 
         timer = QTimer(self)
@@ -3029,12 +3029,89 @@ class MainWindow(ShowsMixin, QMainWindow):
             if result.get("failed"):
                 self.show_status(f"Imported {len(result['tracks'])} songs; {result['failed']} link(s) couldn't be "
                                  "read.", kind="info", timeout_ms=10000)
+            if pl is not None and result.get("chosic_url"):
+                QTimer.singleShot(0, lambda: self.offer_chosic(pl, text, result["chosic_url"]))
             return pl
 
         def failed(err):
             timer.stop()
             self.show_status(f"⚠ Couldn't import: {err}", 12000)
         self.online_call(work, on_done=done, on_error=failed)
+
+    def offer_chosic(self, pl, link, url):
+        """Spotify only shared the first 100 songs: get the rest with Chosic's exporter in the browser. The link is
+        copied for you, and the file Chosic downloads is picked up from Downloads by itself (for 15 minutes)."""
+        box = QMessageBox(self)
+        box.setWindowTitle("Sevbify")
+        box.setText(f"Spotify only shared the first {len(pl.songs)} songs of “{pl.name}”.")
+        box.setInformativeText("Get all of them with Chosic's free Spotify Playlist Exporter: it opens in your "
+                               "browser with the link copied. Paste it there, press Export (CSV), and Sevbify adds "
+                               "the downloaded file to this playlist by itself.")
+        go = box.addButton("Open Chosic", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(f"Keep the first {len(pl.songs)}", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is not go:
+            return
+        QApplication.clipboard().setText(link.strip())
+        QDesktopServices.openUrl(QUrl(url))
+        self._watch_downloads_for(pl)
+
+    def _watch_downloads_for(self, pl, minutes=15):
+        """Look in Downloads every 2 seconds for a new .csv / .txt (a finished download), then import it into pl."""
+        import time as _t
+        folder = os.path.join(os.path.expanduser("~"), "Downloads")
+        started = _t.time() - 5
+        old = getattr(self, "_chosic_timer", None)
+        if old is not None:
+            old.stop()
+        timer = QTimer(self)
+        self._chosic_timer = timer
+        self.show_status("Waiting for the file from Chosic in Downloads…", kind="info", timeout_ms=15000)
+
+        def look():
+            if _t.time() - started > minutes * 60 or pl not in self.playlists:
+                timer.stop()
+                return
+            try:
+                names = os.listdir(folder)
+            except OSError:
+                return
+            for n in names:
+                p = os.path.join(folder, n)
+                if not n.lower().endswith((".csv", ".txt")):
+                    continue
+                try:
+                    st = os.stat(p)
+                except OSError:
+                    continue
+                if st.st_mtime < started or _t.time() - st.st_mtime < 1.5:
+                    continue                                   # older, or still being written
+                timer.stop()
+                self._fill_from_file(pl, p)
+                return
+        timer.timeout.connect(look)
+        timer.start(2000)
+
+    def _fill_from_file(self, pl, path):
+        """Replace an imported playlist's songs with the full list from a file (keeps its name and cover)."""
+        from core import importers
+        try:
+            result = importers.read_playlist_file(path)
+        except OSError as e:
+            self.show_status(f"⚠ Couldn't read {os.path.basename(path)}: {e}", 10000)
+            return
+        tracks = [v for k, v in result["items"] if k == "track"]
+        if len(tracks) <= len(pl.songs):
+            self.show_status(f"{os.path.basename(path)} has no more songs than “{pl.name}” already has.", 8000)
+            return
+        pl.songs = [RemoteSong(t) for t in tracks]
+        self._fill_pending_slots()
+        self._playlists_changed(pl)
+        if self.open_playlist is pl:
+            self.refresh_playlist_page()
+        self.show_status(f"“{pl.name}” now has all {len(pl.songs)} songs (from {os.path.basename(path)}).",
+                         kind="info", timeout_ms=10000)
+        self._check_imported(pl)
 
     def import_from_file(self, path, ask_name=False, name=None):
         """A playlist file: you name it (the file's name is filled in), then every song is checked online so a

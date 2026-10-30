@@ -54,3 +54,27 @@ def test_window_names_the_import_checks_it_and_asks_about_typos(window, qapp, tm
     name, problems = window.reviewed_imports[0]
     assert name == "Road trip" and [(w, s) for _song, w, s in problems] == [("Drake - Hotlin Blng", "Drake - Hotline Bling")]
     assert pl.songs[0].track.cover_url                           # the song that was found got its details
+
+
+def test_spotify_beyond_100_uses_the_embed_key_or_offers_chosic(tmp_path):
+    from core import importers
+    import json as _j
+    page = {"items": [{"track": {"name": "Song 101", "id": "abc", "duration_ms": 1000,
+                                 "artists": [{"name": "X"}], "album": {"name": "A", "images": [{"url": "https://i/1"}]}}}],
+            "next": None}
+    more = importers.fetch_spotify_rest(None, "37i9dQZF1DX5Ejj0EkURtP", "tok", 100,
+                                        opener=lambda url: _j.dumps(page).encode())
+    assert [(t.artist, t.title) for t in more] == [("X", "Song 101")]
+    import pytest
+    with pytest.raises(Exception):
+        importers.fetch_spotify_rest(None, "37i9dQZF1DX5Ejj0EkURtP", "", 100)
+
+
+def test_window_fills_a_playlist_from_the_chosic_download(window, qapp, tmp_path):
+    from core.online.remote_song import RemoteSong
+    pl = window.create_playlist("Big", [RemoteSong(OnlineTrack(f"S{i}", "A")) for i in range(3)])
+    f = tmp_path / "Big.csv"
+    f.write_text("Song,Artist\n" + "".join(f"S{i},A\n" for i in range(5)), encoding="utf-8")
+    window._check_imported = lambda p: None
+    window._fill_from_file(pl, str(f))
+    assert len(pl.songs) == 5 and pl.name == "Big"
