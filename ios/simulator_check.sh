@@ -19,7 +19,8 @@ xcrun simctl install "$DEV" "$APP"
 run() {        # run <name> <seconds> <launch arguments...>
   local name=$1 wait=$2; shift 2
   xcrun simctl terminate "$DEV" "$BID" 2>/dev/null || true
-  xcrun simctl launch --stdout="screens/$name.out.txt" --stderr="screens/$name.err.txt" "$DEV" "$BID" "$@" >/dev/null
+  xcrun simctl launch --stdout="$PWD/screens/$name.out.txt" --stderr="$PWD/screens/$name.err.txt" "$DEV" "$BID" "$@" \
+    >> screens/launch.txt 2>&1 || echo "launch $name failed" >> screens/launch.txt
   sleep "$wait"
   xcrun simctl io "$DEV" screenshot "screens/$name.png" >/dev/null 2>&1
   echo "screenshot $name"
@@ -37,5 +38,12 @@ run 04_library 8 -SEVTab library
 run 05_now_playing 30 -SEVTab home -SEVQuery "daft punk" -SEVPlay open
 run 06_first_run_notice 10
 
-xcrun simctl spawn "$DEV" log show --last 10m --style compact --predicate 'process == "Sevbify"' > screens/system_log.txt 2>/dev/null || true
+# What's inside the app, and any crash reports.
+{ echo "== Frameworks"; ls "$APP/Frameworks" | head -50; echo "== top"; ls "$APP" | head -50
+  echo "== python"; ls "$APP/python/lib" 2>&1 | head; otool -L "$APP/Sevbify" 2>&1 | head -20
+  otool -l "$APP/Sevbify" | grep -A2 LC_RPATH; } > screens/bundle.txt 2>&1
+mkdir -p screens/crashes
+cp ~/Library/Logs/DiagnosticReports/*Sevbify* screens/crashes/ 2>/dev/null || true
+find ~/Library/Logs/DiagnosticReports -name "*Sevbify*" -newer "$APP" 2>/dev/null | head >> screens/launch.txt
+xcrun simctl spawn "$DEV" log show --last 10m --style compact --predicate 'process == "Sevbify" OR eventMessage CONTAINS "Sevbify"' > screens/system_log.txt 2>/dev/null || true
 cat screens/smoke.json
