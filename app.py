@@ -81,7 +81,7 @@ def _smoke_playback():
         from core import downloader
         ff = downloader.engine().ffmpeg_path()
         for name, extra in (("smoke.mp3", []), ("smoke.flac", []), ("smoke.ogg", ["-c:a", "libvorbis"]),
-                            ("smoke.opus", ["-c:a", "libopus"]), ("smoke.m4a", ["-c:a", "aac"])):
+                            ("smoke.opus", ["-c:a", "libopus", "-ar", "48000"]), ("smoke.m4a", ["-c:a", "aac"])):
             out = os.path.join(folder, name)
             subprocess.run([ff, "-y", "-loglevel", "error", "-i", files[0], *extra, out], timeout=60,
                            creationflags=0x08000000 if os.name == "nt" else 0)
