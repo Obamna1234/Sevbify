@@ -79,6 +79,7 @@ def test_unpack_refuses_files_outside_its_folder(tmp_path):
     assert not (tmp_path / "evil").exists()
 
 
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="Unix-style paths")
 def test_install_target_is_the_app_bundle_on_a_mac_and_the_folder_elsewhere():
     assert app_update.install_target("/Applications/Sevbify.app/Contents/MacOS/Sevbify", "darwin") == \
         "/Applications/Sevbify.app"
