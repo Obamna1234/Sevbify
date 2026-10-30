@@ -197,8 +197,8 @@ jobs:
           if [ "${{ runner.os }}" = "macOS" ]; then APP="dist/Sevbify.app/Contents/MacOS/Sevbify"; else APP="dist/Sevbify/Sevbify"; fi
           SEVBIFY_VLC_DEBUG=1 "$APP" --smoke-test > vlc-debug.txt 2>&1 || true
           { python -c "import ctypes.util; print('find_library(vlc) =', ctypes.util.find_library('vlc'))"
-            ls dist/Sevbify/_internal 2>/dev/null | grep -iE "vlc|libstdc|libgcc|libz|glib|dbus|libav|libx|libva|libdrm|libgl" | tr '\n' ' '; echo
-            grep -iE "error|cannot|failed|no such|undefined|symbol" vlc-debug.txt | sort | uniq -c | sort -rn | head -n 40
+            echo "Bundled libraries:"; ls dist/Sevbify/_internal 2>/dev/null | grep "\.so" | tr '\n' ' '; echo
+            grep -iE "opus|error|cannot|failed|no such|undefined|symbol" vlc-debug.txt | grep -v "lua debug" | sort | uniq -c | sort -rn | head -n 40
             echo ----; tail -n 25 vlc-debug.txt; } > summary.txt
           python - <<'PY'
           t = open("summary.txt", encoding="utf-8", errors="replace").read().splitlines()
