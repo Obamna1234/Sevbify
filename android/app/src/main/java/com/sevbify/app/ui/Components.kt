@@ -200,7 +200,7 @@ fun SettingsBadge() {
     androidx.compose.foundation.Image(
         androidx.compose.ui.res.painterResource(com.sevbify.app.R.drawable.sevbify_logo), "Settings",
         modifier = androidx.compose.ui.Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape)
-            .clickable { Nav.go(Screen.Settings) })
+            .clickable { Nav.drawerOpen = true })                  // Spotify: the profile menu slides in
 }
 
 /** Spotify's progress bar: a thin line (white played, grey left) with a small round dot that grows while you drag.

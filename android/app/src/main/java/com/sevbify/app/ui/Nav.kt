@@ -37,6 +37,8 @@ data class SongMenu(val track: Track, val playlist: Playlist? = null, val row: I
 
 object Nav {
     var tab by mutableStateOf(Tab.HOME)
+    var drawerOpen by mutableStateOf(false)                     // the profile menu (slides in from the left)
+    var motion by mutableStateOf("tab")                         // last move: "push" / "pop" / "tab" (page animations)
     private val stacks = mapOf(Tab.HOME to mutableStateListOf<Screen>(Screen.Home),
                                Tab.SEARCH to mutableStateListOf<Screen>(Screen.Search),
                                Tab.LIBRARY to mutableStateListOf<Screen>(Screen.Library))
@@ -58,16 +60,18 @@ object Nav {
     var confirm by mutableStateOf<Triple<String, String, () -> Unit>?>(null)
     var rename by mutableStateOf<Pair<String, (String) -> Unit>?>(null)
 
-    fun go(screen: Screen) { stack.add(screen) }
+    fun go(screen: Screen) { motion = "push"; stack.add(screen) }
     fun switch(t: Tab) {
+        motion = if (tab == t) "pop" else "tab"
         if (tab == t && stack.size > 1) { while (stack.size > 1) stack.removeAt(stack.size - 1) }   // tap again: back to the top
         tab = t
     }
     fun back(): Boolean {
+        if (drawerOpen) { drawerOpen = false; return true }
         if (lyricsOpen) { lyricsOpen = false; return true }
         if (nowPlayingOpen) { nowPlayingOpen = false; return true }
-        if (stack.size > 1) { stack.removeAt(stack.size - 1); return true }
-        if (tab != Tab.HOME) { tab = Tab.HOME; return true }
+        if (stack.size > 1) { motion = "pop"; stack.removeAt(stack.size - 1); return true }
+        if (tab != Tab.HOME) { motion = "tab"; tab = Tab.HOME; return true }
         return false
     }
     fun say(text: String) { toast = text }

@@ -63,17 +63,17 @@ fun HomeScreen() {
             topShows = (0 until a.length()).map { Show(a.getJSONObject(it)) }
         } catch (_: Exception) {}
     }
-    LazyColumn(Modifier.background(Brush.verticalGradient(0f to Color(0xFF1E3264).copy(alpha = 0.55f), 0.25f to C.Bg))) {
-        item {
-            Row(Modifier.statusBarsPadding().horizontalScroll(rememberScrollState())
-                    .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingsBadge()
-                listOf("all" to tr("All"), "music" to "Music", "podcasts" to "Podcasts", "audiobooks" to "Audiobooks").forEach { (k, l) ->
-                    Chip(l, chip == k) { chip = if (chip == k) "all" else k }
-                }
-            }
-        }
+    val chips = listOf("all" to tr("All"), "music" to tr("Music"), "podcasts" to tr("Podcasts"), "audiobooks" to tr("Audiobooks"))
+    Column(Modifier.background(Brush.verticalGradient(0f to Color(0xFF1E3264).copy(alpha = 0.55f), 0.25f to C.Bg))) {
+    // The chips stay put; the page under them swipes between All / Music / Podcasts / Audiobooks (like Spotify).
+    Row(Modifier.statusBarsPadding().horizontalScroll(rememberScrollState())
+            .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SettingsBadge()
+        chips.forEach { (k, l) -> Chip(l, chip == k) { chip = if (chip == k) "all" else k } }
+    }
+    SwipePages(chips.indexOfFirst { it.first == chip }.coerceAtLeast(0), chips.size, { chip = chips[it].first }) {
+    LazyColumn {
         if (chip == "podcasts" || chip == "audiobooks") {
             item { ShowsHomePart(chip, topShows) }
             // Explore, like Spotify's: a shelf per category (each loads when you scroll to it).
@@ -150,6 +150,8 @@ fun HomeScreen() {
             }
         }
         item { Gap(24.dp) }
+    }
+    }
     }
 }
 

@@ -4,6 +4,7 @@ import com.sevbify.app.tr
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -161,10 +162,16 @@ fun SearchScreen() {
                     }
                 }
             }
-            item {
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Library.searches.take(10).forEach { q -> Chip(q, false) { query = q } }
+            // Like Spotify's Recents: one row each, with an X to remove just that one.
+            items(Library.searches.take(10).toList()) { q ->
+                Row(Modifier.fillMaxWidth().clickable { query = q }.padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.History, null, tint = C.Sub, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Text(q, maxLines = 1, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { Library.searches.remove(q); Library.changed() }) {
+                        Icon(Icons.Filled.Close, "Remove", tint = C.Sub, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             item { Gap(12.dp) }

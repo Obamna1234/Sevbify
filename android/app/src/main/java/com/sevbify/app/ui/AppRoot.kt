@@ -4,6 +4,11 @@ import com.sevbify.app.tr
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -77,9 +82,42 @@ fun AppRoot() {
         return
     }
     Box(Modifier.fillMaxSize().background(C.Black)) {
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth().background(C.Bg)) { CurrentScreen(Nav.top) }
-            BottomArea()
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Spotify's profile menu: it slides in from the left and pushes the whole app (bar and player too).
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val drawerW = maxWidth * 0.82f
+            val drawerPx = with(density) { drawerW.toPx() }
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            val open = remember { androidx.compose.animation.core.Animatable(0f) }
+            var dragging by remember { mutableStateOf(false) }
+            LaunchedEffect(Nav.drawerOpen) {
+                if (!dragging) open.animateTo(if (Nav.drawerOpen) 1f else 0f, androidx.compose.animation.core.tween(260))
+            }
+            fun dragBy(d: Float) { dragging = true; scope.launch { open.snapTo((open.value + d / drawerPx).coerceIn(0f, 1f)) } }
+            fun settle() {
+                dragging = false
+                val o = open.value >= 0.4f
+                if (Nav.drawerOpen != o) Nav.drawerOpen = o
+                scope.launch { open.animateTo(if (o) 1f else 0f, androidx.compose.animation.core.tween(200)) }
+            }
+            if (open.value > 0f) {
+                ProfileDrawer(Modifier.width(drawerW).graphicsLayer { translationX = -(1f - open.value) * drawerPx * 0.35f })
+            }
+            Column(Modifier.fillMaxSize().graphicsLayer { translationX = open.value * drawerPx }) {
+                Box(Modifier.weight(1f).fillMaxWidth().background(C.Bg)) { Pages() }
+                BottomArea()
+            }
+            if (open.value > 0f) {
+                Box(Modifier.fillMaxSize().graphicsLayer { translationX = open.value * drawerPx }
+                        .background(Color.Black.copy(alpha = 0.45f * open.value))
+                        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                   indication = null) { Nav.drawerOpen = false }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(onDragEnd = { settle() }, onDragCancel = { settle() }) { c, d -> c.consume(); dragBy(d) }
+                        })
+            } else if (Nav.stack.size == 1 && !Nav.nowPlayingOpen) {
+                DrawerEdge(onDrag = { dragBy(it) }, onEnd = { settle() })
+            }
         }
         AnimatedVisibility(Nav.nowPlayingOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
             NowPlayingScreen()
@@ -91,6 +129,34 @@ fun AppRoot() {
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         Sheets()
         Dialogs()
+    }
+}
+
+/** The open page, with Spotify's moves: a new page slides in from the right over the old one (which drifts a
+ *  little left), Back slides it away again, and switching tabs cross-fades. Each page keeps its scroll position. */
+@Composable
+private fun Pages() {
+    val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+    androidx.compose.animation.AnimatedContent(
+        targetState = Nav.tab to Nav.stack.toList(),
+        transitionSpec = {
+            val t = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(280)
+            val f = androidx.compose.animation.core.tween<Float>(280)
+            when (Nav.motion) {
+                "push" -> (androidx.compose.animation.slideInHorizontally(t) { it } togetherWith
+                           (androidx.compose.animation.slideOutHorizontally(t) { -it / 4 } + androidx.compose.animation.fadeOut(f, 0.6f)))
+                    .apply { targetContentZIndex = 1f }
+                "pop" -> ((androidx.compose.animation.slideInHorizontally(t) { -it / 4 } + androidx.compose.animation.fadeIn(f, 0.6f)) togetherWith
+                          androidx.compose.animation.slideOutHorizontally(t) { it })
+                    .apply { targetContentZIndex = -1f }
+                else -> androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160)) togetherWith
+                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
+            }
+        }, label = "pages") { (tab, stack) ->
+        val screen = stack.last()
+        Box(Modifier.fillMaxSize().background(C.Bg)) {
+            holder.SaveableStateProvider("$tab/${stack.size}/${screen::class.simpleName}") { CurrentScreen(screen) }
+        }
     }
 }
 
