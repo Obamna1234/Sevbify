@@ -117,7 +117,8 @@ object Player {
         failuresInARow = 0
         original = queue
         sourceName = source
-        val order = if (shuffle) listOf(track) + queue.filter { it !== track }.shuffled() else queue
+        // Podcast episodes and audiobook chapters always play in order (like Spotify), even with shuffle on.
+        val order = if (shuffle && !queue.all { it.isItem }) listOf(track) + queue.filter { it !== track }.shuffled() else queue
         context.clear(); context.addAll(order)
         index = order.indexOfFirst { it === track }.coerceAtLeast(0)
         start()
@@ -183,7 +184,7 @@ object Player {
     fun toggleShuffle() {
         shuffle = !shuffle
         val cur = current
-        if (shuffle) {
+        if (shuffle && !context.all { it.isItem }) {
             val rest = context.drop(index + 1).shuffled()
             val head = context.take(index + 1)
             context.clear(); context.addAll(head + rest)

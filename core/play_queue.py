@@ -44,7 +44,7 @@ class PlayQueue:
         self.source_name = source_name
         if start_song not in self.original:
             self.original.insert(0, start_song)
-        if self.shuffle:
+        if self.shuffle and not _is_episodes(self.original):   # episodes and chapters always play in order
             self.items = self._shuffled_with_first(start_song)
             self.index = 0
         else:
@@ -56,6 +56,10 @@ class PlayQueue:
         self.items = list(songs)
         self.original = list(songs)
         self.index = min(self.index, max(0, len(self.items) - 1))
+
+    def toggle_allowed(self):
+        """Shuffle makes no sense for a podcast or an audiobook (like Spotify): they keep their order."""
+        return not _is_episodes(self.original)
 
     def _shuffled_with_first(self, first):
         rest = [s for s in self.original if s != first]
@@ -134,6 +138,8 @@ class PlayQueue:
         current = self.current
         if current is None:
             return
+        if on and _is_episodes(self.original):
+            return                              # the setting is kept for music; episodes stay in order
         if on:
             self.items = self._shuffled_with_first(current)
             self.index = 0
@@ -162,3 +168,9 @@ class PlayQueue:
         self.original = fix(self.original)
         self.user_queue = fix(self.user_queue)
         self.recent = deque(fix(self.recent), maxlen=RECENT_LIMIT)
+
+
+def _is_episodes(songs):
+    """True when every song is a podcast episode, video podcast or audiobook chapter."""
+    sources = {getattr(getattr(s, "track", None), "source", "") for s in songs}
+    return bool(songs) and sources <= {"podcast", "audiobook", "youtube"} and "" not in sources

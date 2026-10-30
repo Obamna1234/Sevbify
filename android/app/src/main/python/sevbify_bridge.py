@@ -154,6 +154,12 @@ def playlist_tracks(playlist_id):
 
 
 @_call
+def album_for(artist, album):
+    """The album a song is on (for "Go to album"), or None."""
+    return _state["music"].deezer.find_album(artist, album)
+
+
+@_call
 def album_tracks(album_json):
     return _tracks(_state["music"].deezer.album_tracks(json.loads(album_json)))
 

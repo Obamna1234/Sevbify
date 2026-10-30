@@ -117,6 +117,26 @@ class Deezer:
             items = self._get("/search", {"q": f"{artist} {title}", "limit": 5}, ttl=7 * 24 * 3600).get("data", [])
         return self.track_from(items[0]) if items else None
 
+    def find_album(self, artist, album):
+        """The album (Deezer dict: id, title, cover_xl, artist, nb_tracks...) a song is on, or None. Only an album
+        with the same name by the same artist counts ("Deluxe" / "Remastered" editions too)."""
+        import re
+
+        def norm(text):
+            text = re.sub(r"\s*[\(\[][^)\]]*(deluxe|remaster|edition|version|expanded|anniversary)[^)\]]*[\)\]]", "",
+                          (text or "").casefold())
+            return " ".join(re.findall(r"\w+", text))
+        want_album, want_artist = norm(album), norm(artist)
+        if not want_album:
+            return None
+        data = self._get("/search/album", {"q": f'artist:"{artist}" album:"{album}"', "limit": 10}, ttl=7 * 24 * 3600)
+        items = data.get("data", []) or \
+            self._get("/search/album", {"q": f"{artist} {album}", "limit": 10}, ttl=7 * 24 * 3600).get("data", [])
+        same = [a for a in items if norm(a.get("title")) == want_album]
+        by_artist = [a for a in same if norm((a.get("artist") or {}).get("name")) == want_artist] or \
+            [a for a in same if want_artist and want_artist in norm((a.get("artist") or {}).get("name"))]
+        return (by_artist or [None])[0]
+
     def search_artists(self, query, limit=10):
         """Artists matching a search (dicts with name, picture_xl, nb_fan), best known first."""
         data = self._get("/search/artist", {"q": query, "limit": limit}, ttl=24 * 3600)

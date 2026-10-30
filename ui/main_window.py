@@ -1006,12 +1006,27 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._search_for(name)
 
     def go_to_album(self, song):
+        """Like Spotify: the whole album in its own order (your downloaded songs play from your files, the rest
+        stream). Offline, or when the album isn't found online, your own copy of the album."""
         main = downloader.artist_folder(song.artist) if song.artist and song.artist != "Unknown Artist" else song.artist
-        album = self.find_album(f"{song.album.casefold()}\x1f{(main or '').casefold()}")
-        if album:
-            self.show_album(album)
-        else:
-            self._search_for(f"{song.artist} {song.album}")
+        local = self.find_album(f"{song.album.casefold()}\x1f{(main or '').casefold()}")
+
+        def fallback(*_):
+            if local:
+                self.show_album(local)
+            else:
+                self._search_for(f"{song.artist} {song.album}")
+        if not self.online_enabled or not song.album or song.album == "Unknown Album":
+            fallback()
+            return
+
+        def found(album):
+            if album:
+                self.open_web_album(album)
+            else:
+                fallback()
+        self.show_status(f"Opening {song.album}…", kind="info", timeout_ms=6000)
+        self.online_call(self.online.deezer.find_album, song.artist, song.album, on_done=found, on_error=fallback)
 
     def _search_for(self, text):
         self.search_input.setText(text)

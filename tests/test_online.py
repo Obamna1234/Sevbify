@@ -157,3 +157,17 @@ def test_online_call_runs_in_background_and_returns_on_ui_thread(window, qapp):
                        on_done=lambda worker: seen.update(worker=worker, cb=threading.get_ident()))
     assert wait_until(qapp, lambda: "cb" in seen)
     assert seen["worker"] != main and seen["cb"] == main
+
+
+def test_find_album_only_matches_the_same_album_and_artist(tmp_path):
+    from core.online.net import NetClient
+    from core.online.providers import Deezer
+    from online_fixtures import FakeWeb
+    albums = {"data": [{"id": 1, "title": "All or Nothing (Remix)", "artist": {"name": "Someone Else"}},
+                       {"id": 2, "title": "All or Nothing", "artist": {"name": "Jeremiah Kane"}, "cover_xl": "x"},
+                       {"id": 3, "title": "All or Nothing", "artist": {"name": "Other Band"}}]}
+    net = NetClient(str(tmp_path / "c"))
+    net._opener = FakeWeb({"api.deezer.com/search/album": albums})
+    d = Deezer(net)
+    assert d.find_album("Jeremiah Kane", "All or Nothing (Deluxe Edition)")["id"] == 2
+    assert d.find_album("Nobody", "Something Else") is None

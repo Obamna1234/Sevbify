@@ -39,8 +39,10 @@ def test_albums_and_artists_chips_and_pages(window, qapp):
     # Go to artist / Go to album from a song's menu open the local pages
     window.go_to_artist("Carpenter Brut")
     assert window._collection_name == "Carpenter Brut"
-    window.go_to_album(window.songs[0])
-    assert window._collection_name == "Dangerous Days"
+    window.go_to_album(window.songs[0])          # offline-style: your own copy of the album (no network in tests)
+    from conftest import wait_until
+    assert wait_until(window.app if hasattr(window, "app") else __import__("PyQt6.QtWidgets").QtWidgets.QApplication.instance(),
+                      lambda: window._collection_name == "Dangerous Days")
 
 
 def test_folders_create_move_rename_delete_and_survive_restart(open_window, audio_dir, data_dir):
@@ -130,3 +132,20 @@ def test_search_in_your_library_finds_albums_and_artists(window):
     assert ("artist", "Perturbator") in kinds(window)
     lp.filter_edit.setText("synth")
     assert kinds(window) == [("playlist", "Synthwave")]
+
+
+def test_go_to_album_opens_the_whole_album_online(window, qapp, monkeypatch):
+    from conftest import wait_until
+    from core.online.models import OnlineTrack
+    window.set_online(True) if hasattr(window, "set_online") else None
+    album = {"id": 9, "title": "Dangerous Days", "cover_xl": ""}
+    monkeypatch.setattr(window.online.deezer, "find_album", lambda artist, name: album)
+    monkeypatch.setattr(window.online.deezer, "album_tracks", lambda a: [
+        OnlineTrack("Intro", "Perturbator", album="Dangerous Days", preview_url="https://p/1.mp3"),
+        OnlineTrack("Future Club", "Perturbator", album="Dangerous Days", preview_url="https://p/2.mp3")])
+    from core.online.remote_song import RemoteSong
+    calls = []
+    monkeypatch.setattr(window, "show_status", lambda *a, **k: calls.append(a))
+    window.go_to_album(RemoteSong(OnlineTrack("Future Club", "Perturbator", album="Dangerous Days")))
+    assert wait_until(qapp, lambda: window._collection_name == "Dangerous Days" and window.collection_table.rowCount() == 2), \
+        (calls, window._collection_name, window.collection_table.rowCount(), window.online_enabled)

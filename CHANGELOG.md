@@ -2,6 +2,13 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Go to album and episode order (v5.0.0-beta.11):**
+- Go to album opens the whole album in its own order, like Spotify (songs you've downloaded play from your
+  files, the rest stream); offline it shows the album's songs you have. Before, a song you didn't own went to a
+  search (Windows) or the artist page (Android).
+- Podcast episodes and audiobook chapters always play in order, back to back, even when Shuffle is on for music
+  (like Spotify). Pick "Oldest first" on a show and press play on episode 1 to binge it from the start.
+
 **Video podcasts, download quality and YouTube upkeep (v5.0.0-beta.10):**
 - Video podcasts play inside Sevbify. Android: Now playing has an Audio / Video switch (cover art or the video,
   like Spotify), and leaving Now playing keeps the video in a small floating player you can move, resize and tap

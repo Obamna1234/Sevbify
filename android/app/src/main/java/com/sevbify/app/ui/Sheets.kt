@@ -1,5 +1,6 @@
 package com.sevbify.app.ui
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -108,9 +109,7 @@ private fun SongMenuSheet(m: SongMenu) {
                 if (t.album.isNotEmpty()) {
                     SheetItem(Icons.Filled.Album, "Go to album") {
                         close(); Nav.nowPlayingOpen = false
-                        val songs = Library.localSongs.filter { it.album == t.album }
-                        if (songs.isNotEmpty()) Nav.go(Screen.Collection("Album", t.album, songs, t.art, saveable = false))
-                        else Nav.go(Screen.Artist(t.artist))
+                        goToAlbum(t)
                     }
                 }
             }
@@ -208,3 +207,21 @@ fun CreateSheet(onClose: () -> Unit) {
 /** A playlist's cover: its own picture, else the first song's. */
 fun playlistCover(pl: com.sevbify.app.Playlist): String =
     pl.coverUrl.ifEmpty { pl.tracks.firstOrNull { it.art.isNotEmpty() }?.art ?: "" }
+
+
+/** Like Spotify: the whole album in its own order (downloaded songs play from the phone, the rest stream).
+ *  Offline, or when it isn't found online: the album's songs you have on the phone. */
+fun goToAlbum(t: com.sevbify.app.Track) {
+    val local = com.sevbify.app.Library.localSongs.filter { it.album == t.album && it.artist == t.artist }
+    fun fallback() {
+        if (local.isNotEmpty()) Nav.go(Screen.Collection("Album", t.album, local, t.art, saveable = false))
+        else Nav.go(Screen.Artist(t.artist))
+    }
+    if (!com.sevbify.app.Library.settings.online) { fallback(); return }
+    com.sevbify.app.SevbifyApp.instance.scope.launch {
+        try {
+            val found = com.sevbify.app.Bridge.call("album_for", t.artist, t.album)
+            if (found is org.json.JSONObject) openWebAlbum(found) else fallback()
+        } catch (e: Exception) { fallback() }
+    }
+}
