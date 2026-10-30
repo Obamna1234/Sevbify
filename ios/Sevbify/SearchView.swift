@@ -95,6 +95,9 @@ struct ArtistPage: View {
     @State private var picture = ""
     @State private var bio = ""
     @State private var fans = 0
+    @State private var releases: [String: [[String: Any]]] = [:]
+    @State private var showAll = false
+    @EnvironmentObject var nav: Nav
 
     var body: some View {
         ScrollView {
@@ -117,11 +120,31 @@ struct ArtistPage: View {
                     }.accessibilityLabel("Play")
                 }.padding(16)
                 SectionTitle("Popular")
-                ForEach(Array(top.enumerated()), id: \.element.id) { i, t in
+                ForEach(Array(top.prefix(showAll ? 50 : 5).enumerated()), id: \.element.id) { i, t in
                     HStack(spacing: 0) {
                         Text("\(i + 1)").foregroundColor(C.dim).frame(width: 28)
                         TrackRow(track: t) { player.play(t, in: top, source: name) }
                     }.padding(.leading, 8)
+                }
+                if top.count > 5 {
+                    Button(showAll ? "Show less" : "See more") { showAll.toggle() }
+                        .font(.subheadline.bold()).foregroundColor(C.dim).padding(.horizontal, 16).padding(.vertical, 6)
+                }
+                // Spotify's artist page: albums, singles & EPs, compilations (newest first).
+                ForEach([("albums", "Albums"), ("singles", "Singles and EPs"), ("compilations", "Compilations")], id: \.0) { key, heading in
+                    if let group = releases[key], !group.isEmpty {
+                        SectionTitle(heading)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 14) {
+                                ForEach(Array(group.enumerated()), id: \.offset) { _, a in
+                                    let ref = AlbumRef(a)
+                                    Card(title: ref.title, subtitle: String((a["release_date"] as? String ?? "").prefix(4)), art: ref.cover) {
+                                        nav.go(.album(ref))
+                                    }
+                                }
+                            }.padding(.horizontal, 16)
+                        }
+                    }
                 }
                 if !bio.isEmpty {
                     SectionTitle("About")
@@ -134,7 +157,10 @@ struct ArtistPage: View {
         .ignoresSafeArea(edges: .top)
         .task {
             guard top.isEmpty else { return }
-            if let o = try? await Bridge.object("artist_top", [name, 10]) {
+            if let r = try? await Bridge.object("artist_releases", [name]) {
+                releases = r.compactMapValues { $0 as? [[String: Any]] }
+            }
+            if let o = try? await Bridge.object("artist_top", [name, 50]) {
                 top = (o["tracks"] as? [[String: Any]] ?? []).map(Track.init(dict:))
                 if let a = o["artist"] as? [String: Any] { picture = a["picture_xl"] as? String ?? "" }
             }
@@ -184,6 +210,16 @@ struct GenrePage: View {
                     }
                 }
                 if !tracks.isEmpty {
+                    HStack(spacing: 20) {
+                        Spacer()
+                        Button { player.playAll(tracks, source: name, shuffled: true) } label: {
+                            Image(systemName: "shuffle").font(.title2).foregroundColor(player.shuffle ? C.green : C.dim)
+                        }.accessibilityLabel("Shuffle")
+                        Button { player.playAll(tracks, source: name, shuffled: false) } label: {
+                            Image(systemName: "play.fill").font(.title2).foregroundColor(.black).frame(width: 56, height: 56)
+                                .background(Circle().fill(C.green))
+                        }.accessibilityLabel("Play")
+                    }.padding(.horizontal, 16)
                     SectionTitle("Popular songs")
                     ForEach(tracks) { t in TrackRow(track: t) { player.play(t, in: tracks, source: name) } }
                 }

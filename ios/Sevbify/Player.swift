@@ -154,6 +154,7 @@ final class Player: ObservableObject {
                 Library.shared.settings.shuffle = false
                 play(list[0], in: list, source: "\(seed.title) Radio")
                 status = autoplay ? "Autoplay: \(seed.title) Radio" : ""
+                if !autoplay { Nav.current?.go(.radio("\(seed.title) Radio", list)) }   // its own page, like Spotify
             } catch {
                 status = "Radio needs the internet (\(error.localizedDescription))"
             }

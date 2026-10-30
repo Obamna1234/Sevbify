@@ -1020,9 +1020,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         return add_menu
 
     def go_to_artist(self, name):
-        """The artist's page from your own songs, or a search when you have none of theirs."""
+        """The artist's page like Spotify's when online (popular songs, releases, plus your own songs by them);
+        offline, the page made from your songs, or a search when you have none of theirs."""
         artist = self.find_artist(name)
-        if artist:
+        if self.online_enabled and name and name != "Unknown Artist":
+            self.show_web_artist(name, local=artist)
+        elif artist:
             self.show_artist(artist)
         else:
             self._search_for(name)
@@ -5256,6 +5259,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                  "genre": lambda: self.show_genre(next(g for g in (self._genres or []) if g["id"] == arg))
                  if any(g["id"] == arg for g in (self._genres or [])) else self.show_home(),
                  "webcollection": self.show_home,
+                 "web_artist": lambda: self.show_web_artist(arg, local=self.find_artist(arg)),
                  "preview": lambda: self.show_playlist(arg) if arg in self.playlists else self.show_home(),
                  "video": self.show_home,
                  "lyrics": self.toggle_lyrics,

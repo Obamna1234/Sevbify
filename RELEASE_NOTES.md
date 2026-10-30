@@ -67,6 +67,11 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.18: the same Spotify features on the other apps. Windows / macOS / Linux: "Go to artist" opens a full artist
+page (popular songs with Play, Shuffle and Artist radio, your own songs by them, latest release, albums, singles &
+EPs, compilations), Play and Shuffle on genre pages, and the Podcasts and Audiobooks pages gain trending plus a
+shelf per category. iPhone: song radio opens its own page, genre pages have Play and Shuffle, and artist pages have
+"See more" and their albums, singles and compilations.
 beta.17 (from the first Android test): Spotify-style progress bar, white Now Playing buttons, song radio opens its
 own "… Radio" page, folders are named before they're made (and can be renamed or deleted by holding them), Explore
 for podcasts and audiobooks (trending plus a shelf per category), a Play button on genre pages, artist pages with

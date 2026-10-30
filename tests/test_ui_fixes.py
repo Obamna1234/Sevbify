@@ -374,4 +374,6 @@ def test_seek_by_and_go_to_artist(window, qapp):
     window.songs[1].artist = "Mega Drive"
     tree = menu_tree(window.build_song_menu(window.songs[1]))
     tree["👤  Go to artist"].trigger()
-    assert window.stack.currentWidget() is window.search_page and window.search_input.text() == "Mega Drive"
+    # Online: the artist's own page (popular songs, releases); offline: a search for them
+    assert (window.stack.currentWidget() is window.genre_page and window.genre_page.title == "Mega Drive") or \
+        (window.stack.currentWidget() is window.search_page and window.search_input.text() == "Mega Drive")

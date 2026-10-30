@@ -18,6 +18,7 @@ enum Route: Hashable {
     case album(AlbumRef)
     case genre(Int, String)
     case songs(String, [Track])
+    case radio(String, [Track])
     case settings
     case importLink
     case downloads

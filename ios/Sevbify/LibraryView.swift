@@ -114,7 +114,9 @@ struct SongsPage: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Spacer()
-                    if let pl = playlist { PlaylistCover(playlist: pl, size: 230) } else { Cover(url: cover, size: 230) }
+                    if let pl = playlist { PlaylistCover(playlist: pl, size: 230) }
+                    else if kind == "Radio" { RadioCover(title: title, cover: cover, size: 230) }
+                    else { Cover(url: cover, size: 230) }
                     Spacer()
                 }.padding(.top, 8)
                 Text(title).font(.title.bold()).padding(.horizontal, 16).padding(.top, 16)
@@ -269,5 +271,25 @@ struct ImportView: View {
             }
             busy = false
         }
+    }
+}
+
+
+/// A song radio's picture, like Spotify's: the song's cover darkened, with RADIO and the song's name on it.
+struct RadioCover: View {
+    let title: String
+    let cover: String
+    let size: CGFloat
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            Cover(url: cover, size: size, corner: 0)
+            LinearGradient(colors: [.black.opacity(0.2), .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("RADIO").font(.caption.weight(.heavy)).tracking(2).foregroundColor(C.green)
+                Text(title.replacingOccurrences(of: " Radio", with: "")).font(.title2.weight(.heavy)).lineLimit(2)
+            }.padding(14)
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }

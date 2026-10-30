@@ -36,8 +36,9 @@ def test_albums_and_artists_chips_and_pages(window, qapp):
     window.show_home()
     window.go_back()
     assert window.stack.currentWidget() is window.collection_page
-    # Go to artist / Go to album from a song's menu open the local pages
-    window.go_to_artist("Carpenter Brut")
+    # An artist from your library opens the page made from your songs (online, "Go to artist" opens the full
+    # Spotify-style artist page, which includes these songs)
+    window.show_artist(window.find_artist("Carpenter Brut"))
     assert window._collection_name == "Carpenter Brut"
     window.go_to_album(window.songs[0])          # offline-style: your own copy of the album (no network in tests)
     from conftest import wait_until

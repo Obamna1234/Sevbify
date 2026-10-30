@@ -101,6 +101,8 @@ extension View {
                 case .album(let a): AlbumPage(album: a)
                 case .genre(let id, let name): GenrePage(id: id, name: name)
                 case .songs(let title, let tracks): SongsPage(title: title, subtitle: "", cover: tracks.first?.art ?? "", tracks: tracks, source: title)
+                case .radio(let title, let tracks): SongsPage(title: title, subtitle: radioSubtitle(tracks), cover: tracks.first?.art ?? "",
+                                                              tracks: tracks, source: title, kind: "Radio")
                 case .settings: SettingsView()
                 case .importLink: ImportView()
                 case .downloads: DownloadsPage()
@@ -190,4 +192,16 @@ struct FirstRunNotice: View {
         .background(C.bg.ignoresSafeArea())
         .interactiveDismissDisabled()
     }
+}
+
+
+/// Like Spotify: "With Turboslash, Isidor, Nightstop and more"
+func radioSubtitle(_ tracks: [Track]) -> String {
+    let seed = tracks.first?.artist ?? ""
+    var seen: [String] = []
+    for t in tracks where !t.artist.isEmpty && t.artist != seed && !seen.contains(t.artist) {
+        seen.append(t.artist)
+        if seen.count == 3 { break }
+    }
+    return seen.isEmpty ? "" : "With \(seen.joined(separator: ", ")) and more"
 }

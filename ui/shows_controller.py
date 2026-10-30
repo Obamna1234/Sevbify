@@ -133,10 +133,29 @@ class ShowsMixin:
             self.online_call(podcasts.top_shows, self.net, country_code(),
                              on_done=lambda shows: (setattr(self, "_top_shows", shows), self.refresh_podcasts_page()),
                              on_error=lambda e: setattr(self, "_top_shows", None))
+            # Explore, like Spotify: a shelf for each category (Apple's public chart per category).
+            self._category_shows = {}
+            self._load_one_by_one([(gid, (podcasts.top_in_category, self.net, gid, country_code()))
+                                   for gid, _n in podcasts.PODCAST_CATEGORIES],
+                                  self._category_shows, self.refresh_podcasts_page)
 
     def _show_cards(self, shows):
         return [self._card(s.title, s.author or ("YouTube" if s.kind == "youtube" else "Podcast"), s.image_url,
                            lambda s=s: self.open_show(s)) for s in shows]
+
+    def _load_one_by_one(self, jobs, into, refresh):
+        """Explore shelves: fetch one category at a time (never a burst of requests that would hold up playing
+        or searching), filling `into` and refreshing the page as each arrives."""
+        if not jobs or not self.online_enabled:
+            return
+        key, (fn, *args) = jobs[0]
+
+        def next_one(result=None):
+            if result:
+                into[key] = result
+                refresh()
+            self._load_one_by_one(jobs[1:], into, refresh)
+        self.online_call(fn, *args, on_done=next_one, on_error=lambda e: next_one())
 
     def refresh_podcasts_page(self):
         sections = []
@@ -146,7 +165,12 @@ class ShowsMixin:
         cont = self._continue_cards(("podcast", "youtube"))
         sections.append(("Continue listening", cont, 1))
         if self._top_shows:
-            sections.append(("Top podcasts", self._show_cards(self._top_shows), 0))
+            sections.append(("Trending podcasts", self._show_cards(self._top_shows), 1))
+        if self._podcast_results is None:
+            got = getattr(self, "_category_shows", {})
+            for gid, name in podcasts.PODCAST_CATEGORIES:
+                if got.get(gid):
+                    sections.append((f"Top in {name}", self._show_cards(got[gid]), 1))
         msg = "" if self.online_enabled else "You're offline or online features are off: downloaded episodes still play."
         if not self.user_data.shows and self._podcast_results is None:
             msg = msg or "Follow a show and its new episodes show up here and in Your Library."
@@ -753,6 +777,10 @@ class ShowsMixin:
                              on_error=lambda e: setattr(self, "_popular_books", None))
             self.online_call(audiobooks.newest, self.net,
                              on_done=lambda b: (setattr(self, "_new_books", b), self.refresh_audiobooks_page()))
+            self._category_books = {}
+            self._load_one_by_one([(name, (audiobooks.in_category, self.net, subject))
+                                   for name, subject in audiobooks.BOOK_CATEGORIES],
+                                  self._category_books, self.refresh_audiobooks_page)
 
     def refresh_audiobooks_page(self):
         sections = []
@@ -764,6 +792,11 @@ class ShowsMixin:
             sections.append(("Popular free audiobooks", self._book_cards(self._popular_books), 0))
         if self._new_books:
             sections.append(("Newly added", self._book_cards(self._new_books), 1))
+        if self._book_results is None:
+            got = getattr(self, "_category_books", {})
+            for name, _subject in audiobooks.BOOK_CATEGORIES:
+                if got.get(name):
+                    sections.append((name, self._book_cards(got[name]), 1))
         msg = "" if self.online_enabled else "You're offline or online features are off: downloaded books still play."
         self.audiobooks_page.set_sections(sections, msg)
 
@@ -822,21 +855,7 @@ class ShowsMixin:
             sections = []
             songs = self.radio_items(data["tracks"])[:10]
             if songs:
-                from .track_table import TrackTable
-                t = TrackTable(sortable=False)
-                t.set_two_line_titles(True)
-                t.mark_pending = True
-                t.download_state = self.downloads.state
-                t.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-                t.set_songs(songs)
-                t.set_current(self.current_song)
-                t.setFixedHeight(36 + len(songs) * t.verticalHeader().defaultSectionSize() + 4)
-                src = f"{genre['name']}: popular songs"
-                t.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src))
-                t.context_requested.connect(lambda s, row, pos, tt=t: self._show_song_menu(
-                    s, pos, queue=tt.songs_in_view(), source=src))
-                self.fetch_covers(songs)
-                sections.append(("Popular songs", t, 0))
+                sections.append(("Popular songs", self._songs_block(songs, f"{genre['name']}: popular songs"), 0))
             pl_cards = [self._card(p["title"], f"{p.get('nb_tracks') or ''} songs".strip(),
                                    p.get("picture_xl") or p.get("picture_big") or "",
                                    lambda p=p: self.open_web_playlist(p)) for p in data["playlists"]]
@@ -850,6 +869,119 @@ class ShowsMixin:
                                                         "(they change every day).")
         self.online_call(self.online.deezer.genre_overview, genre["id"], on_done=done,
                          on_error=lambda e: self.genre_page.show_message(f"Couldn't load {genre['name']}: {e}"))
+
+    def _songs_block(self, songs, source, radio_seed=None, shown=None):
+        """Play / Shuffle (and Artist radio) buttons above a list of songs, like Spotify's genre and artist pages.
+        `shown` limits the rows on screen (Play still plays them all)."""
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+        from .cards import green_play_button
+        from .track_table import TrackTable
+        from . import icons
+        box = QWidget()
+        box.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(8)
+        row = QHBoxLayout()
+        play = green_play_button(52)
+        play.clicked.connect(lambda: self._play_list(songs, source, shuffled=False))
+        row.addWidget(play)
+        shuffle = QPushButton()
+        shuffle.setIcon(icons.shuffle(theme.SUBDUED, 26) if hasattr(icons, "shuffle") else play.icon())
+        shuffle.setIconSize(play.iconSize())
+        shuffle.setFixedSize(44, 44)
+        shuffle.setToolTip("Shuffle play")
+        shuffle.setCursor(Qt.CursorShape.PointingHandCursor)
+        shuffle.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 22px; }"
+                              " QPushButton:hover { background: rgba(255,255,255,0.08); }")
+        shuffle.clicked.connect(lambda: self._play_list(songs, source, shuffled=True))
+        row.addWidget(shuffle)
+        if radio_seed is not None:
+            radio = QPushButton("Artist radio")
+            radio.setCursor(Qt.CursorShape.PointingHandCursor)
+            radio.setStyleSheet(f"QPushButton {{ color: {theme.TEXT}; background: transparent; border: 1px solid "
+                                f"{theme.SUBDUED}; border-radius: 15px; padding: 5px 14px; font-weight: 700; }}"
+                                f" QPushButton:hover {{ border-color: {theme.TEXT}; }}")
+            radio.clicked.connect(lambda: self.start_radio(radio_seed))
+            row.addWidget(radio)
+        row.addStretch()
+        v.addLayout(row)
+        rows = songs[:shown] if shown else songs
+        t = TrackTable(sortable=False)
+        t.set_two_line_titles(True)
+        t.mark_pending = True
+        t.download_state = self.downloads.state
+        t.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        t.set_songs(rows)
+        t.set_current(self.current_song)
+        t.setFixedHeight(36 + len(rows) * t.verticalHeader().defaultSectionSize() + 4)
+        t.play_requested.connect(lambda s, view: self.play_song(s, queue=songs, source=source))
+        t.context_requested.connect(lambda s, r, pos: self._show_song_menu(s, pos, queue=songs, source=source))
+        v.addWidget(t)
+        self.fetch_covers(songs)
+        return box
+
+    def _play_list(self, songs, source, shuffled=False):
+        if not songs:
+            return
+        if shuffled != self.pq.shuffle:
+            self.pq.set_shuffle(shuffled)
+            self._update_mode_buttons()
+        import random
+        first = random.choice(songs) if shuffled else songs[0]
+        self.play_song(first, queue=songs, source=source)
+
+    def show_web_artist(self, name, local=None):
+        """An artist's page like Spotify's: popular songs (with Play, Shuffle and Artist radio), your own songs by
+        them, the latest release, albums, singles & EPs and compilations (Deezer; nothing about you is sent)."""
+        self.genre_page.show_loading(name, TILE_COLOURS[sum(map(ord, name)) % len(TILE_COLOURS)])
+        self.stack.setCurrentWidget(self.genre_page)
+        self._set_nav("web_artist", name)
+        deezer = self.online.deezer
+
+        def fetch():
+            a = deezer.find_artist(name)
+            if not a:
+                return {"tracks": [], "releases": {"albums": [], "singles": [], "compilations": []}}
+            releases = deezer.artist_albums(a.get("id"))
+            for group in releases.values():
+                for album in group:
+                    album.setdefault("artist", {"name": a.get("name", name)})
+            return {"tracks": deezer.top_tracks(a.get("id"), 50), "releases": releases}
+
+        def done(data):
+            if self.stack.currentWidget() is not self.genre_page:
+                return
+            sections = []
+            songs = self.radio_items(data["tracks"])
+            if songs:
+                sections.append(("Popular", self._songs_block(songs, name, radio_seed=songs[0], shown=10), 0))
+            mine = self.artist_songs(local) if local else []
+            if mine:
+                sections.append((f"Your songs by {name}", self._songs_block(mine, name), 0))
+            r = data["releases"]
+            latest = sorted(r["albums"] + r["singles"], key=lambda a: a.get("release_date") or "", reverse=True)[:1]
+            sections.append(("Latest release", [self._release_card(a) for a in latest], 1))
+            sections.append(("Albums", [self._release_card(a) for a in r["albums"]], 1))
+            sections.append(("Singles and EPs", [self._release_card(a) for a in r["singles"]], 1))
+            sections.append(("Compilations", [self._release_card(a) for a in r["compilations"]], 1))
+            if not any(s[1] for s in sections):
+                self.genre_page.show_message(f"Couldn't find {name} online.")
+                return
+            self.genre_page.set_sections(sections)
+
+        def failed(err):
+            if local:
+                self.show_artist(local)
+            else:
+                self.genre_page.show_message(f"Couldn't load {name}: {err}")
+        self.online_call(fetch, on_done=done, on_error=failed)
+
+    def _release_card(self, a):
+        kind = {"single": "Single", "ep": "EP", "compile": "Compilation"}.get(a.get("record_type"), "Album")
+        year = (a.get("release_date") or "")[:4]
+        return self._card(a.get("title", ""), f"{year} • {kind}" if year else kind,
+                          a.get("cover_xl") or a.get("cover_big") or "", lambda a=a: self.open_web_album(a))
 
     @staticmethod
     def _genre_colour(genre):

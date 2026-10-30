@@ -2,6 +2,16 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**The same on Windows / macOS / Linux and iPhone (v5.0.0-beta.18):**
+- Desktop: online "Go to artist" (song menu, search, genre pages) opens a Spotify-style artist page: top 50
+  (10 shown) with Play, Shuffle and Artist radio, your own songs by them, latest release, albums, singles & EPs,
+  compilations; Back / Forward reopen it. Artists in Your Library still open the page made from your files.
+- Desktop: genre pages have Play and Shuffle; the Podcasts page shows Trending podcasts and "Top in <category>"
+  shelves, the Audiobooks page a shelf per subject. Categories load one at a time, so playing and searching never
+  wait behind them.
+- iPhone: "… Radio" page with a radio cover and "With … and more"; Play / Shuffle on genre pages; artist pages show
+  5 songs with "See more" (up to 50) and albums, singles & EPs, compilations.
+
 **From the first Android test (v5.0.0-beta.17):**
 - Fixed: starting a song could show "<song>: StandaloneCoroutine was cancelled" (an earlier attempt being replaced
   was reported as an error).
