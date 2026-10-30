@@ -140,7 +140,11 @@ def _vlc_log_for(vlc, path):
         lines = open(log, encoding="utf-8", errors="replace").read().splitlines()
         lines = [l for l in lines if "does not exist" not in l]          # options of removed video parts
         start = next((i for i, l in enumerate(lines) if "creating access" in l), 0)
-        return " | ".join(l.strip() for l in lines[start:start + 60] if l.strip())[:6000]
+        lines = [l.strip() for l in lines[start:] if l.strip() and "lua" not in l]
+        # The decoder / error lines say why; the rest is VLC looking for modules.
+        key = [l for l in lines if any(w in l.lower() for w in ("decoder", "codec", "error", "fail", "cannot",
+                                                                  "opus", "demux", "es out", "unsupported"))]
+        return " | ".join((key or lines)[:50])[:3500]
     except Exception as e:
         return f"(no VLC log: {e})"
 
