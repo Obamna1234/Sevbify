@@ -317,6 +317,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
         # Settings → Normalize volume adds VLC's volume normaliser (applies after a restart).
         extra = ["--audio-filter=normvol"] if self.user_data.normalize else []
+        if os.environ.get("SEVBIFY_VLC_DEBUG"):
+            extra.append("--verbose=2")          # VLC explains what it's doing (used by the automatic build)
         self.vlc_instance = vlc.Instance("--no-video", *extra, *vlc_args)
         if self.vlc_instance is None:
             raise RuntimeError(
