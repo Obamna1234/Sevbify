@@ -2,6 +2,25 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Video podcasts, download quality and YouTube upkeep (v5.0.0-beta.10):**
+- Video podcasts play inside Sevbify. Android: Now playing has an Audio / Video switch (cover art or the video,
+  like Spotify), and leaving Now playing keeps the video in a small floating player you can move, resize and tap
+  to open again (going to the home screen continues it picture-in-picture). Windows: "Mini player" on the video
+  page opens a resizable window that stays on top while you use Sevbify.
+- "Watch video" on a podcast's page finds the show's own YouTube channel (only a channel with the show's or
+  host's name is accepted) and opens its episodes as videos.
+- Podcast search puts the show you typed first (Apple's results came in their own order).
+- Settings → Download quality: Best (the original audio, no conversion: the smallest full-quality file, .m4a),
+  MP3 (Windows; now 160 kbps instead of a much bigger VBR file), or Data saver (about half the size).
+  Audiobook quality: 64 or 128 kbps. Video podcast quality: Auto, 360p to 1080p.
+- yt-dlp (what finds songs on YouTube) updates itself once a week when it's old, only from the official release
+  and only if it matches its published checksum (Windows and, new, Android). The Windows app bundles Deno,
+  which YouTube now needs for its audio, and yt-dlp-ejs.
+- Failed or stopped downloads no longer leave half-finished files (.part, thumbnails) in your music folder.
+- Android: opening an audiobook failed (fixed); the "S" bubble is now the Sevbify logo (it opens Settings;
+  Sevbify has no accounts). Windows: the Desktop shortcut goes on the real Desktop when OneDrive moved it.
+- CI: the build's GitHub token is read-only except for the Release step.
+
 **Security and stability check (v5.0.0-beta.9), both apps:**
 - Links from podcast feeds and imports can only be web addresses: a feed can no longer make "Open web page"
   launch a program or file on the PC, or make Sevbify read or copy local files. Feeds that try an XML

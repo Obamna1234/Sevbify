@@ -275,7 +275,7 @@ def main():
 
     def settings():
         tap("Home")
-        tap("S")
+        tap("Settings")
         shot("settings")
         swipe_up()
         shot("settings_more")
@@ -286,7 +286,7 @@ def main():
 
     def offline():
         tap("Home")
-        tap("S")
+        tap("Settings")
         found = [nd for nd in nodes() if nd[0] == "Online"]
         if found:
             w, _ = screen_size()
@@ -297,7 +297,7 @@ def main():
             time.sleep(6)
             hide_keyboard()
             shot("offline_search", 2)
-            tap("Home"); tap("S")
+            tap("Home"); tap("Settings")
             sh(f"input tap {int(w * 0.9)} {found[0][3] + 30}")
             back()
     step("offline", offline)
@@ -313,6 +313,54 @@ def main():
         sh(f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
         shot("reopened_after_kill", 12)
     step("background", background_and_return)
+
+    def podcast_search_order():
+        tap("Search")
+        tap("Clear", tries=1)
+        tap("What do you want to listen to?", tries=2)
+        sh("input text bad%sfriends")
+        time.sleep(8)
+        hide_keyboard()
+        tap("Podcasts", below=300, tries=2)
+        shot("podcast_search_bad_friends", 8)
+    step("podcast_search_order", podcast_search_order)
+
+    def audiobook_open():
+        tap("Home")
+        tap("Audiobooks")
+        time.sleep(8)
+        found = [nd for nd in nodes() if nd[0] and nd[4] > 300 and nd[0] not in
+                 ("All", "Music", "Podcasts", "Audiobooks", "Popular free audiobooks", "Find free audiobooks")]
+        if found:
+            sh(f"input tap {found[0][2]} {found[0][3]}")
+            note(f"open book '{found[0][0]}'")
+            shot("audiobook_page", 12)
+            back()
+        tap("All")
+    step("audiobook_open", audiobook_open)
+
+    def watch_video_button():
+        tap("Home")
+        tap("Podcasts")
+        time.sleep(4)
+        if tap("The Daily", tries=2):
+            time.sleep(6)
+            if tap("Watch video", tries=2):
+                shot("watch_video_result", 25)
+            back()
+        tap("All")
+    step("watch_video", watch_video_button)
+
+    def settings_quality():
+        tap("Home")
+        tap("Settings", tries=2)
+        swipe_up()
+        swipe_up()
+        shot("settings_quality")
+        swipe_up()
+        shot("settings_quality_more")
+        back()
+    step("settings_quality", settings_quality)
 
     def rotate():
         sh("settings put system accelerometer_rotation 0")

@@ -28,7 +28,9 @@ Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
 ## What's in this version
 
-beta.9: a security and stability pass on both apps (see `CHANGELOG.md`): links from podcast feeds can only
+beta.10: video podcasts inside the app (Audio/Video switch, movable and resizable mini player), download quality
+settings (Best original audio / MP3 / Data saver), podcast search that puts the show you typed first, and yt-dlp
+keeping itself up to date (checksum-checked). Earlier, beta.9: a security and stability pass on both apps (see `CHANGELOG.md`): links from podcast feeds can only
 be web addresses, Android starts faster and handles downloads, offline and errors more safely.
 
 See `CHANGELOG.md` inside the zip for the full list. Highlights:
