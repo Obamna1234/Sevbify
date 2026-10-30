@@ -67,3 +67,19 @@ def test_windows_export_then_import_on_another_computer(open_window, audio_dir, 
     assert all(not getattr(s, "is_remote", False) for s in synth.songs)        # matched to this computer's files
     assert w2.user_data.shows[0]["feed_url"] == "https://f/rss" and w2.user_data.recent_searches == ["daft punk"]
     assert w2.import_profile(path) == 0                                         # importing twice adds nothing
+
+
+def test_a_crafted_profile_cant_point_at_files_or_blow_up():
+    import gzip as gz
+    evil = {"format": "sevbify-profile", "version": 1, "playlists": [{"name": "x", "cover_url": "file:///etc/passwd",
+            "tracks": [{"title": "t", "artist": "a", "stream_url": "file:///data/data/x", "cover_url": "content://y",
+                        "page_url": "https://ok.example/p", "duration_ms": "lots"}]}],
+            "shows": [{"title": "s", "feed_url": "file:///etc/hosts", "image_url": "javascript:x"},
+                      {"title": "ok", "feed_url": "https://f/rss"}]}
+    d = profile.unpack(gz.compress(json.dumps(evil).encode()))
+    t = d["playlists"][0]["tracks"][0]
+    assert t == {"title": "t", "artist": "a", "page_url": "https://ok.example/p"}
+    assert d["playlists"][0]["cover_url"] == ""
+    assert [s.get("feed_url") for s in d["shows"]] == ["https://f/rss"]
+    with pytest.raises(profile.ProfileError):
+        profile.unpack(gz.compress(b"{" + b" " * (60 * 1024 * 1024) + b"}"))

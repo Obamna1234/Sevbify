@@ -2876,6 +2876,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         more = QLabel("<b>More than 100 songs?</b> Without signing in, Spotify only shares the first 100 songs of a "
                       "playlist link. To bring in all of them: in Spotify open the playlist, click any song, press "
                       "<b>Ctrl+A</b> then <b>Ctrl+C</b>, and paste below (keep the link above for the name and cover).")
+        more.setTextFormat(Qt.TextFormat.RichText)
         more.setObjectName("sub")
         more.setWordWrap(True)
         v.addWidget(more)

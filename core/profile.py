@@ -24,6 +24,13 @@ SETTINGS = ("online", "stream_full", "explicit_ok", "autoplay", "song_quality", 
 
 TRACK_FIELDS = ("title", "artist", "album", "duration_ms", "cover_url", "preview_url", "stream_url", "download_url",
                 "source", "source_id", "page_url", "genre", "explicit", "key", "file")
+URL_FIELDS = ("cover_url", "preview_url", "stream_url", "download_url", "page_url", "feed_url", "image_url", "link")
+
+
+def _web(value):
+    """Only web links (http / https) are kept from a profile: never file:, content: or other schemes."""
+    v = str(value or "").strip()
+    return v if v.lower().startswith(("https://", "http://")) and len(v) < 4000 else ""
 
 
 class ProfileError(Exception):
@@ -35,6 +42,16 @@ def clean_track(d):
     if not isinstance(d, dict):
         return None
     out = {k: d[k] for k in TRACK_FIELDS if k in d and d[k] not in ("", None, 0, False)}
+    for k in URL_FIELDS:
+        if k in out:
+            out[k] = _web(out[k])
+            if not out[k]:
+                del out[k]
+    for k in ("title", "artist", "album", "genre", "source", "source_id", "key", "file"):
+        if k in out:
+            out[k] = str(out[k])[:500]
+    if "duration_ms" in out and not isinstance(out["duration_ms"], (int, float)):
+        del out["duration_ms"]
     if not out.get("title"):
         return None
     out.setdefault("artist", "")
@@ -53,12 +70,13 @@ def normalise(data):
             continue
         pls.append({"name": str(p["name"]).strip()[:200], "folder": str(p.get("folder") or "")[:200],
                     "pinned": bool(p.get("pinned")), "origin": str(p.get("origin") or "")[:20],
-                    "cover_url": str(p.get("cover_url") or ""), "created": p.get("created") or 0,
+                    "cover_url": _web(p.get("cover_url")),
+                    "created": p.get("created") if isinstance(p.get("created"), (int, float)) else 0,
                     "tracks": [t for t in (clean_track(x) for x in p.get("tracks") or []) if t]})
     out["playlists"] = pls
     out["folders"] = [str(f)[:200] for f in data.get("folders") or [] if str(f).strip()]
-    out["shows"] = [_with_key(s, "show") for s in data.get("shows") or []
-                    if isinstance(s, dict) and (s.get("feed_url") or s.get("apple_id"))]
+    shows = [_with_key(s, "show") for s in data.get("shows") or [] if isinstance(s, dict)]
+    out["shows"] = [s for s in shows if s.get("feed_url") or s.get("apple_id")]
     out["books"] = [_with_key(b, "book") for b in data.get("books") or [] if isinstance(b, dict) and b.get("identifier")]
     out["resume"] = {str(k): int(v) for k, v in (data.get("resume") or {}).items()
                      if isinstance(v, (int, float)) and v > 0}
@@ -71,6 +89,8 @@ def normalise(data):
 
 def _with_key(d, kind):
     """A followed show / saved book as every app stores it (its own fields plus "key", and a book's cover)."""
+    d = {k: (_web(v) if k in URL_FIELDS else v) for k, v in d.items()
+         if isinstance(v, (str, int, float, bool)) and len(str(v)) < 20000}
     try:
         if kind == "book":
             from core.audiobooks import Book
@@ -99,9 +119,7 @@ def unpack(raw):
     if len(raw) > MAX_BYTES:
         raise ProfileError("That file is too big to be a Sevbify profile.")
     try:
-        text = gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw
-        if len(text) > MAX_BYTES * 10:
-            raise ProfileError("That file is too big to be a Sevbify profile.")
+        text = _gunzip_limited(raw, 50 * 1024 * 1024) if raw[:2] == b"\x1f\x8b" else raw
         data = json.loads(text.decode("utf-8-sig"))
     except (OSError, ValueError, EOFError):
         raise ProfileError("That isn't a Sevbify profile.")
@@ -110,6 +128,16 @@ def unpack(raw):
     if int(data.get("version") or 0) > VERSION:
         raise ProfileError("This profile was saved by a newer Sevbify: update Sevbify first.")
     return normalise(data)
+
+
+def _gunzip_limited(raw, limit):
+    """Unpack at most `limit` bytes: a tiny file made to unpack into gigabytes is refused, not read."""
+    import zlib
+    d = zlib.decompressobj(16 + zlib.MAX_WBITS)
+    out = d.decompress(raw, limit + 1)
+    if len(out) > limit or d.unconsumed_tail:
+        raise ProfileError("That file is too big to be a Sevbify profile.")
+    return out
 
 
 def pack_b64(json_text):

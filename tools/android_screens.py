@@ -378,6 +378,63 @@ def main():
         back()
     step("settings_quality", settings_quality)
 
+    def new_features():
+        # Song radio page (••• → Go to song radio)
+        tap("Search"); tap("Clear", tries=1)
+        tap("What do you want to listen to?", tries=2)
+        sh("input text perturbator"); time.sleep(8); hide_keyboard()
+        mores = [nd for nd in nodes() if nd[1] == "More" and nd[4] > 400]
+        if mores:
+            sh(f"input tap {mores[0][2]} {mores[0][3]}")
+            shot("song_menu_radio", 3)
+            if tap("Go to song radio", tries=2):
+                shot("radio_page", 12)
+                swipe_up(); shot("radio_page_songs", 3)
+                back()
+        # Recent searches (the search above was remembered)
+        tap("Search"); tap("Clear", tries=1); hide_keyboard()
+        shot("recent_searches", 3)
+        # Artist page with releases
+        tap("What do you want to listen to?", tries=2)
+        sh("input text perturbator"); time.sleep(8); hide_keyboard()
+        if tap("Perturbator", tries=2):
+            shot("artist_top", 10)
+            tap("See more", tries=1) and shot("artist_see_more", 3)
+            for i in range(4):
+                swipe_up()
+            shot("artist_releases", 4)
+            back()
+        # Genre page play button
+        tap("Search"); tap("Clear", tries=1); hide_keyboard()
+        if tap("Rock", tries=2):
+            shot("genre_play", 10)
+            back()
+        # Podcasts and audiobooks explore
+        tap("Home"); tap("Podcasts")
+        time.sleep(8); swipe_up(); shot("podcasts_explore", 6); swipe_up(); shot("podcasts_explore_more", 6)
+        tap("Audiobooks"); time.sleep(8); swipe_up(); shot("audiobooks_explore", 6)
+        tap("All")
+        # Create a folder: name first, then hold it for its menu
+        tap("Create", below=1500)
+        if tap("Folder", tries=2):
+            shot("name_folder", 3)
+            sh("input text Mixes"); time.sleep(1)
+            tap("Create", tries=2)
+            time.sleep(2)
+        tap("Your Library")
+        found = [nd for nd in nodes() if nd[0] == "Mixes"]
+        if found:
+            sh(f"input swipe {found[0][2]} {found[0][3]} {found[0][2]} {found[0][3]} 900")   # long press
+            shot("folder_menu", 3)
+            back()
+        # Settings: profile section
+        tap("Home"); tap("Settings", tries=2)
+        for i in range(3):
+            swipe_up()
+        shot("settings_profile", 3)
+        back()
+    step("new_features", new_features)
+
     def rotate():
         sh("settings put system accelerometer_rotation 0")
         sh("settings put system user_rotation 1")

@@ -59,7 +59,20 @@ object Profile {
 
     /** Adds what's in a profile (never replaces your playlists; the same playlist twice is skipped). */
     suspend fun importFrom(context: Context, uri: Uri): String {
-        val raw = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw CoreError("couldn't open the file")
+        // A profile is normally a few hundred KB: never read more than 20 MB of whatever file was picked.
+        val raw = context.contentResolver.openInputStream(uri)?.use { input ->
+            val out = java.io.ByteArrayOutputStream()
+            val buf = ByteArray(64 * 1024)
+            var total = 0
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                total += n
+                if (total > 20 * 1024 * 1024) throw CoreError("That file is too big to be a Sevbify profile.")
+                out.write(buf, 0, n)
+            }
+            out.toByteArray()
+        } ?: throw CoreError("couldn't open the file")
         val d = Bridge.obj("profile_unpack", Base64.encodeToString(raw, Base64.NO_WRAP))
         d.optJSONArray("folders")?.let { a -> for (i in 0 until a.length()) a.getString(i).let { if (it !in Library.folders) Library.folders.add(it) } }
         var added = 0

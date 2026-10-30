@@ -37,6 +37,8 @@ enum Profile {
     @MainActor static func importFile(_ url: URL) async throws -> String {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        if size > 20 * 1024 * 1024 { throw Bridge.Failure(message: "That file is too big to be a Sevbify profile.") }
         let raw = try Data(contentsOf: url)
         let d = try await Bridge.object("profile_unpack", [raw.base64EncodedString()])
         let lib = Library.shared
