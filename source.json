@@ -1,0 +1,36 @@
+{
+  "name": "Sevbify",
+  "identifier": "com.obamna1234.sevbify.source",
+  "subtitle": "A private, ad-free music player.",
+  "website": "https://github.com/Obamna1234/Sevbify",
+  "iconURL": "https://raw.githubusercontent.com/Obamna1234/Sevbify/main/assets/branding/sevbify_icon_512.png",
+  "tintColor": "1ed760",
+  "apps": [
+    {
+      "name": "Sevbify",
+      "bundleIdentifier": "com.obamna1234.sevbify",
+      "developerName": "Obamna1234",
+      "subtitle": "Your music, podcasts and audiobooks. No account, no ads, no tracking.",
+      "localizedDescription": "Sevbify plays your own music and streams songs you don't have yet, with podcasts, audiobooks, radios and lyrics. Nothing you do is sold or tracked.",
+      "iconURL": "https://raw.githubusercontent.com/Obamna1234/Sevbify/main/assets/branding/sevbify_icon_512.png",
+      "tintColor": "1ed760",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "5.0.0",
+          "buildVersion": "23",
+          "date": "2026-10-30T23:46:38Z",
+          "localizedDescription": "Sevbify 5.0.0-beta.23\n\n## Install (Windows)\n\nEverything is included (player engine, downloader, ffmpeg); nothing else to install.\n\n1. Under **Assets** below, download **Sevbify-Windows.zip**.\n2. Right-click the zip → **Extract All…** → **Extract**.\n3. Open the extracted `Sevbify` folder and double-click **Sevbify.exe**.\n   If Windows says \"Windows protected your PC\", click **More info** → **Run anyway** (the app isn't signed yet).\n4. Optional: in Sevbify, **Settings** (⚙ top right) → **Add to Desktop and Start menu**.\n\nYour playlists and settings are kept between versions (`%APPDATA%\\Sevbify`). From beta.21 on, Sevbify offers new\nversions itself: **Download**, then it restarts into the new one.\n\n## Install (Android, new and experimental) — Android 13 or newer\n\n1. On your phone, open this release and, under **Assets**, tap **Sevbify-Android.apk**.\n2. Open the downloaded file. If Android asks, allow your browser to **install unknown apps**, then tap **Install**.\n   Play Protect may warn that the app is unknown — tap **Install anyway** (it's your own app, not from the Play Store).\n3. Open Sevbify, allow **Music and audio** (so it can see your songs) and **Notifications** (for the player\n   and download progress).\n\nUpdating: from beta.21 on, Sevbify offers new versions itself (Download → Install); your playlists stay. The Android app uses the same core as\nthe Windows app (search, radio, full-song finding, downloads, importing, podcasts, audiobooks), with a layout\nbased on Spotify's phone app: Home, Search, Your Library and Create along the bottom, a mini player above them,\nand the full now-playing screen. It only reads music from the folders you choose in Settings.\nDownloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.\n\n## Install (macOS, new and experimental) — Apple Silicon Macs (M1 or newer)\n\n1. Under **Assets**, download **Sevbify-macOS.zip** and double-click it to unzip.\n2. Drag **Sevbify** into **Applications**.\n3. The first time, **right-click Sevbify → Open → Open** (the app isn't from the App Store or signed by Apple,\n   so a plain double-click is blocked once). If macOS still refuses: **System Settings → Privacy & Security →\n   Open Anyway**.\n\nEverything is included (VLC's player engine, ffmpeg, the downloader). Playlists and settings are kept in\n`~/Library/Application Support/Sevbify`. Older Intel Macs aren't supported by this download yet.\n\n## Install (Linux, new and experimental) — 64-bit, Ubuntu 22.04 or newer (or similar)\n\n1. Install VLC (Sevbify plays music with it): `sudo apt install vlc` (Fedora: `sudo dnf install vlc`, Arch:\n   `sudo pacman -S vlc`).\n2. Under **Assets**, download **Sevbify-Linux.tar.gz** and extract it (right-click → Extract, or\n   `tar xzf Sevbify-Linux.tar.gz`).\n3. Open the `Sevbify` folder and run `./Sevbify`. To add it to your app menu, run `./install.sh` once.\n   If it doesn't start on a very minimal system, also install `libxcb-cursor0`.\n\nPlaylists and settings are kept in `~/.local/share/Sevbify`.\n\n## Install (iPhone / iPad, new and experimental) — iOS 16 or newer, free with AltStore or SideStore\n\nApple doesn't let apps be installed straight from a website, so the iPhone app is **sideloaded**: a free helper app\nsigns it with your own Apple ID. Nothing is paid and Sevbify gets no access to your Apple ID.\n\n1. Install **AltStore** (altstore.io, needs a Windows PC or Mac once) or **SideStore** (sidestore.io).\n2. On your iPhone, open this release in Safari and tap\n   **Sevbify-iOS.ipa** to download it.\n3. In AltStore / SideStore: **My Apps → +** and choose the downloaded `Sevbify-iOS.ipa`.\n4. iOS 16+: turn on **Settings → Privacy & Security → Developer Mode** when asked (the iPhone restarts once).\n5. For updates: in SideStore / AltStore, **Sources → +** and add\n   `https://raw.githubusercontent.com/Obamna1234/Sevbify/altstore/source.json` (or Sevbify's Settings → Sevbify\n   updates → Add Sevbify to SideStore). New versions then show up under Updates.\n6. With a free Apple ID the app must be refreshed ev",
+          "downloadURL": "https://github.com/Obamna1234/Sevbify/releases/download/v5.0.0-beta.23/Sevbify-iOS.ipa",
+          "size": 24961075,
+          "minOSVersion": "16.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
