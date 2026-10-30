@@ -385,8 +385,10 @@ class LibraryPanel(QFrame):
                               f" QPushButton:hover {{ background: {theme.SELECTED}; }}")
             btn.clicked.connect(lambda _=False, st=step: self._scroll_chips(st))
             btn.hide()
-        self.chips_scroll.horizontalScrollBar().valueChanged.connect(lambda _v: self._place_chip_arrows())
-        self.chips_scroll.horizontalScrollBar().rangeChanged.connect(lambda *_: self._place_chip_arrows())
+        # Bound methods, not lambdas: Qt drops them when the panel goes away, so a scroll bar that still reports a
+        # change while the window closes can't call into a deleted panel (macOS test crash, beta.22).
+        self.chips_scroll.horizontalScrollBar().valueChanged.connect(self._on_chips_scrolled)
+        self.chips_scroll.horizontalScrollBar().rangeChanged.connect(self._on_chips_scrolled)
         # older code: .chip_playlists / .chip_saved
         self.chip_playlists = self.chip_buttons["playlists"]
         self.chip_saved = self.chip_buttons["todownload"]
@@ -791,6 +793,9 @@ class LibraryPanel(QFrame):
             ident = (obj.get("key") or e["title"]) if isinstance(obj, dict) else (obj if isinstance(obj, str) else id(obj))
             out.append((e["kind"], e["title"], e["subtitle"], e.get("indent"), ident, repr(extra)))
         return tuple(out)
+
+    def _on_chips_scrolled(self, *_):
+        self._place_chip_arrows()
 
     def _rebuild(self, background=False):
         if background and theme.user_is_busy():
