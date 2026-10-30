@@ -94,7 +94,7 @@ object Player {
                             VideoPlayer.savePosition(); lastResumeSave = System.currentTimeMillis()
                         }
                     }
-                    skipSponsor(position)?.let { v.seekTo(it) }
+                    skipSponsor(position)?.let { VideoPlayer.player?.seekTo(it) }
                     delay(500); continue
                 }
                 controller?.let { c ->

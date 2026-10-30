@@ -30,6 +30,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -211,7 +213,7 @@ fun SeekBar(progress: Float, onSeek: (Float) -> Unit, onDrag: (Float?) -> Unit =
         modifier.fillMaxWidth().height(24.dp)
             .onSizeChanged { width = it.width }
             .pointerInput(Unit) {
-                detectTapGestures { o -> onSeek(at(o.x)) }
+                detectTapGestures(onTap = { o: Offset -> onSeek(at(o.x)) })
             }
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
