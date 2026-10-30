@@ -2,6 +2,17 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Import checks, Chosic, corrected search, motion (v5.0.0-beta.22):**
+- core/import_check.py: each imported song is looked up once (Deezer, then a spelling suggestion); typos come back
+  with the closest song for a "Check the spelling" review (desktop dialog, Android dialog, iPhone sheet). Files are
+  named before import.
+- Spotify playlists over 100 songs: the embed page's anonymous key is tried for the rest; when Spotify refuses, the
+  app opens Chosic's exporter with the link copied and adds the downloaded CSV to the same playlist (desktop watches
+  Downloads for 15 minutes). Chosic's own server key is not used.
+- Search: Google-style "Showing results for / Search instead for"; typo-tolerant matching of your own songs.
+- Android: profile drawer with edge swipe, slide transitions between pages (scroll positions kept), swipeable filter
+  pages on Home and Your Library, Sort by sheet, list/grid, Recents rows with X. iPhone: profile drawer.
+
 **Full songs, updates, 20 languages (v5.0.0-beta.21):**
 - Songs you don't have always stream in full; when the full song isn't found they're skipped, never swapped for the
   30-second clip. "Preview (30 s)" in the song menu opens a small player with a seek bar (desktop, Android, iPhone).

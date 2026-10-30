@@ -69,6 +69,25 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.22:
+- **Importing a playlist file:** you name the playlist first (the file's name is filled in). Then every song is
+  checked online. Songs that can't be found as written are listed under **Check the spelling**, with the closest
+  real song filled in. Fix them there, keep them, or edit the file and import it again.
+- **Spotify links with more than 100 songs:** Sevbify quietly tries to get the rest. If Spotify says no, it offers
+  **Open Chosic**: your link is copied and Chosic's free exporter opens in the browser; press Export there.
+  - Windows / Mac / Linux: Sevbify picks the downloaded file up from Downloads by itself.
+  - Phones: you choose the file when you come back.
+  - Either way, the songs are added to the same playlist.
+- **Typos in search** now show results for the right spelling straight away ("Showing results for …"), with
+  "Search instead for …" to go back. Your own songs also match small typos.
+- **Spotify-style motion on Android:**
+  - The profile menu slides in from the left (tap the logo, or swipe from the edge).
+  - Pages slide in and out.
+  - Swipe left and right between the filters on Home and in Your Library.
+  - Your Library has a Sort by sheet and a list/grid button.
+  - Recent searches have an X each.
+- **iPhone:** the profile menu slides in the same way.
+
 beta.21:
 - **Full songs only.** Songs from imports, playlists, search and radio always play in full. If the full song can't be
   found, it's skipped ("Full song not found"); there's no automatic 30-second clip any more. A clip only plays when
