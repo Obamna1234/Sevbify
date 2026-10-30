@@ -1,0 +1,4 @@
+Row: 0 _display_name=Sevbify Test Band - Morning Light.mp3, relative_path=Music/Test/, is_music=1, title=Morning Light
+Row: 1 _display_name=Night Signals - Paper Planes.mp3, relative_path=Music/Test/, is_music=1, title=Paper Planes
+Row: 2 _display_name=Night Signals - Slow Orbit.mp3, relative_path=Music/Test/, is_music=1, title=Slow Orbit
+Row: 3 _display_name=Sevbify Test Band - City Rain.mp3, relative_path=Music/Test/, is_music=1, title=City Rain

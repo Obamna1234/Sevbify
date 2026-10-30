@@ -1,0 +1,284 @@
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/ui/ShareConnectLyrics.kt:182: Warning: Field requires API level 31 (current min is 26): android.media.AudioDeviceInfo#TYPE_BLE_HEADSET [InlinedApi]
+        val bt = of(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER)
+                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/ui/ShareConnectLyrics.kt:182: Warning: Field requires API level 31 (current min is 26): android.media.AudioDeviceInfo#TYPE_BLE_SPEAKER [InlinedApi]
+        val bt = of(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER)
+                                                                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "InlinedApi":
+   This check scans through all the Android API field references in the
+   application and flags certain constants, such as static final integers and
+   Strings, which were introduced in later versions. These will actually be
+   copied into the class files rather than being referenced, which means that
+   the value is available even when running on older devices. In some cases
+   that's fine, and in other cases it can result in a runtime crash or
+   incorrect behavior. It depends on the context, so consider the code
+   carefully and decide whether it's safe and can be suppressed or whether the
+   code needs to be guarded.
+
+   If you really want to use this API and don't need to support older devices
+   just set the minSdkVersion in your build.gradle or AndroidManifest.xml
+   files.
+
+   If your code is deliberately accessing newer APIs, and you have ensured
+   (e.g. with conditional execution) that this code will only ever be called
+   on a supported platform, then you can annotate your class or method with
+   the @TargetApi annotation specifying the local minimum SDK to apply, such
+   as @TargetApi(11), such that this check considers 11 rather than your
+   manifest file's minimum SDK as the required API level.
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/AndroidManifest.xml:25: Error: Missing intent-filter for action android.media.action.MEDIA_PLAY_FROM_SEARCH. [MissingIntentFilterForMediaSearch]
+    <application
+    ^
+
+   Explanation for issues of type "MissingIntentFilterForMediaSearch":
+   To support voice searches on Android Auto, you should also register an
+   intent-filter for the action android.media.action.MEDIA_PLAY_FROM_SEARCH.
+
+   To do this, add
+   `<intent-filter>`
+       `<action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"
+   />`
+   `</intent-filter>`
+   to your <activity> or <service>.
+
+   https://developer.android.com/training/auto/audio/index.html#support_voice
+
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:68: Warning: Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details. [OldTargetApi]
+        targetSdk = 35
+        ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "OldTargetApi":
+   When your application runs on a version of Android that is more recent than
+   your targetSdkVersion specifies that it has been tested with, various
+   compatibility modes kick in. This ensures that your application continues
+   to work, but it may look out of place. For example, if the targetSdkVersion
+   is less than 14, your app may get an option button in the UI.
+
+   To fix this issue, set the targetSdkVersion to the highest available value.
+   Then test your app to make sure everything works correctly. You may want to
+   consult the compatibility notes to see what changes apply to each version
+   you are adding support for:
+   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
+   as well as follow this guide:
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.
+   html
+
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.html
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/AndroidManifest.xml:34: Warning: Attribute localeConfig is only used in API level 33 and higher (current min is 26) [UnusedAttribute]
+        android:localeConfig="@xml/locales_config"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedAttribute":
+   This check finds attributes set in XML files that were introduced in a
+   version newer than the oldest version targeted by your application (with
+   the minSdkVersion attribute).
+
+   This is not an error; the application will simply ignore the attribute.
+   However, if the attribute is important to the appearance or functionality
+   of your application, you should consider finding an alternative way to
+   achieve the same result with only available attributes, and then you can
+   optionally create a copy of the layout in a layout-vNN folder which will be
+   used on API NN or higher where you can take advantage of the newer
+   attribute.
+
+   Note: This check does not only apply to attributes. For example, some tags
+   can be unused too, such as the new <tag> element in layouts introduced in
+   API 21.
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/AndroidManifest.xml:25: Warning: An activity in this app supports picture-in-picture and the targetSdkVersion is 31 or above; it is therefore strongly recommended to call both setAutoEnterEnabled(true) and setSourceRectHint(...) [PictureInPictureIssue]
+    <application
+     ~~~~~~~~~~~
+
+   Explanation for issues of type "PictureInPictureIssue":
+   Starting in Android 12, the recommended approach for enabling
+   picture-in-picture (PiP) has changed. If your app does not use the new
+   approach, your app's transition animations will be of poor quality compared
+   to other apps. The new approach requires calling setAutoEnterEnabled(true)
+   and setSourceRectHint(...).
+
+   https://developer.android.com/develop/ui/views/picture-in-picture#smoother-transition
+
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:140: Warning: A newer version of androidx.activity:activity-compose than 1.9.3 is available: 1.13.0 [GradleDependency]
+    implementation("androidx.activity:activity-compose:1.9.3")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:141: Warning: A newer version of androidx.core:core-ktx than 1.15.0 is available: 1.19.1 [GradleDependency]
+    implementation("androidx.core:core-ktx:1.15.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:142: Warning: A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.8.7 is available: 2.11.0 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:143: Warning: A newer version of androidx.media3:media3-exoplayer than 1.5.1 is available: 1.11.1 [GradleDependency]
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:144: Warning: A newer version of androidx.media3:media3-session than 1.5.1 is available: 1.11.1 [GradleDependency]
+    implementation("androidx.media3:media3-session:1.5.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:145: Warning: A newer version of androidx.media3:media3-datasource than 1.5.1 is available: 1.11.1 [GradleDependency]
+    implementation("androidx.media3:media3-datasource:1.5.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:146: Warning: A newer version of androidx.media3:media3-ui than 1.5.1 is available: 1.11.1 [GradleDependency]
+    implementation("androidx.media3:media3-ui:1.5.1")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/build.gradle.kts:147: Warning: A newer version of androidx.palette:palette-ktx than 1.0.0 is available: 1.1.0 [GradleDependency]
+    implementation("androidx.palette:palette-ktx:1.0.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/ui/Motion.kt:153: Warning: Modifier factory functions should be extensions on Modifier [ModifierFactoryExtensionFunction from androidx.compose.ui]
+private fun keep() = Modifier.fillMaxSize()
+            ~~~~
+
+   Explanation for issues of type "ModifierFactoryExtensionFunction":
+   Modifier factory functions should be defined as extension functions on
+   Modifier to allow modifiers to be fluently chained.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/ui/Components.kt:209: Warning: Modifier parameter should be the first optional parameter [ModifierParameter from androidx.compose.ui]
+fun SeekBar(progress: Float, onSeek: (Float) -> Unit, onDrag: (Float?) -> Unit = {}, modifier: Modifier = Modifier) {
+                                                                                     ~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/ui/VideoScreen.kt:48: Warning: Optional Modifier parameter should have a default value of Modifier [ModifierParameter from androidx.compose.ui]
+fun VideoSurface(showControls: Boolean, modifier: Modifier = Modifier.fillMaxSize()) {
+                                        ~~~~~~~~
+
+   Explanation for issues of type "ModifierParameter":
+   The first (or only) Modifier parameter in a Composable function should
+   follow the following rules:
+   - Be named modifier
+   - Have a type of Modifier
+   - Either have no default value, or have a default value of Modifier
+   - If optional, be the first optional parameter in the parameter list
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.ui
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/AndroidManifest.xml:58: Warning: Exported service does not require permission [ExportedService]
+        <service
+         ~~~~~~~
+
+   Explanation for issues of type "ExportedService":
+   Exported services (services which either set exported=true or contain an
+   intent-filter and do not specify exported=false) should define a permission
+   that an entity must have in order to launch the service or bind to it.
+   Without this, any application can use this service.
+
+   https://goo.gle/ExportedService
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/res/xml/network_security_config.xml:6: Warning: Insecure Base Configuration [InsecureBaseConfiguration]
+    <base-config cleartextTrafficPermitted="true">
+                                            ~~~~
+
+   Explanation for issues of type "InsecureBaseConfiguration":
+   Permitting cleartext traffic could allow eavesdroppers to intercept data
+   sent by your app, which impacts the privacy of your users. Consider only
+   allowing encrypted traffic by setting the cleartextTrafficPermitted tag to
+   false.
+
+   https://goo.gle/InsecureBaseConfiguration
+   https://developer.android.com/preview/features/security-config.html
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/AndroidManifest.xml:31: Warning: The attribute android:dataExtractionRules only applies for Android 12 and higher; since minSdkVersion is API 26 you should also set android:fullBackupContent [DataExtractionRules]
+        android:dataExtractionRules="@xml/data_extraction_rules"
+                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/DownloadService.kt:65: Warning: Unnecessary; SDK_INT is always >= 26 [ObsoleteSdkInt]
+            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/Updater.kt:93: Warning: Unnecessary; SDK_INT is always >= 26 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/Downloads.kt:31: Information: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var doneCount by mutableStateOf(0)
+                     ~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/Player.kt:41: Information: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var index by mutableStateOf(0)
+                 ~~~~~~~~~~~~~~
+/home/runner/work/Sevbify/Sevbify/android/app/src/main/java/com/sevbify/app/VideoPlayer.kt:28: Information: Prefer mutableIntStateOf instead of mutableStateOf [AutoboxingStateCreation from androidx.compose.runtime]
+    var height by mutableStateOf(0)                // the quality YouTube gave (720 = 720p)
+                  ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "AutoboxingStateCreation":
+   Calling mutableStateOf<T>() when T is either backed by a primitive type on
+   the JVM or is a value class results in a state implementation that requires
+   all state values to be boxed. This usually causes an additional allocation
+   for each state write, and adds some additional work to auto-unbox values
+   when reading the value of the state. Instead, prefer to use a specialized
+   primitive state implementation for Int, Long, Float, and Double when the
+   state does not need to track null values and does not override the default
+   SnapshotMutationPolicy. See mutableIntStateOf(), mutableLongStateOf(),
+   mutableFloatStateOf(), and mutableDoubleStateOf() for more information.
+
+   Vendor: Jetpack Compose
+   Identifier: androidx.compose.runtime
+   Feedback: https://issuetracker.google.com/issues/new?component=612128
+
+/home/runner/work/Sevbify/Sevbify/android/app/build/shared-res/mipmap-xxxhdpi/ic_launcher.png: Warning: Launcher icon used as round icon did not have a circular shape [IconLauncherShape]
+
+   Explanation for issues of type "IconLauncherShape":
+   According to the Android Design Guide
+   (https://d.android.com/r/studio-ui/designer/material/iconography) your
+   launcher icons should "use a distinct silhouette", a "three-dimensional,
+   front view, with a slight perspective as if viewed from above, so that
+   users perceive some depth."
+
+   The unique silhouette implies that your launcher icon should not be a
+   filled square.
+
+/home/runner/work/Sevbify/Sevbify/android/app/build/shared-res/drawable/sevbify_logo.png: Warning: Found bitmap drawable res/drawable/sevbify_logo.png in densityless folder [IconLocation]
+
+   Explanation for issues of type "IconLocation":
+   The res/drawable folder is intended for density-independent graphics such
+   as shapes defined in XML. For bitmaps, move it to drawable-mdpi and
+   consider providing higher and lower resolution versions in drawable-ldpi,
+   drawable-hdpi and drawable-xhdpi. If the icon really is density independent
+   (for example a solid color) you can place it in drawable-nodpi.
+
+   https://developer.android.com/guide/practices/screens_support.html
+
+/home/runner/work/Sevbify/Sevbify/android/app/build/shared-res/mipmap-xxxhdpi/ic_launcher.png: Warning: The following unrelated icon files have identical contents: sevbify_logo.png, ic_launcher.png [IconDuplicates]
+
+   Explanation for issues of type "IconDuplicates":
+   If an icon is repeated under different names, you can consolidate and just
+   use one of the icons and delete the others to make your application
+   smaller. However, duplicated icons usually are not intentional and can
+   sometimes point to icons that were accidentally overwritten or accidentally
+   not updated.
+
+1 errors, 24 warnings

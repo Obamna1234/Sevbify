@@ -1,0 +1,157 @@
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+screenshot screens/01_home.png
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+!! couldn't find 'Podcasts'
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+!! couldn't find 'Audiobooks'
+dismissed an 'isn't responding' box
+screenshot screens/02_home_audiobooks.png
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+!! couldn't find 'All'
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+!! couldn't find 'Search'
+dismissed an 'isn't responding' box
+screenshot screens/03_search_browse.png
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+dismissed an 'isn't responding' box
+!! couldn't find 'What do you want to listen to?'
+screenshot screens/04_search_results.png
+!! no Songs heading
+open now playing (no mini player text found)
+screenshot screens/05_now_playing.png
+screenshot screens/06_now_playing_later.png
+screenshot screens/07_now_playing_scrolled.png
+!! couldn't find 'Queue'
+!! couldn't find 'More'
+!! couldn't find 'Share'
+!! couldn't find 'Connect to a device'
+screenshot screens/08_lyrics_card.png
+!! couldn't find 'Show lyrics'
+screenshot screens/09_after_closing_now_playing.png
+tap 'Search' at 405,2241
+tap 'Search' at 142,216
+!! couldn't find 'Daft Punk'
+!! couldn't find 'Clear'
+tap 'Rock' at 636,1164
+screenshot screens/10_genre_page.png
+tap 'Your Library' at 675,2241
+screenshot screens/11_library.png
+tap 'Your Songs' at 348,676
+screenshot screens/12_your_songs.png
+tap 'More' at 1006,1447
+screenshot screens/13_your_songs_menu.png
+tap 'To download' at 361,886
+screenshot screens/14_to_download.png
+tap 'Create' at 945,2241
+screenshot screens/15_create_sheet.png
+tap 'Playlist' at 223,1962
+screenshot screens/16_name_playlist.png
+!! couldn't find 'Save'
+tap 'Create' at 945,2241
+screenshot screens/17_new_playlist.png
+screenshot screens/18_import_from_share.png
+tap 'Import' at 161,1242
+screenshot screens/19_import_result.png
+tap 'Download' at 84,1121
+screenshot screens/20_download_choice.png
+tap 'Choose songs' at 540,2302
+screenshot screens/21_choose_songs.png
+tap 'Home' at 135,2241
+tap 'Podcasts' at 589,231
+tap 'The Daily' at 118,890
+screenshot screens/22_podcast_show.png
+screenshot screens/23_podcast_playing.png
+tap 'All' at 210,231
+tap 'Home' at 135,2241
+tap 'Settings' at 84,231
+screenshot screens/24_profile_menu.png
+tap 'Settings and privacy' at 339,850
+screenshot screens/25_settings.png
+tap 'Privacy and profile' at 324,804
+screenshot screens/26_settings_privacy.png
+tap 'Playback' at 234,970
+screenshot screens/27_settings_playback.png
+tap 'Home' at 135,2241
+tap 'Settings' at 84,231
+tap 'Settings and privacy' at 339,850
+tap 'Privacy and profile' at 324,804
+tap 'Search' at 405,2241
+screenshot screens/28_offline_search.png
+tap 'Home' at 135,2241
+tap 'Settings' at 84,231
+tap 'Settings and privacy' at 339,850
+tap 'Privacy and profile' at 324,804
+screenshot screens/29_notification_controls.png
+screenshot screens/30_reopened_after_kill.png
+tap 'Search' at 405,2241
+tap 'Clear' at 983,518
+!! couldn't find 'What do you want to listen to?'
+tap 'Podcasts' at 686,517
+screenshot screens/31_podcast_search_bad_friends.png
+tap 'Home' at 135,2241
+tap 'Audiobooks' at 848,231
+open book 'Home'
+screenshot screens/32_audiobook_page.png
+tap 'All' at 210,231
+tap 'Home' at 135,2241
+tap 'Podcasts' at 589,231
+!! couldn't find 'The Daily'
+tap 'All' at 210,231
+tap 'Home' at 135,2241
+tap 'Settings' at 84,231
+tap 'Settings and privacy' at 339,850
+tap 'Media quality' at 277,1302
+screenshot screens/33_settings_quality.png
+tap 'Data-saving and offline' at 370,1136
+screenshot screens/34_settings_offline.png
+tap 'Search' at 405,2241
+tap 'Clear' at 943,349
+!! couldn't find 'What do you want to listen to?'
+tap 'Search' at 142,216
+tap 'Clear' at 943,349
+screenshot screens/35_recent_searches.png
+!! couldn't find 'What do you want to listen to?'
+!! couldn't find 'Perturbator'
+tap 'Search' at 142,216
+tap 'Clear' at 943,349
+!! couldn't find 'Rock'
+tap 'Home' at 135,2241
+tap 'Podcasts' at 589,231
+screenshot screens/36_podcasts_explore.png
+screenshot screens/37_podcasts_explore_more.png
+tap 'Audiobooks' at 848,231
+screenshot screens/38_audiobooks_explore.png
+tap 'All' at 210,231
+tap 'Create' at 945,2241
+tap 'Folder' at 217,2099
+screenshot screens/39_name_folder.png
+tap 'Create' at 808,995
+tap 'Your Library' at 487,225
+screenshot screens/40_folder_menu.png
+tap 'Home' at 135,2241
+tap 'Settings' at 84,231
+tap 'Settings and privacy' at 339,850
+tap 'Privacy and profile' at 324,804
+screenshot screens/41_settings_profile.png
+tap 'Home' at 135,2241
+screenshot screens/42_home_swiped_to_music.png
+tap 'Your Library' at 675,2241
+tap 'Show as grid' at 1006,529
+screenshot screens/43_library_grid.png
+tap 'Show as list' at 1006,529
+tap 'Recents' at 167,529
+screenshot screens/44_sort_by_sheet.png
+screenshot screens/45_landscape.png

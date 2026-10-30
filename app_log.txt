@@ -1,0 +1,400 @@
+10-30 23:24:56.981 11192 11192 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:24:56.986 11192 11192 I AndroidRuntime: Using default boot image
+10-30 23:24:56.987 11192 11192 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:24:58.845 11192 11192 D AndroidRuntime: Shutting down VM
+10-30 23:24:59.874 11217 11217 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:24:59.877 11217 11217 I AndroidRuntime: Using default boot image
+10-30 23:24:59.877 11217 11217 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:01.354 11217 11217 D AndroidRuntime: Shutting down VM
+10-30 23:25:06.299 11242 11242 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:06.302 11242 11242 I AndroidRuntime: Using default boot image
+10-30 23:25:06.303 11242 11242 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:07.402 11242 11242 D AndroidRuntime: Shutting down VM
+10-30 23:25:10.296 11260 11260 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:10.299 11260 11260 I AndroidRuntime: Using default boot image
+10-30 23:25:10.299 11260 11260 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:11.389 11260 11260 D AndroidRuntime: Shutting down VM
+10-30 23:25:14.284 11278 11278 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:14.286 11278 11278 I AndroidRuntime: Using default boot image
+10-30 23:25:14.286 11278 11278 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:15.400 11278 11278 D AndroidRuntime: Shutting down VM
+10-30 23:25:16.351 11303 11303 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:16.356 11303 11303 I AndroidRuntime: Using default boot image
+10-30 23:25:16.356 11303 11303 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:17.865 11303 11303 D AndroidRuntime: Shutting down VM
+10-30 23:25:18.872 11327 11327 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:18.877 11327 11327 I AndroidRuntime: Using default boot image
+10-30 23:25:18.880 11327 11327 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:20.099 11327 11327 D AndroidRuntime: Shutting down VM
+10-30 23:25:21.074 11354 11354 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:21.079 11354 11354 I AndroidRuntime: Using default boot image
+10-30 23:25:21.079 11354 11354 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:22.707 11354 11354 D AndroidRuntime: Shutting down VM
+10-30 23:25:23.668 11379 11379 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:23.673 11379 11379 I AndroidRuntime: Using default boot image
+10-30 23:25:23.673 11379 11379 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:25.126 11379 11379 D AndroidRuntime: Shutting down VM
+10-30 23:25:28.586 11404 11404 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:28.589 11404 11404 I AndroidRuntime: Using default boot image
+10-30 23:25:28.589 11404 11404 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:29.700 11404 11404 D AndroidRuntime: Shutting down VM
+10-30 23:25:32.425 11432 11432 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:32.429 11432 11432 I AndroidRuntime: Using default boot image
+10-30 23:25:32.429 11432 11432 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:33.567 11432 11432 D AndroidRuntime: Shutting down VM
+10-30 23:25:36.987 11458 11458 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:36.990 11458 11458 I AndroidRuntime: Using default boot image
+10-30 23:25:36.990 11458 11458 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:38.112 11458 11458 D AndroidRuntime: Shutting down VM
+10-30 23:25:42.309 11491 11491 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:42.312 11491 11491 I AndroidRuntime: Using default boot image
+10-30 23:25:42.312 11491 11491 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:43.458 11491 11491 D AndroidRuntime: Shutting down VM
+10-30 23:25:44.459 11516 11516 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:44.468 11516 11516 I AndroidRuntime: Using default boot image
+10-30 23:25:44.480 11516 11516 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:45.808 11516 11516 D AndroidRuntime: Shutting down VM
+10-30 23:25:46.798 11542 11542 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:46.803 11542 11542 I AndroidRuntime: Using default boot image
+10-30 23:25:46.803 11542 11542 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:47.933 11542 11542 D AndroidRuntime: Shutting down VM
+10-30 23:25:50.827 11561 11561 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:25:50.830 11561 11561 I AndroidRuntime: Using default boot image
+10-30 23:25:50.830 11561 11561 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:25:51.924 11561 11561 D AndroidRuntime: Shutting down VM
+10-30 23:25:54.810 10806 10806 I ImeTracker: com.obamna1234.sevbify:97ee6a02: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+10-30 23:25:54.813  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=11 initialSelEnd=11 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+10-30 23:25:54.815  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=11 initialSelEnd=11 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+10-30 23:25:54.827 10806 10806 I ImeTracker: com.obamna1234.sevbify:4237b877: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+10-30 23:25:54.838  1578  1578 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=11 initialSelEnd=11 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+10-30 23:25:54.906   519  1962 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e82609, mPriority=0, mIsAnimationCallback=false}
+10-30 23:25:54.978 10806 10806 I ImeTracker: com.obamna1234.sevbify:4237b877: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+10-30 23:25:55.327 10806 10806 I ImeTracker: com.obamna1234.sevbify:97ee6a02: onShown
+10-30 23:26:02.929   519  1962 I ImeTracker: com.obamna1234.sevbify:45af2845: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_SOFT_INPUT_BY_BACK_KEY
+10-30 23:26:02.975   519  2471 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1a56117, mPriority=0, mIsAnimationCallback=false}
+10-30 23:26:03.361 10806 10806 I ImeTracker: com.obamna1234.sevbify:d33bf046: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:26:03.362   519  2475 I ImeTracker: com.obamna1234.sevbify:d33bf046: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:26:03.363 10806 10806 I ImeTracker: com.obamna1234.sevbify:45af2845: onHidden
+10-30 23:26:04.676 11598 11598 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:04.681 11598 11598 I AndroidRuntime: Using default boot image
+10-30 23:26:04.689 11598 11598 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:05.628 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::0@1@com.obamna1234.sevbify>
+10-30 23:26:05.851 11598 11598 D AndroidRuntime: Shutting down VM
+10-30 23:26:06.748 11618 11618 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:06.751 11618 11618 I AndroidRuntime: Using default boot image
+10-30 23:26:06.751 11618 11618 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:07.857 11618 11618 D AndroidRuntime: Shutting down VM
+10-30 23:26:08.798 11642 11642 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:08.801 11642 11642 I AndroidRuntime: Using default boot image
+10-30 23:26:08.801 11642 11642 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:09.932 11642 11642 D AndroidRuntime: Shutting down VM
+10-30 23:26:10.820  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+10-30 23:26:13.605 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:26:14.058 11673 11673 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:14.061 11673 11673 I AndroidRuntime: Using default boot image
+10-30 23:26:14.061 11673 11673 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:15.180 11673 11673 D AndroidRuntime: Shutting down VM
+10-30 23:26:16.319 11697 11697 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:16.321 11697 11697 I AndroidRuntime: Using default boot image
+10-30 23:26:16.321 11697 11697 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:17.449 11697 11697 D AndroidRuntime: Shutting down VM
+10-30 23:26:20.349 11717 11717 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:20.352 11717 11717 I AndroidRuntime: Using default boot image
+10-30 23:26:20.352 11717 11717 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:21.510 11717 11717 D AndroidRuntime: Shutting down VM
+10-30 23:26:24.368   519  2358 I ImeTracker: com.obamna1234.sevbify:de0bf378: onRequestShow at ORIGIN_SERVER_START_INPUT reason SHOW_SOFT_INPUT_FROM_IME
+10-30 23:26:24.370  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+10-30 23:26:24.373  1578  1578 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+10-30 23:26:24.409   519  2358 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@45c4b3c, mPriority=0, mIsAnimationCallback=false}
+10-30 23:26:24.926 10806 10806 I ImeTracker: com.obamna1234.sevbify:de0bf378: onShown
+10-30 23:26:34.331   519  2229 I ImeTracker: com.obamna1234.sevbify:283b002: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_SOFT_INPUT_BY_BACK_KEY
+10-30 23:26:34.347   519  2229 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1fe6258, mPriority=0, mIsAnimationCallback=false}
+10-30 23:26:34.746 10806 10806 I ImeTracker: com.obamna1234.sevbify:d54d678d: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:26:34.746   519  2229 I ImeTracker: com.obamna1234.sevbify:d54d678d: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:26:34.747 10806 10806 I ImeTracker: com.obamna1234.sevbify:283b002: onHidden
+10-30 23:26:35.277 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::0@1@com.obamna1234.sevbify>
+10-30 23:26:35.997 11753 11753 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:36.004 11753 11753 I AndroidRuntime: Using default boot image
+10-30 23:26:36.007 11753 11753 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:37.166 11753 11753 D AndroidRuntime: Shutting down VM
+10-30 23:26:40.073 11802 11802 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:40.077 11802 11802 I AndroidRuntime: Using default boot image
+10-30 23:26:40.077 11802 11802 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:41.186 11802 11802 D AndroidRuntime: Shutting down VM
+10-30 23:26:44.078 11821 11821 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:44.081 11821 11821 I AndroidRuntime: Using default boot image
+10-30 23:26:44.081 11821 11821 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:45.005 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:26:45.179 11821 11821 D AndroidRuntime: Shutting down VM
+10-30 23:26:46.103 11845 11845 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:46.106 11845 11845 I AndroidRuntime: Using default boot image
+10-30 23:26:46.106 11845 11845 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:47.244 11845 11845 D AndroidRuntime: Shutting down VM
+10-30 23:26:48.122  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+10-30 23:26:48.363 11876 11876 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:48.366 11876 11876 I AndroidRuntime: Using default boot image
+10-30 23:26:48.366 11876 11876 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:49.491 11876 11876 D AndroidRuntime: Shutting down VM
+10-30 23:26:52.399 11898 11898 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:52.402 11898 11898 I AndroidRuntime: Using default boot image
+10-30 23:26:52.402 11898 11898 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:53.521 11898 11898 D AndroidRuntime: Shutting down VM
+10-30 23:26:56.420 11917 11917 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:56.423 11917 11917 I AndroidRuntime: Using default boot image
+10-30 23:26:56.423 11917 11917 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:57.525 11917 11917 D AndroidRuntime: Shutting down VM
+10-30 23:26:58.452 11941 11941 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:26:58.456 11941 11941 I AndroidRuntime: Using default boot image
+10-30 23:26:58.456 11941 11941 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:26:58.716 10806 10806 I ImeTracker: com.obamna1234.sevbify:fbcd08f3: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:26:58.716 10806 10806 I ImeTracker: com.obamna1234.sevbify:fbcd08f3: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+10-30 23:26:58.721  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, true)
+10-30 23:26:59.747 11941 11941 D AndroidRuntime: Shutting down VM
+10-30 23:27:15.026 11972 11972 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:15.029 11972 11972 I AndroidRuntime: Using default boot image
+10-30 23:27:15.029 11972 11972 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:16.119 11972 11972 D AndroidRuntime: Shutting down VM
+10-30 23:27:23.594 12002 12002 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:23.597 12002 12002 I AndroidRuntime: Using default boot image
+10-30 23:27:23.597 12002 12002 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:24.714 12002 12002 D AndroidRuntime: Shutting down VM
+10-30 23:27:25.859 12025 12025 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:25.862 12025 12025 I AndroidRuntime: Using default boot image
+10-30 23:27:25.862 12025 12025 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:26.956 12025 12025 D AndroidRuntime: Shutting down VM
+10-30 23:27:42.193 12056 12056 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:42.196 12056 12056 I AndroidRuntime: Using default boot image
+10-30 23:27:42.196 12056 12056 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:43.300 12056 12056 D AndroidRuntime: Shutting down VM
+10-30 23:27:44.445 12080 12080 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:44.448 12080 12080 I AndroidRuntime: Using default boot image
+10-30 23:27:44.448 12080 12080 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:45.565 12080 12080 D AndroidRuntime: Shutting down VM
+10-30 23:27:46.561 12105 12105 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:46.565 12105 12105 I AndroidRuntime: Using default boot image
+10-30 23:27:46.565 12105 12105 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:48.128 12105 12105 D AndroidRuntime: Shutting down VM
+10-30 23:27:49.033   519  2457 D CoreBackPreview: Window{ecd8433 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@4c60725, mPriority=0, mIsAnimationCallback=false}
+10-30 23:27:49.352 12129 12129 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:49.358 12129 12129 I AndroidRuntime: Using default boot image
+10-30 23:27:49.358 12129 12129 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:49.699   519  2475 I ImeTracker: com.obamna1234.sevbify:60f2b3ae: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:27:49.699   519  2475 I ImeTracker: com.obamna1234.sevbify:60f2b3ae: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:27:49.811  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:27:51.398 12129 12129 D AndroidRuntime: Shutting down VM
+10-30 23:27:52.380   519  2475 D CoreBackPreview: Window{ecd8433 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:27:52.383   519  2475 W InputManager-JNI: Input channel object 'ecd8433 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:27:52.494   519  2471 D CoreBackPreview: Window{1f5f1b9 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@376c157, mPriority=0, mIsAnimationCallback=false}
+10-30 23:27:52.698 10806 10806 I ImeTracker: com.obamna1234.sevbify:88003949: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+10-30 23:27:52.699 10806 10806 I ImeTracker: com.obamna1234.sevbify:88003949: onFailed at PHASE_CLIENT_REQUEST_IME_SHOW
+10-30 23:27:53.265   519  2471 I ImeTracker: com.obamna1234.sevbify:259c0ab5: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:27:53.266   519  2471 I ImeTracker: com.obamna1234.sevbify:259c0ab5: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:27:53.269  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=10 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, false)
+10-30 23:27:53.287 10806 10806 I ImeTracker: com.obamna1234.sevbify:e5d378ff: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+10-30 23:27:53.297  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=10 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+10-30 23:27:53.300  1578  1578 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=10 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+10-30 23:27:53.330   519  2398 D CoreBackPreview: Window{1f5f1b9 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@108cf5e, mPriority=0, mIsAnimationCallback=false}
+10-30 23:27:53.684 10806 10806 I ImeTracker: com.obamna1234.sevbify:e5d378ff: onShown
+10-30 23:27:55.679 12157 12157 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:55.693 12157 12157 I AndroidRuntime: Using default boot image
+10-30 23:27:55.694 12157 12157 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:27:56.847 12157 12157 D AndroidRuntime: Shutting down VM
+10-30 23:27:59.059 12187 12187 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:27:59.062 12187 12187 I AndroidRuntime: Using default boot image
+10-30 23:27:59.062 12187 12187 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:00.193 12187 12187 D AndroidRuntime: Shutting down VM
+10-30 23:28:01.113   519  2398 D CoreBackPreview: Window{1f5f1b9 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@81d36ce, mPriority=0, mIsAnimationCallback=false}
+10-30 23:28:01.113   519  2398 D CoreBackPreview: Window{1f5f1b9 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:28:01.205   519  2398 W InputManager-JNI: Input channel object '1f5f1b9 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:28:01.515 10806 10806 I ImeTracker: com.obamna1234.sevbify:f629cab7: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+10-30 23:28:01.515 10806 10806 I ImeTracker: com.obamna1234.sevbify:f629cab7: onFailed at PHASE_CLIENT_VIEW_SERVED
+10-30 23:28:01.525   519  2398 I ImeTracker: com.obamna1234.sevbify:50b5d4d: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:28:01.531   519  1962 I ImeTracker: com.obamna1234.sevbify:50b5d4d: onFailed at PHASE_WM_HAS_IME_INSETS_CONTROL_TARGET
+10-30 23:28:01.542  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:28:03.157 12211 12211 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:03.159 12211 12211 I AndroidRuntime: Using default boot image
+10-30 23:28:03.160 12211 12211 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:03.949 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::0@0@com.obamna1234.sevbify>
+10-30 23:28:04.298 12211 12211 D AndroidRuntime: Shutting down VM
+10-30 23:28:05.220 12235 12235 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:05.223 12235 12235 I AndroidRuntime: Using default boot image
+10-30 23:28:05.223 12235 12235 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:06.346 12235 12235 D AndroidRuntime: Shutting down VM
+10-30 23:28:07.776   519  2475 D CoreBackPreview: Window{3f2d5ec u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ad46316, mPriority=0, mIsAnimationCallback=false}
+10-30 23:28:08.388   519  1962 I ImeTracker: com.obamna1234.sevbify:89444008: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:28:08.388   519  1962 I ImeTracker: com.obamna1234.sevbify:89444008: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:28:08.392  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:28:11.271 12261 12261 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:11.274 12261 12261 I AndroidRuntime: Using default boot image
+10-30 23:28:11.274 12261 12261 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:12.397 12261 12261 D AndroidRuntime: Shutting down VM
+10-30 23:28:14.044   519  1962 D CoreBackPreview: Window{3f2d5ec u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:28:14.095   519  1962 W InputManager-JNI: Input channel object '3f2d5ec com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:28:14.172   519  2474 I ImeTracker: com.obamna1234.sevbify:fcd29ea7: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:28:14.173   519  2474 I ImeTracker: com.obamna1234.sevbify:fcd29ea7: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:28:14.177  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:28:15.184 12289 12289 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:15.187 12289 12289 I AndroidRuntime: Using default boot image
+10-30 23:28:15.187 12289 12289 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:16.310 12289 12289 D AndroidRuntime: Shutting down VM
+10-30 23:28:17.237 12313 12313 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:17.262 12313 12313 I AndroidRuntime: Using default boot image
+10-30 23:28:17.263 12313 12313 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:18.838 12313 12313 D AndroidRuntime: Shutting down VM
+10-30 23:28:19.811 12339 12339 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:19.816 12339 12339 I AndroidRuntime: Using default boot image
+10-30 23:28:19.816 12339 12339 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:21.190 12339 12339 D AndroidRuntime: Shutting down VM
+10-30 23:28:22.210 12362 12362 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:22.215 12362 12362 I AndroidRuntime: Using default boot image
+10-30 23:28:22.215 12362 12362 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:23.518 12362 12362 D AndroidRuntime: Shutting down VM
+10-30 23:28:27.826 12392 12392 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:27.829 12392 12392 I AndroidRuntime: Using default boot image
+10-30 23:28:27.829 12392 12392 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:28.951 12392 12392 D AndroidRuntime: Shutting down VM
+10-30 23:28:33.162 12425 12425 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:33.165 12425 12425 I AndroidRuntime: Using default boot image
+10-30 23:28:33.165 12425 12425 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:34.295 12425 12425 D AndroidRuntime: Shutting down VM
+10-30 23:28:38.732 12471 12471 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:38.735 12471 12471 I AndroidRuntime: Using default boot image
+10-30 23:28:38.735 12471 12471 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:39.870 12471 12471 D AndroidRuntime: Shutting down VM
+10-30 23:28:41.595 12500 12500 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:41.598 12500 12500 I AndroidRuntime: Using default boot image
+10-30 23:28:41.598 12500 12500 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:42.703 12500 12500 D AndroidRuntime: Shutting down VM
+10-30 23:28:43.648 12525 12525 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:43.672 12525 12525 I AndroidRuntime: Using default boot image
+10-30 23:28:43.672 12525 12525 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:45.003 12525 12525 D AndroidRuntime: Shutting down VM
+10-30 23:28:47.974 12551 12551 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:47.977 12551 12551 I AndroidRuntime: Using default boot image
+10-30 23:28:47.977 12551 12551 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:49.107 12551 12551 D AndroidRuntime: Shutting down VM
+10-30 23:28:50.312 12574 12574 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:50.315 12574 12574 I AndroidRuntime: Using default boot image
+10-30 23:28:50.315 12574 12574 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:51.450 12574 12574 D AndroidRuntime: Shutting down VM
+10-30 23:28:52.506 12598 12598 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:52.519 12598 12598 I AndroidRuntime: Using default boot image
+10-30 23:28:52.519 12598 12598 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:53.924 12598 12598 D AndroidRuntime: Shutting down VM
+10-30 23:28:54.848   519  1197 D CoreBackPreview: Window{b91871 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1924973, mPriority=0, mIsAnimationCallback=false}
+10-30 23:28:55.237   519  2184 I ImeTracker: com.obamna1234.sevbify:44cd885b: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:28:55.237   519  2184 I ImeTracker: com.obamna1234.sevbify:44cd885b: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:28:55.319  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:28:56.893 12624 12624 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:28:56.896 12624 12624 I AndroidRuntime: Using default boot image
+10-30 23:28:56.896 12624 12624 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:28:58.003 12624 12624 D AndroidRuntime: Shutting down VM
+10-30 23:28:59.573   519  2184 D CoreBackPreview: Window{b91871 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:28:59.660   519  2184 W InputManager-JNI: Input channel object 'b91871 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:28:59.715   519  1197 I ImeTracker: com.obamna1234.sevbify:d3e29864: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:28:59.717   519  1197 I ImeTracker: com.obamna1234.sevbify:d3e29864: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:28:59.727  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:00.848  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, true)
+10-30 23:29:00.926  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, true)
+10-30 23:29:00.929   519  2184 I WindowManager: finishDrawing of orientation change: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity} 132ms
+10-30 23:29:00.947   519   538 V WindowManager:     info={id=11 t=CHANGE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{c947afb Task{32c3e10 #8 type=standard A=10192:com.obamna1234.sevbify}}} m=CHANGE f=NONE p=WCT{RemoteToken{7d98911 DefaultTaskDisplayArea@163755988}} leash=Surface(name=Task=8)/@0x2f1132 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 2400, 1080) d=0 r=0->1:0},{WCT{RemoteToken{7d98911 DefaultTaskDisplayArea@163755988}} m=CHANGE f=NONE p=WCT{RemoteToken{388ba76 Display{#0 state=ON size=2400x1080 ROTATION_90}}} leash=Surface(name=DefaultTaskDisplayArea)/@0x6e8f04b sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 2400, 1080) d=0 r=0->1:-1},{WCT{RemoteToken{388ba76 Display{#0 state=ON size=2400x1080 ROTATION_90}}} m=CHANGE f=IS_DISPLAY leash=Surface(name=WindowedMagnification:0:31)/@0x5ecb36b sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 2400, 1080) d=0 r=0->1:-1}]}
+10-30 23:29:01.236   519  2184 I ImeTracker: com.obamna1234.sevbify:d51e64bf: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_SAME_WINDOW_FOCUSED_WITHOUT_EDITOR
+10-30 23:29:01.236   519  2184 I ImeTracker: com.obamna1234.sevbify:d51e64bf: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:29:01.280  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:04.772 12669 12669 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:29:04.775 12669 12669 I AndroidRuntime: Using default boot image
+10-30 23:29:04.775 12669 12669 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:29:05.885 12669 12669 D AndroidRuntime: Shutting down VM
+10-30 23:29:07.149  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, true)
+10-30 23:29:07.228   519  2471 I WindowManager: finishDrawing of orientation change: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity} 130ms
+10-30 23:29:07.269   519   538 V WindowManager:     info={id=12 t=CHANGE f=0x0 trk=0 r=[0@Point(0, 0)] c=[{WCT{RemoteToken{c947afb Task{32c3e10 #8 type=standard A=10192:com.obamna1234.sevbify}}} m=CHANGE f=NONE p=WCT{RemoteToken{7d98911 DefaultTaskDisplayArea@163755988}} leash=Surface(name=Task=8)/@0x2f1132 sb=Rect(0, 0 - 2400, 1080) eb=Rect(0, 0 - 1080, 2400) d=0 r=1->0:0},{WCT{RemoteToken{7d98911 DefaultTaskDisplayArea@163755988}} m=CHANGE f=NONE p=WCT{RemoteToken{388ba76 Display{#0 state=ON size=1080x2400 ROTATION_0}}} leash=Surface(name=DefaultTaskDisplayArea)/@0x6e8f04b sb=Rect(0, 0 - 2400, 1080) eb=Rect(0, 0 - 1080, 2400) d=0 r=1->0:-1},{WCT{RemoteToken{388ba76 Display{#0 state=ON size=1080x2400 ROTATION_0}}} m=CHANGE f=IS_DISPLAY leash=Surface(name=WindowedMagnification:0:31)/@0x5ecb36b sb=Rect(0, 0 - 2400, 1080) eb=Rect(0, 0 - 1080, 2400) d=0 r=1->0:-1}]}
+10-30 23:29:07.403   519  2358 I ImeTracker: com.obamna1234.sevbify:92eee29d: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_SAME_WINDOW_FOCUSED_WITHOUT_EDITOR
+10-30 23:29:07.403   519  2358 I ImeTracker: com.obamna1234.sevbify:92eee29d: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:29:07.404  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:09.064 12695 12695 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:29:09.067 12695 12695 I AndroidRuntime: Using default boot image
+10-30 23:29:09.067 12695 12695 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:29:09.140 12695 12695 D AndroidRuntime: Calling main entry com.android.commands.monkey.Monkey
+10-30 23:29:09.141 12695 12695 W Monkey  : args: [-p, com.obamna1234.sevbify, --throttle, 250, --pct-syskeys, 0, --pct-appswitch, 0, --ignore-crashes, --ignore-timeouts, -s, 42, -v, 1500]
+10-30 23:29:09.142 12695 12695 W Monkey  :  arg: "com.obamna1234.sevbify"
+10-30 23:29:09.143 12695 12695 W Monkey  : data="com.obamna1234.sevbify"
+10-30 23:29:09.149 12695 12695 I Monkey  : :AllowPackage: com.obamna1234.sevbify
+10-30 23:29:09.156 12695 12695 I Monkey  : :Switch: #Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;launchFlags=0x10200000;component=com.obamna1234.sevbify/com.sevbify.app.MainActivity;end
+10-30 23:29:09.158 12695 12695 I Monkey  :     // Allowing start of Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] cmp=com.obamna1234.sevbify/com.sevbify.app.MainActivity } in package com.obamna1234.sevbify
+10-30 23:29:09.163   832   863 D WindowManagerShell: onActivityRestartAttempt: ComponentInfo{com.obamna1234.sevbify/com.sevbify.app.MainActivity}
+10-30 23:29:09.166   519  2358 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.obamna1234.sevbify/com.sevbify.app.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=3
+10-30 23:29:09.242  1022  1022 D MediaPlayerList: onActiveSessionsChanged: controller: com.obamna1234.sevbify
+10-30 23:29:09.243  1022  1022 D MediaPlayerList: onActiveSessionsChanged: controller: com.obamna1234.sevbify
+10-30 23:29:09.905  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:38.239  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+10-30 23:29:38.250 10806 10806 I ImeTracker: com.obamna1234.sevbify:fe0f17e1: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+10-30 23:29:38.268  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+10-30 23:29:38.296 10806 10806 I ImeTracker: com.obamna1234.sevbify:b4b1923a: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+10-30 23:29:38.336  1578  1578 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+10-30 23:29:38.479   519  2457 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@ad8d670, mPriority=0, mIsAnimationCallback=false}
+10-30 23:29:38.599   519  2230 I ImeTracker: com.obamna1234.sevbify:fe0f17e1: onFailed at PHASE_WM_SHOW_IME_RUNNER
+10-30 23:29:39.331 10806 10806 I ImeTracker: com.obamna1234.sevbify:b4b1923a: onShown
+10-30 23:29:42.855 10806 10806 I ImeTracker: com.obamna1234.sevbify:9c4ee8d6: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:29:42.856 10806 10806 I ImeTracker: com.obamna1234.sevbify:120073be: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:29:42.883  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, true)
+10-30 23:29:43.195 10806 10806 I ImeTracker: com.obamna1234.sevbify:120073be: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+10-30 23:29:43.199   519  1902 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@4504cd0, mPriority=0, mIsAnimationCallback=false}
+10-30 23:29:43.412 10806 10806 I ImeTracker: com.obamna1234.sevbify:8fc150bc: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT_BY_INSETS_API
+10-30 23:29:43.412   519  2471 I ImeTracker: com.obamna1234.sevbify:8fc150bc: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:29:43.413 10806 10806 I ImeTracker: com.obamna1234.sevbify:9c4ee8d6: onHidden
+10-30 23:29:49.722 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::0@1@com.obamna1234.sevbify>
+10-30 23:29:51.187   519  1902 D CoreBackPreview: Window{436530b u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@fa29f3d, mPriority=0, mIsAnimationCallback=false}
+10-30 23:29:51.500   519  1902 I ImeTracker: com.obamna1234.sevbify:b1fc97c8: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:29:51.505   519  1902 I ImeTracker: com.obamna1234.sevbify:b1fc97c8: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:29:51.515  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:53.768 10806 10806 E FrameTracker: force finish cuj, time out: J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:29:53.768 10806 10806 W FrameTracker: Missed SF frame:UNKNOWN: 66, 70984, 0, CUJ=J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:29:53.768 10806 10806 W FrameTracker: Missed App frame:UNKNOWN: 328, 71051, 0, CUJ=J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:29:53.768 10806 10806 W FrameTracker: Missed App frame:UNKNOWN: 74, 71102, 0, CUJ=J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:29:53.768 10806 10806 W FrameTracker: Missed SF frame:UNKNOWN: 74, 71102, 0, CUJ=J<IME_INSETS_ANIMATION::1@1@com.obamna1234.sevbify>
+10-30 23:29:53.806   519  1902 D CoreBackPreview: Window{436530b u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:29:53.864   519  1902 W InputManager-JNI: Input channel object '436530b com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:29:53.960   519  1962 I ImeTracker: com.obamna1234.sevbify:af99e954: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:29:53.960   519  1962 I ImeTracker: com.obamna1234.sevbify:af99e954: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:29:53.991  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:54.266  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:29:56.079   519  1962 I MediaFocusControl: requestAudioFocus() from uid/pid 10192/10806 AA=USAGE_MEDIA/CONTENT_TYPE_MUSIC clientId=android.media.AudioManager@a28b788androidx.media3.exoplayer.AudioFocusManager$AudioFocusListener@671c521 callingPack=com.obamna1234.sevbify req=1 flags=0x0 sdk=35
+10-30 23:30:00.594   519  1962 D CoreBackPreview: Window{51a56e1 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8a01463, mPriority=0, mIsAnimationCallback=false}
+10-30 23:30:00.826   519   620 W InputDispatcher: Waiting because no window has focus but ActivityRecord{b9184c2 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+10-30 23:30:01.080   519  2184 I ImeTracker: com.obamna1234.sevbify:fbc69e09: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:30:01.080   519  2184 I ImeTracker: com.obamna1234.sevbify:fbc69e09: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:30:01.081  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:01.537  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:02.116   519  2184 D CoreBackPreview: Window{51a56e1 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:30:02.204   519  2184 W InputManager-JNI: Input channel object '51a56e1 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:30:02.374   519  2457 I ImeTracker: com.obamna1234.sevbify:a5dfdb1: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:30:02.375   519  2457 I ImeTracker: com.obamna1234.sevbify:a5dfdb1: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:30:02.382  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:03.848   519  2457 D CoreBackPreview: startBackNavigation currentTask=Task{32c3e10 #8 type=standard A=10192:com.obamna1234.sevbify}, topRunningActivity=ActivityRecord{b9184c2 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8}, callbackInfo=OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@4504cd0, mPriority=0, mIsAnimationCallback=false}, currentFocus=Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}
+10-30 23:30:03.848   519  1962 I InputDispatcher: Channel [Gesture Monitor] edge-swipe (server) is stealing touch from [f20bddd com.obamna1234.sevbify/com.sevbify.app.MainActivity (server), [Gesture Monitor] swipe-up (server)]
+10-30 23:30:07.242   519  1902 D CoreBackPreview: Window{572baa8 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@c85c1f2, mPriority=0, mIsAnimationCallback=false}
+10-30 23:30:07.481   519   620 W InputDispatcher: Waiting because no window has focus but ActivityRecord{b9184c2 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+10-30 23:30:07.787   519  1962 I ImeTracker: com.obamna1234.sevbify:2b213342: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:30:07.787   519  1962 I ImeTracker: com.obamna1234.sevbify:2b213342: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:30:07.795  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:08.891   519  1902 D CoreBackPreview: Window{572baa8 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+10-30 23:30:08.892   519  2184 W InputManager-JNI: Input channel object '572baa8 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+10-30 23:30:08.892   519   620 W InputDispatcher: Not creating InputTarget for 572baa8 com.obamna1234.sevbify/com.sevbify.app.MainActivity, no input channel
+10-30 23:30:09.137   519  1902 I ImeTracker: com.obamna1234.sevbify:e01987eb: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+10-30 23:30:09.139   519  1902 I ImeTracker: com.obamna1234.sevbify:e01987eb: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:30:09.233  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:18.104   519   539 I InputDispatcher: Two or more foreground windows: f20bddd com.obamna1234.sevbify/com.sevbify.app.MainActivity and b212a7f StatusBar
+10-30 23:30:21.831  1022  1022 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-30 23:30:30.937   519  2232 I ImeTracker: com.obamna1234.sevbify:ae90eda2: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_SAME_WINDOW_FOCUSED_WITHOUT_EDITOR
+10-30 23:30:30.937   519  2232 I ImeTracker: com.obamna1234.sevbify:ae90eda2: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:30:30.955  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:31.005  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+10-30 23:30:36.151  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+10-30 23:30:36.153 10806 10806 I ImeTracker: com.obamna1234.sevbify:61131968: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+10-30 23:30:36.192  1578  1578 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+10-30 23:30:36.236 10806 10806 I ImeTracker: com.obamna1234.sevbify:212e8bcd: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+10-30 23:30:36.281  1578  1578 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+10-30 23:30:36.317   519  2476 D CoreBackPreview: Window{f20bddd u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@66d7dcd, mPriority=0, mIsAnimationCallback=false}
+10-30 23:30:36.382   519  2476 I ImeTracker: com.obamna1234.sevbify:61131968: onFailed at PHASE_WM_SHOW_IME_RUNNER
+10-30 23:30:36.768 10806 10806 I ImeTracker: com.obamna1234.sevbify:212e8bcd: onShown
+10-30 23:30:38.230 12695 12695 I AndroidRuntime: VM exiting with result code 0.

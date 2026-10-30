@@ -1,0 +1,184 @@
+10-30 23:13:36.809  5430  5430 W DefaultDispatch: type=1400 audit(0.0:58): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/zlib.cpython-312.so" dev="dm-40" ino=336124 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:36.894  1485  1514 I Icing   : Indexing com.google.android.gms-internal.3p:MusicRecording from com.google.android.gms
+10-30 23:13:36.895  1485  1514 I Icing   : Indexing done com.google.android.gms-internal.3p:MobileApplication
+10-30 23:13:36.896  1485  1514 I Icing   : Indexing done com.google.android.gms-internal.3p:MusicRecording
+10-30 23:13:36.913   519  2233 D OomAdjuster: Not killing cached processes
+10-30 23:13:36.937   519   539 W Looper  : Slow dispatch took 245ms android.ui h=android.view.Choreographer$FrameHandler c=android.view.Choreographer$FrameDisplayEventReceiver@254c68 m=0
+10-30 23:13:36.981   832   832 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+10-30 23:13:37.013   519   539 W Looper  : Drained
+10-30 23:13:37.016  1040  4965 D SliceBroadcastRelay: Unregistering uri broadcast relay: content://android.settings.slices/action/bluetooth
+10-30 23:13:37.039  5430  5454 I OpenGLRenderer: Davey! duration=3040ms; Flags=1, FrameTimelineVsyncId=8442, IntendedVsync=115487786550, Vsync=117671119796, InputEventId=0, HandleInputStart=117714685373, AnimationStart=117714685964, PerformTraversalsStart=117716021219, DrawStart=118352969252, FrameDeadline=115504453216, FrameInterval=117679529336, FrameStartTime=16666666, SyncQueued=118355284677, SyncStart=118355624432, IssueDrawCommandsStart=118355940151, SwapBuffers=118358844227, FrameCompleted=118528400636, DequeueBufferDuration=2345, QueueBufferDuration=94616, GpuCompleted=118528400636, SwapBuffersCompleted=118477710597, DisplayPresentTime=15062450310578, CommandSubmissionCompleted=118358844227, 
+10-30 23:13:37.072   832   893 D EGL_emulation: app_time_stats: avg=4880.17ms min=4880.17ms max=4880.17ms count=1
+10-30 23:13:37.122   519   609 D ActivityManager: freezing 1780 com.google.android.apps.youtube.music
+10-30 23:13:37.168  1093  1093 I ActivityThread: Schedule relaunch activity: com.google.android.apps.nexuslauncher.NexusLauncherActivity
+10-30 23:13:37.179  1093  2270 D OneSearchSuggestProvider: Shut down the binder channel
+10-30 23:13:37.180  1093  1429 I IPCThreadState: oneway function results for code 2 on binder at 0x78717552bae0 will be dropped but finished with status UNKNOWN_TRANSACTION
+10-30 23:13:37.210  1818  3221 I PBSessionCacheImpl: Deleted sessionId[7997441959130353] from persistence.
+10-30 23:13:37.181  5430  5430 W DefaultDispatch: type=1400 audit(0.0:59): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/java/chaquopy.so" dev="dm-40" ino=336132 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.205  5430  5430 W DefaultDispatch: type=1400 audit(0.0:60): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_ctypes.cpython-312.so" dev="dm-40" ino=336123 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.213  5430  5430 W DefaultDispatch: type=1400 audit(0.0:61): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_struct.cpython-312.so" dev="dm-40" ino=336122 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.261  1818  2798 W SearchServiceCore: Abort, client detached.
+10-30 23:13:37.262  4982  4982 W rules.WifiRx: FenceState currentState is not true
+10-30 23:13:37.298  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:13:37.298  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:13:37.300  1435  3362 I NamespaceManager: Package com.android.refreshratecontrol name not found! Using module version.
+10-30 23:13:37.310   519   538 I ActivityTaskManager: Displayed com.obamna1234.sevbify/com.sevbify.app.MainActivity for user 0: +4s483ms
+10-30 23:13:37.310   519   538 W Looper  : Slow dispatch took 304ms android.fg h=android.os.Handler c=com.android.server.wm.ActivityMetricsLogger$$ExternalSyntheticLambda0@7a21531 m=0
+10-30 23:13:37.261  5430  5430 W DefaultDispatch: type=1400 audit(0.0:62): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_bz2.cpython-312.so" dev="dm-40" ino=336130 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.343  1435  3362 I NamespaceManager: Package com.google.oslo name not found! Using module version.
+10-30 23:13:37.352  5430  5430 I Choreographer: Skipped 68 frames!  The application may be doing too much work on its main thread.
+10-30 23:13:37.359  1093  1129 I ImeTracker: com.google.android.apps.nexuslauncher:4b7a6b73: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+10-30 23:13:37.329  5430  5430 W DefaultDispatch: type=1400 audit(0.0:63): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_lzma.cpython-312.so" dev="dm-40" ino=336125 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.414   832   863 W Looper  : Slow delivery took 58ms wmshell.main h=android.os.Handler c=com.android.wm.shell.onehanded.OneHandedTimeoutHandler$$ExternalSyntheticLambda0@1e1a7cb m=0
+10-30 23:13:37.414  1435  2092 W .gms.persistent: Long monitor contention with owner netscheduler-queue-handler (3339) at void bytb.o(int)(:com.google.android.gms@231818047@23.18.18 (190800-535401451):4) waiters=0 in void bytb.t(boolean, awbu) for 1.481s
+10-30 23:13:37.417  1093  1093 D b/254119092: clearActivity
+10-30 23:13:37.417  1093  1093 D b/254119092: mActivity and mContext agree taskbarIsPresent=false
+10-30 23:13:37.418   519  2231 I ImeTracker: com.google.android.apps.nexuslauncher:4b7a6b73: onCancelled at PHASE_SERVER_SHOULD_HIDE
+10-30 23:13:37.428   519   756 W system_server: Long monitor contention with owner binder:519_10 (2184) at boolean com.android.server.am.OomAdjuster.updateOomAdjLocked(com.android.server.am.ProcessRecord, int)(OomAdjuster.java:609) waiters=1 in void com.android.server.am.ActivityManagerService$LocalService.notifyNetworkPolicyRulesUpdated(int, long) for 152ms
+10-30 23:13:37.432  1435  3362 I NamespaceManager: Package com.android.media name not found! Using module version.
+10-30 23:13:37.432  1435  3362 I NamespaceManager: Package com.android.media.swcodec name not found! Using module version.
+10-30 23:13:37.435  1435  3362 I NamespaceManager: Package com.android.neuralnetworks name not found! Using module version.
+10-30 23:13:37.435  1435  3362 I NamespaceManager: Package com.android.media name not found! Using module version.
+10-30 23:13:37.436  1435  3362 I NamespaceManager: Package 1 name not found! Using module version.
+10-30 23:13:37.437  1435  3362 I NamespaceManager: Package rkpd name not found! Using module version.
+10-30 23:13:37.437  1435  3362 I NamespaceManager: Package android.companion name not found! Using module version.
+10-30 23:13:37.438  1435  3362 I NamespaceManager: Package com.google.android.aicore name not found! Using module version.
+10-30 23:13:37.440  1435  3362 I NamespaceManager: Package com.google.android.audioproxy name not found! Using module version.
+10-30 23:13:37.441  1435  3362 I NamespaceManager: Package com.google.android.apps.pixel.psi name not found! Using module version.
+10-30 23:13:37.441  1435  3362 I NamespaceManager: Package com.google.android.apps.safetycore name not found! Using module version.
+10-30 23:13:37.442  1435  3362 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+10-30 23:13:37.442  1435  3362 I NamespaceManager: Package com.google.android.profiling name not found! Using module version.
+10-30 23:13:37.443  1435  3362 I NamespaceManager: Package com.google.android.bt name not found! Using module version.
+10-30 23:13:37.393  5430  5430 W DefaultDispatch: type=1400 audit(0.0:64): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_datetime.cpython-312.so" dev="dm-40" ino=336128 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.523   519  2457 D WifiNl80211Manager: Scan result ready event
+10-30 23:13:37.523   519  2457 D WifiNative: Scan result ready event
+10-30 23:13:37.527   519   539 W Looper  : Slow dispatch took 174ms android.ui h=com.android.server.am.ActivityManagerService$UiHandler c=null m=68
+10-30 23:13:37.528  5430  5430 I MediaController: Init 5f1d976 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+10-30 23:13:37.530  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:13:37.533  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:13:37.550  1435  3362 I NamespaceManager: Package com.google.android.nfcservices name not found! Using module version.
+10-30 23:13:37.550  1435  3362 I NamespaceManager: Package com.google.android.webapp name not found! Using module version.
+10-30 23:13:37.550  1435  3362 I NamespaceManager: Package com.google.android.telephonycore name not found! Using module version.
+10-30 23:13:37.551  1435  3362 I NamespaceManager: Package com.google.android.uprobestats name not found! Using module version.
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: Update for unknown DeviceConfig package com.google.android.gms.locationsharingreporter [CONTEXT service_id=204 ]
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: bwix: No package exists for config package: com.google.android.gms.locationsharingreporter
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.b(:com.google.android.gms@231818047@23.18.18 (190800-535401451):6)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.a(:com.google.android.gms@231818047@23.18.18 (190800-535401451):4)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):21)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.chimera.IntentOperation.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):2)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at zhv.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):4)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at hjm.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):3)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at hjl.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):11)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at dfhf.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):2)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+10-30 23:13:37.552  1435  3362 W PhenotypeConfigurationU: 	at java.lang.Thread.run(Thread.java:1012)
+10-30 23:13:37.582   519  2358 D SearchUiPerUserService: Removing callback for session Id=com.google.android.apps.nexuslauncher:bfcda859-60ab-4437-89b0-acdd8a398276,0 and callback=android.os.BinderProxy@d7c9f55
+10-30 23:13:37.583   519   943 D SearchUiPerUserService: Removing all callbacks for session Id=com.google.android.apps.nexuslauncher:bfcda859-60ab-4437-89b0-acdd8a398276,0 and 0 callbacks.
+--
+10-30 23:13:37.589  5430  5430 W DefaultDispatch: type=1400 audit(0.0:65): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/math.cpython-312.so" dev="dm-40" ino=336129 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.617   832   887 D StylusManager: Stylus InputDevice changed: 12 virtio_input_multi_touch_9
+10-30 23:13:37.621   847  4096 I PermissionControllerServiceImpl: Updating user sensitive for uid 10154
+10-30 23:13:37.623  1036  1036 D CarrierSvcBindHelper: onPackageModified: com.google.android.contacts
+10-30 23:13:37.624  1036  1036 D CarrierSvcBindHelper: No carrier app for: 0
+10-30 23:13:37.617  5430  5430 W DefaultDispatch: type=1400 audit(0.0:66): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_random.cpython-312.so" dev="dm-40" ino=336126 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:37.803     0     0 W audit   : audit_lost=1 audit_rate_limit=5 audit_backlog_limit=64
+10-30 23:13:37.806     0     0 E audit   : rate limit exceeded
+10-30 23:13:37.667  1435  3456 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+10-30 23:13:37.699   832   887 D StylusManager: Stylus InputDevice changed: 11 virtio_input_multi_touch_8
+10-30 23:13:37.701  1022  1022 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
+10-30 23:13:37.701  1022  1022 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
+10-30 23:13:37.713  4982  4982 W rules.WifiRx: FenceState currentState is not true
+10-30 23:13:37.718  1093  1093 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@6745cf5
+10-30 23:13:37.728   519   943 D CoreBackPreview: Window{a313820 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}: Setting back callback null
+10-30 23:13:37.729  1093  1093 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+10-30 23:13:37.729  1093  1093 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+10-30 23:13:37.734   832   863 W Looper  : Drained
+10-30 23:13:37.734   832   832 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
+10-30 23:13:37.736   519   610 I RoleService: Granting default roles...
+10-30 23:13:37.749  1435  1449 I FontLog : Received query Noto Color Emoji Compat, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+10-30 23:13:37.749  1435  1449 I FontLog : Query [emojicompat-emoji-font] resolved to {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} [CONTEXT service_id=132 ]
+10-30 23:13:37.751  1435  1449 I FontLog : Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+10-30 23:13:37.757  1435  3055 I FontLog : Pulling font file for id = 6, cache size = 6 [CONTEXT service_id=132 ]
+10-30 23:13:37.758  1435  3055 I FontLog : Pulling font file for id = 6, cache size = 6 [CONTEXT service_id=132 ]
+10-30 23:13:37.765   832   887 D StylusManager: Stylus InputDevice changed: 9 virtio_input_multi_touch_6
+10-30 23:13:37.767  1435  4063 W ctxmgr  : [WorkManager] Long workInfo: pkg=com.google.android.gms, lbl=DispatcherDeliver, start=2026-10-30 23:13:35.566+0000, stop=2026-10-30 23:13:37.767+0000, durtn=2201ms [CONTEXT service_id=47 ]
+10-30 23:13:37.799   479  5326 D BufferPoolAccessor2.0: bufferpool2 0x73f4eef48c88 : 2(1944000 size) total buffers - 1(972000 size) used buffers - 44/46 (recycle/alloc) - 3/46 (fetch/transfer)
+10-30 23:13:37.831  1036  1371 D ImsResolver: maybeAddedImsService, packageName: com.google.android.contacts
+10-30 23:13:37.831   832   887 D StylusManager: Stylus InputDevice changed: 13 virtio_input_multi_touch_10
+10-30 23:13:37.832  1435  2092 W .gms.persistent: Long monitor contention with owner netscheduler-queue-handler (3339) at void bytk.e()(:com.google.android.gms@231818047@23.18.18 (190800-535401451):3) waiters=0 in boolean bytk.g() for 385ms
+--
+10-30 23:13:38.317  5430  5430 W DefaultDispatch: type=1400 audit(0.0:80): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/termios.cpython-312.so" dev="dm-40" ino=336183 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:38.348  1435  3362 I NamespaceManager: Package com.google.android.apps.pixel.psi name not found! Using module version.
+10-30 23:13:38.353   335  5559 I resolv  : res_nsend: used send_dg 233 terrno: 0
+10-30 23:13:38.353   335  5559 I resolv  : doQuery: rcode=0, ancount=2, return value=233
+10-30 23:13:38.355  1435  3362 I NamespaceManager: Package com.google.android.apps.safetycore name not found! Using module version.
+10-30 23:13:38.355  1435  3362 I NamespaceManager: Package com.google.android.crashrecovery name not found! Using module version.
+10-30 23:13:38.355  1435  3362 I NamespaceManager: Package com.google.android.profiling name not found! Using module version.
+10-30 23:13:38.356  1435  3362 I NamespaceManager: Package com.google.android.bt name not found! Using module version.
+10-30 23:13:38.373   335  5560 I resolv  : res_nsend: used send_dg 262 terrno: 0
+10-30 23:13:38.374   335  5560 I resolv  : doQuery: rcode=0, ancount=5, return value=262
+10-30 23:13:38.365  5430  5430 W DefaultDispatch: type=1400 audit(0.0:81): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/_elementtree.cpython-312.so" dev="dm-40" ino=336184 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:38.398  2789  5565 W DiskBasedLogger: Disk-based log buffer doesn't exist, so there's nothing to clean up.
+10-30 23:13:38.389  5430  5430 W DefaultDispatch: type=1400 audit(0.0:82): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/pyexpat.cpython-312.so" dev="dm-40" ino=336185 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:38.401  5430  5430 W DefaultDispatch: type=1400 audit(0.0:83): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/_decimal.cpython-312.so" dev="dm-40" ino=336188 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:38.417  5430  5430 W DefaultDispatch: type=1400 audit(0.0:84): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/_sqlite3.cpython-312.so" dev="dm-40" ino=336189 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:13:38.445  1435  3362 I NamespaceManager: Package com.google.android.nfcservices name not found! Using module version.
+10-30 23:13:38.446  1435  3362 I NamespaceManager: Package com.google.android.webapp name not found! Using module version.
+10-30 23:13:38.449  1435  3362 I NamespaceManager: Package com.google.android.telephonycore name not found! Using module version.
+10-30 23:13:38.450  1435  3362 I NamespaceManager: Package com.google.android.uprobestats name not found! Using module version.
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: Update for unknown DeviceConfig package com.google.android.gms.auth_managed [CONTEXT service_id=204 ]
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: bwix: No package exists for config package: com.google.android.gms.auth_managed
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.b(:com.google.android.gms@231818047@23.18.18 (190800-535401451):6)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.a(:com.google.android.gms@231818047@23.18.18 (190800-535401451):4)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.gms.platformconfigurator.PhenotypeConfigurationUpdateListener.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):21)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at com.google.android.chimera.IntentOperation.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):2)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at zhv.onHandleIntent(:com.google.android.gms@231818047@23.18.18 (190800-535401451):4)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at hjm.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):3)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at hjl.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):11)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at dfhf.run(:com.google.android.gms@231818047@23.18.18 (190800-535401451):2)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+10-30 23:13:38.465  1435  3362 W PhenotypeConfigurationU: 	at java.lang.Thread.run(Thread.java:1012)
+10-30 23:13:38.484  1435  3456 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+10-30 23:13:38.506  1093  1093 D AutofillManager: Fill dialog is enabled:false, hints=[password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+10-30 23:13:38.526  1093  1093 D DeviceSearchAlg: search timeout = %d200
+10-30 23:13:38.528  1093  1093 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+10-30 23:13:38.540  1435  5415 W .gms.persistent: Long monitor contention with owner lowpool[11] (3331) at boolean com.google.android.gms.clearcut.uploader.QosUploaderChimeraService.g(java.lang.String)(:com.google.android.gms@231818047@23.18.18 (190800-535401451):184) waiters=0 in boolean com.google.android.gms.clearcut.uploader.QosUploaderChimeraService.g(java.lang.String) for 1.224s
+10-30 23:13:38.542  1093  1093 W BcSmartspaceView: Current card is not present in the Adapter; cannot log.
+10-30 23:13:38.547  1093  1093 I OverviewComponentObserver: updateOverviewTargets: mIsHomeDisabled=false, isDefaultHomeNull=false, mIsDefaultHome=true
+10-30 23:13:38.551  1435  3456 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+--
+10-30 23:23:35.769 10806 10806 W DefaultDispatch: type=1400 audit(0.0:467): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/zlib.cpython-312.so" dev="dm-40" ino=336124 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.120 10806 10818 I OpenGLRenderer: Davey! duration=740ms; Flags=0, FrameTimelineVsyncId=39512, IntendedVsync=716854429162, Vsync=716871095828, InputEventId=0, HandleInputStart=716874799172, AnimationStart=716874799823, PerformTraversalsStart=716895157183, DrawStart=716895184715, FrameDeadline=716871095828, FrameInterval=716874790826, FrameStartTime=16666666, SyncQueued=716907517585, SyncStart=716942181513, IssueDrawCommandsStart=716942310073, SwapBuffers=717389282543, FrameCompleted=717629961542, DequeueBufferDuration=4518, QueueBufferDuration=30616448, GpuCompleted=717611795861, SwapBuffersCompleted=717629961542, DisplayPresentTime=0, CommandSubmissionCompleted=717389282543, 
+10-30 23:23:36.155   519  2812 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+10-30 23:23:36.301 10806 10806 W DefaultDispatch: type=1400 audit(0.0:468): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/java/chaquopy.so" dev="dm-40" ino=336132 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.317 10806 10806 W DefaultDispatch: type=1400 audit(0.0:469): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_ctypes.cpython-312.so" dev="dm-40" ino=336123 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.317 10806 10806 W DefaultDispatch: type=1400 audit(0.0:470): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_struct.cpython-312.so" dev="dm-40" ino=336122 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.333 10806 10806 W DefaultDispatch: type=1400 audit(0.0:471): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_bz2.cpython-312.so" dev="dm-40" ino=336130 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.337 10806 10806 W DefaultDispatch: type=1400 audit(0.0:472): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_lzma.cpython-312.so" dev="dm-40" ino=336125 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+10-30 23:23:36.533     0     0 W audit   : audit_lost=17 audit_rate_limit=5 audit_backlog_limit=64
+10-30 23:23:36.534     0     0 E audit   : rate limit exceeded
+10-30 23:23:36.623   832   832 D StatusBarIconController: ignoring old pipeline callbacks, because the new mobile icons are enabled
+10-30 23:23:39.026 10806 10853 D ProfileInstaller: Skipping profile installation for com.obamna1234.sevbify
+10-30 23:23:41.602  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:23:41.603  1022  1320 D BtGatt.ScanManager: uid 10131 isForeground true scanMode -1
+10-30 23:23:42.945  5651  5729 I PhenotypeProcessReaper: Memory state is: 125
+10-30 23:23:44.525  1818  2798 I WorkerManager: dispose()
+10-30 23:23:44.525  1818  2798 W A       : Queue length for executor EventBus is now 11. Perhaps some tasks are too long, or the pool is too small.
+10-30 23:23:45.164 10857 10857 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-30 23:23:45.167 10857 10857 I AndroidRuntime: Using default boot image
+10-30 23:23:45.168 10857 10857 I AndroidRuntime: Leaving lock profiling enabled
+10-30 23:23:45.169 10857 10857 I app_process: Core platform API reporting enabled, enforcing=false
+10-30 23:23:45.170 10857 10857 I app_process: Using CollectorTypeCC GC.
+10-30 23:23:45.215 10857 10857 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+10-30 23:23:45.222 10857 10857 D app_process: Time zone APEX ICU file found: /apex/com.android.tzdata/etc/icu/icu_tzdata.dat
+10-30 23:23:45.222 10857 10857 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt72l.dat
+10-30 23:23:45.226 10857 10857 W app_process: Unexpected CPU variant for x86: x86_64.
+10-30 23:23:45.226 10857 10857 W app_process: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+10-30 23:23:45.228 10857 10857 W app_process: ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*836642756]#PCL[/system/framework/android.test.mock.jar*3186112116]} | PCL[])
+10-30 23:23:45.229 10857 10857 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*4168958247]{PCL[/system/framework/android.test.base.jar*836642756]#PCL[/system/framework/android.test.mock.jar*3186112116]}#PCL[/system/framework/android.test.base.jar*836642756]} | PCL[/system/framework/android.test.runner.jar*4168958247])
+10-30 23:23:45.240 10857 10857 W libc    : Access denied finding property "ro.product.name_for_attestation"
+10-30 23:23:45.237 10857 10857 W main    : type=1400 audit(0.0:489): avc:  denied  { read } for  name="u:object_r:build_attestation_prop:s0" dev="tmpfs" ino=86 scontext=u:r:shell:s0 tcontext=u:object_r:build_attestation_prop:s0 tclass=file permissive=0
+10-30 23:23:45.244 10857 10857 W libc    : Access denied finding property "ro.product.brand_for_attestation"
+10-30 23:23:45.244 10857 10857 W libc    : Access denied finding property "ro.product.model_for_attestation"
