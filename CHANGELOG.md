@@ -2,6 +2,21 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Servers, cloud folders, Save space, Android Auto, security fixes (v5.0.0-beta.23):**
+- core/servers.py: Jellyfin (token after sign-in) and Nextcloud / WebDAV (app password); http only on private
+  networks; a redirect handler strips Authorization / X-Emby-* when a redirect leaves the server; sign-ins in
+  servers.json (0600 desktop, private storage on Android), never in playlists, profiles or logs. Server songs stream
+  with the sign-in added at play time and download straight from the server (no overwriting; safe file names).
+- Android: folders from other apps via OpenDocumentTree (persisted read permission, listed by file name).
+- core/space.py: Save space converts downloaded episodes / chapters to 40 kbps mono Opus after checking the result.
+- Android Auto: MediaLibraryService browse tree; onConnect accepts only Sevbify, trusted system controllers and
+  Android Auto; Settings → Car and tips for "Unknown sources". iPhone: CarPlay explanation.
+- Independent security review fixes: updater replaces only a recognisable Sevbify folder and requires GitHub's
+  SHA-256 (unique .old name; % and UTF-8 safe .cmd), m3u UNC / network paths never opened, Downloads pick-up only
+  for song lists and only after asking, Android server streams use a connection that drops the sign-in on
+  cross-host redirects.
+- README: new introduction and screenshots.
+
 **Import checks, Chosic, corrected search, motion (v5.0.0-beta.22):**
 - core/import_check.py: each imported song is looked up once (Deezer, then a spelling suggestion); typos come back
   with the closest song for a "Check the spelling" review (desktop dialog, Android dialog, iPhone sheet). Files are

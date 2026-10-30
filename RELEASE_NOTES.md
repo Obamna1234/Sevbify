@@ -69,6 +69,29 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.23:
+- **Your own music servers:** add a Jellyfin or Nextcloud server in Settings (computers and Android). Its songs
+  become a playlist; stream them, or download them straight from your server.
+  - Jellyfin keeps only a revocable sign-in token, not your password. For Nextcloud, use an app password.
+  - The sign-in stays on your device and never leaves your server's address.
+- **Folders from other apps (Android):** add a folder from an SD card or a cloud app that offers folders in
+  Android's file picker (Nextcloud, OneDrive, Dropbox, …). Your sign-in stays in that app.
+- **Save space:** on Windows / Mac / Linux, downloaded podcast episodes and audiobook chapters are kept as small Opus
+  files (about a third of the size; speech sounds the same). The original is only replaced after the new file checks
+  out, and your own music is never changed. Song downloads have a "Save space" quality too.
+- **Android Auto:** your playlists, Recently played and Your Songs on the car's screen.
+  - Android Auto only lists Play Store apps until you switch on "Unknown sources" in its developer settings, and no
+    app can do that for you. Settings → Car shows how, and Sevbify reminds you if Android Auto hasn't found it.
+  - Not yet tested in a real car.
+- **iPhone:** Settings explains CarPlay. Music plays through it with controls on its Now Playing screen, but a
+  sideloaded app can't have its own CarPlay icon.
+- **Security review of the new features:**
+  - The updater only replaces a folder that's clearly Sevbify's own, and only with GitHub's checksum.
+  - Server sign-ins never follow a redirect to another site.
+  - Other Android apps can't read your playlists or history.
+  - Playlist files can't make Windows contact other computers.
+  - Downloads never overwrite a song you already have.
+
 beta.22:
 - **Importing a playlist file:** you name the playlist first (the file's name is filled in). Then every song is
   checked online. Songs that can't be found as written are listed under **Check the spelling**, with the closest
