@@ -109,11 +109,22 @@ jobs:
         run: python tools/download_check.py
 
       - name: Get Deno (YouTube's JavaScript engine for yt-dlp), checksum-checked
+        env:
+          GH_TOKEN: ${{ github.token }}      # GitHub's API limits anonymous requests on shared build machines
         run: |
           python - <<'PY'
-          import hashlib, io, json, os, platform, re, stat, sys, urllib.request, zipfile
+          import hashlib, io, json, os, platform, re, stat, sys, time, urllib.request, zipfile
           def get(u):
-              return urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Sevbify-CI"}), timeout=120).read()
+              headers = {"User-Agent": "Sevbify-CI"}
+              if "api.github.com" in u and os.environ.get("GH_TOKEN"):
+                  headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
+              for attempt in range(4):
+                  try:
+                      return urllib.request.urlopen(urllib.request.Request(u, headers=headers), timeout=120).read()
+                  except Exception as e:
+                      if attempt == 3:
+                          raise
+                      print("retrying after", e); time.sleep(10 * (attempt + 1))
           rel = json.loads(get("https://api.github.com/repos/denoland/deno/releases/latest"))
           arch = "aarch64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
           target = {"win32": "pc-windows-msvc", "darwin": "apple-darwin"}.get(sys.platform, "unknown-linux-gnu")
