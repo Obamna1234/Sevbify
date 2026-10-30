@@ -30,12 +30,12 @@ def format_time(ms: int) -> str:
 
 
 def format_total(ms: int) -> str:
-    """Longer form used for playlist totals, e.g. '1 hr 4 min' or '23 min 5 sec'."""
+    """Playlist totals the way Spotify's desktop app writes them: 'about 1 hr 4 min' or '23 min 5 sec'."""
     seconds = max(0, int(ms)) // 1000
     hrs, rem = divmod(seconds, 3600)
     mins, secs = divmod(rem, 60)
     if hrs:
-        return f"{hrs} hr {mins} min"
+        return f"about {hrs} hr {mins} min"
     return f"{mins} min {secs} sec"
 
 
@@ -143,6 +143,7 @@ class Playlist:
         self.custom_cover = ""                  # a picture you chose (or the imported playlist's cover)
         self.created = created or time.time()   # for "Recently added" sorting
         self.last_played = last_played          # for "Recents" sorting (played or opened)
+        self.origin = ""                        # "" made in Sevbify, or imported: spotify / apple / youtube / file
 
     def add_song(self, song: Song):
         self.songs.append(song)
@@ -155,15 +156,20 @@ class Playlist:
         if self.custom_cover and os.path.exists(self.custom_cover):
             self.cover_path = self.custom_cover
             return self.cover_path
-        covers = [s.album_cover_path for s in self.songs[:4]]
+        # Spotify's rule: the first 4 different albums' covers; fewer than 4 → the first song's cover alone.
+        from core.playlist_cover import choose
+        covers = [c for c in choose(self.songs) if os.path.isfile(c)]
         if not covers:
             self.cover_path = PLACEHOLDER_IMAGE
+            return self.cover_path
+        if len(covers) < 4:
+            self.cover_path = covers[0]
             return self.cover_path
         self.cover_path = self.create_album_collage(covers)
         return self.cover_path
 
     def create_album_collage(self, paths):
-        tile = 150
+        tile = 320
         collage = Image.new('RGB', (tile * 2, tile * 2), '#181818')
         pos = [(0, 0), (tile, 0), (0, tile), (tile, tile)]
 

@@ -1,6 +1,13 @@
 package com.sevbify.app.ui
 
 import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -125,7 +132,7 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
     ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
         Column(Modifier.navigationBarsPadding()) {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Cover(playlistCover(pl), 48.dp)
+                PlaylistCover(pl, 48.dp)
                 Spacer(Modifier.width(12.dp))
                 Text(pl.name, style = MaterialTheme.typography.titleMedium)
             }
@@ -172,7 +179,7 @@ private fun AddToSheet(tracks: List<Track>) {
             items(Library.playlists.toList()) { pl ->
                 Row(Modifier.fillMaxWidth().clickable { close(); Library.add(pl, tracks); Nav.say("Added to ${pl.name}") }
                         .padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Cover(playlistCover(pl), 48.dp)
+                    PlaylistCover(pl, 48.dp)
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(pl.name, style = MaterialTheme.typography.bodyLarge)
@@ -200,7 +207,48 @@ fun CreateSheet(onClose: () -> Unit) {
 
 /** A playlist's cover: its own picture, else the first song's. */
 fun playlistCover(pl: com.sevbify.app.Playlist): String =
-    pl.coverUrl.ifEmpty { pl.tracks.firstOrNull { it.art.isNotEmpty() }?.art ?: "" }
+    pl.coverUrl.ifEmpty { playlistCovers(pl).firstOrNull() ?: "" }
+
+/** Spotify's picture for a playlist you haven't given one (same rule as core/playlist_cover.py): the covers of the
+ *  first 4 *different* albums in the playlist's order as a 2x2 grid; fewer than 4 → the first song's cover alone. */
+fun playlistCovers(pl: com.sevbify.app.Playlist): List<String> {
+    val seen = HashSet<String>(); val picks = ArrayList<String>(4); var first = ""
+    for (t in pl.tracks) {
+        val art = t.art
+        if (art.isEmpty()) continue
+        if (first.isEmpty()) first = art
+        val album = t.album.trim().lowercase()
+        val key = if (album.isNotEmpty() && album != "unknown album") "a|$album|${t.artist.trim().lowercase()}" else "c|$art"
+        if (!seen.add(key)) continue
+        picks.add(art)
+        if (picks.size == 4) return picks
+    }
+    return if (first.isEmpty()) emptyList() else listOf(first)
+}
+
+/** Colours for Settings ▸ "Show where playlists came from" (off by default). */
+fun originColour(origin: String): Color = when (origin) {
+    "" -> Color(0xFF509BF5)                    // made in Sevbify: blue
+    "file" -> Color(0xFFAF7BFF)                // imported from a file (.txt / .csv / .m3u): purple
+    else -> Color(0xFFFFA42B)                  // imported from a link (Spotify / Apple Music): orange
+}
+
+/** A playlist's picture: its own cover, or Spotify's 2x2 of album covers; with the optional origin border. */
+@Composable
+fun PlaylistCover(pl: com.sevbify.app.Playlist, size: Dp, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(4.dp)
+    val ring = if (com.sevbify.app.Library.settings.showPlaylistOrigin)
+        Modifier.border(if (size >= 100.dp) 4.dp else 2.dp, originColour(pl.origin), shape) else Modifier
+    val covers = if (pl.coverUrl.isNotEmpty()) listOf(pl.coverUrl) else playlistCovers(pl)
+    Box(modifier.size(size).clip(shape).then(ring)) {
+        if (covers.size == 4) {
+            Column {
+                Row { Cover(covers[0], size / 2, RectangleShape); Cover(covers[1], size / 2, RectangleShape) }
+                Row { Cover(covers[2], size / 2, RectangleShape); Cover(covers[3], size / 2, RectangleShape) }
+            }
+        } else Cover(covers.firstOrNull(), size, shape)
+    }
+}
 
 
 /** Like Spotify: the whole album in its own order (downloaded songs play from the phone, the rest stream).

@@ -31,6 +31,7 @@ data class Settings(
     var autoUpdateYtdlp: Boolean = true,       // keep yt-dlp up to date (official release, checksum-checked)
     var lastYtdlpCheck: Long = 0,
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
+    var showPlaylistOrigin: Boolean = false,   // coloured border: made in Sevbify / imported from a link / from a file
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -40,6 +41,7 @@ data class Settings(
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
+        put("show_playlist_origin", showPlaylistOrigin)
     }
 
     companion object {
@@ -60,6 +62,7 @@ data class Settings(
             s.videoQuality = o.optString("video_quality", "auto").takeIf { it in listOf("auto", "360", "480", "720", "1080") } ?: "auto"
             s.autoUpdateYtdlp = o.optBoolean("auto_update_ytdlp", true); s.lastYtdlpCheck = o.optLong("last_ytdlp_check")
             s.lyrics = o.optBoolean("lyrics", true)
+            s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
             return s
         }
     }

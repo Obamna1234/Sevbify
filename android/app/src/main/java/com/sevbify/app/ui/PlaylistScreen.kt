@@ -59,7 +59,8 @@ import kotlinx.coroutines.launch
 fun totalTime(tracks: List<Track>): String {
     val s = tracks.sumOf { it.durationMs } / 1000
     val h = s / 3600; val m = (s % 3600) / 60
-    return if (h > 0) "$h hr $m min" else "$m min ${s % 60} sec"
+    // Spotify's phone app: "2h 48min", or "23min 5s" under an hour.
+    return if (h > 0) "${h}h ${m}min" else "${m}min ${s % 60}s"
 }
 
 /** The page shared by playlists, albums, artist songs, genre playlists...: Spotify's Android layout. */
@@ -105,7 +106,9 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
             Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(colour, C.Bg)))
                        .statusBarsPadding().padding(bottom = 8.dp)) {
                 IconButton(onClick = { Nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Cover(cover, 230.dp) }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (playlist != null) PlaylistCover(playlist, 230.dp) else Cover(cover, 230.dp)
+                }
                 Gap(16.dp)
                 Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 16.dp))
                 Gap(6.dp)

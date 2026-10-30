@@ -80,6 +80,12 @@ fun SettingsScreen() {
             Toggle("Lyrics", "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
                    "database; only the song's name and length are sent).", s.lyrics) { s.lyrics = it; Library.changed() }
         }
+        item { Heading("Your Library") }
+        item {
+            Toggle("Show where playlists came from", "A coloured border around playlist pictures: blue = made in Sevbify, " +
+                   "orange = imported from a link (Spotify / Apple Music), purple = imported from a file.",
+                   s.showPlaylistOrigin) { s.showPlaylistOrigin = it; Library.changed() }
+        }
         item { Heading("Downloads") }
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {

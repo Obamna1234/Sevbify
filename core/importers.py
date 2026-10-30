@@ -39,6 +39,14 @@ def parse_link(text):
     return None
 
 
+def origin_of(text):
+    """Where an imported playlist came from, for the optional coloured border: "spotify", "apple" or "link"."""
+    found = parse_link(text)
+    if found:
+        return found[0]
+    return "spotify" if "spotify" in (text or "").lower() else "link"
+
+
 TRACK_LINK_RE = re.compile(r"(?:open\.spotify\.com/(?:intl-[a-z]{2}/)?(?:embed/)?track/|spotify:track:)([A-Za-z0-9]{22})")
 
 

@@ -164,7 +164,7 @@ private fun PlaylistRow(pl: Playlist, indent: Boolean = false) {
                                                          onLongClick = { Nav.playlistMenu = pl })
             .padding(start = if (indent) 32.dp else 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Cover(playlistCover(pl), 64.dp)
+        PlaylistCover(pl, 64.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(pl.name, maxLines = 1, overflow = TextOverflow.Ellipsis,

@@ -82,6 +82,31 @@ def rounded(pm: QPixmap, size, radius=4):
     return out
 
 
+ORIGIN_COLOURS = {"": "#509bf5", "file": "#af7bff"}      # made in Sevbify: blue; from a file: purple
+LINK_COLOUR = "#ffa42b"                                   # imported from a link (Spotify / Apple Music): orange
+
+
+def origin_colour(origin):
+    return ORIGIN_COLOURS.get(origin or "", LINK_COLOUR)
+
+
+def with_ring(pm: QPixmap, size, colour, radius=4, width=None):
+    """The picture with a coloured border (Settings ▸ "Show where playlists came from")."""
+    width = width or (2 if size < 100 else 4)
+    out = QPixmap(pm)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    pen = p.pen()
+    pen.setColor(QColor(colour))
+    pen.setWidthF(width)
+    p.setPen(pen)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    half = width / 2
+    p.drawRoundedRect(QRectF(half, half, size - width, size - width), radius, radius)
+    p.end()
+    return out
+
+
 def circle(pm: QPixmap, size):
     """Round picture, used for artists (like Spotify)."""
     return rounded(pm, size, size / 2)
@@ -257,6 +282,7 @@ class LibraryPanel(QFrame):
         self.setStyleSheet(theme.panel_style("libraryPanel"))
         self.sort, self.view, self.collapsed, self.expanded = "recents", "list", False, False
         self.chip = None
+        self.show_origin = False          # Settings: coloured border = where each playlist came from
         self._open_folders = set()
         self._grid_columns = 0
         v = QVBoxLayout(self)
@@ -543,6 +569,11 @@ class LibraryPanel(QFrame):
                            folders=list(folders or []), shows=list(shows or []))
         self._rebuild(background=True)
 
+    def set_show_origin(self, on):
+        if bool(on) != self.show_origin:
+            self.show_origin = bool(on)
+            self._rebuild()
+
     def set_active(self, key):
         """key: "library", "saved", a Playlist, ("album", key), ("artist", name), or None."""
         self._state["active"] = key
@@ -652,7 +683,10 @@ class LibraryPanel(QFrame):
         if e["kind"] == "folder":
             return folder_cover(size)
         if e["kind"] == "playlist":
-            return rounded(self._cover(e["obj"].cover_path, size), size)
+            pm = rounded(self._cover(e["obj"].cover_path, size), size)
+            if self.show_origin:
+                pm = with_ring(pm, size, origin_colour(getattr(e["obj"], "origin", "")))
+            return pm
         if e["kind"] in ("album", "podcast", "audiobook"):
             return rounded(self._cover(e["obj"]["cover_path"], size), size)
         return circle(self._cover(e["obj"]["cover_path"], size), size)
@@ -735,12 +769,13 @@ class LibraryPanel(QFrame):
 
     def _signature(self, items, mode):
         """What the list looks like; refreshing with the same signature changes nothing on screen."""
-        out = [mode, self.chip, self.sort, repr(self._state.get("active")), self._state.get("playing_source")]
+        out = [mode, self.chip, self.sort, repr(self._state.get("active")), self._state.get("playing_source"),
+               self.show_origin]
         for e in items:
             obj = e.get("obj")
             extra = ""
             if e["kind"] == "playlist":
-                extra = (getattr(obj, "cover", "") or "", tuple(getattr(s, "album_cover_path", "") or ""
+                extra = (getattr(obj, "cover_path", "") or "", getattr(obj, "origin", ""), tuple(getattr(s, "album_cover_path", "") or ""
                                                                for s in obj.songs[:8]), self.is_downloaded(obj))
             elif isinstance(obj, dict):
                 extra = (obj.get("cover_path") or obj.get("cover") or "", len(obj.get("songs") or []))

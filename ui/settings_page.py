@@ -206,6 +206,11 @@ class SettingsPage(QWidget):
                      "Keeps .m3u8 playlists next to your downloads, in your order, so copying the folder to a phone "
                      "keeps your playlists.", u.playlist_files)
 
+        self._toggle("show_playlist_origin", "Show where playlists came from",
+                     "A coloured border around playlist pictures in Your Library: blue = made in Sevbify, orange = "
+                     "imported from a link (Spotify / Apple Music), purple = imported from a file (.txt / .csv / .m3u).",
+                     getattr(u, "show_playlist_origin", False))
+
         self._section("Playback")
         self._toggle("lyrics_enabled", "Lyrics",
                      "Shows the Lyrics button next to the queue. Lyrics come from a .lrc or .txt file next to your song "

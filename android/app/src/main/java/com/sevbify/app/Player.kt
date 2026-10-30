@@ -168,7 +168,28 @@ object Player {
         if (c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == t.matchKey) { c.seekTo(at); c.play() } else start()
     }
 
-    fun next() = advance(auto = false)
+    fun next() {
+        radioSkipFeedback()
+        advance(auto = false)
+    }
+
+    /** Skipping a radio song in its first 30 s: less of that artist for the rest of this radio, like Spotify.
+     *  Kept in memory only (nothing saved or sent). Same rule as PlayQueue.drop_upcoming_by_artist on Windows. */
+    private fun radioSkipFeedback() {
+        val t = current ?: return
+        if (!sourceName.endsWith(" Radio") || userQueue.isNotEmpty() || t.isItem || index == 0) return
+        if (position >= 30_000) return
+        val artist = t.artist.trim().lowercase()
+        if (artist.isEmpty()) return
+        val rest = context.drop(index + 1)
+        val kept = rest.filter { it.artist.trim().lowercase() != artist }
+        if (kept.size == rest.size || kept.size < 5) return
+        val removed = rest.filter { it.artist.trim().lowercase() == artist }.toSet()
+        val head = context.take(index + 1)
+        context.clear(); context.addAll(head + kept)
+        original = original.filterNot { it in removed }
+        status = "Got it: less ${t.artist} on this radio"
+    }
 
     fun previous() {
         val c = controller ?: return

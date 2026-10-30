@@ -64,6 +64,7 @@ class StoredPlaylist:
     created: float = 0.0
     last_played: float = 0.0
     cover: str = ""              # custom cover picture
+    origin: str = ""             # where it came from: "" made in Sevbify | "spotify" | "apple" | "youtube" | "file"
 
 
 @dataclass
@@ -86,6 +87,7 @@ class UserData:
     download_quality: str = "best"                # Settings: "best" (original) | "mp3" | "small" (core/quality)
     audiobook_quality: str = "standard"           # Settings: "standard" (64 kbps) | "high" (128 kbps)
     video_quality: str = "auto"                   # Settings: video podcasts "auto" | "360" | "480" | "720" | "1080"
+    show_playlist_origin: bool = False            # Settings: coloured border = where a playlist came from
     lyrics_enabled: bool = True                   # Settings: Lyrics button (your .lrc files, or LRCLIB online)
     audio_device: str = ""                        # Connect: VLC output device id ("" = Windows' default)
     playlist_files: bool = True                   # Settings: keep .m3u8 playlist files next to downloads
@@ -130,7 +132,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
                        "canvas_enabled")
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
-    "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled",
+    "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin",
     "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders")
@@ -219,6 +221,7 @@ class Storage:
                 "audiobook_quality": data.audiobook_quality,
                 "video_quality": data.video_quality,
                 "lyrics_enabled": bool(data.lyrics_enabled),
+                "show_playlist_origin": bool(data.show_playlist_origin),
                 "audio_device": data.audio_device,
                 "playlist_files": bool(data.playlist_files),
                 "folders": list(data.folders),
@@ -250,7 +253,8 @@ class Storage:
                  **({"folder": p.folder} if p.folder else {}),
                  **({"created": round(p.created, 3)} if p.created else {}),
                  **({"last_played": round(p.last_played, 3)} if p.last_played else {}),
-                 **({"cover": to_stored_path(p.cover)} if p.cover else {})}
+                 **({"cover": to_stored_path(p.cover)} if p.cover else {}),
+                 **({"origin": p.origin} if getattr(p, "origin", "") else {})}
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
@@ -304,6 +308,7 @@ class Storage:
         data.video_quality = str(settings.get("video_quality")) if str(settings.get("video_quality")) in \
             _q.VIDEO_QUALITIES else _q.DEFAULT_VIDEO_QUALITY
         data.lyrics_enabled = bool(settings.get("lyrics_enabled", True))
+        data.show_playlist_origin = bool(settings.get("show_playlist_origin", False))
         data.audio_device = str(settings.get("audio_device") or "")
         data.playlist_files = bool(settings.get("playlist_files", True))
         data.folders = [str(f) for f in settings.get("folders", []) or [] if str(f).strip()]
@@ -414,9 +419,11 @@ class Storage:
                     return 0.0
             folder = str(item.get("folder") or "")
             cover = item.get("cover") or ""
+            origin = str(item.get("origin") or "")
             playlists.append(StoredPlaylist(name, tracks, folder if folder in data.folders else "",
                                             num("created"), num("last_played"),
-                                            from_stored_path(str(cover)) if cover else ""))
+                                            from_stored_path(str(cover)) if cover else "",
+                                            origin if origin in ("spotify", "apple", "youtube", "file", "link") else ""))
         data.playlists = playlists
         return data
 

@@ -28,6 +28,10 @@ Downloaded songs are saved to `Music/Sevbify/<Artist>` on the phone.
 
 ## What's in this version
 
+beta.13: playlist pictures made Spotify's way (the first 4 different albums as a 2x2 grid, or the first song's
+cover), an optional coloured border showing which playlists you made and which you imported (Settings, off by
+default), playlist lengths written like Spotify ("about 2 hr 45 min" / "2h 45min"), and song radio that listens
+to skips (skip an artist early and the radio plays less of them, for that radio only; nothing is saved).
 beta.12: lyrics (synced, like Spotify), share songs as Spotify/YouTube links, Connect (speakers/Bluetooth), and
 Download all or choose songs for playlists.
 beta.11: Go to album opens the whole album in order; podcast episodes always play in order (never shuffled).

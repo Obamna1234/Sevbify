@@ -61,6 +61,7 @@ fun ImportScreen(start: String) {
                     val tracks = o.getJSONArray("tracks").tracks()
                     val pl = Library.newPlaylist(o.optString("name", "Imported playlist"), tracks)
                     pl.coverUrl = o.optString("cover_url")
+                    pl.origin = if ("music.apple.com" in link) "apple" else "spotify"
                     Library.changed()
                     Nav.back()
                     Nav.go(Screen.PlaylistPage(pl.id))

@@ -57,6 +57,22 @@ class PlayQueue:
         self.original = list(songs)
         self.index = min(self.index, max(0, len(self.items) - 1))
 
+    def drop_upcoming_by_artist(self, artist, keep_at_least=5):
+        """Song radio, like Spotify reacting to a skip: remove the rest of this artist's songs that haven't played
+        yet. Only for this session (nothing is remembered or saved). Keeps a few songs so the radio goes on.
+        Returns how many were removed."""
+        name = (artist or "").strip().casefold()
+        if not name or not self.items:
+            return 0
+        head, rest = self.items[: self.index + 1], self.items[self.index + 1:]
+        kept = [s for s in rest if (getattr(s, "artist", "") or "").strip().casefold() != name]
+        if len(kept) < keep_at_least or len(kept) == len(rest):
+            return 0
+        removed = {id(s) for s in rest} - {id(s) for s in kept}
+        self.items = head + kept
+        self.original = [s for s in self.original if id(s) not in removed]
+        return len(rest) - len(kept)
+
     def toggle_allowed(self):
         """Shuffle makes no sense for a podcast or an audiobook (like Spotify): they keep their order."""
         return not _is_episodes(self.original)

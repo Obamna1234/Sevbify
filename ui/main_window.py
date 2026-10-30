@@ -11,7 +11,7 @@ from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKey
 from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher
 
 from .top_bar import TopBar
-from .library_panel import LibraryPanel, rounded
+from .library_panel import LibraryPanel, rounded, with_ring, origin_colour
 from .cards import Card, QuickTile
 from . import theme
 from .track_table import TrackTable
@@ -416,6 +416,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.main_layout.addLayout(self.top_layout, 1)
 
         self.library_panel = LibraryPanel(cover_thumb)
+        self.library_panel.show_origin = bool(getattr(self.user_data, "show_playlist_origin", False))
         self.library_panel.create_clicked.connect(self.new_playlist)
         self.library_panel.create_folder_clicked.connect(self.create_folder)
         self.library_panel.import_clicked.connect(self.import_playlist_dialog)
@@ -654,6 +655,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         for stored in self.user_data.playlists:
             pl = Playlist(stored.name, stored.folder, stored.created, stored.last_played)
             pl.custom_cover = stored.cover
+            pl.origin = getattr(stored, "origin", "")
             for entry in stored.tracks:
                 if isinstance(entry, dict):
                     # A song added from Radio/Search that isn't downloaded yet.
@@ -707,7 +709,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
                                         else s.file_path for s in p.songs], p.folder, p.created, p.last_played,
-                               p.custom_cover)
+                               p.custom_cover, getattr(p, "origin", ""))
                 for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
@@ -842,6 +844,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._playlists_changed(playlist)
 
     def _playlists_changed(self, playlist=None):
+        self._ensure_playlist_covers([playlist] if playlist is not None else self.playlists)
         self.save_now()
         self._schedule_playlist_files()
         self.display_playlists()
@@ -2760,7 +2763,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         def done(result):
             timer.stop()
             pl = self._create_imported_playlist(result["name"], [("track", t) for t in result["tracks"]],
-                                                result.get("cover_url"), result.get("truncated"))
+                                                result.get("cover_url"), result.get("truncated"),
+                                                origin=importers.origin_of(text))
             if result.get("failed"):
                 self.show_status(f"Imported {len(result['tracks'])} songs; {result['failed']} link(s) couldn't be "
                                  "read.", kind="info", timeout_ms=10000)
@@ -2781,9 +2785,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not result["items"]:
             self.show_status(f"⚠ No songs found in {os.path.basename(path)}.", 8000)
             return None
-        return self._create_imported_playlist(result["name"], result["items"])
+        return self._create_imported_playlist(result["name"], result["items"], origin="file")
 
-    def _create_imported_playlist(self, name, items, cover_url="", truncated=False):
+    def _create_imported_playlist(self, name, items, cover_url="", truncated=False, origin="link"):
         base, n = name.strip() or "Imported playlist", 2
         name = base
         while self._name_taken(name):
@@ -2800,6 +2804,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         if pl is None:
             return None
         pl.songs = songs
+        pl.origin = origin
         filled = self._fill_pending_slots()                   # songs already in your music folders
         pl.generate_cover()
         self._playlists_changed(pl)
@@ -3436,7 +3441,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         if pl is None:
             return
         cover = load_pixmap(pl.cover_path)
-        self.pl_cover.setPixmap(rounded(cover, 220, 6))
+        pic = rounded(cover, 220, 6)
+        if getattr(self.user_data, "show_playlist_origin", False):
+            pic = with_ring(pic, 220, origin_colour(getattr(pl, "origin", "")), radius=6)
+        self.pl_cover.setPixmap(pic)
         c = dominant_colour(cover)
         top = QColor.fromHsv(c.hsvHue(), min(255, c.hsvSaturation() + 30), min(200, c.value() + 50))
         self.pl_header.setStyleSheet(
@@ -3930,8 +3938,27 @@ class MainWindow(ShowsMixin, QMainWindow):
         except Exception as e:
             self.show_status(f"⚠ Play/Pause error: {e}")
 
+    RADIO_EARLY_SKIP_MS = 30_000
+
+    def _radio_skip_feedback(self):
+        """Skipping a radio song in its first 30 seconds: play less of that artist for the rest of this radio
+        (like Spotify). Kept in memory only, never saved or sent anywhere."""
+        song = self.current_song
+        if (song is None or not self._radio_name or self.pq.source_name != self._radio_name
+                or song == self._radio_seed or self.pq.user_queue):
+            return
+        try:
+            heard = self.player.get_time()
+        except Exception:
+            return
+        if 0 <= heard < self.RADIO_EARLY_SKIP_MS:
+            n = self.pq.drop_upcoming_by_artist(getattr(song, "artist", ""))
+            if n:
+                self.show_status(f"Got it: less {song.artist} on this radio", kind="info", timeout_ms=3000)
+
     def next_song(self):
         self.cancel_crossfade()
+        self._radio_skip_feedback()
         if self.pq.items or self.pq.user_queue:
             self._consecutive_failures = 0
             if self.pq.advance(auto=False) is not None:
@@ -4745,6 +4772,42 @@ class MainWindow(ShowsMixin, QMainWindow):
                     self._schedule_view_refresh()
             self.online_call(self.net.get_image, s.track.cover_url, on_done=done)
 
+    def _ensure_playlist_covers(self, playlists):
+        """Spotify-style pictures for playlists without one: the first 4 different albums' covers. Covers of songs
+        you haven't downloaded come from the cache, or are fetched (then the picture is made again)."""
+        from core.playlist_cover import choose
+        fetch = []
+        for pl in playlists:
+            if pl is None or pl.custom_cover:
+                continue
+            wanted = set(choose(pl.songs))
+            for s in pl.songs:
+                if not getattr(s, "is_remote", False) or s.album_cover_path != PLACEHOLDER_IMAGE:
+                    continue
+                url = s.track.cover_url
+                if not url or url not in wanted:
+                    continue
+                cached = self.net.cached_image(url)
+                if cached:
+                    s.album_cover_path = cached
+                else:
+                    fetch.append(s)
+            pl.generate_cover()
+        if fetch and self.online_enabled:
+            self.fetch_covers(fetch, limit=16)
+
+    def _refresh_playlist_covers(self):
+        changed = False
+        for pl in self.playlists:
+            if pl.custom_cover:
+                continue
+            old = pl.cover_path
+            pl.generate_cover()
+            changed = changed or pl.cover_path != old
+        if changed:
+            self.display_playlists()
+            self._refresh_library_panel()
+
     def _schedule_view_refresh(self):
         if not hasattr(self, "_view_refresh_timer"):
             self._view_refresh_timer = QTimer(self)
@@ -4753,6 +4816,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._view_refresh_timer.start(250)
 
     def _refresh_online_views(self):
+        self._refresh_playlist_covers()
         self._queue_changed()
         self.web_table.refresh_artwork()
         self.pl_table.refresh_artwork()
@@ -4943,6 +5007,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             u.audiobook_quality = values["audiobook_quality"]
         if values.get("video_quality") in _q.VIDEO_QUALITIES:
             u.video_quality = values["video_quality"]
+        if "show_playlist_origin" in values:
+            u.show_playlist_origin = bool(values["show_playlist_origin"])
+            self.library_panel.set_show_origin(u.show_playlist_origin)
+            if self.open_playlist is not None:
+                self.refresh_playlist_page()
         if "lyrics_enabled" in values:
             u.lyrics_enabled = bool(values["lyrics_enabled"])
             self.lyrics_btn.setVisible(u.lyrics_enabled)
