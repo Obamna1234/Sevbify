@@ -2,6 +2,16 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Final checks (v5.0.0-beta.20):**
+- Profile files are untrusted input: unpacking stops at 50 MB (a tiny file made to expand into gigabytes is refused
+  without being read), Android reads at most 20 MB of a picked file and iPhone checks the size first, and only http(s)
+  links are kept for songs, covers, pages, feeds and pictures (no file:, content: or other schemes).
+- Desktop: every label shows plain text unless it's marked as our own formatting, so titles, lyrics, descriptions and
+  bios from the internet are never read as HTML.
+- Desktop: the genre / artist page ignores a late answer for a page you've already left.
+- The Android emulator run walks every new screen (radio page, recent searches, artist releases, genre Play,
+  podcast / audiobook Explore, naming a folder, the folder menu, profile settings): no crashes, monkey test clean.
+
 **Your Sevbify profile and recent searches (v5.0.0-beta.19):**
 - `core/profile.py`: one gzip-compressed JSON file (.sevbify) shared by every app: playlists (songs as names only,
   never device paths), folders, pins, origins, followed shows, saved books, positions, recently played, recent

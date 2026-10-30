@@ -66,6 +66,11 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.20: final checks before testing. A profile file from someone else can't point songs at files on your
+device or unpack into gigabytes, text from the internet (titles, lyrics, descriptions) is always shown as plain
+text on Windows / Mac / Linux, and opening a genre while an artist page loads no longer mixes the two up. Checked on
+the Android emulator (every new screen, 1,500 random taps, no crashes) and the iPhone simulator.
+
 beta.19: **your Sevbify profile**: one small file (.sevbify) with your playlists, folders, podcasts,
 audiobooks, where you stopped, recently played, recent searches and settings. Export it in Settings and open it in
 Sevbify on any device: Windows, Mac, Linux, Android or iPhone. It stays where you save it; Sevbify never uploads
