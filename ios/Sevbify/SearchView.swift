@@ -16,6 +16,22 @@ struct SearchView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if !lib.searches.isEmpty {
+                        HStack {
+                            Text("Recent searches").font(.title3.bold())
+                            Spacer()
+                            Button("Clear") { lib.searches = []; lib.save() }.foregroundColor(C.dim)
+                        }.padding(.horizontal, 16).padding(.top, 16)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(lib.searches.prefix(10), id: \.self) { q in
+                                    Button(q) { query = q }
+                                        .padding(.horizontal, 14).padding(.vertical, 7)
+                                        .background(Capsule().fill(C.card)).foregroundColor(C.text)
+                                }
+                            }.padding(.horizontal, 16)
+                        }
+                    }
                     if lib.settings.online {
                         SectionTitle("Browse all")
                         GenreGrid(genres: genres)
@@ -83,6 +99,9 @@ struct SearchView: View {
                 if !Task.isCancelled { self.error = "Search didn't work: \(error.localizedDescription)" }
             }
             busy = false
+            // Recent searches: remembered when you stay on the results for a moment (this task is cancelled when you type).
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if !Task.isCancelled { lib.rememberSearch(q) }
         }
     }
 }

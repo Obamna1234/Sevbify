@@ -116,6 +116,7 @@ class UserData:
     last_update_check: float = 0.0
     disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
+    recent_searches: List[str] = field(default_factory=list)  # Search ▸ Recent searches (newest first, max 30)
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     shows: List[dict] = field(default_factory=list)       # followed podcasts / YouTube channels (Show dicts)
     books: List[dict] = field(default_factory=list)       # audiobooks in Your Library (Book dicts)
@@ -260,6 +261,7 @@ class Storage:
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
+            "recent_searches": list(data.recent_searches[:30]),
             "save_for_later": data.save_for_later,
             "shows": data.shows,
             "books": data.books,
@@ -394,6 +396,7 @@ class Storage:
         except (TypeError, ValueError):
             pass
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
+        data.recent_searches = [str(q)[:200] for q in raw.get("recent_searches", []) or [] if str(q).strip()][:30]
         data.shows = [d for d in raw.get("shows", []) or [] if isinstance(d, dict) and (d.get("feed_url") or d.get("apple_id"))]
         data.books = [d for d in raw.get("books", []) or [] if isinstance(d, dict) and d.get("identifier")]
         resume = raw.get("resume", {}) or {}

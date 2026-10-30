@@ -157,6 +157,19 @@ def artist_releases(name):
 
 
 @_call
+def profile_pack(json_text):
+    """Your Sevbify profile file (base64 of its bytes; Kotlin / Swift write it where you chose)."""
+    from core import profile
+    return profile.pack_b64(json_text)
+
+
+@_call
+def profile_unpack(b64):
+    from core import profile
+    return profile.unpack_b64(b64)
+
+
+@_call
 def genres():
     return _state["music"].deezer.genres()
 

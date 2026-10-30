@@ -3,6 +3,8 @@ package com.sevbify.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +75,12 @@ fun SearchScreen() {
             try { val a = Bridge.arr("genres"); genres = (0 until a.length()).map { a.getJSONObject(it) } } catch (_: Exception) {}
         }
     }
+    // Recent searches, like Spotify's: a search you stay on for a moment is remembered (only on this phone).
+    LaunchedEffect(query) {
+        if (query.trim().length < 2) return@LaunchedEffect
+        delay(2500)
+        Library.rememberSearch(query)
+    }
     LaunchedEffect(query, chip) {
         web = emptyList(); artists = emptyList(); shows = emptyList(); books = emptyList(); note = ""
         val q = query.trim()
@@ -123,6 +131,23 @@ fun SearchScreen() {
                     if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Clear", tint = Color(0xFF121212)) }
                 }
             }
+        }
+        if (query.isBlank() && Library.searches.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Recent searches", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.TextButton(onClick = { Library.searches.clear(); Library.changed() }) {
+                        Text("Clear", color = C.Sub)
+                    }
+                }
+            }
+            item {
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Library.searches.take(10).forEach { q -> Chip(q, false) { query = q } }
+                }
+            }
+            item { Gap(12.dp) }
         }
         if (query.isBlank()) {
             item { Text("Browse all", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) }

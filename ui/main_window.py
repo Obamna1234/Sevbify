@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import vlc
 from PyQt6.QtWidgets import (
@@ -511,6 +512,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.open_folder_requested.connect(
             lambda _w: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
         self.settings_page.shortcuts_requested.connect(self._make_shortcuts)
+        self.settings_page.profile_export_requested.connect(self.export_profile)
+        self.settings_page.profile_import_requested.connect(self.import_profile)
         self.settings_page.import_requested.connect(self.import_playlist_dialog)
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
@@ -2014,6 +2017,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         # The search box itself is the pill in the top bar.
         self.search_input = self.top_bar.search_edit
         self.search_input.textChanged.connect(self.refresh_search_results)
+        # Recent searches (like Spotify): a search you stayed on for a moment is remembered (not in a private session).
+        self._search_memory = QTimer(self)
+        self._search_memory.setSingleShot(True)
+        self._search_memory.setInterval(2500)
+        self._search_memory.timeout.connect(lambda: self.remember_search(self.search_input.text()))
+        self.search_input.textChanged.connect(lambda _t: self._search_memory.start())
 
         self.search_summary = self._muted_label("Search your library by song, artist or album.")
         layout.addWidget(self.search_summary)
@@ -2163,6 +2172,120 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.search_input.clear()
         self.show_search(select=False)
 
+    # --- Your Sevbify profile (Settings ▸ Your Library): one small file, never uploaded ---------------------
+    @staticmethod
+    def _profile_track(song):
+        if getattr(song, "is_remote", False):
+            return song.track.to_dict()
+        d = {"title": song.title, "artist": song.artist, "album": song.album,
+             "duration_ms": int(song.duration or 0), "file": os.path.basename(song.file_path or "")}
+        return {k: v for k, v in d.items() if v}
+
+    def profile_data(self):
+        u = self.user_data
+        settings = {"online": bool(self.online_enabled), "explicit_ok": bool(u.explicit_ok), "autoplay": bool(u.autoplay),
+                    "song_quality": getattr(u, "download_quality", "best"),
+                    "show_playlist_origin": bool(getattr(u, "show_playlist_origin", False)),
+                    "skip_sponsors": bool(getattr(u, "skip_sponsors", True)),
+                    "lyrics": bool(getattr(u, "lyrics_enabled", True)), "shuffle": bool(self.pq.shuffle),
+                    "repeat": self.pq.repeat}
+        return {"from": sys.platform, "folders": list(u.folders),
+                "playlists": [{"name": p.name, "folder": p.folder, "origin": getattr(p, "origin", ""),
+                               "cover_url": p.custom_cover if str(p.custom_cover).startswith("http") else "",
+                               "created": p.created, "tracks": [self._profile_track(s) for s in p.songs]}
+                              for p in self.playlists],
+                "shows": list(u.shows), "books": list(u.books),
+                "resume": {k: v.get("ms", 0) for k, v in u.resume.items() if isinstance(v, dict)},
+                "recent": [self._profile_track(s) for s in list(self.pq.recent)[:50]],
+                "searches": list(u.recent_searches), "settings": settings}
+
+    def export_profile(self, path=None):
+        from core import profile
+        if path is None:
+            start = os.path.join(os.path.expanduser("~"), "Sevbify profile" + profile.EXTENSION)
+            path, _ = QFileDialog.getSaveFileName(self, "Export your Sevbify profile", start,
+                                                  "Sevbify profile (*.sevbify)")
+            if not path:
+                return None
+        if not path.lower().endswith(profile.EXTENSION):
+            path += profile.EXTENSION
+        try:
+            profile.save(path, self.profile_data())
+        except OSError as e:
+            self.show_status(f"⚠ Couldn't save your profile: {e}", 8000)
+            return None
+        self.show_status(f"Profile saved: {os.path.basename(path)} ({os.path.getsize(path) // 1024 + 1} KB). "
+                         "Open it in Sevbify on any device.", kind="info", timeout_ms=8000)
+        return path
+
+    def import_profile(self, path=None):
+        """Adds what's in a profile: playlists (never replacing yours; same playlist twice is skipped), folders,
+        podcasts, audiobooks, positions, recent searches and settings. Songs you have play from your files."""
+        from core import profile
+        from core.online.models import OnlineTrack
+        if path is None:
+            path, _ = QFileDialog.getOpenFileName(self, "Import a Sevbify profile", os.path.expanduser("~"),
+                                                  "Sevbify profile (*.sevbify);;All files (*)")
+            if not path:
+                return None
+        try:
+            d = profile.load(path)
+        except (OSError, profile.ProfileError) as e:
+            self.show_status(f"⚠ {e}", 8000)
+            return None
+        u = self.user_data
+        for f in d["folders"]:
+            if f not in u.folders:
+                u.folders.append(f)
+        added = 0
+        for p in d["playlists"]:
+            if any(x.name.casefold() == p["name"].casefold() and
+                   profile.same_playlist([self._profile_track(s) for s in x.songs], p["tracks"]) for x in self.playlists):
+                continue
+            name = profile.merge_names([x.name for x in self.playlists], p["name"])
+            pl = self._create_imported_playlist(name, [("track", OnlineTrack.from_dict(t)) for t in p["tracks"]],
+                                                p.get("cover_url", ""), origin=p.get("origin", ""))
+            if pl is not None:
+                pl.folder = p.get("folder", "") if p.get("folder", "") in u.folders else ""
+                added += 1
+        have = {podcasts_key(s) for s in u.shows}
+        for s in d["shows"]:
+            if podcasts_key(s) not in have:
+                u.shows.append(s)
+        have_books = {b.get("identifier") for b in u.books}
+        u.books.extend(b for b in d["books"] if b.get("identifier") not in have_books)
+        for k, ms in d["resume"].items():
+            u.resume.setdefault(k, {"ms": ms, "t": 0})
+        u.recent_searches = list(dict.fromkeys(u.recent_searches + d["searches"]))[:30]
+        mapped = {"online": "online_enabled", "explicit_ok": "explicit_ok", "autoplay": "autoplay",
+                  "song_quality": "download_quality", "show_playlist_origin": "show_playlist_origin",
+                  "skip_sponsors": "skip_sponsors", "lyrics": "lyrics_enabled"}
+        values = {mapped[k]: v for k, v in d["settings"].items() if k in mapped}
+        if values.get("download_quality") not in (None, "best", "mp3", "small"):
+            values.pop("download_quality")
+        if values:
+            self.apply_settings(values)
+        self.save_now()
+        self.display_playlists()
+        self._refresh_library_panel()
+        self.show_status(f"Profile imported: {added} playlist{'s' if added != 1 else ''} added"
+                         f"{' (the rest were already here)' if added < len(d['playlists']) else ''}.",
+                         kind="info", timeout_ms=8000)
+        return added
+
+    def remember_search(self, text):
+        q = (text or "").strip()
+        if len(q) < 2 or self.private_session:
+            return
+        searches = [s for s in self.user_data.recent_searches if s.casefold() != q.casefold()]
+        self.user_data.recent_searches = [q] + searches[:29]
+        self.schedule_save()
+
+    def clear_recent_searches(self):
+        self.user_data.recent_searches = []
+        self.schedule_save()
+        self.refresh_browse()
+
     def refresh_browse(self):
         from .shows_page import TileGrid, section_title
         content = QWidget()
@@ -2170,6 +2293,28 @@ class MainWindow(ShowsMixin, QMainWindow):
         content.setStyleSheet("#browseContent { background: transparent; }")
         v = QVBoxLayout(content)
         v.setContentsMargins(0, 8, 0, 8)
+        if self.user_data.recent_searches:
+            head = QHBoxLayout()
+            head.addWidget(section_title("Recent searches"))
+            head.addStretch()
+            clear = QPushButton("Clear recent searches")
+            clear.setCursor(Qt.CursorShape.PointingHandCursor)
+            clear.setStyleSheet(f"QPushButton {{ color: {theme.SUBDUED}; background: transparent; border: none;"
+                                f" font-weight: 700; }} QPushButton:hover {{ color: {theme.TEXT}; }}")
+            clear.clicked.connect(self.clear_recent_searches)
+            head.addWidget(clear)
+            v.addLayout(head)
+            chips = QHBoxLayout()
+            chips.setContentsMargins(8, 0, 8, 8)
+            for q in self.user_data.recent_searches[:8]:
+                b = QPushButton(q)
+                b.setCursor(Qt.CursorShape.PointingHandCursor)
+                b.setStyleSheet(f"QPushButton {{ color: {theme.TEXT}; background: {theme.ELEVATED}; border: none;"
+                                f" border-radius: 15px; padding: 6px 14px; }} QPushButton:hover {{ background: {theme.HOVER}; }}")
+                b.clicked.connect(lambda _=False, q=q: self.search_input.setText(q))
+                chips.addWidget(b)
+            chips.addStretch()
+            v.addLayout(chips)
         v.addWidget(section_title("Browse all"))
         v.addSpacing(8)
         v.addWidget(TileGrid(self.browse_tiles()))
@@ -5318,3 +5463,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.refresh_saved_page()
         self.stack.setCurrentWidget(self.saved_page)
         self._set_nav("saved")
+
+
+def podcasts_key(show_dict):
+    """The same show from any device: its feed (or Apple id)."""
+    return (show_dict.get("feed_url") or "").rstrip("/").casefold() or f"apple:{show_dict.get('apple_id', '')}"

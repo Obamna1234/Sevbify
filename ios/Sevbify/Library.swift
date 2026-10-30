@@ -44,6 +44,25 @@ private struct SaveFile: Codable {
     var folders: [LinkedFolder] = []
     var recent: [Track] = []
     var resume: [String: Double] = [:]
+    var searches: [String] = []
+    var libraryFolders: [String] = []
+
+    init(playlists: [Playlist], settings: Settings, folders: [LinkedFolder], recent: [Track], resume: [String: Double],
+         searches: [String], libraryFolders: [String]) {
+        self.playlists = playlists; self.settings = settings; self.folders = folders; self.recent = recent
+        self.resume = resume; self.searches = searches; self.libraryFolders = libraryFolders
+    }
+    // Every part is optional, so saves from older versions always load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        playlists = (try? c.decode([Playlist].self, forKey: .playlists)) ?? []
+        settings = (try? c.decode(Settings.self, forKey: .settings)) ?? Settings()
+        folders = (try? c.decode([LinkedFolder].self, forKey: .folders)) ?? []
+        recent = (try? c.decode([Track].self, forKey: .recent)) ?? []
+        resume = (try? c.decode([String: Double].self, forKey: .resume)) ?? [:]
+        searches = (try? c.decode([String].self, forKey: .searches)) ?? []
+        libraryFolders = (try? c.decode([String].self, forKey: .libraryFolders)) ?? []
+    }
 }
 
 /// Everything Sevbify keeps on this iPhone: playlists, settings, your songs. Saved as one JSON file in the app's
@@ -57,6 +76,8 @@ final class Library: ObservableObject {
     @Published var folders: [LinkedFolder] = []
     @Published var localSongs: [Track] = []
     @Published var recent: [Track] = []
+    @Published var searches: [String] = []          // Search ▸ Recent searches (newest first)
+    var libraryFolders: [String] = []                 // playlist folders from a profile made on another device
     @Published var scanning = false
     var resume: [String: Double] = [:]
 
@@ -85,6 +106,7 @@ final class Library: ObservableObject {
         do {
             let s = try JSONDecoder().decode(SaveFile.self, from: data)
             playlists = s.playlists; settings = s.settings; folders = s.folders; recent = s.recent; resume = s.resume
+            searches = s.searches; libraryFolders = s.libraryFolders
         } catch {
             // Keep a damaged file instead of overwriting it, so nothing is lost.
             try? FileManager.default.copyItem(at: file, to: file.appendingPathExtension("damaged-\(Int(Date().timeIntervalSince1970))"))
@@ -95,7 +117,8 @@ final class Library: ObservableObject {
     func save() {
         if loading { return }
         let snapshot = SaveFile(playlists: playlists, settings: settings, folders: folders,
-                                recent: Array(recent.prefix(50)), resume: resume)
+                                recent: Array(recent.prefix(50)), resume: resume, searches: Array(searches.prefix(30)),
+                                libraryFolders: libraryFolders)
         let target = file
         saveTask?.cancel()
         saveTask = Task.detached(priority: .utility) {
@@ -135,6 +158,16 @@ final class Library: ObservableObject {
 
     func add(_ tracks: [Track], to id: String) { update(id) { $0.tracks.append(contentsOf: tracks.map { $0.fresh() }) } }
     func delete(_ id: String) { playlists.removeAll { $0.id == id }; save() }
+
+    /// A search you stayed on for a moment, like Spotify's Recent searches (only on this iPhone).
+    func rememberSearch(_ q: String) {
+        let text = q.trimmingCharacters(in: .whitespaces)
+        guard text.count >= 2 else { return }
+        searches.removeAll { $0.lowercased() == text.lowercased() }
+        searches.insert(text, at: 0)
+        if searches.count > 30 { searches.removeLast(searches.count - 30) }
+        save()
+    }
 
     func addRecent(_ t: Track) {
         recent.removeAll { $0.matchKey == t.matchKey }

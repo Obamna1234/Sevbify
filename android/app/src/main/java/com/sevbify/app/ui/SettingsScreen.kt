@@ -45,6 +45,21 @@ fun SettingsScreen() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var update by remember { mutableStateOf("") }
+    // Your Sevbify profile: Export / Import through Android's own file picker (any folder, Drive, a USB stick...).
+    val exporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        if (uri != null) scope.launch {
+            try { val n = com.sevbify.app.Profile.exportTo(context, uri); Nav.say("Profile saved (${n / 1024 + 1} KB)") }
+            catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; Nav.say("⚠ Couldn't save: ${e.message}") }
+        }
+    }
+    val importer = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            try { Nav.say(com.sevbify.app.Profile.importFrom(context, uri)) }
+            catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; Nav.say("⚠ ${e.message}") }
+        }
+    }
     LazyColumn {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
@@ -92,6 +107,24 @@ fun SettingsScreen() {
                    "green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link, " +
                    "blue = imported from a file.",
                    s.showPlaylistOrigin) { s.showPlaylistOrigin = it; Library.changed() }
+        }
+        item { Heading("Your Sevbify profile") }
+        item {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text("One small file with your playlists, folders, podcasts, audiobooks, where you stopped, recently " +
+                     "played, recent searches and settings. Open it in Sevbify on any device: Android, iPhone, " +
+                     "Windows, Mac or Linux. It stays where you save it; Sevbify never uploads it.",
+                     style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { exporter.launch(com.sevbify.app.Profile.FILE_NAME) }) { Text("Export", color = C.Text) }
+                    OutlinedButton(onClick = { importer.launch(arrayOf("*/*")) }) { Text("Import", color = C.Text) }
+                }
+            }
+        }
+        item {
+            Toggle("Keep a copy in Downloads", "Saves your profile to Download/Sevbify whenever you leave Sevbify, so " +
+                   "it's still there if the app is uninstalled (then: Import, and pick it). Only on this phone.",
+                   s.profileBackup) { s.profileBackup = it; Library.changed() }
         }
         item { Heading("Downloads") }
         item {

@@ -49,6 +49,8 @@ class SettingsPage(QWidget):
     open_folder_requested = pyqtSignal(str)
     shortcuts_requested = pyqtSignal()
     import_requested = pyqtSignal()
+    profile_export_requested = pyqtSignal()
+    profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
     update_ytdlp_requested = pyqtSignal()
     reset_requested = pyqtSignal(str)          # "appearance" or "all"
@@ -144,6 +146,19 @@ class SettingsPage(QWidget):
         imp.clicked.connect(self.import_requested.emit)
         imp_row.addWidget(imp)
         self._v.addLayout(imp_row)
+        prof_row = QHBoxLayout()
+        prof_row.addLayout(self._name_desc("Your Sevbify profile",
+                                           "One small file with your playlists, folders, podcasts, audiobooks, where you "
+                                           "stopped, recently played, recent searches and settings. Open it in Sevbify on "
+                                           "any device (Windows, Mac, Linux, Android, iPhone). It stays where you save it; "
+                                           "Sevbify never uploads it.", into=prof_row), 1)
+        exp = QPushButton("Export…")
+        exp.clicked.connect(self.profile_export_requested.emit)
+        prof_row.addWidget(exp)
+        imp2 = QPushButton("Import…")
+        imp2.clicked.connect(self.profile_import_requested.emit)
+        prof_row.addWidget(imp2)
+        self._v.addLayout(prof_row)
         self._name_desc("Show songs from", "Folders on your computer that Sevbify plays music from. Switch one off to "
                         "hide its songs without removing it.")
         for folder in u.music_folders:

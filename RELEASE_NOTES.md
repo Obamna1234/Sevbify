@@ -66,6 +66,12 @@ helper programs, so YouTube may fail more often (Bandcamp is tried first).
 
 ## What's in this version
 
+beta.19: **your Sevbify profile**: one small file (.sevbify) with your playlists, folders, podcasts,
+audiobooks, where you stopped, recently played, recent searches and settings. Export it in Settings and open it in
+Sevbify on any device: Windows, Mac, Linux, Android or iPhone. It stays where you save it; Sevbify never uploads
+it. On Android it can also keep itself in Download/Sevbify, so it survives uninstalling the app. Search also
+remembers your recent searches now (with Clear), on every version.
+
 **Android: new signing key.** Sevbify's code is now public, so the app is signed with a new key kept only in
 GitHub's secrets. Android won't install it over an older Sevbify: **uninstall the old one first** (your playlists in
 the app are removed with it; songs you downloaded stay in Music/Sevbify).

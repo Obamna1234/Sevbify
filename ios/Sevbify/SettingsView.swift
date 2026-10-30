@@ -35,6 +35,7 @@ struct SettingsView: View {
             } header: { Text("Downloads") } footer: {
                 Text("Songs are saved in Files ▸ On My iPhone ▸ Sevbify ▸ Music. Downloads keep going while music plays; if you close Sevbify, unfinished ones wait for next time.")
             }
+            ProfileSection()
             Section("Your Library") {
                 Toggle("Show where playlists came from", isOn: $lib.settings.showPlaylistOrigin)
                 Text("A coloured border around playlist pictures: grey = made in Sevbify, green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link, blue = imported from a file.")

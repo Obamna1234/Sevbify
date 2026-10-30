@@ -2,6 +2,19 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Your Sevbify profile and recent searches (v5.0.0-beta.19):**
+- `core/profile.py`: one gzip-compressed JSON file (.sevbify) shared by every app: playlists (songs as names only,
+  never device paths), folders, pins, origins, followed shows, saved books, positions, recently played, recent
+  searches and the settings that mean the same everywhere. Importing adds (never replaces; a playlist that's already
+  there is skipped; clashing names get "(imported)"); songs you have on that device play from your files.
+- Windows / macOS / Linux: Settings ▸ Your Library ▸ Your Sevbify profile ▸ Export… / Import…
+- Android: Settings ▸ Your Sevbify profile ▸ Export / Import (any folder, Drive...), and "Keep a copy in
+  Downloads" (on): Download/Sevbify/Sevbify profile.sevbify is updated whenever you leave the app and survives
+  uninstalling it.
+- iPhone: Settings ▸ Export profile… / Import profile… (Files, iCloud Drive, a password manager). An iPhone deletes an
+  app's files with the app, so export before deleting.
+- Recent searches (Spotify-style chips with Clear) on Search in every app; not remembered in a private session.
+
 **The same on Windows / macOS / Linux and iPhone (v5.0.0-beta.18):**
 - Desktop: online "Go to artist" (song menu, search, genre pages) opens a Spotify-style artist page: top 50
   (10 shown) with Play, Shuffle and Artist radio, your own songs by them, latest release, albums, singles & EPs,

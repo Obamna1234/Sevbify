@@ -33,7 +33,9 @@ data class Settings(
     var lastYtdlpCheck: Long = 0,
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
     var showPlaylistOrigin: Boolean = false,
-    var skipSponsors: Boolean = true,          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
+    var skipSponsors: Boolean = true,
+    var profileBackup: Boolean = true,         // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
+    var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -44,6 +46,7 @@ data class Settings(
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
         put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors)
+        put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
     }
 
     companion object {
@@ -66,6 +69,7 @@ data class Settings(
             s.lyrics = o.optBoolean("lyrics", true)
             s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
+            s.profileBackup = o.optBoolean("profile_backup", true); s.profileBackupUri = o.optString("profile_backup_uri")
             return s
         }
     }
@@ -83,6 +87,7 @@ object Library {
     val folders = mutableStateListOf<String>()
     val shows = mutableStateListOf<Show>()              // followed podcasts / YouTube channels / saved books
     val recent = mutableStateListOf<Track>()            // recently played (not in a private session)
+    val searches = mutableStateListOf<String>()         // Search ▸ Recent searches (newest first)
     val offline = mutableMapOf<String, String>()        // song / episode key -> downloaded file
     val resume = mutableMapOf<String, Long>()           // episode / chapter key -> where you stopped (ms)
     val finished = mutableSetOf<String>()
@@ -130,6 +135,8 @@ object Library {
         o.optJSONArray("shows")?.let { a -> for (i in 0 until a.length()) shows.add(Show(a.getJSONObject(i))) }
         recent.clear()
         o.optJSONArray("recent")?.let { recent.addAll(it.tracks()) }
+        searches.clear()
+        o.optJSONArray("searches")?.let { a -> for (i in 0 until a.length()) searches.add(a.getString(i)) }
         offline.clear()
         o.optJSONObject("offline")?.let { m -> m.keys().forEach { k -> offline[k] = m.getString(k) } }
         resume.clear()
@@ -147,6 +154,7 @@ object Library {
             put("folders", JSONArray(folders.toList()))
             put("shows", JSONArray().also { a -> shows.forEach { a.put(it.json) } })
             put("recent", recent.take(50).toJsonArray())
+            put("searches", JSONArray(searches.take(30)))
             put("offline", JSONObject(offline as Map<*, *>))
             put("resume", JSONObject(resume as Map<*, *>))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
@@ -181,6 +189,16 @@ object Library {
         playlists.add(0, pl)
         changed()
         return pl
+    }
+
+    /** A search you stayed on for a moment (not in a private session), like Spotify's Recent searches. */
+    fun rememberSearch(q: String) {
+        val text = q.trim()
+        if (text.length < 2 || privateSession) return
+        searches.removeAll { it.equals(text, true) }
+        searches.add(0, text)
+        while (searches.size > 30) searches.removeAt(searches.size - 1)
+        changed()
     }
 
     fun delete(pl: Playlist) { playlists.remove(pl); changed() }

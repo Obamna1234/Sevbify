@@ -106,10 +106,11 @@ struct Playlist: Codable, Identifiable, Hashable {
     var pinned = false
     /// "" made in Sevbify, or imported: "spotify" | "apple" | "deezer" | "jamendo" | "file"
     var origin = ""
+    var folder = ""                 // kept from a profile made on another device (Your Library folders)
 
     init(name: String, tracks: [Track] = []) { self.name = name; self.tracks = tracks }
 
-    enum CodingKeys: String, CodingKey { case id, name, tracks, coverUrl, created, lastPlayed, pinned, origin }
+    enum CodingKeys: String, CodingKey { case id, name, tracks, coverUrl, created, lastPlayed, pinned, origin, folder }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
@@ -120,6 +121,7 @@ struct Playlist: Codable, Identifiable, Hashable {
         lastPlayed = (try? c.decode(Double.self, forKey: .lastPlayed)) ?? 0
         pinned = (try? c.decode(Bool.self, forKey: .pinned)) ?? false
         origin = (try? c.decode(String.self, forKey: .origin)) ?? ""
+        folder = (try? c.decode(String.self, forKey: .folder)) ?? ""
     }
 
     static func == (a: Playlist, b: Playlist) -> Bool { a.id == b.id }
