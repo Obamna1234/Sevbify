@@ -1,0 +1,44 @@
+name: Key backup (one-off)
+on:
+  push:
+    branches: ["keys-backup"]
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check passphrase is set
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          [ -n "$PASS" ] || { echo "::error::Add a BACKUP_PASSPHRASE repo secret first."; exit 1; }
+      - name: Assemble backup
+        env:
+          B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SPW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p backup
+          printf '%s' "$B64" | base64 -d > backup/sevbify-android.jks
+          printf '%s\n' "$B64" > backup/sevbify-android.jks.b64
+          if [ ! -s backup/sevbify-android.jks ]; then echo "::error::ANDROID_KEYSTORE_BASE64 secret is empty or invalid."; exit 1; fi
+          {
+            echo "Repo: Obamna1234/Sevbify   (Android signing key; desktop builds are not signed)"
+            echo "ANDROID_KEYSTORE_PASSWORD=$SPW"
+            echo "ANDROID_KEYSTORE_BASE64 = the single line in sevbify-android.jks.b64"
+            echo "(alias: list it with  keytool -list -keystore sevbify-android.jks )"
+          } > backup/values.txt
+          echo "keystore bytes: $(wc -c < backup/sevbify-android.jks)"
+      - name: Encrypt into password-locked .7z
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq p7zip-full
+          7z a -p"$PASS" -mhe=on sevbify-key-backup.7z ./backup/* >/dev/null
+          echo "done"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sevbify-key-backup
+          path: sevbify-key-backup.7z
+          retention-days: 1
+          if-no-files-found: error
