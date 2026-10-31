@@ -2,6 +2,13 @@
 
 ## v5.0 (in progress) — Spotify-style redesign, queue, radio, online search, downloads
 
+**Security hardening (v5.0.0-beta.24):**
+- core/profile.py: `clean_track()` drops an imported profile's `file` field if it looks like a device path
+  (absolute, `..` traversal, Windows drive/UNC, or a `file:`/`content:` scheme). The field is only ever a
+  song's own description and is never used to open a path — preventative guard, no behaviour change.
+- Added SECURITY.md documenting the October 2026 review outcome and the items held for a tested update
+  (server-credential keychain, VLC stream-URL handling, Android cleartext scoping).
+
 **Servers, cloud folders, Save space, Android Auto, security fixes (v5.0.0-beta.23):**
 - core/servers.py: Jellyfin (token after sign-in) and Nextcloud / WebDAV (app password); http only on private
   networks; a redirect handler strips Authorization / X-Emby-* when a redirect leaves the server; sign-ins in
