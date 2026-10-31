@@ -1,3 +1,18 @@
+## What's new in beta.24 (security hardening)
+
+A small, behaviour-preserving security fix from the October 2026 code review — **nothing about how the app
+works changes**:
+
+- Importing a profile (`.sevbify`) can no longer smuggle a device file path through a song's `file` field
+  (the app never uses that field to open anything; this just closes a latent door).
+
+No critical or high-severity issues were found in the review. A few further items (server-credential storage
+in the OS keychain, VLC stream-URL handling, and Android cleartext scoping) are documented in `SECURITY.md`
+and intentionally held for a later update so they can be tested against a real server first. Earlier releases
+remain available as fallbacks.
+
+---
+
 ## Install (Windows)
 
 Everything is included (player engine, downloader, ffmpeg); nothing else to install.

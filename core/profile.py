@@ -53,6 +53,15 @@ def clean_track(d):
     for k in ("title", "artist", "album", "genre", "source", "source_id", "key", "file"):
         if k in out:
             out[k] = str(out[k])[:500]
+    # "file" is only ever a song's own description, never a device path. Drop it if a (possibly
+    # hand-crafted) profile tries to carry an absolute path, a parent-directory escape, a Windows
+    # drive/UNC path, or a scheme like file:/content: — none of which should come from a profile.
+    f = out.get("file")
+    if f is not None:
+        bad = (f.startswith(("/", "\\", "~")) or ".." in f.replace("\\", "/").split("/")
+               or "\x00" in f or ":" in f[:3] or "://" in f)
+        if bad:
+            del out["file"]
     if "duration_ms" in out and not isinstance(out["duration_ms"], (int, float)):
         del out["duration_ms"]
     if not out.get("title"):
