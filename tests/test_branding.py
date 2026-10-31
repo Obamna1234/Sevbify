@@ -38,7 +38,7 @@ def test_create_shortcuts_reports_success_and_failure(tmp_path, monkeypatch):
     ok, msg = shortcuts.create_windows_shortcuts(
         r"C:\Apps\Sevbify.exe", run=lambda cmd, **k: calls.append(cmd) or SimpleNamespace(returncode=0, stderr=""))
     assert ok and "Desktop and Start menu" in msg
-    assert calls[0][0] == "powershell" and (tmp_path / "Desktop").is_dir()
+    assert calls[0][0].lower().endswith("powershell" + (".exe" if os.name == "nt" else "")) and (tmp_path / "Desktop").is_dir()
     ok, msg = shortcuts.create_windows_shortcuts(
         r"C:\Apps\Sevbify.exe", run=lambda cmd, **k: SimpleNamespace(returncode=1, stderr="Access denied"))
     assert not ok and "Access denied" in msg

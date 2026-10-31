@@ -42,8 +42,8 @@ class SevbifyApp : Application() {
 
     companion object {
         lateinit var instance: SevbifyApp
+            private set
         /** A test build (debuggable): only then are problems written to Android's log. */
         val debuggable: Boolean get() = (instance.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-            private set
     }
 }
