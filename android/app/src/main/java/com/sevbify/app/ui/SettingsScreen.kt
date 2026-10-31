@@ -39,6 +39,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,8 +57,8 @@ import kotlinx.coroutines.launch
  *  long list. Only what Sevbify actually has is shown. */
 @Composable
 fun SettingsScreen() {
-    @Suppress("UNUSED_VARIABLE") val tick = Library.changes
     val s = Library.settings
+    key(Library.changes) {                 // rebuild the list on any settings change so controls redraw live
     LazyColumn {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
@@ -96,6 +97,7 @@ fun SettingsScreen() {
             }
         }
         item { Gap(32.dp) }
+    }
     }
 }
 
@@ -147,6 +149,7 @@ fun SettingsPageScreen(key: String) {
     val title = mapOf("content" to "Content and display", "privacy" to "Privacy and profile", "playback" to "Playback",
                       "offline" to "Data-saving and offline", "quality" to "Media quality", "car" to "Car",
                       "about" to "About and updates")[key] ?: "Settings"
+    key(Library.changes) {                 // rebuild on any settings change so pills/toggles redraw live
     LazyColumn {
         item {
             Row(Modifier.statusBarsPadding(), verticalAlignment = Alignment.CenterVertically) {
@@ -364,6 +367,7 @@ fun SettingsPageScreen(key: String) {
         }
         }
         item { Gap(32.dp) }
+    }
     }
 }
 
