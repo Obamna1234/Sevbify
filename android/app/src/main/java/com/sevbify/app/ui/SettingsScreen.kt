@@ -223,8 +223,10 @@ fun SettingsPageScreen(key: String) {
                    s.skipSponsors) { s.skipSponsors = it; Library.changed() }
         }
         item {
-            Muted(tr("Songs you don't have yet always play in full (found on Bandcamp, then YouTube). A 30-second preview ") +
-                  "only plays when you pick Preview from a song's menu.")
+            Toggle(tr("Play 30-second previews"),
+                   "For songs you don't have yet, play a short preview instead of streaming the full song. " +
+                   "Your own and downloaded songs always play in full. Off = full songs (default).",
+                   !s.streamFull) { s.streamFull = !it; Library.changed() }
         }
         }
         "offline" -> {

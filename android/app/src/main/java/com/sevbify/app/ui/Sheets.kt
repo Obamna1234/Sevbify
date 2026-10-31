@@ -115,8 +115,6 @@ private fun SongMenuSheet(m: SongMenu) {
                     }
                 }
                 SheetItem(Icons.Filled.Radio, tr("Go to song radio"), enabled = Library.settings.online) { close(); Player.startRadio(t) }
-                SheetItem(Icons.Filled.PlayCircleOutline, tr("Preview (30 s)"),
-                          enabled = Library.settings.online || t.previewUrl.isNotEmpty()) { close(); Nav.previewFor = t }
                 if (t.artist.isNotEmpty() && t.artist != "Unknown Artist") {
                     SheetItem(Icons.Filled.Person, tr("Go to artist")) { close(); Nav.nowPlayingOpen = false; Nav.go(Screen.Artist(t.artist)) }
                 }

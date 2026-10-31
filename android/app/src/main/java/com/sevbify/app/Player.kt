@@ -357,7 +357,18 @@ object Player {
             val (url, headers) = MusicServers.playable(t) ?: throw CoreError("its server was removed in Settings")
             return Triple(url, headers, "From your server")
         }
-        // Always the full song. A 30-second clip only plays from the song menu's Preview, never in its place.
+        // Preview mode (Settings → Playback): play the 30-second preview instead of the full song.
+        // Your own and downloaded songs already returned above, so this only affects songs you don't have.
+        if (!Library.settings.streamFull) {
+            status = "Playing 30-second preview…"
+            val pv = t.previewUrl.ifEmpty {
+                try { (Bridge.call("preview_url", t.artist, t.title) as? String).orEmpty() }
+                catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; "" }
+            }
+            if (pv.isNotEmpty()) return Triple(pv, null, "30-second preview")
+            // no preview found → fall through to the full song
+        }
+        // Full song. (A 30-second clip plays in its place only when preview mode is on, handled just above.)
         if (!Library.settings.onlineNoticeAccepted) { noticeFor = t; return null }
         status = "Finding the full song…"
         try {
