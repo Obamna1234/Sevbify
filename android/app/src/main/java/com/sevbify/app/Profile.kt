@@ -20,7 +20,7 @@ import org.json.JSONObject
 object Profile {
     const val FILE_NAME = "Sevbify profile.sevbify"
 
-    fun build(): JSONObject {
+    fun build(withHistory: Boolean = true): JSONObject {
         val s = Library.settings
         val music = Library.shows.filter { !it.isBook }.map { it.json }
         val books = Library.shows.filter { it.isBook }.map { it.json }
@@ -38,8 +38,10 @@ object Profile {
             })
             put("shows", JSONArray(music)); put("books", JSONArray(books))
             put("resume", JSONObject(Library.resume as Map<*, *>))
-            put("recent", Library.recent.take(50).toJsonArray())
-            put("searches", JSONArray(Library.searches.toList()))
+            if (withHistory) {
+                put("recent", Library.recent.take(50).toJsonArray())
+                put("searches", JSONArray(Library.searches.toList()))
+            }
             put("settings", JSONObject().apply {
                 put("online", s.online); put("stream_full", s.streamFull); put("explicit_ok", s.explicitOk)
                 put("autoplay", s.autoplay); put("song_quality", s.songQuality)
@@ -49,7 +51,8 @@ object Profile {
         }
     }
 
-    suspend fun bytes(): ByteArray = Base64.decode(Bridge.call("profile_pack", build().toString()) as String, Base64.DEFAULT)
+    suspend fun bytes(withHistory: Boolean = true): ByteArray =
+        Base64.decode(Bridge.call("profile_pack", build(withHistory).toString()) as String, Base64.DEFAULT)
 
     suspend fun exportTo(context: Context, uri: Uri): Int {
         val data = bytes()
@@ -103,7 +106,7 @@ object Profile {
         }
         d.optJSONObject("settings")?.let { m ->
             val s = Library.settings
-            if (m.has("online")) s.online = m.getBoolean("online")
+            if (m.has("online") && !m.getBoolean("online")) s.online = false   // a file may turn online off, never on
             if (m.has("stream_full")) s.streamFull = m.getBoolean("stream_full")
             if (m.has("explicit_ok")) s.explicitOk = m.getBoolean("explicit_ok")
             if (m.has("autoplay")) s.autoplay = m.getBoolean("autoplay")
@@ -130,7 +133,8 @@ object Profile {
      *  you leave the app. Survives uninstalling Sevbify; nothing is uploaded. */
     suspend fun backupToDownloads(context: Context) {
         if (!Library.settings.profileBackup || Build.VERSION.SDK_INT < 29) return
-        val data = bytes()
+        // Downloads can be read by other apps with file access, so this copy leaves out what you played and searched.
+        val data = bytes(withHistory = false)
         val resolver = context.contentResolver
         val saved = Library.settings.profileBackupUri.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }
         if (saved != null) {

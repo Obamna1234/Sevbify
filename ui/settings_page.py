@@ -334,7 +334,9 @@ class SettingsPage(QWidget):
         self.app_update_label = QLabel(info.get("app_update", ""))
         self.app_update_label.setObjectName("desc")
         self.app_update_label.setWordWrap(True)
-        self.app_update_label.setOpenExternalLinks(True)
+        self.app_update_label.setOpenExternalLinks(False)
+        from . import open_web
+        self.app_update_label.linkActivated.connect(open_web)
         v.addWidget(self.app_update_label)
         age = info.get("ytdlp_age")
         self._text(f"yt-dlp {info.get('ytdlp', '')} finds and downloads full songs and video podcasts. YouTube "

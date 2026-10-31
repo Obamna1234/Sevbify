@@ -17,6 +17,34 @@ if not getattr(_QLabel, "_sevbify_plain", False):
     _QLabel.__init__ = _plain_init
     _QLabel._sevbify_plain = True
 
+# Message boxes too: their text often holds a playlist, song or file name, which must never be read as HTML.
+from PyQt6.QtWidgets import QMessageBox as _QMessageBox
+
+if not getattr(_QMessageBox, "_sevbify_plain", False):
+    _box_init = _QMessageBox.__init__
+
+    def _plain_box_init(self, *args, **kwargs):
+        _box_init(self, *args, **kwargs)
+        self.setTextFormat(_Qt.TextFormat.PlainText)
+
+    _QMessageBox.__init__ = _plain_box_init
+
+    def _plain_static(icon, default_buttons):
+        def show(parent, title, text, buttons=default_buttons,
+                 defaultButton=_QMessageBox.StandardButton.NoButton):
+            box = _QMessageBox(icon, title, text, buttons, parent)
+            if defaultButton != _QMessageBox.StandardButton.NoButton:
+                box.setDefaultButton(defaultButton)
+            return _QMessageBox.StandardButton(box.exec())
+        return staticmethod(show)
+
+    _SB = _QMessageBox.StandardButton
+    _QMessageBox.question = _plain_static(_QMessageBox.Icon.Question, _SB.Yes | _SB.No)
+    _QMessageBox.warning = _plain_static(_QMessageBox.Icon.Warning, _SB.Ok)
+    _QMessageBox.information = _plain_static(_QMessageBox.Icon.Information, _SB.Ok)
+    _QMessageBox.critical = _plain_static(_QMessageBox.Icon.Critical, _SB.Ok)
+    _QMessageBox._sevbify_plain = True
+
 
 # Language: menu items Sevbify makes look like "≡  Add to queue" (a symbol, two spaces, the words). Only those are
 # translated (core/i18n), so a playlist or song that happens to be called "Lyrics" is never changed.
@@ -43,3 +71,15 @@ if not getattr(_QMenu, "_sevbify_tr", False):
 
     _QMenu.addAction, _QMenu.addMenu = _add_action, _add_menu
     _QMenu._sevbify_tr = True
+
+
+def open_web(url):
+    """Open a web page in the browser: only http(s) addresses, never file:, smb:, ms-… or other kinds of links,
+    because links can come from the internet."""
+    from core.online.net import is_web_url
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+    if is_web_url(url):
+        QDesktopServices.openUrl(QUrl(url))
+        return True
+    return False

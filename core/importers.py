@@ -348,6 +348,13 @@ def track_from_line(line):
     return OnlineTrack(title=title, artist=artist)
 
 
+def is_network_path(path):
+    """True for a Windows network location in any spelling (\\\\host\\x, //host/x, /\\host\\x, \\/host/x)."""
+    import ntpath
+    p = (path or "").strip().replace("/", "\\")
+    return p.startswith("\\\\") or ntpath.splitdrive(p)[0].startswith("\\\\")
+
+
 def read_playlist_file(path):
     """Returns {"name", "tracks": [OnlineTrack], "files": [local paths in order, None for slots]}.
     For .m3u files the order mixes local files and slots: items is a list of ("file", path) / ("track", t)."""
@@ -374,10 +381,10 @@ def read_playlist_file(path):
                 continue
             # Network paths (\\server\share, //host/x) and links are never opened: on Windows just looking at one
             # would send your sign-in to that computer. Such a line is treated like a song you don't have.
-            remote = line.startswith(("\\\\", "//")) or "://" in line or re.match(r"^[A-Za-z]:(?![\\/])", line)
+            remote = is_network_path(line) or "://" in line or re.match(r"^[A-Za-z]:(?![\\/])", line)
             p = "" if remote else (line if os.path.isabs(line) else
                                    os.path.normpath(os.path.join(base, line.replace("/", os.sep))))
-            if p and os.path.exists(p):
+            if p and not is_network_path(p) and os.path.exists(p):
                 items.append(("file", p))
             elif pending_info:
                 t = track_from_line(pending_info)

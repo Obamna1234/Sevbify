@@ -63,7 +63,9 @@ final class ImportChecker: ObservableObject {
     func offerChosic(_ id: String, _ link: String) { chosicId = id; chosicLink = link; chosicAsk = true }
 
     func openChosic() {
-        UIPasteboard.general.string = chosicLink
+        // Only on this phone (not your other Apple devices), and gone after five minutes.
+        UIPasteboard.general.setItems([["public.utf8-plain-text": chosicLink]],
+                                      options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(300)])
         if let u = URL(string: "https://www.chosic.com/spotify-playlist-exporter/") { UIApplication.shared.open(u) }
         chosicPick = true
     }
@@ -72,9 +74,14 @@ final class ImportChecker: ObservableObject {
         Task {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            // Only a song list (Chosic gives a .csv), never anything big.
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard ["csv", "txt", "m3u", "m3u8"].contains(url.pathExtension.lowercased()), size <= 10_000_000 else {
+                Player.shared.status = "That isn't a song list from Chosic (a .csv file)"; return
+            }
             let dir = FileManager.default.temporaryDirectory.appendingPathComponent("import", isDirectory: true)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let copy = dir.appendingPathComponent(url.lastPathComponent)
+            let copy = dir.appendingPathComponent("chosic." + url.pathExtension.lowercased())
             try? FileManager.default.removeItem(at: copy)
             defer { try? FileManager.default.removeItem(at: copy) }
             guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil,

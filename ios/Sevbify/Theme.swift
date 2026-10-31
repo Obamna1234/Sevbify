@@ -39,13 +39,26 @@ struct AlbumRef: Hashable {
     }
 }
 
+/// A picture's address, made safe: https (an http link is asked for over https), or a file on this phone.
+/// Anything else (other kinds of links) shows the placeholder.
+func safeImageURL(_ s: String) -> URL? {
+    if s.hasPrefix("https://") { return URL(string: s) }
+    if s.hasPrefix("http://") { return URL(string: "https://" + s.dropFirst(7)) }
+    if s.hasPrefix("file://") { return URL(string: s) }
+    if s.hasPrefix("/") { return URL(fileURLWithPath: s) }
+    return nil
+}
+
+/// Only Sevbify's own release pages are opened from an update message.
+func isSevbifyPage(_ s: String) -> Bool { s.hasPrefix("https://github.com/Obamna1234/Sevbify/") }
+
 struct Cover: View {
     let url: String
     var size: CGFloat
     var corner: CGFloat = 4
     var body: some View {
         Group {
-            if let u = URL(string: url), !url.isEmpty {
+            if let u = safeImageURL(url), !url.isEmpty {
                 AsyncImage(url: u, transaction: Transaction(animation: .easeIn(duration: 0.15))) { phase in
                     if let img = phase.image { img.resizable().scaledToFill() } else { placeholder }
                 }

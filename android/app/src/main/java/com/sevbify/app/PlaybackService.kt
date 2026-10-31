@@ -110,7 +110,8 @@ class PlaybackService : MediaLibraryService() {
          *  Auto may connect: other apps can't read your playlists or what you listened to. */
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
             val ok = controller.packageName == packageName || controller.isTrusted ||
-                controller.packageName == ANDROID_AUTO || controller.packageName == "com.google.android.carassistant"
+                ((controller.packageName == ANDROID_AUTO || controller.packageName == "com.google.android.carassistant")
+                    && isRealGoogleApp(this@PlaybackService, controller.packageName))
             return if (ok) super.onConnect(session, controller) else MediaSession.ConnectionResult.reject()
         }
 
@@ -177,6 +178,18 @@ class PlaybackService : MediaLibraryService() {
 
     companion object {
         const val ANDROID_AUTO = "com.google.android.projection.gearhead"
+
+        /** Android Auto really is Google's app: built into the phone, or installed from the Play Store. An app
+         *  sideloaded under the same name (possible only when Android Auto isn't installed) can't see your library. */
+        fun isRealGoogleApp(context: android.content.Context, pkg: String): Boolean = try {
+            val pm = context.packageManager
+            val info = pm.getApplicationInfo(pkg, 0)
+            val system = info.flags and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or
+                android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+            val installer = if (android.os.Build.VERSION.SDK_INT >= 30) pm.getInstallSourceInfo(pkg).installingPackageName
+                            else @Suppress("DEPRECATION") pm.getInstallerPackageName(pkg)
+            system || installer == "com.android.vending"
+        } catch (e: Exception) { false }
         @Volatile var carConnected = false
         /** HTTP headers some streams need (yt-dlp gives them with the link). */
         val headers = ConcurrentHashMap<String, Map<String, String>>()

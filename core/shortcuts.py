@@ -4,6 +4,7 @@
 and showing its logo. Uses Windows' own shortcut maker (WScript.Shell through PowerShell); no UI code here.
 """
 import os
+import ntpath
 import subprocess
 import sys
 
@@ -55,6 +56,13 @@ def powershell_script(target, paths):
     return "; ".join(lines)
 
 
+def system_program(name):
+    """Full path of a Windows program (powershell, cmd) so a same-named file elsewhere is never run."""
+    root = os.environ.get("SystemRoot") or r"C:\Windows"
+    return {"powershell": ntpath.join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
+            "cmd": ntpath.join(root, "System32", "cmd.exe")}[name]
+
+
 def create_windows_shortcuts(target=None, run=subprocess.run):
     """Create the Desktop and Start-menu shortcuts. Returns (ok, message)."""
     target = target or sys.executable
@@ -62,7 +70,7 @@ def create_windows_shortcuts(target=None, run=subprocess.run):
     for p in paths:
         os.makedirs(os.path.dirname(p), exist_ok=True)
     try:
-        r = run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+        r = run([system_program("powershell") if os.name == "nt" else "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
                  powershell_script(target, paths)],
                 capture_output=True, text=True, timeout=30, creationflags=0x08000000 if os.name == "nt" else 0)
     except Exception as e:

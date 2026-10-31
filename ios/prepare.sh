@@ -27,8 +27,8 @@ cp python/ios_entry.py app/
 cp ../VERSION app/VERSION
 
 # Pure-Python packages only (no compiled parts), so they run on the iPhone as they are.
-python3 -m pip install --quiet --no-compile --no-deps --only-binary=:all: --target app_packages \
-  yt-dlp mutagen certifi
+python3 -m pip install --quiet --no-compile --no-deps --only-binary=:all: --require-hashes --target app_packages \
+  -r ../android/app/phone-requirements.txt
 # yt-dlp-ejs is for Deno, which can't run on an iPhone.
 find app_packages -name "__pycache__" -type d -prune -exec rm -rf {} +
 rm -rf app_packages/bin

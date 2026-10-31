@@ -116,9 +116,9 @@ chaquopy {
     defaultConfig {
         version = "3.12"
         pip {
-            install("yt-dlp")
-            install("mutagen")
-            install("certifi")
+            // Exact versions with their SHA-256 (phone-requirements.txt): nothing changed on PyPI gets in.
+            options("--require-hashes")
+            install("-r", "phone-requirements.txt")
         }
     }
     sourceSets {

@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         SevbifyApp.instance.scope.launch {
             try { Profile.backupToDownloads(this@MainActivity) } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.w("Sevbify", "profile backup: ${e.message}")
+                if (SevbifyApp.debuggable) android.util.Log.w("Sevbify", "profile backup: ${e.message}")
             }
         }
         // The picture-in-picture window was closed (or Sevbify went away without it): pause the video.

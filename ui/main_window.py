@@ -1,3 +1,4 @@
+import html as _html
 import os
 import sys
 import time
@@ -2888,7 +2889,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         from . import dialogs
         n = sum(1 for p in self.playlists if p.folder == name)
         extra = (f" The {n} playlist{'s' if n != 1 else ''} inside stay in Your Library." if n else "")
-        if dialogs.confirm(self, "Delete folder?", f"This will delete <b>{name}</b> from <b>Your Library</b>.{extra}"):
+        if dialogs.confirm(self, "Delete folder?", f"This will delete <b>{_html.escape(name)}</b> from <b>Your Library</b>.{extra}"):
             self.delete_folder(name)
 
     # --- Playlist covers ----------------------------------------------------------------------------------
@@ -4095,7 +4096,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         """Spotify's "Delete from Your Library?" card. Only the playlist goes; music files are never touched."""
         from . import dialogs
         if dialogs.confirm(self, "Delete from Your Library?",
-                           f"This will delete <b>{pl.name}</b> from <b>Your Library</b>. Your music files stay "
+                           f"This will delete <b>{_html.escape(pl.name)}</b> from <b>Your Library</b>. Your music files stay "
                            "where they are."):
             self.delete_playlist(pl)
 
@@ -5502,7 +5503,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         if box.clickedButton() is not go:
             return
         if not can:
-            QDesktopServices.openUrl(QUrl(r.get("page") or app_update.ALLOWED_PREFIX))
+            from . import open_web
+            open_web(r.get("page") if str(r.get("page", "")).startswith("https://github.com/Obamna1234/Sevbify/")
+                     else "https://github.com/Obamna1234/Sevbify/releases")
             return
         self._update_busy = True
         self.show_status(f"Downloading Sevbify {r['latest']}…", kind="info", timeout_ms=600000)

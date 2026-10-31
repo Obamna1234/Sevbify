@@ -17,6 +17,7 @@ from .cards import Card
 from .shows_page import ShowsHome, ShowPage, EpisodeRow, BrowseTile, TileGrid, TILE_COLOURS, GenrePage
 from .video_page import VideoPage
 from . import theme
+from . import open_web
 
 ITEM_SOURCES = ("podcast", "audiobook", "youtube")
 RESUME_SAVE_MS = 5000
@@ -421,7 +422,7 @@ class ShowsMixin:
             from PyQt6.QtGui import QDesktopServices
             from PyQt6.QtCore import QUrl
             menu.addAction("↗  Open web page").triggered.connect(
-                lambda: QDesktopServices.openUrl(QUrl(song.track.page_url)))
+                lambda: open_web(song.track.page_url))
         menu.exec(pos)
 
     def _toggle_follow(self):

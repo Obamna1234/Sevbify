@@ -128,6 +128,18 @@ def open_window(qapp):
     for w in windows:
         w.close()
     wait_for_all(10000)
+    # Stop the closed windows' timers and free them now, not whenever Python's garbage collector gets round
+    # to it (that could happen in the middle of a later test's timer and crash the test run).
+    import gc
+    from PyQt6.QtCore import QTimer
+    for w in windows:
+        for t in w.findChildren(QTimer):
+            t.stop()
+        w.deleteLater()
+    windows.clear()
+    qapp.processEvents()
+    gc.collect()
+    qapp.processEvents()
 
 
 @pytest.fixture

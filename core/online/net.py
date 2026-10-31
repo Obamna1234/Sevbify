@@ -7,8 +7,10 @@
 - Never used on the UI thread: call it from a background task.
 """
 import hashlib
+import ipaddress
 import json
 import os
+import socket
 import ssl
 import threading
 import time
@@ -32,6 +34,53 @@ def is_web_url(url):
     except ValueError:
         return False
     return p.scheme.lower() in WEB_SCHEMES and bool(p.netloc)
+
+
+_HOST_OK = {}             # host -> (public?, when checked)
+
+
+def is_public_host(host):
+    """False for an address on your own network or computer (192.168.x.x, 10.x, 127.0.0.1, 169.254.x.x, ...).
+    Links from outside (podcast feeds, imported files, web answers) must never make Sevbify reach your router,
+    printer or other devices at home."""
+    host = (host or "").strip("[]").lower()
+    if not host or host == "localhost" or host.endswith((".local", ".lan", ".home.arpa", ".internal")):
+        return False
+    hit = _HOST_OK.get(host)
+    if hit and time.time() - hit[1] < 600:
+        return hit[0]
+    try:
+        addrs = {info[4][0].split("%")[0] for info in socket.getaddrinfo(host, None)}
+    except OSError:
+        addrs = set()             # can't look it up here (offline, or a proxy does it): the request decides
+    ok = True
+    for a in addrs:
+        try:
+            ip = ipaddress.ip_address(a)
+        except ValueError:
+            continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast \
+                or ip.is_unspecified or (ip.version == 6 and ip.ipv4_mapped and not ip.ipv4_mapped.is_global):
+            ok = False
+    _HOST_OK[host] = (ok, time.time())
+    return ok
+
+
+def check_public_url(url):
+    if not is_web_url(url):
+        raise ServiceError("Only web (http/https) addresses can be opened.")
+    if not is_public_host(urllib.parse.urlparse(url).hostname):
+        raise ServiceError("That link points to a device on your own network, so Sevbify didn't open it.")
+
+
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow a redirect only to another public web address (never file:, ftp: or your own network)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        newurl = urllib.parse.urljoin(req.full_url, newurl)
+        if not is_web_url(newurl) or not is_public_host(urllib.parse.urlparse(newurl).hostname):
+            raise urllib.error.HTTPError(newurl, code, "redirect refused", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class OfflineError(Exception):
@@ -66,6 +115,7 @@ class NetClient:
         self.timeout = timeout
         self._opener = opener          # tests inject a fake opener: (url) -> bytes
         self._ctx = _ssl_context()
+        self._web = urllib.request.build_opener(urllib.request.HTTPSHandler(context=self._ctx), _SafeRedirect)
         self._lock = threading.Lock()
         self._last_request = {}
         self.online = None             # None = unknown, True/False after a request
@@ -104,9 +154,10 @@ class NetClient:
             if self._opener is not None:
                 data = self._opener(url)
             else:
+                check_public_url(url)
                 req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                            "Accept": "application/json, */*"})
-                with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as r:
+                with self._web.open(req, timeout=self.timeout) as r:
                     data = r.read(MAX_RESPONSE_BYTES + 1)
                 if len(data) > MAX_RESPONSE_BYTES:
                     raise ServiceError(f"{urllib.parse.urlparse(url).hostname} sent far more than expected")
@@ -211,17 +262,20 @@ class NetClient:
         os.replace(tmp, path)
         return path
 
+    MAX_DOWNLOAD_BYTES = 3 * 1024 ** 3      # an episode or chapter is never bigger (a full day of audio is ~1 GB)
+
     def download(self, url, dest_path, progress=None, cancelled=lambda: False, chunk=64 * 1024):
         """Download a file (only used for sources that allow downloading)."""
         if not self.enabled():
             raise OnlineDisabled("Online features are switched off in Settings.")
         if not is_web_url(url):
             raise ServiceError("Only web (http/https) addresses can be downloaded.")
+        check_public_url(url)
         self._throttle(url)
         tmp = dest_path + ".part"
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout * 3, context=self._ctx) as r, open(tmp, "wb") as f:
+            with self._web.open(req, timeout=self.timeout * 3) as r, open(tmp, "wb") as f:
                 total = int(r.headers.get("Content-Length") or 0)
                 done = 0
                 while True:
@@ -232,6 +286,8 @@ class NetClient:
                         break
                     f.write(block)
                     done += len(block)
+                    if done > self.MAX_DOWNLOAD_BYTES:
+                        raise OSError("the file is far bigger than an episode can be")
                     if progress:
                         progress(done, total)
             os.replace(tmp, dest_path)
@@ -247,8 +303,11 @@ class NetClient:
             raise OfflineError(f"Download failed: {getattr(e, 'reason', e)}") from e
 
     def clear_cache(self):
-        for kind in ("json", "images"):
+        """Settings → Clear cache: every saved answer, picture and page (feeds, imported playlist pages)."""
+        for kind in ("json", "images", "pages"):
             folder = os.path.join(self.cache_dir, kind)
+            if not os.path.isdir(folder):
+                continue
             for name in os.listdir(folder):
                 try:
                     os.remove(os.path.join(folder, name))

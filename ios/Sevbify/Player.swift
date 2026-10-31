@@ -279,7 +279,9 @@ final class Player: ObservableObject {
             let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs])
             return (try asset(o), false)
         } catch {
+            #if DEBUG
             NSLog("Sevbify: full song not found for %@: %@", t.title, error.localizedDescription)
+            #endif
             throw NoSource(errorDescription: "full song not found")
         }
     }
@@ -318,7 +320,7 @@ final class Player: ObservableObject {
         if let (key, art) = artwork, key == t.art { info[MPMediaItemPropertyArtwork] = art }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         let wanted = t.art
-        if !wanted.isEmpty && artwork?.0 != wanted, let url = URL(string: wanted) {
+        if !wanted.isEmpty && artwork?.0 != wanted, let url = safeImageURL(wanted) {
             Task {
                 guard let (data, _) = try? await URLSession.shared.data(from: url), let img = UIImage(data: data) else { return }
                 let art = MPMediaItemArtwork(boundsSize: img.size) { _ in img }

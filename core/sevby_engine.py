@@ -32,12 +32,45 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 
-# An updated yt-dlp (downloaded from About & updates) wins over the copy bundled in the app.
-YTDLP_UPDATE_DIR = Path.home() / ".sevby_ytdlp"
+# An updated yt-dlp (downloaded from About & updates) wins over the copy bundled in the app. It lives in
+# Sevbify's own private data folder (not a folder shared with other apps), and is only used while it still
+# matches the official checksum recorded when it was downloaded; otherwise the bundled copy is used.
+def _sevbify_data_dir() -> Path:
+    if os.environ.get("SEVBIFY_DATA_DIR"):
+        return Path(os.environ["SEVBIFY_DATA_DIR"])
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or os.path.expanduser("~\\AppData\\Roaming")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return Path(base) / "Sevbify"
+
+
+YTDLP_UPDATE_DIR = _sevbify_data_dir() / "yt-dlp-update"
 YTDLP_ACTIVE = ""
+
+
+def ytdlp_update_ok(folder=None) -> bool:
+    """The downloaded yt-dlp is still exactly the file whose official checksum was checked."""
+    import hashlib
+    folder = Path(folder or YTDLP_UPDATE_DIR)
+    try:
+        want = (folder / "yt-dlp.sha256").read_text(encoding="ascii").strip().lower()
+        if len(want) != 64:
+            return False
+        h = hashlib.sha256()
+        with open(folder / "yt-dlp", "rb") as f:
+            for block in iter(lambda: f.read(1 << 20), b""):
+                h.update(block)
+        return h.hexdigest() == want
+    except (OSError, ValueError):
+        return False
+
+
 try:
     _upd = YTDLP_UPDATE_DIR / "yt-dlp"
-    if _upd.is_file():
+    if _upd.is_file() and not _upd.is_symlink() and ytdlp_update_ok():
         import importlib.machinery
 
         sys.path.insert(0, str(_upd))
@@ -194,10 +227,10 @@ def _fetch(url: str, headers: dict, data: bytes | None = None) -> tuple[str | No
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             status = resp.status
-            raw = resp.read().decode("utf-8", errors="replace").strip()
+            raw = resp.read(_MAX_WEB).decode("utf-8", errors="replace").strip()
     except urllib.error.HTTPError as e:
         try:
-            body = e.read().decode("utf-8", errors="replace")
+            body = e.read(_MAX_WEB).decode("utf-8", errors="replace")
         except Exception:
             body = ""
         return None, _describe_block(e.code, body)
@@ -456,7 +489,7 @@ def _http_json(req: urllib.request.Request, timeout: int = 20) -> dict:
     for attempt in range(6):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                return json.loads(resp.read(_MAX_WEB).decode("utf-8"))
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < 5:
                 # Spotify rate limit (can happen on very large playlists): wait as told, retry
@@ -467,7 +500,7 @@ def _http_json(req: urllib.request.Request, timeout: int = 20) -> dict:
                 time.sleep(min(max(wait, 1), 60))
                 continue
             try:
-                body = e.read().decode("utf-8", errors="replace")[:300]
+                body = e.read(_MAX_WEB).decode("utf-8", errors="replace")[:300]
             except Exception:
                 body = ""
             raise RuntimeError(f"HTTP {e.code} {body}".strip()) from e
@@ -886,7 +919,7 @@ def fetch_apple_playlist(url: str) -> tuple[str, list[str]]:
     })
     try:
         with urllib.request.urlopen(req, timeout=25) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
+            html = resp.read(_MAX_WEB).decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
         raise ValueError(f"Apple Music said no (HTTP {e.code}). Is the playlist public (Share > Copy Link)?")
     except Exception as e:
@@ -1064,10 +1097,30 @@ def _thumb_urls(info: dict | None) -> list[str]:
     return urls[:5]
 
 
+_TMP = []
+
+
+def _tmp_path(name: str) -> str:
+    """A file in Sevbify's own temporary folder (made fresh, only you can open it, removed on exit), so nobody
+    else on the computer can swap a cover picture or point the name at one of your files."""
+    if not _TMP or not os.path.isdir(_TMP[0]):
+        import atexit
+        import shutil
+        d = tempfile.mkdtemp(prefix="sevbify-")
+        _TMP[:] = [d]
+        atexit.register(shutil.rmtree, d, True)
+    return os.path.join(_TMP[0], name)
+
+
+def _image_url_ok(url: str) -> bool:
+    from .online.net import is_web_url, is_public_host
+    return is_web_url(url) and is_public_host(urllib.parse.urlparse(url).hostname)
+
+
 def _to_jpg(src: str) -> str | None:
     if src.lower().endswith((".jpg", ".jpeg")):
         return src
-    dst = os.path.join(tempfile.gettempdir(), f"sevby_cover_{os.getpid()}.jpg")
+    dst = _tmp_path("cover.jpg")
     r = _run_ff(["-y", "-i", src, "-q:v", "2", dst])
     return dst if r is not None and r.returncode == 0 and os.path.isfile(dst) else None
 
@@ -1080,16 +1133,18 @@ def _find_or_fetch_cover(out_dir: str, safe: str, info: dict | None) -> str | No
             if jpg:
                 return jpg
     for url in _thumb_urls(info):
+        if not _image_url_ok(url):
+            continue
         try:
             req = urllib.request.Request(url, headers={"User-Agent": SIMPLE_UA})
             with urllib.request.urlopen(req, timeout=20) as resp:
-                data = resp.read()
+                data = resp.read(_MAX_WEB)
         except Exception:
             continue
         if len(data) < 1000:
             continue
         ext = ".webp" if data[:4] == b"RIFF" else (".png" if data[:8] == b"\x89PNG\r\n\x1a\n" else ".jpg")
-        tmp = os.path.join(tempfile.gettempdir(), f"sevby_thumb_{os.getpid()}{ext}")
+        tmp = _tmp_path("thumb" + ext)
         try:
             with open(tmp, "wb") as f:
                 f.write(data)
@@ -1151,6 +1206,8 @@ def _ensure_cover(out_dir: str, safe: str, info: dict | None, log) -> None:
 
 # Set by Sevbify: which audio to keep when saving the original (smaller files: a lower-bitrate original), and
 # the MP3 quality when converting (yt-dlp/ffmpeg: a bitrate like "160" or a VBR level "0"-"9").
+_MAX_WEB = 60 * 1024 * 1024        # most a page, JSON answer or picture may be (more is cut off, not stored)
+_MAX_BIN = 200 * 1024 * 1024       # the yt-dlp program
 AUDIO_FORMAT_ORIGINAL = "bestaudio[ext=m4a]/bestaudio/best"
 MP3_QUALITY = "0"
 
@@ -1312,7 +1369,7 @@ def _crop_box(src: str) -> tuple[int, int, int, int, int, int] | None:
 def _square_jpg(src: str) -> str | None:
     """Make a square cover from a video thumbnail: trim black bars that are the same on both sides,
     then crop the centre square if the picture is nearly square, else show it whole on a black square."""
-    dst = os.path.join(tempfile.gettempdir(), f"sevby_square_{os.getpid()}.jpg")
+    dst = _tmp_path("square.jpg")
     vf = []
     box = _crop_box(src)
     cw = ch = None
@@ -1343,16 +1400,18 @@ def _square_jpg(src: str) -> str | None:
 
 
 def _fetch_image(url: str) -> str | None:
+    if not _image_url_ok(url):
+        return None
     try:
         req = urllib.request.Request(url, headers={"User-Agent": SIMPLE_UA})
         with urllib.request.urlopen(req, timeout=20) as resp:
-            data = resp.read()
+            data = resp.read(_MAX_WEB)
     except Exception:
         return None
     if len(data) < 1000:
         return None
     ext = ".png" if data[:8] == b"\x89PNG\r\n\x1a\n" else (".webp" if data[:4] == b"RIFF" else ".jpg")
-    tmp = os.path.join(tempfile.gettempdir(), f"sevby_cover_dl_{os.getpid()}{ext}")
+    tmp = _tmp_path("cover_dl" + ext)
     try:
         with open(tmp, "wb") as f:
             f.write(data)
@@ -2018,17 +2077,22 @@ MIN_BYTES = 100 * 1024
 
 
 def existing_song(out_dir: str, safe: str) -> str | None:
-    """A finished copy of this song already in the folder (>= 100 KB). Smaller files are leftovers of an
-    interrupted run: they are deleted so the song gets downloaded again."""
+    """A finished copy of this song already in the folder (>= 100 KB). A smaller file is probably left over
+    from an interrupted run, but it could be yours, so it is never deleted: it is renamed
+    "<name>.<ext>.incomplete" (kept) and the song is downloaded again."""
     found = None
     for ext in ("mp3", "m4a", "flac"):
         p = os.path.join(out_dir, f"{safe}.{ext}")
-        if os.path.isfile(p):
+        if os.path.isfile(p) and not os.path.islink(p):
             try:
                 if os.path.getsize(p) >= MIN_BYTES:
                     found = found or p
                 else:
-                    os.remove(p)
+                    keep, n = p + ".incomplete", 1
+                    while os.path.exists(keep):
+                        n += 1
+                        keep = f"{p}.incomplete{n}"
+                    os.rename(p, keep)
             except OSError:
                 pass
     return found
@@ -2215,7 +2279,7 @@ def _http_get(url: str, timeout: int = 20) -> bytes | None:
     try:
         req = urllib.request.Request(url, headers={"User-Agent": _FREE_UA})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read()
+            return resp.read(_MAX_BIN)
     except Exception:
         return None
 
@@ -2270,7 +2334,7 @@ def ytdlp_latest_tag() -> str | None:
             headers={"User-Agent": "SEVBY", "Accept": "application/vnd.github+json"},
         )
         with urllib.request.urlopen(req, timeout=15) as r:
-            return json.loads(r.read().decode("utf-8")).get("tag_name") or None
+            return json.loads(r.read(_MAX_WEB).decode("utf-8")).get("tag_name") or None
     except Exception:
         return None
 
@@ -2368,31 +2432,16 @@ def app_latest_release():
             headers={"User-Agent": "SEVBY", "Accept": "application/vnd.github+json"},
         )
         with urllib.request.urlopen(req, timeout=15) as r:
-            data = json.loads(r.read().decode("utf-8"))
+            data = json.loads(r.read(_MAX_WEB).decode("utf-8"))
         return True, app_pick_release(data, UPDATE_PRERELEASES)
     except Exception:
         return False, None
 
 
 def download_ytdlp_update(tag: str) -> tuple[bool, str]:
-    """Download the official yt-dlp release file into the user's folder. It is picked up on next start."""
-    try:
-        YTDLP_UPDATE_DIR.mkdir(parents=True, exist_ok=True)
-        dest = YTDLP_UPDATE_DIR / "yt-dlp"
-        tmp = YTDLP_UPDATE_DIR / "yt-dlp.part"
-        url = f"https://github.com/yt-dlp/yt-dlp/releases/download/{tag}/yt-dlp"
-        req = urllib.request.Request(url, headers={"User-Agent": "SEVBY"})
-        with urllib.request.urlopen(req, timeout=60) as r, open(tmp, "wb") as f:
-            shutil.copyfileobj(r, f)
-        import zipfile
-
-        if not zipfile.is_zipfile(tmp):
-            tmp.unlink(missing_ok=True)
-            return False, "The download wasn't a valid yt-dlp file. Try again later."
-        os.replace(tmp, dest)
-        return True, "ok"
-    except Exception as e:
-        return False, f"Couldn't download the update ({e})."
+    """Download the official yt-dlp release (checked against its published SHA-256). Used from next start."""
+    from core.updates import download_verified_ytdlp
+    return download_verified_ytdlp(tag)
 
 
 def diagnostics_text() -> str:

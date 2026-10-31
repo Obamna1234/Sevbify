@@ -1,8 +1,8 @@
 """Checking for updates (no UI code).
 
 - yt-dlp: YouTube changes often and an old yt-dlp is the usual reason full songs or downloads stop working. The
-  newest official yt-dlp release (github.com/yt-dlp/yt-dlp) is downloaded with SEVBY's updater into
-  ~/.sevby_ytdlp (shared with SEVBY) and used from the next start.
+  newest official yt-dlp release (github.com/yt-dlp/yt-dlp) is checked against its published SHA-256, saved
+  in Sevbify's own data folder, and used from the next start (only while it still matches that checksum).
 - Sevbify: the newest release on Sevbify's GitHub page; core/app_update.py downloads and installs it.
 Only GitHub is contacted, and only when online features are on.
 """
@@ -34,7 +34,7 @@ def _get(url, timeout=60):
     import urllib.request
     req = urllib.request.Request(url, headers={"User-Agent": "Sevbify"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+        return r.read(200 * 1024 * 1024)       # never more than a program can be
 
 
 def download_verified_ytdlp(tag, fetch=None, dest_dir=None):
@@ -59,13 +59,19 @@ def download_verified_ytdlp(tag, fetch=None, dest_dir=None):
         return False, f"Couldn't download the update ({e})."
     if hashlib.sha256(data).hexdigest() != expected:
         return False, "The downloaded yt-dlp didn't match its official checksum, so it was thrown away."
+    import zipfile
+    import io
+    if not zipfile.is_zipfile(io.BytesIO(data)):
+        return False, "The download wasn't a valid yt-dlp file, so it wasn't installed."
     e = downloader.engine()
     folder = dest_dir or str(e.YTDLP_UPDATE_DIR)
-    os.makedirs(folder, exist_ok=True)
-    tmp = os.path.join(folder, "yt-dlp.part")
-    with open(tmp, "wb") as f:
-        f.write(data)
-    os.replace(tmp, os.path.join(folder, "yt-dlp"))
+    os.makedirs(folder, mode=0o700, exist_ok=True)
+    for name, blob in (("yt-dlp", data), ("yt-dlp.sha256", expected.encode("ascii"))):
+        tmp = os.path.join(folder, name + ".part")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(blob)
+        os.replace(tmp, os.path.join(folder, name))
     return True, "ok"
 
 

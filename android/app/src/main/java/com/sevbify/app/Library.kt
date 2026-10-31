@@ -39,7 +39,7 @@ data class Settings(
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
     var showPlaylistOrigin: Boolean = false,
     var skipSponsors: Boolean = true,
-    var profileBackup: Boolean = true,         // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
+    var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -81,7 +81,7 @@ data class Settings(
             s.lyrics = o.optBoolean("lyrics", true)
             s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
-            s.profileBackup = o.optBoolean("profile_backup", true); s.profileBackupUri = o.optString("profile_backup_uri")
+            s.profileBackup = o.optBoolean("profile_backup", false); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             return s

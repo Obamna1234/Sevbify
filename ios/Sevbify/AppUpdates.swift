@@ -47,7 +47,10 @@ struct UpdateAlert: ViewModifier {
         content.alert("Update Sevbify", isPresented: $updates.showing, presenting: updates.offer) { o in
             Button("Open SideStore") { updates.openStore("sidestore") }
             Button("Open AltStore") { updates.openStore("altstore") }
-            Button("Release page") { if let u = URL(string: o.page) { UIApplication.shared.open(u) } }
+            Button("Release page") {
+                let page = isSevbifyPage(o.page) ? o.page : "https://github.com/Obamna1234/Sevbify/releases"
+                if let u = URL(string: page) { UIApplication.shared.open(u) }
+            }
             Button("Later", role: .cancel) {}
         } message: { o in
             Text("Sevbify \(o.latest) is available (you have \(updates.version)). Update it in SideStore or AltStore: your playlists, downloads and settings stay.")

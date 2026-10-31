@@ -66,7 +66,9 @@ enum Bridge {
         else { throw Failure(message: "Unreadable answer from Python") }
         if obj["ok"] as? Bool == true { return obj["value"] ?? NSNull() }
         let msg = obj["error"] as? String ?? "Something went wrong"
+        #if DEBUG   // test builds only: errors can hold song names or addresses
         if let trace = obj["trace"] as? String { NSLog("Sevbify %@ failed: %@\n%@", name, msg, trace) }
+        #endif
         throw Failure(message: msg)
     }
 

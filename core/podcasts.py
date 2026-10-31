@@ -5,7 +5,8 @@ Where the data comes from (nothing else is contacted):
   (rss.applemarketingtools.com). No account, no sign-in.
 - Each show's own public RSS feed: episodes, artwork, descriptions and the audio files, exactly as the show
   publishes them for every podcast app. Episodes can be streamed and downloaded.
-- YouTube channels (video podcasts) through yt-dlp, only when the user adds a channel link.
+- YouTube (video podcasts) through yt-dlp: a channel link you add, and on the Podcasts tab a search for the
+  show's own channel when Apple's directory has no show by that name.
 
 Episodes become OnlineTrack objects (source "podcast" / "youtube"), so they play in the normal player and queue.
 """
@@ -203,7 +204,7 @@ def find_youtube_channel(title, author="", extract=None):
 
         def extract(query):
             opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-                    "skip_download": True, "socket_timeout": 20}
+                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY}
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(query, download=False)
     info = extract(f"ytsearch15:{title} podcast") or {}
@@ -290,8 +291,9 @@ def resolve_feed(net, show):
 def parse_feed(xml_text, feed_url=""):
     """(Show, [Episode]) from a podcast RSS feed, newest first."""
     raw = xml_text.encode("utf-8") if isinstance(xml_text, str) else xml_text
-    if b"<!ENTITY" in raw[:200000]:
-        # Real feeds never declare entities; a feed that does could expand them to gigabytes ("billion laughs").
+    if b"<!ENTITY" in raw or b"<!DOCTYPE" in raw:
+        # Real feeds never declare entities or a DOCTYPE; one that does could expand to gigabytes ("billion laughs").
+        # The whole feed is checked (older phones' XML readers have no protection of their own).
         raise ValueError("That feed can't be read safely.")
     try:
         root = ET.fromstring(raw)
@@ -357,6 +359,19 @@ def fetch_show(net, show):
 
 
 # --- YouTube channels (video podcasts) ------------------------------------------------------------------
+YOUTUBE_ONLY = ["youtube", "youtube:.*"]     # yt-dlp may only use its YouTube readers for podcasts
+
+
+def is_youtube_video(url):
+    """https://www.youtube.com/watch?v=… / youtu.be/… / m.youtube.com / music.youtube.com only."""
+    try:
+        p = urllib.parse.urlparse(url or "")
+    except ValueError:
+        return False
+    host = (p.hostname or "").lower()
+    return p.scheme in ("http", "https") and (host in ("youtu.be", "youtube.com") or host.endswith(".youtube.com"))
+
+
 def is_youtube_link(text):
     return bool(YOUTUBE_RE.search(text or ""))
 
@@ -382,10 +397,14 @@ def fetch_youtube_channel(url, show=None, extract=None, limit=60):
 
         def extract(u):
             opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-                    "skip_download": True, "playlistend": limit, "socket_timeout": 20}
+                    "skip_download": True, "playlistend": limit, "socket_timeout": 20,
+                    "allowed_extractors": YOUTUBE_ONLY}
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(u, download=False)
-    info = extract(youtube_list_url(url) or url) or {}
+    list_url = youtube_list_url(url)
+    if not list_url:
+        raise ValueError("That isn't a YouTube channel or playlist link.")   # e.g. a crafted profile file
+    info = extract(list_url) or {}
     title = info.get("channel") or info.get("uploader") or info.get("title") or "YouTube channel"
     title = re.sub(r"\s+-\s+Videos$", "", title)
     thumbs = [t.get("url") for t in (info.get("thumbnails") or []) if t.get("url")]
@@ -398,9 +417,9 @@ def fetch_youtube_channel(url, show=None, extract=None, limit=60):
     episodes = []
     for i, entry in enumerate((info.get("entries") or [])[:limit]):
         vid = entry.get("id") or ""
-        if not vid:
+        if not re.fullmatch(r"[\w-]{6,20}", vid):
             continue
-        page = entry.get("url") if str(entry.get("url", "")).startswith("http") else f"https://www.youtube.com/watch?v={vid}"
+        page = f"https://www.youtube.com/watch?v={vid}"          # always YouTube's own page, never a link from outside
         thumbs = [t.get("url") for t in (entry.get("thumbnails") or []) if t.get("url")]
         track = OnlineTrack(title=entry.get("title") or "Video", artist=show.title, album=show.title,
                             duration_ms=int((entry.get("duration") or 0) * 1000),
@@ -431,7 +450,8 @@ def _ydl(extra):
     e = downloader.engine()
     if e.yt_dlp is None:
         raise ValueError("yt-dlp is missing.")
-    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True, "socket_timeout": 20}
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True, "socket_timeout": 20,
+            "allowed_extractors": YOUTUBE_ONLY}
     loc = e._ffmpeg_location()
     if loc:
         opts["ffmpeg_location"] = loc
@@ -457,6 +477,8 @@ def youtube_stream(page_url, video=False, extract=None, max_height=720):
             fmt = video_format(max_height) if video else quality.STREAM_AUDIO_FORMAT
             with _ydl({"format": fmt, "skip_download": True}) as ydl:
                 return ydl.extract_info(url, download=False)
+    if not is_youtube_video(page_url):
+        raise ValueError("That isn't a YouTube video link.")
     info = extract(page_url) or {}
     if not info.get("url"):
         raise ValueError("YouTube didn't give a playable link for this video.")
@@ -473,6 +495,8 @@ def youtube_video_streams(page_url, max_height=720, extract=None):
                    f"b[height<={h}]/b")
             with _ydl({"format": fmt, "skip_download": True}) as ydl:
                 return ydl.extract_info(url, download=False)
+    if not is_youtube_video(page_url):
+        raise ValueError("That isn't a YouTube video link.")
     info = extract(page_url) or {}
     parts = info.get("requested_formats") or []
     headers = dict(info.get("http_headers") or {})
@@ -486,7 +510,9 @@ def youtube_video_streams(page_url, max_height=720, extract=None):
 
 def download_youtube_audio(page_url, out_path_without_ext):
     """Save an episode's sound as an MP3 (yt-dlp + ffmpeg). Returns the file path."""
-    with _ydl({"format": "bestaudio/best", "outtmpl": out_path_without_ext + ".%(ext)s",
+    if not is_youtube_video(page_url):
+        raise ValueError("That isn't a YouTube video link.")
+    with _ydl({"format": "bestaudio/best", "outtmpl": out_path_without_ext.replace("%", "%%") + ".%(ext)s",
                "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "128"}]}) as ydl:
         ydl.download([page_url])
     path = out_path_without_ext + ".mp3"

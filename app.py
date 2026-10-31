@@ -213,8 +213,8 @@ def install_error_guard():
         details = "".join(traceback.format_exception(exc_type, exc, tb))
         _log_stderr(details)
         try:
-            os.makedirs(os.path.dirname(log_path), exist_ok=True)
-            with open(log_path, "a", encoding="utf-8") as f:
+            os.makedirs(os.path.dirname(log_path), mode=0o700, exist_ok=True)
+            with open(os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600), "a", encoding="utf-8") as f:
                 f.write(f"\n=== {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n{details}")
         except OSError:
             pass
@@ -261,6 +261,16 @@ def set_app_identity(app):
 
 
 def main():
+    # Windows: never run a program that happens to sit in the current folder (a planted "ffmpeg.exe" in
+    # Downloads, say) instead of the real one.
+    os.environ["NoDefaultCurrentDirectoryInExePath"] = "1"
+    # Mac/Linux: only you can read Sevbify's data folder (playlists, history, music-server sign-ins).
+    try:
+        from core.storage import default_data_dir, keep_private
+        os.makedirs(default_data_dir(), mode=0o700, exist_ok=True)
+        keep_private(default_data_dir())
+    except Exception as e:
+        _log_stderr(f"Could not lock the data folder: {e}\n")
     # No black console windows flashing when ffmpeg / yt-dlp run in the background (Windows).
     from core.platform_fixes import hide_console_windows
     hide_console_windows()

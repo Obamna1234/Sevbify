@@ -60,7 +60,12 @@ def test_settings_buttons(window, qapp, tmp_path, monkeypatch):
 def test_ytdlp_update_is_checked_against_the_official_checksum(tmp_path):
     import hashlib
     from core import updates
-    good = b"PK\x03\x04 pretend yt-dlp"
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("__main__.py", "print('pretend yt-dlp')")
+    good = buf.getvalue()
     sums = f"{hashlib.sha256(good).hexdigest()}  yt-dlp\n{'0' * 64}  yt-dlp.exe\n".encode()
 
     def fetch(body):
@@ -68,7 +73,15 @@ def test_ytdlp_update_is_checked_against_the_official_checksum(tmp_path):
 
     ok, msg = updates.download_verified_ytdlp("2026.10.26", fetch=fetch(good), dest_dir=str(tmp_path))
     assert ok and (tmp_path / "yt-dlp").read_bytes() == good
+    from core import sevby_engine
+    assert sevby_engine.ytdlp_update_ok(tmp_path)              # used at the next start
+    (tmp_path / "yt-dlp").write_bytes(good + b"changed later")
+    assert not sevby_engine.ytdlp_update_ok(tmp_path)          # changed after the check: the bundled copy is used
     (tmp_path / "yt-dlp").unlink()
+    ok, msg = updates.download_verified_ytdlp(
+        "2026.10.26", fetch=lambda url: (f"{hashlib.sha256(b'not a zip').hexdigest()}  yt-dlp\n".encode()
+                                         if url.endswith("SHA2-256SUMS") else b"not a zip"), dest_dir=str(tmp_path))
+    assert not ok and not (tmp_path / "yt-dlp").exists()
     ok, msg = updates.download_verified_ytdlp("2026.10.26", fetch=fetch(b"tampered"), dest_dir=str(tmp_path))
     assert not ok and "checksum" in msg and not (tmp_path / "yt-dlp").exists()
     ok, msg = updates.download_verified_ytdlp("../../evil", fetch=fetch(good), dest_dir=str(tmp_path))

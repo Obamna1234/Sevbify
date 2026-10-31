@@ -24,15 +24,17 @@ jobs:
       apple: ${{ steps.p.outputs.apple }}
       matrix: ${{ steps.p.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - id: p
         env:
           MSG: ${{ github.event.head_commit.message }}
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
         run: |
           V=$(tr -d '[:space:]' < VERSION)
           APPLE=false
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then APPLE=true; fi
-          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then APPLE=true; fi
+          if [ "$EVENT" = "workflow_dispatch" ]; then APPLE=true; fi
+          if [ "$REF" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then APPLE=true; fi
           case "$MSG" in *"[apple]"*) APPLE=true ;; esac
           M='{"include":[{"name":"Windows","os":"windows-latest"},{"name":"Linux","os":"ubuntu-22.04"}'
           if [ "$APPLE" = true ]; then M="$M"',{"name":"macOS","os":"macos-latest"}'; fi
@@ -56,20 +58,22 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Is this a new version to release?
         id: version
+        env:
+          REF: ${{ github.ref }}
         run: |
           V=$(tr -d '[:space:]' < VERSION)
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then
+          if [ "$REF" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then
             echo "release=true" >> "$GITHUB_OUTPUT"; echo "Will publish release v$V if everything passes."
           else
             echo "release=false" >> "$GITHUB_OUTPUT"; echo "No new version (v$V already released, or not main)."
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -86,8 +90,10 @@ jobs:
 
       - name: Install Python packages
         run: |
+          # Exact versions with their SHA-256 (requirements-lock.txt, made with `uv pip compile --universal
+          # --generate-hashes`): a changed or tampered package on PyPI can't get into the build.
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller imageio-ffmpeg
+          pip install --require-hashes --no-deps -r requirements-lock.txt
 
       - name: Run automated tests
         run: |
@@ -108,39 +114,35 @@ jobs:
         continue-on-error: true
         run: python tools/download_check.py
 
-      - name: Get Deno (YouTube's JavaScript engine for yt-dlp), checksum-checked
-        env:
-          GH_TOKEN: ${{ github.token }}      # GitHub's API limits anonymous requests on shared build machines
+      - name: Get Deno (YouTube's JavaScript engine for yt-dlp), pinned version and checksum
         run: |
           python - <<'PY'
-          import hashlib, io, json, os, platform, re, stat, sys, time, urllib.request, zipfile
-          def get(u):
-              headers = {"User-Agent": "Sevbify-CI"}
-              if "api.github.com" in u and os.environ.get("GH_TOKEN"):
-                  headers["Authorization"] = "Bearer " + os.environ["GH_TOKEN"]
-              for attempt in range(4):
-                  try:
-                      return urllib.request.urlopen(urllib.request.Request(u, headers=headers), timeout=120).read()
-                  except Exception as e:
-                      if attempt == 3:
-                          raise
-                      print("retrying after", e); time.sleep(10 * (attempt + 1))
-          rel = json.loads(get("https://api.github.com/repos/denoland/deno/releases/latest"))
+          # A fixed Deno version whose SHA-256 is written here (checked against the download), so a changed or
+          # tampered release can never slip into Sevbify. To update: change the version and the three checksums.
+          import hashlib, io, os, platform, stat, sys, time, urllib.request, zipfile
+          VERSION = "v2.9.8"
+          SHA256 = {
+              "x86_64-pc-windows-msvc": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
+              "aarch64-apple-darwin": "9f0bf660393da2eaff044cdc7444cb08c73f235849b61d224d825a194ce7c98e",
+              "x86_64-unknown-linux-gnu": "e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609",
+          }
           arch = "aarch64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
-          target = {"win32": "pc-windows-msvc", "darwin": "apple-darwin"}.get(sys.platform, "unknown-linux-gnu")
-          name = f"deno-{arch}-{target}.zip"
-          exe = "deno.exe" if os.name == "nt" else "deno"
-          asset = next(a for a in rel["assets"] if a["name"] == name)
-          data = get(asset["browser_download_url"])
-          expected = (asset.get("digest") or "").removeprefix("sha256:")
-          if not expected:
-              side = next(a for a in rel["assets"] if a["name"] == name + ".sha256sum")
-              expected = re.search(r"[0-9a-fA-F]{64}", get(side["browser_download_url"]).decode("utf-8", "replace")).group(0)
+          target = arch + "-" + {"win32": "pc-windows-msvc", "darwin": "apple-darwin"}.get(sys.platform, "unknown-linux-gnu")
+          url = f"https://github.com/denoland/deno/releases/download/{VERSION}/deno-{target}.zip"
+          for attempt in range(4):
+              try:
+                  data = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Sevbify-CI"}), timeout=120).read()
+                  break
+              except Exception as e:
+                  if attempt == 3:
+                      raise
+                  print("retrying after", e); time.sleep(10 * (attempt + 1))
           actual = hashlib.sha256(data).hexdigest()
-          assert actual.lower() == expected.lower(), f"Deno checksum mismatch: {actual} != {expected}"
+          assert actual == SHA256[target], f"Deno checksum mismatch for {target}: {actual}"
+          exe = "deno.exe" if os.name == "nt" else "deno"
           zipfile.ZipFile(io.BytesIO(data)).extract(exe, ".")
           os.chmod(exe, os.stat(exe).st_mode | stat.S_IEXEC)
-          print("Deno", rel["tag_name"], name, "verified", actual)
+          print("Deno", VERSION, target, "verified", actual)
           PY
           if [ -f deno.exe ]; then ./deno.exe --version; else ./deno --version; fi
 
@@ -253,7 +255,7 @@ jobs:
           esac
           ls -la Sevbify-*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Sevbify-${{ matrix.name }}
           path: |
@@ -266,16 +268,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
       # Chaquopy runs pip with the same Python version the app uses (3.12) to bundle yt-dlp etc.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: "8.11.1"
       - name: Build the APK (shares the repository's core/ with Windows)
@@ -313,7 +315,7 @@ jobs:
           fi
           cp android/app/build/outputs/apk/release/app-release.apk Sevbify-Android.apk
           ls -la Sevbify-Android.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Sevbify-Android
           path: Sevbify-Android.apk
@@ -326,10 +328,12 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 50
     permissions:
-      contents: write          # saves the simulator screenshots to the screens-ios branch
+      contents: read           # this job runs third-party code (pip, brew): it never gets a write token
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Get Python for iOS (checksum-checked), the shared code and the Xcode project
@@ -385,25 +389,47 @@ jobs:
                   print(f"::warning title=iPhone {f}::" + "%0A".join(x.replace("%", "%25")[:300] for x in lines[-12:]))
           PY
           ls -la screens
-      - name: Save screenshots to the screens-ios branch
+      - name: Keep the screenshots for the next job
         if: always()
         run: |
-          [ -d screens ] || exit 0
+          mkdir -p screens
           cp sim-build.log ipa-build.log screens/ 2>/dev/null || true
-          set -x
-          rm -rf /tmp/s && mkdir -p /tmp/s && cp -r screens/. /tmp/s/
-          cd /tmp/s
-          git init -q -b screens-ios
-          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-          git add -A && git commit -qm "iPhone screenshots ${GITHUB_SHA::7}"
-          AUTH=$(git -C "$GITHUB_WORKSPACE" config --get http.https://github.com/.extraheader || true)
-          git -c http.https://github.com/.extraheader="$AUTH" push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:screens-ios \
-            || echo "::error title=screens-ios::push failed"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: iphone-screens
+          path: screens
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Sevbify-iOS
           path: Sevbify-iOS.ipa
           retention-days: 30
+
+  iphone-screens:
+    # Saves the iPhone screenshots to the screens-ios branch. Only this small job has a write token, and it runs
+    # no third-party code: it downloads the screenshots and pushes them.
+    name: iPhone screenshots
+    needs: iphone
+    if: always() && needs.iphone.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: iphone-screens
+          path: /tmp/s
+      - name: Push
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd /tmp/s
+          git init -q -b screens-ios
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "iPhone screenshots ${GITHUB_SHA::7}"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:screens-ios || echo "::error title=screens-ios::push failed"
 
   release:
     name: Release
@@ -411,26 +437,30 @@ jobs:
     if: >-
       always() && needs.build.result == 'success' && needs.android.result == 'success' &&
       (needs.iphone.result == 'success' || needs.iphone.result == 'skipped') &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+      github.ref == 'refs/heads/main'
     permissions:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Is this a new version to release?
         id: version
         run: |
           V=$(tr -d '[:space:]' < VERSION)
+          # Only a plain version (5.0.0 or 5.0.0-beta.23) can name a release.
+          if ! printf '%s' "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$'; then
+            echo "::error title=Release::VERSION isn't a plain version number"; exit 1
+          fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
           if [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then echo "release=true" >> "$GITHUB_OUTPUT";
           else echo "release=false" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/download-artifact@v4
-        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: steps.version.outputs.release == 'true'
         with:
           path: artifacts
           merge-multiple: true
       - name: Every download is there (the Android one needs the signing-key secrets)
-        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
+        if: steps.version.outputs.release == 'true'
         run: |
           ls -la artifacts
           if [ ! -f artifacts/Sevbify-Android.apk ]; then
@@ -438,24 +468,25 @@ jobs:
             exit 1
           fi
       - name: Publish release (new VERSION or a pushed tag)
-        if: startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true'
-        uses: softprops/action-gh-release@v2
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          tag_name: ${{ format('v{0}', steps.version.outputs.version) }}
           target_commitish: ${{ github.sha }}
-          name: Sevbify ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: Sevbify ${{ format('v{0}', steps.version.outputs.version) }}
           body_path: RELEASE_NOTES.md
           # Versions with a dash (5.0.0-beta.1) are test versions: marked "Pre-release".
-          prerelease: ${{ contains(steps.version.outputs.version, '-') || contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
           files: |
             artifacts/Sevbify-*.zip
             artifacts/Sevbify-*.tar.gz
             artifacts/Sevbify-*.apk
             artifacts/Sevbify-*.ipa
       - name: Update the AltStore / SideStore source (iPhone updates)
-        if: (startsWith(github.ref, 'refs/tags/v') || steps.version.outputs.release == 'true') && hashFiles('artifacts/Sevbify-iOS.ipa') != ''
+        if: (steps.version.outputs.release == 'true') && hashFiles('artifacts/Sevbify-iOS.ipa') != ''
+        env:
+          V: ${{ steps.version.outputs.version }}
         run: |
-          V=${{ steps.version.outputs.version }}
           mkdir -p /tmp/alt
           python3 tools/altstore_source.py "$V" artifacts/Sevbify-iOS.ipa RELEASE_NOTES.md /tmp/alt/source.json
           cd /tmp/alt

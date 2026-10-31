@@ -84,6 +84,10 @@ def normalise(data):
     out["searches"] = [str(q)[:200] for q in data.get("searches") or [] if str(q).strip()][:30]
     out["settings"] = {k: v for k, v in (data.get("settings") or {}).items()
                        if k in SETTINGS and isinstance(v, (bool, int, str))}
+    # A profile file (maybe from someone else) may switch online features off, never on: turning them on is
+    # always your own choice in Settings.
+    if out["settings"].get("online") is not False:
+        out["settings"].pop("online", None)
     return out
 
 

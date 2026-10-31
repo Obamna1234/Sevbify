@@ -72,8 +72,11 @@
 	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Some podcast feeds and their episodes are still plain http; Sevbify tries https first. -->
-		<key>NSAllowsArbitraryLoads</key>
+		<!-- Only audio and video may still come over plain http (some podcast episodes; Sevbify tries https
+		     first), plus music servers on your own home network. Everything else must be https. -->
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 </dict>

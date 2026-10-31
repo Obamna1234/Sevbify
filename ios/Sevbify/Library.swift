@@ -197,15 +197,21 @@ final class Library: ObservableObject {
         return nil
     }
 
+    /// Folders you added, opened once and kept open while the app runs (closed again when you remove one).
+    private var opened: [String: URL] = [:]
+
     func resolve(_ f: LinkedFolder) -> URL? {
+        if let u = opened[f.id] { return u }
         var stale = false
         guard let u = try? URL(resolvingBookmarkData: f.bookmark, bookmarkDataIsStale: &stale) else { return nil }
-        _ = u.startAccessingSecurityScopedResource()          // kept open while the app runs
+        guard u.startAccessingSecurityScopedResource() else { return nil }
+        opened[f.id] = u
         return u
     }
 
     func addFolder(_ url: URL) {
-        _ = url.startAccessingSecurityScopedResource()
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let bm = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
         if folders.contains(where: { $0.name == url.lastPathComponent && $0.bookmark == bm }) { return }
         folders.append(LinkedFolder(name: url.lastPathComponent, bookmark: bm))
@@ -213,7 +219,10 @@ final class Library: ObservableObject {
         Task { await scan() }
     }
 
-    func removeFolder(_ f: LinkedFolder) { folders.removeAll { $0.id == f.id }; save(); Task { await scan() } }
+    func removeFolder(_ f: LinkedFolder) {
+        if let u = opened.removeValue(forKey: f.id) { u.stopAccessingSecurityScopedResource() }   // Sevbify can't read it any more
+        folders.removeAll { $0.id == f.id }; save(); Task { await scan() }
+    }
 
     /// Reads Sevbify's own folder (downloads and anything you put there with the Files app or Finder) and the
     /// folders you added. Tags are read by the shared Python code (mutagen).

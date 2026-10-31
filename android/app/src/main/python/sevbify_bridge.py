@@ -461,8 +461,14 @@ def share_links(artist, title, page_url="", duration_ms=0):
     from core import share, streamer
     if not _state["online_on"]:
         return dict(share.search_links(artist, title), songlink="", exact={"spotify": False, "youtube": False})
-    yt = streamer.youtube_page(artist, title, int(duration_ms or 0))
-    return share.links(_net(), artist, title, page_url or "", yt)
+    # song.link first; YouTube is only searched when that didn't give a YouTube link (less sent to YouTube).
+    yt = streamer.youtube_page(artist, title, int(duration_ms or 0), search=False)
+    res = share.links(_net(), artist, title, page_url or "", yt)
+    if not res["exact"].get("youtube"):
+        yt = streamer.youtube_page(artist, title, int(duration_ms or 0), search=True)
+        if yt:
+            res = share.links(_net(), artist, title, page_url or "", yt)
+    return res
 
 
 @_call

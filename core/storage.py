@@ -35,6 +35,33 @@ def default_data_dir() -> str:
     return os.path.join(base, APP_DIR_NAME)
 
 
+def keep_private(folder: str) -> None:
+    """Only you can open Sevbify's data folder and the files in it (Mac and Linux; on Windows the AppData
+    folder is already yours alone). Other accounts on a shared computer can't read your playlists,
+    history or music-server sign-ins."""
+    if os.name != "posix" or not os.path.isdir(folder):
+        return
+    try:
+        os.chmod(folder, 0o700)
+        for name in os.listdir(folder):
+            p = os.path.join(folder, name)
+            if os.path.isfile(p) and not os.path.islink(p):
+                os.chmod(p, 0o600)
+    except OSError:
+        pass
+
+
+def write_private(path: str, text: str) -> None:
+    """Write a file safely (all or nothing) that only you can read."""
+    tmp = path + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 def migrate_legacy_data(new_dir: str) -> bool:
     """Copy playlists/settings saved under the app's old name into new_dir.
 
@@ -205,7 +232,7 @@ class Storage:
             return data
 
     def save(self, data: UserData) -> None:
-        os.makedirs(self.data_dir, exist_ok=True)
+        os.makedirs(self.data_dir, mode=0o700, exist_ok=True)
         payload = {
             "version": SCHEMA_VERSION,
             "settings": {
@@ -277,12 +304,7 @@ class Storage:
             "offline": {k: to_stored_path(v) for k, v in data.offline.items()},
             "offline_info": {k: v for k, v in data.offline_info.items() if k in data.offline},
         }
-        tmp = self.path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, self.path)
+        write_private(self.path, json.dumps(payload, ensure_ascii=False, indent=2))
 
     # ------------------------------------------------------------------
     def _from_dict(self, raw) -> UserData:

@@ -193,7 +193,9 @@ class NowPlayingPanel(QWidget):
         cv.addWidget(self.card_bio)
         self.card_links = QLabel("")
         self.card_links.setTextFormat(Qt.TextFormat.RichText)
-        self.card_links.setOpenExternalLinks(True)
+        from . import open_web
+        self.card_links.setOpenExternalLinks(False)         # links are checked before anything is opened
+        self.card_links.linkActivated.connect(open_web)
         self.card_links.setWordWrap(True)
         self.card_links.setStyleSheet("color: #b3b3b3; font-size: 12px; padding: 0 16px;")
         cv.addWidget(self.card_links)
@@ -275,9 +277,13 @@ class NowPlayingPanel(QWidget):
             bio = (bio + "\n\n" if bio else "") + "  ·  ".join(card["tags"])
         self.card_bio.setText(bio)
         links = []
+        import html as _html
+        from core.online.net import is_web_url
         for label, key in (("Last.fm", "url"), ("Wikipedia", "wiki_url"), ("Deezer", "deezer_url")):
-            if card.get(key):
-                links.append(f'<a style="color:#ffffff; text-decoration:none" href="{card[key]}">{label} ↗</a>')
+            u = card.get(key) or ""
+            if is_web_url(u):          # only web pages, escaped: a web answer can't add file:, smb: or other links
+                links.append(f'<a style="color:#ffffff; text-decoration:none" href="{_html.escape(u, quote=True)}">'
+                             f'{label} ↗</a>')
         self.card_links.setText("   ".join(links))
         self.card_image.hide()
 

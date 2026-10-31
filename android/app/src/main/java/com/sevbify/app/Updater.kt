@@ -48,6 +48,8 @@ object Updater {
         val url = r.optString("url")
         if (!url.startsWith(ALLOWED)) { status = "No Android download in that release."; return }
         val sha = r.optString("sha256").lowercase()
+        // No checksum from GitHub: don't install anything, open the release page instead.
+        if (!Regex("[0-9a-f]{64}").matches(sha)) { status = "Open the release page to download this update."; return }
         val size = r.optLong("size")
         progress = 0f; status = "Downloading Sevbify ${r.optString("latest")}…"
         try {
@@ -75,7 +77,7 @@ object Updater {
                 }
                 if (size > 0 && got != size) { out.delete(); throw CoreError("the download didn't finish") }
                 val hex = md.digest().joinToString("") { "%02x".format(it) }
-                if (sha.isNotEmpty() && hex != sha) { out.delete(); throw CoreError("it didn't match GitHub's checksum") }
+                if (hex != sha) { out.delete(); throw CoreError("it didn't match GitHub's checksum") }
                 out
             }
             progress = -1f; status = ""

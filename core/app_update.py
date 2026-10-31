@@ -234,7 +234,8 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
         ]
         with open(script, "w", encoding="utf-8", newline="\r\n") as f:
             f.write("\n".join(lines) + "\n")
-        return ["cmd.exe", "/c", script]
+        return [__import__("ntpath").join(os.environ.get("SystemRoot") or r"C:\Windows", "System32", "cmd.exe")
+                if os.name == "nt" else "cmd.exe", "/c", script]
     script = os.path.join(script_dir, "sevbify-update.sh")
     if not reopen:
         reopen = ":"
