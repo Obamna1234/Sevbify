@@ -2,9 +2,12 @@ package com.sevbify.app
 
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 
 /**
  * Songs already on the phone, from Android's music index. Only the folders you choose in Settings are used
@@ -48,5 +51,45 @@ object LocalMusic {
             // No permission yet: Your Songs stays empty until you allow it.
         }
         return out
+    }
+
+    /**
+     * A one-off playable song from a file you picked yourself in the phone's file explorer (Library ▸ + ▸
+     * "Play a file…"). Reads the file's own tags for the title and artist, falling back to the file's name.
+     * The file is played straight from its content:// link and is NOT added to Your Songs; nothing else on
+     * the phone is read. Read access is kept (best-effort) so it can replay from Recently played later.
+     */
+    fun trackFromUri(context: Context, uri: Uri): Track {
+        try {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (e: SecurityException) {
+            // Only a temporary grant (common for Downloads/attachments): it still plays for now.
+        }
+
+        var displayName = ""
+        try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) displayName = c.getString(0) ?: ""
+            }
+        } catch (e: Exception) { /* some providers don't answer: fall back to tags/"Audio file" */ }
+
+        var title = ""; var artist = ""; var album = ""; var durationMs = 0L
+        val mmr = MediaMetadataRetriever()
+        try {
+            mmr.setDataSource(context, uri)
+            title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE).orEmpty()
+            artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST).orEmpty()
+            album = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM).orEmpty()
+            durationMs = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } catch (e: Exception) {
+            // Not tagged, or not decodable here: the player will still try the file, and the name is used below.
+        } finally {
+            try { mmr.release() } catch (e: Exception) {}
+        }
+
+        if (title.isBlank()) title = displayName.substringBeforeLast('.').ifBlank { "Audio file" }
+        if (artist.isBlank()) artist = "Unknown Artist"
+        return Track(title = title, artist = artist, album = album, durationMs = durationMs,
+                     localUri = uri.toString(), source = "local", key = Track.matchKeyOf(artist, title))
     }
 }

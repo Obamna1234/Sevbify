@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
@@ -229,6 +230,27 @@ private fun AddToSheet(tracks: List<Track>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSheet(onClose: () -> Unit) {
+    val context = LocalContext.current
+    // Pick any audio file in the phone's file explorer (like Samsung Music) and play it straight away.
+    val filePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            Nav.say(tr("Opening…"))
+            com.sevbify.app.SevbifyApp.instance.scope.launch {
+                try {
+                    // Reading the file's tags is blocking I/O: keep it off the UI thread.
+                    val t = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.sevbify.app.LocalMusic.trackFromUri(context, uri)
+                    }
+                    Nav.tab = Tab.LIBRARY
+                    Player.play(t, listOf(t), tr("File"))
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    Nav.say("⚠ ${tr("Couldn't play that file")}: ${e.message}")
+                }
+            }
+        }
+    }
     ModalBottomSheet(onDismissRequest = onClose, containerColor = C.Elevated) {
         Column(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
             SheetItem(Icons.Filled.MusicNote, tr("Playlist")) {
@@ -236,6 +258,9 @@ fun CreateSheet(onClose: () -> Unit) {
             }
             SheetItem(Icons.Filled.Folder, tr("Folder")) { onClose(); Nav.tab = Tab.LIBRARY; askNewFolder() }
             SheetItem(Icons.Filled.Link, tr("Import a playlist")) { onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.Import()) }
+            SheetItem(Icons.Filled.FolderOpen, tr("Play a file…")) {
+                onClose(); filePicker.launch(arrayOf("audio/*", "application/ogg"))
+            }
         }
     }
 }
