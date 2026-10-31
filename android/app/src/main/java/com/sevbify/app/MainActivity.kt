@@ -31,12 +31,12 @@ class MainActivity : ComponentActivity() {
             arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         askMusic.launch(wanted)
-        handleShare(intent)
+        handleIncoming(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleShare(intent)
+        handleIncoming(intent)
     }
 
     /** Leaving Sevbify (home button) while a video podcast plays: keep watching in a small window. */
@@ -91,11 +91,43 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** A link shared from Spotify, Apple Music or YouTube: open Import (or the channel) with it filled in. */
-    private fun handleShare(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-        Nav.tab = Tab.LIBRARY
-        Nav.go(Screen.Import(text))
+    /** Something handed to Sevbify from another app: an audio file to play ("Open with" / "Share" a song), or
+     *  a Spotify / Apple Music / YouTube link to import. */
+    private fun handleIncoming(intent: Intent?) {
+        intent ?: return
+        when (intent.action) {
+            // "Open with ▸ Sevbify" on an audio file in a file manager.
+            Intent.ACTION_VIEW -> intent.data?.let { playUri(it) }
+            Intent.ACTION_SEND -> {
+                val type = intent.type.orEmpty()
+                if (type.startsWith("audio") || type == "application/ogg") {
+                    // "Share ▸ Sevbify" on a song.
+                    val uri = if (Build.VERSION.SDK_INT >= 33)
+                        intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                    else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                    uri?.let { playUri(it) }
+                } else {
+                    // A shared link (Spotify / Apple Music / YouTube): open Import with it filled in.
+                    val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+                    Nav.tab = Tab.LIBRARY
+                    Nav.go(Screen.Import(text))
+                }
+            }
+        }
+    }
+
+    /** Play one audio file handed to Sevbify from another app. Reads its tags off the UI thread; the player
+     *  starts it as soon as it's connected (see Player.pendingPlay) if the app was cold-started by this. */
+    private fun playUri(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            try {
+                val t = withContext(Dispatchers.IO) { LocalMusic.trackFromUri(this@MainActivity, uri) }
+                Nav.tab = Tab.LIBRARY
+                Player.play(t, listOf(t), tr("File"))
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Nav.say("⚠ ${tr("Couldn't play that file")}: ${e.message}")
+            }
+        }
     }
 }
