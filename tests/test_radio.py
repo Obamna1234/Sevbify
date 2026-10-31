@@ -36,7 +36,9 @@ def test_radio_builds_queue_with_local_matches_and_previews(radio_window, qapp):
     assert any(t.endswith("online") for t in texts)
 
 
-def test_remote_song_plays_from_its_stream(radio_window, qapp, audio_dir):
+def test_remote_song_plays_from_its_stream(radio_window, qapp, audio_dir, monkeypatch):
+    from core.online import net
+    monkeypatch.setattr(net, "is_outside_link", lambda url: True)     # the test's "stream" is a file here
     from core.online.models import OnlineTrack
     from core.online.remote_song import RemoteSong
     w = radio_window

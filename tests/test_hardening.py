@@ -129,3 +129,66 @@ def test_windows_programs_are_run_by_full_path(monkeypatch):
     monkeypatch.setenv("SystemRoot", r"C:\Windows")
     assert shortcuts.system_program("powershell").lower().endswith(r"system32\windowspowershell\v1.0\powershell.exe")
     assert shortcuts.system_program("cmd").lower().endswith(r"system32\cmd.exe")
+
+
+def test_rebinding_to_your_network_is_caught_when_connecting(monkeypatch):
+    """Even if the name looked public when checked, the connection itself is refused if it reaches a home
+    address (DNS rebinding)."""
+    import http.server
+    import threading
+    for k in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(k, raising=False)
+    srv = http.server.HTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
+    threading.Thread(target=srv.handle_request, daemon=True).start()
+    opener = urllib.request.build_opener(net._CheckedHTTP)
+    with pytest.raises(Exception, match="own network"):
+        opener.open(f"http://127.0.0.1:{srv.server_port}/", timeout=5)
+    srv.server_close()
+
+
+def test_carrier_nat_and_unknown_hosts_are_not_public(monkeypatch):
+    assert not net.is_public_ip("100.64.1.2")          # carrier NAT / Tailscale
+    assert not net.is_public_ip("::ffff:192.168.0.1")
+    assert net.is_public_ip("8.8.8.8")
+    for k in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(k, raising=False)
+    import socket
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: (_ for _ in ()).throw(OSError("SERVFAIL")))
+    net._HOST_OK.clear()
+    assert not net.is_public_host("feeds.example.org")   # can't look it up: refused, not assumed public
+
+
+def test_feed_links_to_your_own_network_are_dropped():
+    from core import podcasts
+    feed = b"""<?xml version="1.0"?><rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel>
+      <title>Pod</title><itunes:image href="http://192.168.1.1/cgi-bin/reboot"/>
+      <item><title>Router</title><enclosure url="http://192.168.1.1/apply.cgi?x=1" type="audio/mpeg"/></item>
+      <item><title>Nas</title><enclosure url="http://nas.local/a.mp3" type="audio/mpeg"/></item>
+      <item><title>Real</title><enclosure url="https://cdn.example.com/ep.mp3" type="audio/mpeg"/></item>
+    </channel></rss>"""
+    show, eps = podcasts.parse_feed(feed, "https://feeds.example.com/rss")
+    assert [e.track.title for e in eps] == ["Real"] and show.image_url == ""
+
+
+def test_profiles_leave_out_songs_from_your_own_server():
+    from core import profile
+    d = profile.normalise({"playlists": [{"name": "Mine", "tracks": [
+        {"title": "A", "artist": "B", "source": "jellyfin", "stream_url": "https://jf.home.example/Audio/1"},
+        {"title": "C", "artist": "D", "cover_url": "http://10.0.0.2/c.jpg"}]}]})
+    assert d["playlists"][0]["tracks"] == [{"title": "C", "artist": "D"}]
+
+
+def test_song_lookups_only_use_bandcamp_and_youtube():
+    from core import sevby_engine
+    assert sevby_engine.SONG_EXTRACTORS == ["Bandcamp", "youtube", "youtube:.*"]
+
+
+def test_tooltips_show_titles_as_written(qapp):
+    import ui
+    from PyQt6.QtWidgets import QLabel
+    lbl = QLabel()
+    lbl.setToolTip('<a href="file:///x">click</a>')
+    assert "&lt;a" in lbl.toolTip()
+    lbl.setToolTip("Queue")
+    assert lbl.toolTip() == "Queue"
+    assert ui.as_plain("a & b") == "<qt>a &amp; b</qt>"

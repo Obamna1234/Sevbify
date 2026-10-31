@@ -130,8 +130,8 @@ def test_show_in_folder_commands(tmp_path):
     reveal_in_file_manager(str(f), run=ran.append, system="win32")
     reveal_in_file_manager(str(f), run=ran.append, system="darwin")
     reveal_in_file_manager(str(f), run=ran.append, system="linux")
-    assert ran[0] == f'explorer /select,"{f}"'
-    assert ran[1] == ["open", "-R", str(f)] and ran[2] == ["xdg-open", str(tmp_path)]
+    assert ran[0].lower().endswith(f'explorer.exe" /select,"{f}"'.lower()) and ran[0].startswith('"')
+    assert ran[1] == ["/usr/bin/open", "-R", str(f)] and ran[2] == ["xdg-open", str(tmp_path)]
 
 
 def test_show_in_folder_is_in_the_menu_for_your_own_songs(window):

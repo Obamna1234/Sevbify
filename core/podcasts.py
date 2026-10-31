@@ -20,12 +20,13 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
 from core.online.models import OnlineTrack
-from core.online.net import is_web_url
+from core.online.net import is_web_url, is_outside_link
 
 
 def _web(url):
-    """Links from a feed are only kept when they're web addresses (never file: or other local links)."""
-    return url.strip() if is_web_url(url) else ""
+    """Links from a feed are only kept when they're web addresses on the internet (never file: links, and never
+    a device on your own network such as your router)."""
+    return url.strip() if is_outside_link(url) else ""
 
 ITUNES_NS = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 MEDIA_NS = "{http://search.yahoo.com/mrss/}"

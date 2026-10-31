@@ -188,7 +188,7 @@ def _propfind(server, url, opener=None):
             b'</d:prop></d:propfind>')
     data = _request(url if url.endswith("/") else url + "/", "PROPFIND",
                     {**_basic(server), "Depth": "1", "Content-Type": "application/xml"}, body, opener=opener)
-    if b"<!DOCTYPE" in data[:2000] or b"<!ENTITY" in data[:5000]:
+    if b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
         raise ServerError("The server's answer wasn't a normal folder listing.")
     try:
         root = ET.fromstring(data)
@@ -261,19 +261,13 @@ def headers_for(server):
     return _basic(server)
 
 
-def playable(server, track, for_vlc=False):
-    """(url, headers) to stream a server song. VLC can't send custom headers, so for the computer app the
-    sign-in goes in the address instead (it stays inside this computer: it's never saved or logged)."""
+def playable(server, track):
+    """(url, headers) to stream a server song. The sign-in is only ever in the headers, never in the address
+    (on the computer, VLC plays it through core/server_relay.py, which adds the headers)."""
     url = track.stream_url
     if not _same_server(server["url"], url):
         raise ServerError("That song doesn't belong to this server.")
-    if not for_vlc:
-        return url, headers_for(server)
-    if server["type"] == "jellyfin":
-        return url + ("&" if "?" in url else "?") + "api_key=" + urllib.parse.quote(server["token"]), {}
-    p = urllib.parse.urlparse(url)
-    cred = urllib.parse.quote(server["user"], safe="") + ":" + urllib.parse.quote(server["password"], safe="")
-    return urllib.parse.urlunparse(p._replace(netloc=f"{cred}@{p.netloc}")), {}
+    return url, headers_for(server)
 
 
 def download(server, track, out_dir, limit=1_500_000_000, opener=None):

@@ -151,7 +151,7 @@ def unpack(archive, dest_dir):
             if sys.platform == "darwin" and shutil.which("ditto"):
                 # A Mac app has links inside it (frameworks) that only ditto restores properly.
                 import subprocess
-                subprocess.run(["ditto", "-x", "-k", archive, dest_dir], check=True, timeout=600)
+                subprocess.run(["/usr/bin/ditto", "-x", "-k", archive, dest_dir], check=True, timeout=600)
                 return _found_app(dest_dir)
             for info in z.infolist():
                 out = os.path.join(dest_dir, info.filename)

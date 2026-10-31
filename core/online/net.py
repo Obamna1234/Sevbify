@@ -7,6 +7,7 @@
 - Never used on the UI thread: call it from a background task.
 """
 import hashlib
+import http.client
 import ipaddress
 import json
 import os
@@ -36,6 +37,30 @@ def is_web_url(url):
     return p.scheme.lower() in WEB_SCHEMES and bool(p.netloc)
 
 
+LOCAL_SUFFIXES = (".local", ".lan", ".home", ".home.arpa", ".internal", ".localdomain", ".intranet", ".corp")
+
+
+def is_outside_link(url):
+    """A web link that doesn't name a device on your own network or this computer, judged from the link alone
+    (no lookup, so it's quick enough to check everywhere: songs, episodes, covers from feeds and files)."""
+    if not is_web_url(url):
+        return False
+    try:
+        host = (urllib.parse.urlparse(url.strip()).hostname or "").lower().rstrip(".")
+    except ValueError:
+        return False
+    if not host or host == "localhost" or host.endswith(LOCAL_SUFFIXES) or "." not in host and ":" not in host:
+        return False
+    try:
+        ipaddress.ip_address(host.strip("[]"))
+        return is_public_ip(host.strip("[]"))     # written as an address
+    except ValueError:
+        pass
+    if host.replace(".", "").isdigit() or host.startswith("0x"):
+        return False                         # odd number forms (decimal, hex): refused, never a real site
+    return True
+
+
 _HOST_OK = {}             # host -> (public?, when checked)
 
 
@@ -52,18 +77,56 @@ def is_public_host(host):
     try:
         addrs = {info[4][0].split("%")[0] for info in socket.getaddrinfo(host, None)}
     except OSError:
-        addrs = set()             # can't look it up here (offline, or a proxy does it): the request decides
-    ok = True
-    for a in addrs:
-        try:
-            ip = ipaddress.ip_address(a)
-        except ValueError:
-            continue
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast \
-                or ip.is_unspecified or (ip.version == 6 and ip.ipv4_mapped and not ip.ipv4_mapped.is_global):
-            ok = False
+        # Can't look it up: only allowed when a proxy does the looking up; otherwise refused (and not remembered,
+        # so it is tried again next time).
+        return _using_proxy()
+    ok = bool(addrs) and all(is_public_ip(a) for a in addrs)
     _HOST_OK[host] = (ok, time.time())
     return ok
+
+
+def is_public_ip(a):
+    """An address on the open internet (not your home network, this computer, carrier-NAT/Tailscale, ...)."""
+    try:
+        ip = ipaddress.ip_address(str(a).split("%")[0])
+    except ValueError:
+        return False
+    if ip.version == 6 and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not ip.is_multicast
+
+
+def _using_proxy():
+    return any(os.environ.get(k) for k in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY"))
+
+
+class _CheckedHTTPS(urllib.request.HTTPSHandler):
+    """Checks the address actually connected to, so a website can't answer "public" first and "your router"
+    when the connection is made (DNS rebinding)."""
+
+    def https_open(self, req):
+        return self.do_open(_checked(http.client.HTTPSConnection), req, context=self._context)
+
+
+class _CheckedHTTP(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_checked(http.client.HTTPConnection), req)
+
+
+def _checked(base):
+    class Conn(base):
+        def connect(self):
+            super().connect()
+            if _using_proxy() or getattr(self, "_tunnel_host", None):
+                return                      # connected to your proxy; it reaches the site
+            try:
+                peer = self.sock.getpeername()[0]
+            except OSError:
+                return
+            if not is_public_ip(peer):
+                self.sock.close()
+                raise OSError("That link points to a device on your own network, so Sevbify didn't open it.")
+    return Conn
 
 
 def check_public_url(url):
@@ -115,7 +178,7 @@ class NetClient:
         self.timeout = timeout
         self._opener = opener          # tests inject a fake opener: (url) -> bytes
         self._ctx = _ssl_context()
-        self._web = urllib.request.build_opener(urllib.request.HTTPSHandler(context=self._ctx), _SafeRedirect)
+        self._web = urllib.request.build_opener(_CheckedHTTPS(context=self._ctx), _CheckedHTTP, _SafeRedirect)
         self._lock = threading.Lock()
         self._last_request = {}
         self.online = None             # None = unknown, True/False after a request

@@ -404,6 +404,7 @@ def _probe_bc_track(url: str) -> dict | None:
         "socket_timeout": 15,
         "retries": 1,
         "no_color": True,
+        "allowed_extractors": SONG_EXTRACTORS,
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -1208,6 +1209,9 @@ def _ensure_cover(out_dir: str, safe: str, info: dict | None, log) -> None:
 # the MP3 quality when converting (yt-dlp/ffmpeg: a bitrate like "160" or a VBR level "0"-"9").
 _MAX_WEB = 60 * 1024 * 1024        # most a page, JSON answer or picture may be (more is cut off, not stored)
 _MAX_BIN = 200 * 1024 * 1024       # the yt-dlp program
+# Songs only ever come from Bandcamp or YouTube: yt-dlp's other readers (its "generic" one opens any address it
+# is given, and follows redirects) are switched off, so a search result can't send it into your home network.
+SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*"]
 AUDIO_FORMAT_ORIGINAL = "bestaudio[ext=m4a]/bestaudio/best"
 MP3_QUALITY = "0"
 
@@ -1218,6 +1222,7 @@ def _run_ytdlp_module(
     opts = {
         "format": AUDIO_FORMAT_ORIGINAL if original else "bestaudio/best",
         "noplaylist": True,
+        "allowed_extractors": SONG_EXTRACTORS,
         "outtmpl": os.path.join(out_dir, safe.replace("%", "%%") + ".%(ext)s"),
         "writethumbnail": embed,
         "postprocessors": [] if original else (
@@ -1648,6 +1653,7 @@ def search_youtube_candidates(query: str, n: int = 8) -> list[dict]:
     opts = {
         "quiet": True, "no_warnings": True, "logger": _QuietLogger(), "no_color": True,
         "extract_flat": True, "skip_download": True, "socket_timeout": 30,
+        "allowed_extractors": SONG_EXTRACTORS,
     }
     for attempt in range(2):
         try:

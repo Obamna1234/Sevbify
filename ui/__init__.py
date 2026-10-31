@@ -46,6 +46,27 @@ if not getattr(_QMessageBox, "_sevbify_plain", False):
     _QMessageBox._sevbify_plain = True
 
 
+def as_plain(text):
+    """Text that Qt would otherwise guess is HTML, made to show exactly as written (for tooltips and the
+    smaller line of a message box, which Qt builds itself)."""
+    import html
+    text = "" if text is None else str(text)
+    if "<" not in text and "&" not in text:
+        return text
+    return "<qt>" + html.escape(text).replace("\n", "<br>") + "</qt>"
+
+
+from PyQt6.QtWidgets import QWidget as _QWidget, QTableWidgetItem as _QTableWidgetItem
+
+if not getattr(_QWidget, "_sevbify_plain_tips", False):
+    for _cls in (_QWidget, _QTableWidgetItem):
+        _orig_tip = _cls.setToolTip
+        _cls.setToolTip = (lambda orig: lambda self, text: orig(self, as_plain(text)))(_orig_tip)
+    _orig_info = _QMessageBox.setInformativeText
+    _QMessageBox.setInformativeText = lambda self, text: _orig_info(self, as_plain(text))
+    _QWidget._sevbify_plain_tips = True
+
+
 # Language: menu items Sevbify makes look like "≡  Add to queue" (a symbol, two spaces, the words). Only those are
 # translated (core/i18n), so a playlist or song that happens to be called "Lyrics" is never changed.
 from PyQt6.QtWidgets import QMenu as _QMenu  # noqa: E402

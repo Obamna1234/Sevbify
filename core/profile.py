@@ -29,8 +29,9 @@ URL_FIELDS = ("cover_url", "preview_url", "stream_url", "download_url", "page_ur
 
 def _web(value):
     """Only web links (http / https) are kept from a profile: never file:, content: or other schemes."""
+    from core.online.net import is_outside_link
     v = str(value or "").strip()
-    return v if v.lower().startswith(("https://", "http://")) and len(v) < 4000 else ""
+    return v if is_outside_link(v) and len(v) < 4000 else ""
 
 
 class ProfileError(Exception):
@@ -41,6 +42,8 @@ def clean_track(d):
     """Only the song's description (never local paths or anything about the device)."""
     if not isinstance(d, dict):
         return None
+    if str(d.get("source") or "") in ("jellyfin", "webdav"):
+        return None        # songs from your own server: its address, user name and folders stay out of the file
     out = {k: d[k] for k in TRACK_FIELDS if k in d and d[k] not in ("", None, 0, False)}
     for k in URL_FIELDS:
         if k in out:

@@ -156,6 +156,8 @@ jobs:
           EXTRA=""
           if [ "${{ runner.os }}" = "Windows" ]; then
             SRC="/c/Program Files/VideoLAN/VLC"
+            # Only ship VLC files that VideoLAN itself signed (a tampered download would fail here).
+            powershell -NoProfile -Command '$bad = Get-ChildItem "C:\Program Files\VideoLAN\VLC" -Recurse -Include *.dll,*.exe | Where-Object { $s = Get-AuthenticodeSignature $_.FullName; $s.Status -ne "Valid" -or $s.SignerCertificate.Subject -notmatch "VideoLAN" }; if ($bad) { $bad | Select-Object -First 10 | ForEach-Object { Write-Output ("::error title=VLC::not signed by VideoLAN: " + $_.FullName) }; exit 1 } else { Write-Output "All VLC files are signed by VideoLAN." }'
             mkdir -p vlc
             cp "$SRC/libvlc.dll" "$SRC/libvlccore.dll" vlc/
             cp -r "$SRC/plugins" vlc/
@@ -282,8 +284,9 @@ jobs:
           gradle-version: "8.11.1"
       - name: Build the APK (shares the repository's core/ with Windows)
         env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          SEVBIFY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          # The signing key is only handed to builds of main or a release tag, never to other branches.
+          KEYSTORE_B64: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          SEVBIFY_KEYSTORE_PASSWORD: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
         run: |
           # The release signing key comes from the repository's secrets (never stored in the code).
           if [ -n "$KEYSTORE_B64" ] && [ -n "$SEVBIFY_KEYSTORE_PASSWORD" ]; then

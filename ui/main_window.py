@@ -1,4 +1,5 @@
 import html as _html
+from core.online import net as net_links
 import os
 import sys
 import time
@@ -325,6 +326,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         extra = ["--audio-filter=normvol"] if self.user_data.normalize else []
         if os.environ.get("SEVBIFY_VLC_DEBUG"):
             extra.append("--verbose=2")          # VLC explains what it's doing (used by the automatic build)
+        else:
+            extra.append("--quiet")              # VLC prints nothing (no song addresses in logs)
         self.vlc_instance = vlc.Instance("--no-video", *extra, *vlc_args)
         if self.vlc_instance is None:
             raise RuntimeError(
@@ -4195,7 +4198,19 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._track_handled = True
                 self._handle_failed_track("its server was removed in Settings")
                 return
-            self._play_media(servers.playable(srv, song.track, for_vlc=True)[0])
+            from core import server_relay
+            try:
+                self._play_media(server_relay.local_address(srv, song.track))
+            except servers.ServerError as e:
+                self.player.stop()
+                self._track_handled = True
+                self._handle_failed_track(str(e))
+            return
+        if is_remote and not net_links.is_outside_link(song.playable_url):
+            # A link from a feed or file that points into your own network (router, printer): never opened.
+            self.player.stop()
+            self._track_handled = True
+            self._handle_failed_track("its link points to a device on your own network")
             return
         self._play_media(song.playable_url if is_remote else song.file_path)
         # Note: any "Skipped …" message is left visible; it clears on its own timer.

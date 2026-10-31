@@ -11,9 +11,9 @@ def sample():
     return {"from": "android", "playlists": [
         {"name": "Road trip", "folder": "Car", "pinned": True, "origin": "spotify",
          "tracks": [{"title": "Future Club", "artist": "Perturbator", "duration_ms": 290000, "local_uri": "content://x",
-                     "cover_url": "https://img/x.jpg"}, {"artist": "no title"}]},
+                     "cover_url": "https://img.example.com/x.jpg"}, {"artist": "no title"}]},
         {"name": "  ", "tracks": []}],
-        "folders": ["Car"], "shows": [{"title": "Pod", "feed_url": "https://f/rss"}, {"title": "broken"}],
+        "folders": ["Car"], "shows": [{"title": "Pod", "feed_url": "https://f.example.com/rss"}, {"title": "broken"}],
         "books": [{"identifier": "pride", "title": "Pride"}], "resume": {"podcast:1": 90000, "bad": -1},
         "recent": [{"title": "A", "artist": "B"}], "searches": ["daft punk", ""],
         "settings": {"autoplay": False, "skip_sponsors": True, "music_folders": ["C:/secret"]}}
@@ -26,7 +26,7 @@ def test_pack_unpack_keeps_only_safe_known_parts():
     pl = d["playlists"]
     assert len(pl) == 1 and pl[0]["name"] == "Road trip" and pl[0]["pinned"] and pl[0]["origin"] == "spotify"
     assert pl[0]["tracks"] == [{"title": "Future Club", "artist": "Perturbator", "duration_ms": 290000,
-                                "cover_url": "https://img/x.jpg"}]                  # no device paths
+                                "cover_url": "https://img.example.com/x.jpg"}]                  # no device paths
     assert len(d["shows"]) == 1 and d["resume"] == {"podcast:1": 90000} and d["searches"] == ["daft punk"]
     assert d["settings"] == {"autoplay": False, "skip_sponsors": True}            # no folders from the device
 
@@ -49,7 +49,7 @@ def test_windows_export_then_import_on_another_computer(open_window, audio_dir, 
     w = open_window(audio_folder=str(audio_dir), data_dir=str(data_dir))
     pl = w.create_playlist("Synth", w.songs[:2])
     w.user_data.folders.append("Car"); pl.folder = "Car"
-    w.user_data.shows.append({"title": "Pod", "feed_url": "https://f/rss", "kind": "rss"})
+    w.user_data.shows.append({"title": "Pod", "feed_url": "https://f.example.com/rss", "kind": "rss"})
     w.remember_search("daft punk")
     path = w.export_profile(str(tmp_path / "me"))
     assert path.endswith(".sevbify")
@@ -65,7 +65,7 @@ def test_windows_export_then_import_on_another_computer(open_window, audio_dir, 
     synth = next(p for p in w2.playlists if p.name == "Synth")
     assert len(synth.songs) == 2 and synth.folder == "Car"
     assert all(not getattr(s, "is_remote", False) for s in synth.songs)        # matched to this computer's files
-    assert w2.user_data.shows[0]["feed_url"] == "https://f/rss" and w2.user_data.recent_searches == ["daft punk"]
+    assert w2.user_data.shows[0]["feed_url"] == "https://f.example.com/rss" and w2.user_data.recent_searches == ["daft punk"]
     assert w2.import_profile(path) == 0                                         # importing twice adds nothing
 
 
@@ -75,12 +75,12 @@ def test_a_crafted_profile_cant_point_at_files_or_blow_up():
             "tracks": [{"title": "t", "artist": "a", "stream_url": "file:///data/data/x", "cover_url": "content://y",
                         "page_url": "https://ok.example/p", "duration_ms": "lots"}]}],
             "shows": [{"title": "s", "feed_url": "file:///etc/hosts", "image_url": "javascript:x"},
-                      {"title": "ok", "feed_url": "https://f/rss"}]}
+                      {"title": "ok", "feed_url": "https://f.example.com/rss"}]}
     d = profile.unpack(gz.compress(json.dumps(evil).encode()))
     t = d["playlists"][0]["tracks"][0]
     assert t == {"title": "t", "artist": "a", "page_url": "https://ok.example/p"}
     assert d["playlists"][0]["cover_url"] == ""
-    assert [s.get("feed_url") for s in d["shows"]] == ["https://f/rss"]
+    assert [s.get("feed_url") for s in d["shows"]] == ["https://f.example.com/rss"]
     with pytest.raises(profile.ProfileError):
         profile.unpack(gz.compress(b"{" + b" " * (60 * 1024 * 1024) + b"}"))
 

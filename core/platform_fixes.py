@@ -31,9 +31,11 @@ def reveal_in_file_manager(path, run=subprocess.Popen, system=None):
     system = system or sys.platform
     path = os.path.abspath(path)
     if system.startswith("win"):
-        cmd = f'explorer /select,"{path}"'          # explorer wants the quotes around the path only
+        import ntpath
+        explorer = ntpath.join(os.environ.get("SystemRoot") or r"C:\Windows", "explorer.exe")   # the real one
+        cmd = f'"{explorer}" /select,"{path}"'          # explorer wants the quotes around the path only
     elif system == "darwin":
-        cmd = ["open", "-R", path]
+        cmd = ["/usr/bin/open", "-R", path]
     else:
         cmd = ["xdg-open", os.path.dirname(path)]
     try:

@@ -62,8 +62,8 @@ def test_nextcloud_walks_folders_and_never_leaves_the_server():
     srv = S.webdav_connect("https://cloud.example.com", "ann", "app-pass", "Music", opener=opener)
     songs = S.songs(srv, opener=opener)
     assert [(t.artist, t.album, t.title) for t in songs] == [("Band", "LP", "Night Song")]
-    url, headers = S.playable(srv, songs[0], for_vlc=True)
-    assert url.startswith("https://ann:app-pass@cloud.example.com/") and not headers
+    url, headers = S.playable(srv, songs[0])
+    assert "app-pass" not in url and headers["Authorization"].startswith("Basic ")
     assert "app-pass" not in json.dumps(songs[0].to_dict())
 
 
@@ -96,7 +96,29 @@ def test_window_adds_a_server_as_a_playlist_and_plays_with_the_sign_in(window, q
     played = []
     monkeypatch.setattr(window, "_play_media", lambda url, *a: played.append(url) or True)
     window.play_song(pl.songs[0], queue=pl.songs)
-    assert played and "api_key=TOK" in played[0]
+    # VLC gets a 127.0.0.1 relay address with no sign-in in it; the relay asks the server with the token
+    # in a header.
+    assert played and played[0].startswith("http://127.0.0.1:") and "TOK" not in played[0]
+    from core import server_relay
+    seen = []
+
+    class FakeResp:
+        status = 200
+        headers = {"Content-Type": "audio/flac", "Content-Length": "4"}
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self, n=-1):
+            out, self._done = (b"" if getattr(self, "_done", False) else b"fLaC"), True
+            return out
+    monkeypatch.setattr(S, "_open", lambda req, timeout: seen.append(req) or FakeResp())
+    import urllib.request
+    body = urllib.request.build_opener(urllib.request.ProxyHandler({})).open(played[0], timeout=5).read()
+    assert body == b"fLaC" and seen[0].full_url == track.stream_url
+    assert seen[0].get_header("Authorization") == 'MediaBrowser Token="TOK"' or "TOK" in str(seen[0].headers)
+    wrong = played[0].rsplit("/", 2)[0] + "/" + "0" * 32 + "/x"
+    import pytest
+    with pytest.raises(urllib.error.HTTPError):
+        urllib.request.build_opener(urllib.request.ProxyHandler({})).open(wrong, timeout=5)
     window.save_now()
     assert "TOK" not in open(window.storage.path, encoding="utf-8").read()   # never in the save file
 
