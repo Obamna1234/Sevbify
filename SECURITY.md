@@ -28,9 +28,15 @@ fixes made here and the items intentionally deferred.
 These were identified but **not** changed in this pass, to avoid shipping untested changes to the
 Jellyfin/Nextcloud sign-in path or to podcast playback:
 
-1. **Server credentials at rest (Medium).** `servers.json` stores Jellyfin tokens / Nextcloud app-passwords
-   as plaintext (file mode `0600`). Recommended: move them to the OS keychain (DPAPI / macOS Keychain /
-   libsecret). Deferred because it needs testing against a live server before release.
+1. **Server credentials at rest (Medium) — FIX WRITTEN, pending live test.** `servers.json` used to store
+   Jellyfin tokens / Nextcloud app-passwords as plaintext (file mode `0600`). `core/server_store.py` now
+   keeps the secret in the OS secure store (Windows Credential Manager / macOS Keychain / Linux Secret
+   Service) via `keyring`, and writes only non-secret details to the file. It is **fail-safe**: with no
+   secure store (or no `keyring`) it falls back to exactly the previous behaviour, and it only drops a secret
+   from the file after confirming it reads back from the store, so a sign-in can't be lost. **Still to do
+   before shipping:** test the add/sign-in/play flow against a real Jellyfin & Nextcloud server, and
+   regenerate `requirements-lock.txt` to include `keyring` (the packaged build installs from the lock with
+   `--require-hashes`, so until then packaged builds safely fall back to the file).
 2. **Credentials embedded in the VLC stream URL (Low).** For local playback VLC receives the sign-in in the
    URL. Recommended: a local authenticated proxy. Architectural; deferred.
 3. **App-wide Android cleartext (Low/Medium).** `network_security_config.xml` permits cleartext app-wide for
