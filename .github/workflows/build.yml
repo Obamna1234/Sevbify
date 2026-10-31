@@ -156,8 +156,9 @@ jobs:
           EXTRA=""
           if [ "${{ runner.os }}" = "Windows" ]; then
             SRC="/c/Program Files/VideoLAN/VLC"
-            # Only ship VLC files that VideoLAN itself signed (a tampered download would fail here).
-            powershell -NoProfile -Command '$bad = Get-ChildItem "C:\Program Files\VideoLAN\VLC" -Recurse -Include *.dll,*.exe | Where-Object { $s = Get-AuthenticodeSignature $_.FullName; $s.Status -ne "Valid" -or $s.SignerCertificate.Subject -notmatch "VideoLAN" }; if ($bad) { $bad | Select-Object -First 10 | ForEach-Object { Write-Output ("::error title=VLC::not signed by VideoLAN: " + $_.FullName) }; exit 1 } else { Write-Output "All VLC files are signed by VideoLAN." }'
+            # Only ship VLC files that VideoLAN itself signed (a tampered download would fail here). Its uninstaller,
+            # which isn't signed and isn't shipped, is skipped.
+            powershell -NoProfile -Command '$bad = Get-ChildItem "C:\Program Files\VideoLAN\VLC" -Recurse -Include *.dll,*.exe | Where-Object { $_.Name -ne "uninstall.exe" } | Where-Object { $s = Get-AuthenticodeSignature $_.FullName; $s.Status -ne "Valid" -or $s.SignerCertificate.Subject -notmatch "VideoLAN" }; if ($bad) { $bad | Select-Object -First 10 | ForEach-Object { Write-Output ("::error title=VLC::not signed by VideoLAN: " + $_.FullName) }; exit 1 } else { Write-Output "All VLC files are signed by VideoLAN." }'
             mkdir -p vlc
             cp "$SRC/libvlc.dll" "$SRC/libvlccore.dll" vlc/
             cp -r "$SRC/plugins" vlc/
