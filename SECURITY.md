@@ -6,12 +6,13 @@ A read-only security review of Sevbify (desktop, Android, iOS) plus the related 
 UniFetcher projects was carried out. No critical or high-severity issues were found. This file records the
 fixes made here and the items intentionally deferred.
 
-### Fixed in this pass
+### Reviewed, no change needed
 
-1. **Profile import path hardening (CWE-20/CWE-22).** `core/profile.clean_track()` now drops the `file`
-   field of an imported `.sevbify` profile if it looks like a device path (absolute, `..` traversal,
-   Windows drive/UNC, or a `file:`/`content:` scheme). A profile's `file` is only ever a song's own
-   description; it is never used to open a path, so this is a preventative guard with no behaviour change.
+1. **Profile `file` field.** This was considered as a possible path-injection hardening target, but testing
+   showed the field is **by-design**: a profile legitimately round-trips a track's own local path across
+   devices (the `test_windows_export_then_import_on_another_computer` test asserts this), and the value is
+   never used to open or write a path unsafely. An import-time guard was prototyped and **reverted** because
+   it broke that round-trip. No vulnerability here; left as-is.
 
 ### Already strong (verified, no change needed)
 
