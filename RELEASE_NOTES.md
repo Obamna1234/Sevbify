@@ -1,3 +1,13 @@
+## What's new in beta.24 (Android)
+
+- **Settings update instantly.** Media quality and other settings/toggles now change the moment you tap them — no more leaving the page and coming back for it to show.
+- **30-second previews are one simple setting.** The per-song "Preview (30 s)" menu item is gone. Instead there's a single switch in **Settings → Playback** ("Play 30-second previews"): off by default, so full songs play; turn it on for short previews. Previews now play through the normal player, which should fix the distorted sound.
+- **Open with / Share → Sevbify.** Pick a song in your file manager (e.g. Samsung My Files) → **Open with → Sevbify**, or **Share → Sevbify**, and it plays. Nothing was added inside the app; Sevbify just shows up as a player other apps can hand a file to.
+
+(Windows, macOS and Linux are unchanged in this build.)
+
+---
+
 ## Install (Windows)
 
 Everything is included (player engine, downloader, ffmpeg); nothing else to install.
