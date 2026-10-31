@@ -41,6 +41,9 @@ object Player {
     var index by mutableStateOf(0)
 
     private var controller: MediaController? = null
+    // A play asked for before the player finished connecting (e.g. "Open with Sevbify" cold-starts the app):
+    // held here and started as soon as connect() is ready, so the first song is never dropped.
+    private var pendingPlay: Triple<Track, List<Track>, String>? = null
     private var original: List<Track> = emptyList()
     private var loadJob: Job? = null
     private var ticker: Job? = null
@@ -54,6 +57,7 @@ object Player {
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
             controller = future.get()
+            pendingPlay?.let { (t, q, s) -> pendingPlay = null; play(t, q, s) }   // a play that was waiting to connect
             controller?.addListener(object : MediaPlayer.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
@@ -116,6 +120,7 @@ object Player {
 
     // --- choosing what plays ---------------------------------------------------------------------------------
     fun play(track: Track, queue: List<Track> = listOf(track), source: String = "") {
+        if (controller == null) { pendingPlay = Triple(track, queue, source); return }  // not connected yet: start on connect
         failuresInARow = 0
         original = queue
         sourceName = source
