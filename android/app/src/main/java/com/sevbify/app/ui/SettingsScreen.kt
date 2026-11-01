@@ -256,17 +256,38 @@ fun SettingsPageScreen(key: String) {
         item { Heading(tr("Your music")) }
         item {
             var folders by remember { mutableStateOf(s.musicFolders.joinToString(", ")) }
+            // Browse: pick a folder in the file explorer instead of typing its name.
+            val folderPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { uri ->
+                if (uri != null) {
+                    val rel = com.sevbify.app.LocalMusic.relativePathFromTree(uri)
+                    if (rel == null) {
+                        Nav.say(tr("Pick a folder on this phone's storage. For an SD card or a cloud app, use \"Add a folder\" below."))
+                    } else {
+                        val cur = folders.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                        if (cur.none { it.trim('/').equals(rel, ignoreCase = true) }) cur.add(rel)
+                        folders = cur.joinToString(", ")
+                        s.musicFolders = cur
+                        Library.changed()
+                        (context as? com.sevbify.app.MainActivity)?.rescan()
+                        Nav.say(tr("Music folder added") + ": $rel")
+                    }
+                }
+            }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(tr("Music folders"), style = MaterialTheme.typography.bodyLarge)
                 Text(tr("Folders on the phone Sevbify plays music from (separate with commas). Only these are read."),
                      style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(folders, { folders = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-                OutlinedButton(onClick = {
-                    s.musicFolders = folders.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
-                    Library.changed()
-                    (context as? com.sevbify.app.MainActivity)?.rescan()
-                    Nav.say(tr("Music folders saved"))
-                }, modifier = Modifier.padding(top = 6.dp)) { Text(tr("Save"), color = C.Text) }
+                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        s.musicFolders = folders.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+                        Library.changed()
+                        (context as? com.sevbify.app.MainActivity)?.rescan()
+                        Nav.say(tr("Music folders saved"))
+                    }) { Text(tr("Save"), color = C.Text) }
+                    OutlinedButton(onClick = { folderPicker.launch(null) }) { Text(tr("Browse…"), color = C.Text) }
+                }
             }
         }
         item {

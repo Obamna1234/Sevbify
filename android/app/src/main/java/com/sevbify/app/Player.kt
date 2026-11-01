@@ -259,11 +259,12 @@ object Player {
     private fun advance(auto: Boolean, failed: Boolean = false) {
         if (failed) {
             failuresInARow++
-            // Every song failed (offline with nothing downloaded, or no internet with Repeat on): stop instead
-            // of skipping round and round forever.
-            if (failuresInARow >= maxOf(1, context.size + userQueue.size)) {
+            // Stop after a few failures in a row instead of racing through the whole queue (which looks like
+            // the player "spazzing out"). A short run of failures means a bad connection or the song finder
+            // is down, not one unplayable track, so skipping further won't help.
+            if (failuresInARow >= maxOf(1, minOf(4, context.size + userQueue.size))) {
                 controller?.pause()
-                status = if (Library.settings.online) "Nothing in this list could be played" else
+                status = if (Library.settings.online) "Couldn't play these right now — check your connection, or update yt-dlp in Settings" else
                     "You're offline and none of these songs are downloaded"
                 return
             }
