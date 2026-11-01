@@ -1,4 +1,8 @@
-## What's new in beta.27 (Android)
+## What's new in beta.28 (Android)
+
+- **Experiment: trying to get YouTube songs playing on the phone.** The phone has no JavaScript engine to solve YouTube's new playback challenge (the desktop app does), which is why mainstream songs were stuck on "Finding the full song…". This build asks YouTube for its audio a different way that may work without one. It may or may not fully fix it — if songs still won't play, use **Settings → Data-saving → "Bandcamp + YouTube"** so Bandcamp songs play, and use the desktop app for the rest.
+
+### Earlier, in beta.27 (Android)
 
 - **Choose Beta or Stable updates.** New switch in **Settings → About and updates → "Beta (test) updates"**. On = you get pre-release test builds as soon as they're out (leave it on for now, since everything is a beta). Off = only full official releases, so you'll never be offered a rough test build. It re-checks the moment you flip it.
 
