@@ -405,6 +405,7 @@ def _probe_bc_track(url: str) -> dict | None:
         "retries": 1,
         "no_color": True,
         "allowed_extractors": SONG_EXTRACTORS,
+        "extractor_args": yt_extractor_args(),
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -1212,6 +1213,15 @@ _MAX_BIN = 200 * 1024 * 1024       # the yt-dlp program
 # Songs only ever come from Bandcamp or YouTube: yt-dlp's other readers (its "generic" one opens any address it
 # is given, and follows redirects) are switched off, so a search result can't send it into your home network.
 SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*"]
+
+
+def yt_extractor_args():
+    """On the phones there's no JS runtime (Deno/Bun/Node) to solve YouTube's player challenge, so ask yt-dlp to
+    prefer the clients most likely to return a playable URL without one. Desktop (which bundles Deno) keeps
+    yt-dlp's defaults. Empty dict = no override."""
+    if os.environ.get("SEVBIFY_PHONE") == "1":
+        return {"youtube": {"player_client": ["default", "tv", "mweb", "ios", "android_vr"]}}
+    return {}
 AUDIO_FORMAT_ORIGINAL = "bestaudio[ext=m4a]/bestaudio/best"
 MP3_QUALITY = "0"
 
@@ -1223,6 +1233,7 @@ def _run_ytdlp_module(
         "format": AUDIO_FORMAT_ORIGINAL if original else "bestaudio/best",
         "noplaylist": True,
         "allowed_extractors": SONG_EXTRACTORS,
+        "extractor_args": yt_extractor_args(),
         "outtmpl": os.path.join(out_dir, safe.replace("%", "%%") + ".%(ext)s"),
         "writethumbnail": embed,
         "postprocessors": [] if original else (
