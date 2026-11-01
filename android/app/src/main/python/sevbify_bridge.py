@@ -80,6 +80,7 @@ def _net():
 @_call
 def setup(data_dir, cache_dir, online=True, lastfm_key="", version=""):
     os.environ["SEVBIFY_DATA_DIR"] = data_dir
+    os.environ["SEVBIFY_PHONE"] = "1"      # no Deno/JS runtime here: prefer YouTube clients that don't need one
     if version:
         os.environ["SEVBIFY_VERSION"] = version
     os.makedirs(data_dir, exist_ok=True)

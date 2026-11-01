@@ -43,7 +43,8 @@ def _extract(e, page):
         raise NoFullSong("yt-dlp is not installed")
     opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
             "format": __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT, "socket_timeout": 20,
-            "skip_download": True, "allowed_extractors": e.SONG_EXTRACTORS}
+            "skip_download": True, "allowed_extractors": e.SONG_EXTRACTORS,
+            "extractor_args": e.yt_extractor_args()}
     with e.yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(page, download=False)
     url = (info or {}).get("url")
@@ -131,7 +132,7 @@ def download_original_audio(page, out_without_ext, progress=None, quality="best"
             # m4a first: every phone plays it and it carries cover art; then whatever audio there is
             "format": __import__("core.quality", fromlist=["x"]).audio_format(quality), "socket_timeout": 20,
             "outtmpl": out_without_ext.replace("%", "%%") + ".%(ext)s", "progress_hooks": hooks, "postprocessors": [],
-            "allowed_extractors": e.SONG_EXTRACTORS}
+            "allowed_extractors": e.SONG_EXTRACTORS, "extractor_args": e.yt_extractor_args()}
     with e.yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(page, download=True)
     path = (info or {}).get("requested_downloads", [{}])[0].get("filepath") or ""
