@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        Library.flush()        // write any pending (debounced) library change now, before we may be killed
         // Settings ▸ Keep a copy in Downloads: the profile file, so it survives uninstalling Sevbify.
         SevbifyApp.instance.scope.launch {
             try { Profile.backupToDownloads(this@MainActivity) } catch (e: Exception) {

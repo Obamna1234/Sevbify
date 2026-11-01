@@ -1,6 +1,7 @@
 package com.sevbify.app
 
 import android.content.Context
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -161,7 +162,24 @@ object Library {
         o.optJSONArray("finished")?.let { a -> for (i in 0 until a.length()) finished.add(a.getString(i)) }
     }
 
+    private var saveJob: kotlinx.coroutines.Job? = null
+
+    /** Coalesce rapid saves into one. Serialising the whole library isn't free, and callers like played()
+     *  can fire many times a second (e.g. while songs change quickly), so we re-serialise at most once per
+     *  short burst instead of on every call — which keeps the UI thread free to draw. */
     fun save() {
+        if (!::file.isInitialized) return
+        saveJob?.cancel()
+        saveJob = SevbifyApp.instance.scope.launch {
+            kotlinx.coroutines.delay(350)
+            saveNow()
+        }
+    }
+
+    /** Write immediately (e.g. when the app goes to the background), skipping the debounce. */
+    fun flush() { saveJob?.cancel(); saveNow() }
+
+    private fun saveNow() {
         if (!::file.isInitialized) return
         val o = JSONObject().apply {
             put("version", 1)
