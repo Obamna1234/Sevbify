@@ -1,6 +1,10 @@
-## What's new in beta.26 (Android)
+## What's new in beta.27 (Android)
 
-- **"Check for updates" is instant now.** Tapping Check for updates fetches the latest straight from GitHub, so a just-published version shows right away instead of after a delay. (Automatic background checks still use a short cache.)
+- **Choose Beta or Stable updates.** New switch in **Settings → About and updates → "Beta (test) updates"**. On = you get pre-release test builds as soon as they're out (leave it on for now, since everything is a beta). Off = only full official releases, so you'll never be offered a rough test build. It re-checks the moment you flip it.
+
+### Earlier, in beta.26 (Android)
+
+- **"Check for updates" is instant now** — tapping it fetches the latest straight from GitHub instead of after a delay.
 
 ### Earlier, in beta.25 (Android)
 
