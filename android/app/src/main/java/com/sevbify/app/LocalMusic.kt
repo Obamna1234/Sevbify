@@ -6,6 +6,7 @@ import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 
@@ -51,6 +52,21 @@ object LocalMusic {
             // No permission yet: Your Songs stays empty until you allow it.
         }
         return out
+    }
+
+    /**
+     * The media-index folder path for a folder the user picked in the file explorer (Settings ▸ Music folders ▸
+     * Browse), e.g. a picked "Music/Sevbify" → "Music/Sevbify". Returns null if the pick isn't on this phone's
+     * internal storage (an SD card or a cloud app → those go under "Folders from other apps" instead), or is the
+     * whole-storage root (too broad). What's returned matches how scan() reads folders by name.
+     */
+    fun relativePathFromTree(uri: Uri): String? {
+        val docId = try { DocumentsContract.getTreeDocumentId(uri) } catch (e: Exception) { return null }
+        val parts = docId.split(":", limit = 2)
+        if (parts.size != 2) return null
+        if (!parts[0].equals("primary", ignoreCase = true)) return null   // only internal storage is indexed by path
+        val path = parts[1].trim('/')
+        return path.ifEmpty { null }
     }
 
     /**
