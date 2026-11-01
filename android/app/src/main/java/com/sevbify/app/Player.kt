@@ -32,7 +32,36 @@ object Player {
     var position by mutableLongStateOf(0L)
     var duration by mutableLongStateOf(0L)
     var status by mutableStateOf("")            // "Finding the full song…", "30-second preview", errors
+    var diag by mutableStateOf("")              // recent playback events, for Settings ▸ About ▸ Playback status
     var sourceName by mutableStateOf("")
+
+    /** A short rolling log of what the player did (states, errors, why it paused) so a stuck "loads but won't
+     *  play" can be read in the app without a computer. Newest at the bottom; last 16 lines kept. */
+    private fun diagLog(s: String) {
+        val stamp = android.text.format.DateFormat.format("HH:mm:ss", System.currentTimeMillis())
+        diag = (diag.split("\n").filter { it.isNotBlank() } + "$stamp  $s").takeLast(16).joinToString("\n")
+    }
+
+    private fun stateName(s: Int) = when (s) {
+        MediaPlayer.STATE_IDLE -> "IDLE"; MediaPlayer.STATE_BUFFERING -> "BUFFERING"
+        MediaPlayer.STATE_READY -> "READY"; MediaPlayer.STATE_ENDED -> "ENDED"; else -> "state$s"
+    }
+
+    private fun pwrReason(r: Int) = when (r) {
+        MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST -> "user"
+        MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS -> "AUDIO_FOCUS_LOSS"
+        MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY -> "becoming_noisy"
+        MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_REMOTE -> "remote"
+        MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM -> "end_of_item"
+        else -> "reason$r"
+    }
+
+    /** A one-line snapshot of the player right now, shown above the log. */
+    fun diagSnapshot(): String {
+        val c = controller
+        return "connected=${c != null}  playing=${c?.isPlaying}  playWhenReady=${c?.playWhenReady}  " +
+               "state=${c?.let { stateName(it.playbackState) }}  out=${com.sevbify.app.ui.AudioOutput.name}"
+    }
     var shuffle by mutableStateOf(Library.settings.shuffle)
     var repeat by mutableStateOf(Library.settings.repeat)   // off / all / one
     var noticeFor by mutableStateOf<Track?>(null)           // the one-time streaming notice is waiting
@@ -62,8 +91,13 @@ object Player {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                     if (playing) failuresInARow = 0
+                    diagLog("isPlaying=$playing")
+                }
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    diagLog("playWhenReady=$playWhenReady (${pwrReason(reason)})")
                 }
                 override fun onPlaybackStateChanged(state: Int) {
+                    diagLog(stateName(state))
                     if (state == MediaPlayer.STATE_READY) {
                         duration = controller?.duration?.takeIf { it > 0 } ?: duration
                         applyResume()
@@ -75,6 +109,7 @@ object Player {
                     }
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    diagLog("ERROR ${error.errorCodeName}: ${error.message?.take(80)}")
                     val t = current
                     if (t != null && t.isItem && plainHttpFor != t.itemKey &&
                         t.streamUrl.ifEmpty { t.downloadUrl }.startsWith("http://")) {
@@ -327,9 +362,10 @@ object Player {
                 val meta = MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
                     .setArtworkUri(t.art.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }).setExtras(Bundle()).build()
                 val item = MediaItem.Builder().setUri(uri).setMediaId(t.matchKey).setMediaMetadata(meta).build()
+                diagLog("play '${t.title}' via ${uri.substringBefore(':')} (controller=${controller != null})")
                 controller?.run {
                     setMediaItem(item); prepare()
-                    if (!videoMode) play()          // being watched: the sound comes with the video
+                    if (!videoMode) { playWhenReady = true; play() }   // being watched: the sound comes with the video
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error

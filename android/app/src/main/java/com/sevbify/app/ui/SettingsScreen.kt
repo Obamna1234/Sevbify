@@ -399,6 +399,23 @@ fun SettingsPageScreen(key: String) {
                 Text(ytdlp, style = MaterialTheme.typography.bodySmall)
             }
         }
+        item {
+            @Suppress("UNUSED_VARIABLE") val tick = com.sevbify.app.Player.diag
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(tr("Playback status"), style = MaterialTheme.typography.bodyLarge)
+                Text("What the player last did. If a song won't play: tap it, then come back here and tap Copy and send it over.",
+                     style = MaterialTheme.typography.bodySmall, color = C.Sub)
+                Text(com.sevbify.app.Player.diagSnapshot() + "\n" +
+                         com.sevbify.app.Player.diag.ifBlank { "(no playback yet)" },
+                     style = MaterialTheme.typography.bodySmall, color = C.Text, modifier = Modifier.padding(top = 6.dp))
+                OutlinedButton(onClick = {
+                    val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Sevbify playback",
+                        com.sevbify.app.Player.diagSnapshot() + "\n" + com.sevbify.app.Player.diag))
+                    Nav.say(tr("Copied"))
+                }, modifier = Modifier.padding(top = 6.dp)) { Text(tr("Copy"), color = C.Text) }
+            }
+        }
         }
         }
         item { Gap(32.dp) }
