@@ -1,10 +1,17 @@
-## What's new in beta.24 (Android)
+## What's new in beta.25 (Android)
 
-- **Settings update instantly.** Media quality and other settings/toggles now change the moment you tap them — no more leaving the page and coming back for it to show.
-- **30-second previews are one simple setting.** The per-song "Preview (30 s)" menu item is gone. Instead there's a single switch in **Settings → Playback** ("Play 30-second previews"): off by default, so full songs play; turn it on for short previews. Previews now play through the normal player, which should fix the distorted sound.
-- **Open with / Share → Sevbify.** Pick a song in your file manager (e.g. Samsung My Files) → **Open with → Sevbify**, or **Share → Sevbify**, and it plays. Nothing was added inside the app; Sevbify just shows up as a player other apps can hand a file to.
+- **No more "spazzing" through songs.** When songs can't be played (e.g. the online song-finder is having trouble), the player now stops after a few tries with a clear message instead of racing through the whole list.
+- **Pick your music folder by browsing.** Settings → Data-saving and offline → Music folders now has a **Browse…** button: choose the folder in your file explorer instead of typing its name.
+- **Tidier Downloads screen.** Each download now shows its cover, song title and artist, with a progress bar on the one that's downloading.
+- **Cleaner update bar.** Removed the odd green dot on the right of the update progress bar.
 
-(Windows, macOS and Linux are unchanged in this build.)
+### Earlier, in beta.24 (Android)
+
+- **Settings update instantly** — media quality and toggles change the moment you tap them.
+- **30-second previews are one simple setting** in Settings → Playback (off by default = full songs).
+- **Open with / Share → Sevbify** — hand a song to Sevbify from your file manager.
+
+(Windows, macOS and Linux are unchanged in these builds.)
 
 ---
 
