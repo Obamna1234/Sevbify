@@ -1,4 +1,9 @@
-## What's new in beta.28 (Android)
+## What's new in beta.29 (Android)
+
+- **Playback status readout (to track down songs that won't play).** Settings → About and updates → **Playback status** shows what the player last did, including *why* it stopped. If a song won't play, tap it, come back here, tap **Copy**, and send it over.
+- **Less lag.** The app no longer re-saves your whole library on the UI thread every time a song changes, so navigation should feel smoother.
+
+### Earlier, in beta.28 (Android)
 
 - **Experiment: trying to get YouTube songs playing on the phone.** The phone has no JavaScript engine to solve YouTube's new playback challenge (the desktop app does), which is why mainstream songs were stuck on "Finding the full song…". This build asks YouTube for its audio a different way that may work without one. It may or may not fully fix it — if songs still won't play, use **Settings → Data-saving → "Bandcamp + YouTube"** so Bandcamp songs play, and use the desktop app for the rest.
 
