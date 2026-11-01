@@ -440,10 +440,11 @@ def book_chapters(book_json, quality="standard"):
 
 # --- updates ------------------------------------------------------------------------------------------------
 @_call
-def check_updates(current, plat="android"):
-    """Newest Sevbify for this phone: {"newer", "latest", "url" (the .apk / .ipa), "sha256", "size", "message"}."""
+def check_updates(current, plat="android", fresh=False):
+    """Newest Sevbify for this phone: {"newer", "latest", "url" (the .apk / .ipa), "sha256", "size", "message"}.
+    `fresh` skips the 6-hour cache, for a manual "Check for updates"."""
     from core import updates
-    return updates.check_app(_net(), current, plat)
+    return updates.check_app(_net(), current, plat, fresh=fresh)
 
 
 @_call
