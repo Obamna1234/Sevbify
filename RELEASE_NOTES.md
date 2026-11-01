@@ -1,4 +1,8 @@
-## What's new in beta.25 (Android)
+## What's new in beta.26 (Android)
+
+- **"Check for updates" is instant now.** Tapping Check for updates fetches the latest straight from GitHub, so a just-published version shows right away instead of after a delay. (Automatic background checks still use a short cache.)
+
+### Earlier, in beta.25 (Android)
 
 - **No more "spazzing" through songs.** When songs can't be played (e.g. the online song-finder is having trouble), the player now stops after a few tries with a clear message instead of racing through the whole list.
 - **Pick your music folder by browsing.** Settings → Data-saving and offline → Music folders now has a **Browse…** button: choose the folder in your file explorer instead of typing its name.
