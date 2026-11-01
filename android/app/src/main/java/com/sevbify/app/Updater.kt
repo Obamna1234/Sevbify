@@ -33,7 +33,8 @@ object Updater {
         if (!s.online) return "Turn on Online features to check for updates."
         if (!manual && System.currentTimeMillis() - s.lastAppCheck < 24L * 3600 * 1000) return ""
         // A manual "Check for updates" skips the cache so a just-published release shows straight away.
-        val r = Bridge.obj("check_updates", Library.coreVersion, "android", manual)
+        // betaUpdates = also offer pre-releases (Settings ▸ About and updates ▸ Beta updates).
+        val r = Bridge.obj("check_updates", Library.coreVersion, "android", manual, s.betaUpdates)
         s.lastAppCheck = System.currentTimeMillis(); Library.changed()
         if (r.optBoolean("newer")) {
             val latest = r.optString("latest")

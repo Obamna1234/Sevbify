@@ -88,10 +88,11 @@ def update_ytdlp(download=None):
     return True, f"yt-dlp {info['latest']} downloaded. Restart Sevbify to use it."
 
 
-def check_app(net, current=None, plat="", fresh=False):
+def check_app(net, current=None, plat="", fresh=False, include_pre=None):
     """{"current", "latest", "newer", "page", "url", "sha256", "size", "checked", "message"} for Sevbify itself.
     `url` is the download for `plat` (this computer by default; "android" / "ios" from the phones).
-    `fresh` skips the cache (for a manual "Check for updates", so a just-published release shows at once)."""
+    `fresh` skips the cache (for a manual "Check for updates", so a just-published release shows at once).
+    `include_pre` offers pre-releases (betas); None = auto (on when the running version is itself a beta)."""
     e = downloader.engine()
     current = current or app_version()
     result = {"current": current, "latest": None, "newer": False, "page": RELEASES_PAGE, "url": "", "sha256": "",
@@ -103,10 +104,12 @@ def check_app(net, current=None, plat="", fresh=False):
                              f"reached ({err}).")
         return result
     result["checked"] = True
-    include_pre = "-" in current                      # beta testers also hear about new betas
+    if include_pre is None:
+        include_pre = "-" in current                  # auto: beta testers also hear about new betas
     best = e.app_pick_release(data, include_pre, plat)
     if not best:
-        result["message"] = "No releases found."
+        result["message"] = ("No official release yet — turn on beta updates to get test builds."
+                             if not include_pre else "No releases found.")
         return result
     result.update(latest=best["version"], page=best.get("page") or RELEASES_PAGE, url=best.get("url") or "",
                   sha256=best.get("sha256") or "", size=best.get("size") or 0,
