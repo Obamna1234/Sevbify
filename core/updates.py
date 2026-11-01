@@ -88,15 +88,16 @@ def update_ytdlp(download=None):
     return True, f"yt-dlp {info['latest']} downloaded. Restart Sevbify to use it."
 
 
-def check_app(net, current=None, plat=""):
+def check_app(net, current=None, plat="", fresh=False):
     """{"current", "latest", "newer", "page", "url", "sha256", "size", "checked", "message"} for Sevbify itself.
-    `url` is the download for `plat` (this computer by default; "android" / "ios" from the phones)."""
+    `url` is the download for `plat` (this computer by default; "android" / "ios" from the phones).
+    `fresh` skips the cache (for a manual "Check for updates", so a just-published release shows at once)."""
     e = downloader.engine()
     current = current or app_version()
     result = {"current": current, "latest": None, "newer": False, "page": RELEASES_PAGE, "url": "", "sha256": "",
               "size": 0, "checked": False, "message": ""}
     try:
-        data = net.get_json(RELEASES_API, {"per_page": 30}, ttl=6 * 3600)
+        data = net.get_json(RELEASES_API, {"per_page": 30}, ttl=0 if fresh else 6 * 3600)
     except Exception as err:
         result["message"] = ("Couldn't check: Sevbify's releases page isn't public yet, or GitHub couldn't be "
                              f"reached ({err}).")
