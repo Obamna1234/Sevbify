@@ -41,6 +41,7 @@ data class Settings(
     var skipSponsors: Boolean = true,
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
+    var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("online", online); put("stream_full", streamFull); put("source", source); put("autoplay", autoplay)
@@ -53,7 +54,7 @@ data class Settings(
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
         put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
-        put("last_app_check", lastAppCheck); put("update_asked", updateAsked)
+        put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
     }
 
@@ -83,6 +84,7 @@ data class Settings(
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
             s.profileBackup = o.optBoolean("profile_backup", false); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
+            s.betaUpdates = o.optBoolean("beta_updates", true)
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             return s
         }

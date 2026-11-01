@@ -370,6 +370,18 @@ fun SettingsPageScreen(key: String) {
             }
         }
         item {
+            Toggle(tr("Beta (test) updates"),
+                   "Get pre-release test builds as soon as they're out. Off = only full, official releases — fewer updates and " +
+                   "less chance of a rough one. You're on a beta now, so leave this on until there's an official release.",
+                   s.betaUpdates) {
+                s.betaUpdates = it; Library.changed()
+                scope.launch {
+                    update = try { com.sevbify.app.Updater.check(manual = true) }
+                             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; "Couldn't check: ${e.message}" }
+                }
+            }
+        }
+        item {
             Toggle(tr("Keep yt-dlp up to date"), "yt-dlp is what finds and downloads songs on YouTube; YouTube changes often. " +
                    "Once a week, when online, the newest official release is fetched and checked against its published " +
                    "checksum. Used from the next start.", s.autoUpdateYtdlp) { s.autoUpdateYtdlp = it; Library.changed() }
