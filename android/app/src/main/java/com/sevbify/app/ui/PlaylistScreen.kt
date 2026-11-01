@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.outlined.ArrowCircleDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -281,15 +282,33 @@ fun DownloadsScreen() {
         }
         if (items.isEmpty()) item { Muted(tr("Nothing is downloading.")) }
         items(items) { (key, state) ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(key.substringAfter('|').ifEmpty { key }, style = MaterialTheme.typography.bodyLarge)
-                    Text(state.name.lowercase().replaceFirstChar { it.uppercase() } +
-                             (Downloads.notes[key]?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodySmall)
+            val t = Downloads.trackFor(key)
+            val title = t?.title?.takeIf { it.isNotBlank() } ?: key.substringAfter('|').ifEmpty { key }
+            val artist = t?.artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" }
+            val status = when (state) {
+                Downloads.State.QUEUED -> tr("Queued")
+                Downloads.State.DOWNLOADING -> tr("Downloading…")
+                Downloads.State.FAILED -> tr("Failed")
+                Downloads.State.STOPPED -> tr("Stopped")
+            } + (Downloads.notes[key]?.let { " · $it" } ?: "")
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Cover(t?.art ?: "", 48.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(listOfNotNull(artist, status).joinToString(" · "), color = C.Sub,
+                             style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (state == Downloads.State.FAILED || state == Downloads.State.STOPPED) {
+                        Chip(tr("Try again"), false) { Downloads.retry(key) }; Spacer(Modifier.width(8.dp))
+                    }
+                    Chip(tr("Cancel"), false) { Downloads.cancel(key) }
                 }
-                if (state == Downloads.State.FAILED || state == Downloads.State.STOPPED) Chip(tr("Try again"), false) { Downloads.retry(key) }
-                Spacer(Modifier.width(8.dp))
-                Chip(tr("Cancel"), false) { Downloads.cancel(key) }
+                // No per-file percentage is reported by the downloader, so show a moving bar while it's active.
+                if (state == Downloads.State.DOWNLOADING)
+                    LinearProgressIndicator(color = C.Green, trackColor = C.Elevated,
+                                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
             }
         }
     }

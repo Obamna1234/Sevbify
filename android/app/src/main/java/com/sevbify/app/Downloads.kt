@@ -34,6 +34,9 @@ object Downloads {
 
     fun stateOf(t: Track): State? = states[if (t.isItem) t.itemKey else t.matchKey]
 
+    /** The song/episode queued or downloading for this key, for the Downloads screen (title, artist, cover). */
+    fun trackFor(key: String): Track? = jobs[key]
+
     fun request(tracks: List<Track>): Int {
         var added = 0
         for (t in tracks) {

@@ -34,6 +34,7 @@ fun UpdateDialog(r: JSONObject) {
                 Text("Sevbify ${r.optString("latest")} is available (you have ${Library.coreVersion}). It installs over " +
                      "this one: your playlists, downloads and settings stay.")
                 if (busy) LinearProgressIndicator(progress = { Updater.progress }, color = C.Green,
+                                                  gapSize = 0.dp, drawStopIndicator = {},
                                                   modifier = Modifier.fillMaxWidth().padding(top = 16.dp))
                 if (Updater.status.isNotEmpty() && !ready) Text(Updater.status, color = C.Sub, modifier = Modifier.padding(top = 8.dp))
             }
