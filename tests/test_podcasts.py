@@ -182,3 +182,17 @@ def test_find_youtube_channel_only_accepts_the_shows_own_channel():
     assert find_youtube_channel("Some Quiet Show", extract=lambda q: {"entries": entries[:1]}) is None
     bad = [{"channel": "Bad Friends", "channel_url": "file:///C:/x.exe"}]
     assert find_youtube_channel("Bad Friends", extract=lambda q: {"entries": bad}) is None
+
+
+def test_find_youtube_episode_matches_title_and_length():
+    from core import podcasts
+    entries = {"entries": [
+        {"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "Totally different video", "duration": 3200},
+        {"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb", "title": "The War of The Noses | Agincourt", "duration": 600},
+        {"url": "https://www.youtube.com/watch?v=ccccccccccc", "title": "The War of The Noses | Agincourt (Fin vs History)", "duration": 3360},
+    ]}
+    got = podcasts.find_youtube_episode("Fin vs History", "The War of The Noses | Agincourt", 3365000,
+                                        extract=lambda q: entries)
+    assert got.endswith("ccccccccccc")
+    assert podcasts.find_youtube_episode("Fin vs History", "Something nobody uploaded", 1000,
+                                         extract=lambda q: entries) == ""
