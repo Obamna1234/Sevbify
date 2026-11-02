@@ -240,7 +240,7 @@ object Player {
                         ""
                     } finally { findingVideo = false }
                 }
-                if (page.isEmpty()) { Nav.say("Couldn't find a video of this episode on YouTube"); return@launch }
+                if (page.isEmpty()) { status = "Couldn't find a video of this episode on YouTube"; return@launch }
                 episodeVideo[t.itemKey] = page
                 watch = t.copy(pageUrl = page)
             }
