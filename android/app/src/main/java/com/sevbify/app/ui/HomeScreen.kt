@@ -45,15 +45,25 @@ import com.sevbify.app.Player
 import com.sevbify.app.Show
 import com.sevbify.app.Track
 
+/** Home's loaded shelves, kept while the app runs so coming back from another tab doesn't empty and reload them. */
+object HomeState {
+    var chip by mutableStateOf("all")
+    var popular by mutableStateOf<List<Track>>(emptyList())
+    var topShows by mutableStateOf<List<Show>>(emptyList())
+    var books by mutableStateOf<List<Show>>(emptyList())
+    val shelves = androidx.compose.runtime.mutableStateMapOf<String, List<Show>>()
+}
+
 /** Home, like Spotify's on Android: chips, eight quick tiles, then shelves. */
 @Composable
 fun HomeScreen() {
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes
-    var chip by rememberSaveable { mutableStateOf("all") }
-    var popular by remember { mutableStateOf<List<Track>>(emptyList()) }
-    var topShows by remember { mutableStateOf<List<Show>>(emptyList()) }
+    var chip by HomeState::chip
+    var popular by HomeState::popular
+    var topShows by HomeState::topShows
     LaunchedEffect(Library.settings.online) {
         if (!Library.settings.online) return@LaunchedEffect
+        if (popular.isNotEmpty() && topShows.isNotEmpty()) return@LaunchedEffect   // already loaded: no reload on return
         try {
             val a = Bridge.obj("genre_overview", 0).getJSONArray("tracks")
             popular = (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) }
@@ -192,7 +202,7 @@ private fun ShowsHomePart(chip: String, topShows: List<Show>) {
         Row(Modifier.padding(horizontal = 16.dp)) { Chip(tr("Find podcasts"), false) { Nav.go(Screen.Podcasts) } }
     } else {
         // Popular free audiobooks (LibriVox), like the Top podcasts shelf.
-        var popular by remember { mutableStateOf<List<Show>>(emptyList()) }
+        var popular by HomeState::books
         LaunchedEffect(Library.settings.online) {
             if (Library.settings.online && popular.isEmpty()) {
                 try { val a = Bridge.arr("books", "popular", ""); popular = (0 until a.length()).map { Show(a.getJSONObject(it)) } }
@@ -226,9 +236,13 @@ internal val BOOK_CATEGORIES = listOf(
 /** One Explore shelf; nothing is shown when the list is empty or can't be loaded. */
 @Composable
 internal fun CategoryShelf(title: String, load: suspend () -> List<Show>) {
-    var shows by remember(title) { mutableStateOf<List<Show>>(emptyList()) }
-    LaunchedEffect(title) { shows = try { load() } catch (e: Exception) {
-        if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() } }
+    val shows = HomeState.shelves[title].orEmpty()
+    LaunchedEffect(title) {
+        if (HomeState.shelves[title] != null) return@LaunchedEffect              // loaded before: keep it
+        val loaded = try { load() } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() }
+        if (loaded.isNotEmpty()) HomeState.shelves[title] = loaded       // an empty/failed load is tried again later
+    }
     if (shows.isNotEmpty()) {
         SectionTitle(title)
         LazyRow(Modifier.padding(start = 16.dp)) {
