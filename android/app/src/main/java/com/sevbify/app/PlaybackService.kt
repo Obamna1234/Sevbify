@@ -129,9 +129,13 @@ class PlaybackService : MediaLibraryService() {
             val index = id.substringAfterLast('#', "").toIntOrNull()
             val (tracks, source) = list(folderId)
             if (index != null && index in tracks.indices) {
+                // A song picked on the car's screen: play it through Sevbify's own queue.
                 main.post { Player.play(tracks[index], tracks, source) }   // after the session has applied this answer
+                return Futures.immediateFuture(mutableListOf())
             }
-            return Futures.immediateFuture(mutableListOf())
+            // Everything else is Sevbify's own player loading a song (its link is already in the item): pass it
+            // through. (Answering with an empty list here left the player with nothing to play: it "ended" at once.)
+            return Futures.immediateFuture(mediaItems)
         }
     }
 
