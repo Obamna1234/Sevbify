@@ -1,0 +1,96 @@
+2026-11-02 00:20:41.228 Sevbify[12514:38397] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] O9BK3xcRH1g: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:41.230 Sevbify[12514:38384] Sevbify: full song not found for Instant Crush (feat. Julian Casablancas): YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:20:44.546 Sevbify[12514:38399] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] Rif-RTvmmss: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:44.547 Sevbify[12514:38384] Sevbify: full song not found for Starboy: YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:20:48.381 Sevbify[12514:38392] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] 5NV6Rdv1a3I: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:48.381 Sevbify[12514:38384] Sevbify: full song not found for Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers): YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:20:51.630 Sevbify[12514:38392] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] iIWoYaJRryw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:51.631 Sevbify[12514:38384] Sevbify: full song not found for I Feel It Coming: YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:20:55.088 Sevbify[12514:38391] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] TCd6PfxOy0Y: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:55.088 Sevbify[12514:38384] Sevbify: full song not found for Veridis Quo: YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:20:58.464 Sevbify[12514:38399] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] A2VpR8HahKc: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:20:58.468 Sevbify[12514:38384] Sevbify: full song not found for One More Time: YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:21:02.398 Sevbify[12514:38399] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] gx7GyiDZQms: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:21:02.399 Sevbify[12514:38384] Sevbify: full song not found for Get Lucky (feat. Pharrell Williams and Nile Rodgers): YouTube is blocking this connection for now (try again later or on another network)
+2026-11-02 00:21:05.748 Sevbify[12514:38399] Sevbify resolve failed: YouTube is blocking this connection for now (try again later or on another network)
+Traceback (most recent call last):
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 43, in wrapped
+    return _ok(fn(*args))
+               ~~^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/sevbify_bridge.py", line 234, in resolve
+    return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/F5C4661C-7B05-4238-BF71-BF2845D2630A/data/Containers/Bundle/Application/683AACAE-7170-4084-9BE8-06387E185D7A/Sevbify.app/app/core/streamer.py", line 93, in find_full_song
+    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+core.streamer.NoFullSong: ERROR: [youtube] dwDns8x3Jb4: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+2026-11-02 00:21:05.751 Sevbify[12514:38384] Sevbify: full song not found for Around the World: YouTube is blocking this connection for now (try again later or on another network)

@@ -1,0 +1,1391 @@
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild -project ios/Sevbify.xcodeproj -scheme Sevbify -configuration Release -sdk iphoneos -destination generic/platform=iOS -derivedDataPath ios/build ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= build
+
+Build settings from command line:
+    ARCHS = arm64
+    CODE_SIGN_IDENTITY = 
+    CODE_SIGNING_ALLOWED = NO
+    CODE_SIGNING_REQUIRED = NO
+    SDKROOT = iphoneos26.5
+
+note: Using codesigning identity override: 
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'Sevbify' in project 'Sevbify' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 8f4babd4ad8e3ed834c483067e9b0d0d
+Build description path: /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/XCBuildData/8f4babd4ad8e3ed834c483067e9b0d0d.xcbuilddata
+ClangStatCache /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache
+    cd /Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify-62195c35455db4d2bd8b1e2c2cd0eac8-VFS-iphoneos/all-product-headers.yaml
+    cd /Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify-62195c35455db4d2bd8b1e2c2cd0eac8-VFS-iphoneos/all-product-headers.yaml
+
+CreateBuildDirectory /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+    cd /Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+
+CreateBuildDirectory /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos
+    cd /Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos
+
+ProcessXCFramework /Users/runner/work/Sevbify/Sevbify/ios/Python.xcframework /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework ios
+    cd /Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    builtin-process-xcframework --xcframework /Users/runner/work/Sevbify/Sevbify/ios/Python.xcframework --platform ios --target-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyStaticMetadataFileList (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyMetadataFileList (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-non-framework-target-headers.hmap (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Script-5E20CACBF58E9B733DE95B5A.sh (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Script-5E20CACBF58E9B733DE95B5A.sh
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_const_extract_protocols.json (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftConstValuesFileList (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.LinkFileList (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.LinkFileList
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-OutputFileMap.json (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-OutputFileMap.json
+
+WriteAuxiliaryFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    write-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+'-std=gnu11' -fmodules -gmodules '-fmodules-cache-path=/Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex' -fpascal-strings -Os -fno-common -g -iquote /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap -iquote /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/include -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework/Headers -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources-normal/arm64 -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/arm64 -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources -F/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F/Users/runner/work/Sevbify/Sevbify/ios -F.
+
+MkDir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /bin/mkdir -p /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks
+
+MkDir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /bin/mkdir -p /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+
+MkDir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/unthinned (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /bin/mkdir -p /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/unthinned
+
+MkDir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /bin/mkdir -p /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned
+
+GenerateAssetSymbols /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/actool /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets --compile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_dependencies --output-partial-info-plist /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphoneos --bundle-identifier com.obamna1234.sevbify --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols.h
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+CpResource /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/app_packages /Users/runner/work/Sevbify/Sevbify/ios/app_packages (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/Sevbify/Sevbify/ios/app_packages /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+
+CpResource /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/app /Users/runner/work/Sevbify/Sevbify/ios/app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/Sevbify/Sevbify/ios/app /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/zh-Hans.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/zh-Hans.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/zh-Hans.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/zh-Hans.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/zh-Hans.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/vi.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/vi.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/vi.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/vi.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/vi.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/uk.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/uk.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/uk.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/uk.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/uk.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/tr.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/tr.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/tr.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/tr.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/tr.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/th.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/th.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/th.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/th.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/th.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/sv.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/sv.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/sv.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/sv.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/sv.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ru.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ru.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ru.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ru.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ru.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/pt.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pt.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/pt.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pt.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pt.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/pl.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pl.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/pl.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pl.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/pl.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/nl.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/nl.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/nl.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/nl.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/nl.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ko.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ko.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ko.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ko.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ko.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ja.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ja.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ja.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ja.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ja.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/it.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/it.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/it.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/it.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/it.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/id.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/id.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/id.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/id.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/id.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/hi.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/hi.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/hi.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/hi.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/hi.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/fr.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/fr.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/fr.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/fr.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/fr.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/es.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/es.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/es.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/es.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/es.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/en.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/en.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/en.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/en.lproj/Localizable.strings
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/de.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/de.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/de.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/de.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/de.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CopyStringsFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ar.lproj/Localizable.strings /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ar.lproj/Localizable.strings (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/ar.lproj -- /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ar.lproj/Localizable.strings
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ar.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'Sevbify' from project 'Sevbify')
+
+CompileAssetCatalogVariant thinned /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/actool /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets --compile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 16.0 --platform iphoneos
+/* com.apple.actool.compilation-results */
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist_thinned
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned/AppIcon60x60@2x.png
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned/AppIcon76x76@2x~ipad.png
+/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned/Assets.car
+
+
+SwiftDriver Sevbify normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-SwiftDriver -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Sevbify -O -whole-module-optimization @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -target arm64-apple-ios16.0 -g -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -swift-version 5 -I /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios -F . -c -num-threads 3 -Xcc -ivfsstatcache -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache -output-file-map /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -sdk-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework/Headers -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources -emit-objc-header -emit-objc-header-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-Swift.h -import-objc-header /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Sevbify-Bridging-Header.h -working-directory /Users/runner/work/Sevbify/Sevbify/ios -no-emit-module-separately-wmo
+
+SwiftDriver\ Compilation Sevbify normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-Swift-Compilation -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Sevbify -O -whole-module-optimization @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -target arm64-apple-ios16.0 -g -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -swift-version 5 -I /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios -F . -c -num-threads 3 -Xcc -ivfsstatcache -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache -output-file-map /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -sdk-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework/Headers -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources -emit-objc-header -emit-objc-header-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-Swift.h -import-objc-header /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Sevbify-Bridging-Header.h -working-directory /Users/runner/work/Sevbify/Sevbify/ios -no-emit-module-separately-wmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdbool-31YGOPR8JWDPPYPDAQM18ET63.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ptrcheck-1076RK3ZZRNW8JTII1GBWFCWX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdarg-DXGZ4PZGMR1KXNM97LRX26RWL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_float-7LSAAF3B2BDJ41BL8XB6HRDCQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_AvailabilityInternal-F5GNZUIDVLMCK3KDN5238OYKB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftShims-5E0XTB4S83Y6BYZTKGLQD5D8P.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/DeveloperToolsSupport-2L3HAC6FEBWQ0HA6VES979P9X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_SwiftConcurrencyShims-349XNR3Q4JN56LB33S3FZ9IU1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation1-CFMUVO40OXSXJQLD8ALEF83C4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ptrauth-50JBO9VYS95OENIGL01MZ1FE3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stddef-1HITIJFHHUBH9YQFDQVRJW92H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_limits-2LDVRZ8SV2FW90HJKNMDUS6SB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation2-AWNM2SWKEVMKF8ITUUB5JO3WI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_tgmath-ENQ4OH0FVYWVULO2U39V089BA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdint-7WOE936EE66LWA8LD6QOIHQAV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/sys_types-46CVOY9YGVT3SLON5AEVAECQQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdatomic-8K6OZEDI5FX45KPIHZ6WD764X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation3-1AAH2T0A77WG4ZRLF4KXEG8VN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_intrinsics-E32G1HM4D2WN1KO8LNHRW9BH5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_inttypes-727AYXCT0AXUVA1Y463ORPQEU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Darwin-B2KUK6NOC874ZOWZO4XHGKBV3.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/simd-87F17DDPC22XABKTLHYS9W1CX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ObjectiveC-3EUHNIZSLSRQVJ0YBTOG4KK9F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MachO-25CUFC1FODCO28P43IJMGX36F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os_object-6SHICL02WDVILKYM2VEBC55MS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os_workgroup-9AAETZKL8NC8Y6F71D96KWUSZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Dispatch-KP9YJHTSFOC6NDPDSGYM3U7C.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Spatial-EITJU47730YF4IK7EJO7AA78Q.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/XPC-JMHLXQOGAMOPMG18UJLIVKHR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/dnssd-EOSK9E57DUJ52LB687C52AZQT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os-7SFQW2NOE4N1G8PSYNNVFS88Y.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreFoundation-7OG2YV4VLFQ4T7M0XSXWXIAAA.pcm
+
+LinkAssetCatalog /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Assets.xcassets (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-linkAssetCatalog --thinned /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/thinned --thinned-dependencies /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist_unthinned --output /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app --plist-output /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist
+note: Emplaced /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Assets.car (in target 'Sevbify' from project 'Sevbify')
+note: Emplaced /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/AppIcon60x60@2x.png (in target 'Sevbify' from project 'Sevbify')
+note: Emplaced /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/AppIcon76x76@2x~ipad.png (in target 'Sevbify' from project 'Sevbify')
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreAudioTypes-6YYP2UBEZ1TNHG584A50FFIQ8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Security-32WYZH1HPJJUW86JAQ9Q4GDWB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreGraphics-1J6TKM4J0AL05S5PEYFKE4EAD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CFNetwork-48L4YF7VMWNSXMTVP3MUFHYFO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreAudio-A6XWKR8ZC7SR86T4XPQ5VARIN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreText-738OL6ERE7ZIEMDYR50BU0OCW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ImageIO-COMYN58T7CWU9S73R9I854STU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Foundation-99SJFNLY8XL5R0Z1CLSMY4V7X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/DataDetection-DEQHHKH73PT81ST4T8NBXKS3S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/IOSurface-PUY4J66JHWOBOPBH58M3U7ZT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UniformTypeIdentifiers-L65LG0PSC5V3Z1XLULAWWZ7R.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Symbols-BW302IOJ5PKQTJNHL39W4QQO5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/FileProvider-BZXYARF9UILEJI4BK39P7ARS2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UIUtilities-BDK49MUTDNK0895NRN5ZHOJVW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Accessibility-1AW7QOPDQAA7Y1T0CKDNEZT0Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreMIDI-PYQGGJD3EQ0F4NZ0JNCGN4L9.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/OSLog-23Z68AY9AN7C3TO8C3O4KIJ0M.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreTransferable-6T01WFHQDRBCSHGTUGN506JR4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UserNotifications-4309R1GQ3Q7WGSNIM12QWI59H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Network-CKKE8SG3HGXSE3W234L78UGGN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AudioToolbox-CM4993C9KD1C70NFZVL7NQ3KU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreData-CAB8HOSGUTW8TO8ZW7CHK1HZ5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/OpenGLES-1Y5SHSRRHX07CKFNTVIEJJJ1L.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVRouting-9B0G6947KY7NL1SCLJSZGHZ7F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Metal-ET7B94BU8140ZQNOQ2AG32LG4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaAccessibility-1AYHOAKS37FUDQ4KDY28C4928.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreVideo-ELO2AB24JPPQ47ANKJQF7Z57H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreMedia-1CC8U0P7N2PW1VP3WXE26L3EM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreImage-8Q2HTTYPDNWWNEWS7PGZGY4GW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/QuartzCore-3TAR7UNRC43KONBA49B1BZY2U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftUICore-EM771SMHE90GCZCTSSVONLB60.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UIKit-DY3GGMTPPKNKC30DIKIW6NXL0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVFAudio-37UZGIRF53C8GE4ITEISC901S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaToolbox-4G7A0AXLWC5PYICXBXP3DL7RZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVFoundation-7GJSTX3XVGLUKZTL5RWGNLKXI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftUI-42UXZO4FP7TWPJP06F0WOWVGY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaPlayer-8W8HAT5OZ7R5Y3GPVK4B187LS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVKit-257KHAZLAC97GIOH1USTKN36O.pcm
+
+SwiftGeneratePch normal arm64 Compiling\ bridging\ header (in target 'Sevbify' from project 'Sevbify')
+
+SwiftDriverJobDiscovery normal arm64 Compiling bridging header (in target 'Sevbify' from project 'Sevbify')
+
+SwiftCompile normal arm64 Compiling\ App.swift,\ AppUpdates.swift,\ Bridge.swift,\ CarPlayInfo.swift,\ Downloads.swift,\ HomeView.swift,\ ImportChecker.swift,\ Library.swift,\ LibraryView.swift,\ Models.swift,\ NowPlayingView.swift,\ Player.swift,\ PreviewView.swift,\ Profile.swift,\ SearchView.swift,\ SettingsView.swift,\ Theme.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/App.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/AppUpdates.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Bridge.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/CarPlayInfo.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/HomeView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/ImportChecker.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Library.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/LibraryView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Models.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/NowPlayingView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Player.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/PreviewView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Profile.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/SearchView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/SettingsView.swift /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Theme.swift /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/GeneratedAssetSymbols.swift /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Dispatch.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/TipKit.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/AudioToolbox.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_AVKit_SwiftUI.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/AVKit.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/System.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/OSLog.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreText.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreFoundation.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Accessibility.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/MediaPlayer.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_StringProcessing.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/simd.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/FileProvider.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Distributed.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Observation.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_Concurrency.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/SwiftUICore.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/AVFAudio.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreTransferable.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Metal.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Synchronization.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreData.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_DarwinFoundation1.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Spatial.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Symbols.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/SwiftUI.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/ObjectiveC.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Darwin.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/QuartzCore.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreImage.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/MediaAccessibility.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/DeveloperToolsSupport.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreMedia.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/AVFoundation.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_Builtin_float.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreMIDI.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/DataDetection.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_DarwinFoundation2.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Combine.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Foundation.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreVideo.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreAudio.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/_DarwinFoundation3.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/os.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/UniformTypeIdentifiers.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Network.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/UIKit.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/CoreGraphics.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/XPC.swiftmodule/arm64e-apple-ios.swiftmodule /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos/prebuilt-modules/26.5/Swift.swiftmodule/arm64e-apple-ios.swiftmodule /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ObjectiveC-3EUHNIZSLSRQVJ0YBTOG4KK9F.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_limits-2LDVRZ8SV2FW90HJKNMDUS6SB.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdatomic-8K6OZEDI5FX45KPIHZ6WD764X.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaPlayer-8W8HAT5OZ7R5Y3GPVK4B187LS.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os-7SFQW2NOE4N1G8PSYNNVFS88Y.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreVideo-ELO2AB24JPPQ47ANKJQF7Z57H.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/OSLog-23Z68AY9AN7C3TO8C3O4KIJ0M.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdint-7WOE936EE66LWA8LD6QOIHQAV.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreMedia-1CC8U0P7N2PW1VP3WXE26L3EM.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Network-CKKE8SG3HGXSE3W234L78UGGN.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_float-7LSAAF3B2BDJ41BL8XB6HRDCQ.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/QuartzCore-3TAR7UNRC43KONBA49B1BZY2U.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreImage-8Q2HTTYPDNWWNEWS7PGZGY4GW.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreText-738OL6ERE7ZIEMDYR50BU0OCW.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/FileProvider-BZXYARF9UILEJI4BK39P7ARS2.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreAudio-A6XWKR8ZC7SR86T4XPQ5VARIN.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreFoundation-7OG2YV4VLFQ4T7M0XSXWXIAAA.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/XPC-JMHLXQOGAMOPMG18UJLIVKHR.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreGraphics-1J6TKM4J0AL05S5PEYFKE4EAD.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ptrauth-50JBO9VYS95OENIGL01MZ1FE3.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/OpenGLES-1Y5SHSRRHX07CKFNTVIEJJJ1L.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/DataDetection-DEQHHKH73PT81ST4T8NBXKS3S.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVKit-257KHAZLAC97GIOH1USTKN36O.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation3-1AAH2T0A77WG4ZRLF4KXEG8VN.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_inttypes-727AYXCT0AXUVA1Y463ORPQEU.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Darwin-B2KUK6NOC874ZOWZO4XHGKBV3.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVFoundation-7GJSTX3XVGLUKZTL5RWGNLKXI.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVFAudio-37UZGIRF53C8GE4ITEISC901S.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/sys_types-46CVOY9YGVT3SLON5AEVAECQQ.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os_workgroup-9AAETZKL8NC8Y6F71D96KWUSZ.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UserNotifications-4309R1GQ3Q7WGSNIM12QWI59H.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdarg-DXGZ4PZGMR1KXNM97LRX26RWL.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftUICore-EM771SMHE90GCZCTSSVONLB60.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stdbool-31YGOPR8JWDPPYPDAQM18ET63.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_SwiftConcurrencyShims-349XNR3Q4JN56LB33S3FZ9IU1.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UIUtilities-BDK49MUTDNK0895NRN5ZHOJVW.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftShims-5E0XTB4S83Y6BYZTKGLQD5D8P.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaToolbox-4G7A0AXLWC5PYICXBXP3DL7RZ.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/simd-87F17DDPC22XABKTLHYS9W1CX.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreAudioTypes-6YYP2UBEZ1TNHG584A50FFIQ8.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_tgmath-ENQ4OH0FVYWVULO2U39V089BA.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Metal-ET7B94BU8140ZQNOQ2AG32LG4.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/dnssd-EOSK9E57DUJ52LB687C52AZQT.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreData-CAB8HOSGUTW8TO8ZW7CHK1HZ5.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreTransferable-6T01WFHQDRBCSHGTUGN506JR4.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UIKit-DY3GGMTPPKNKC30DIKIW6NXL0.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CFNetwork-48L4YF7VMWNSXMTVP3MUFHYFO.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Foundation-99SJFNLY8XL5R0Z1CLSMY4V7X.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/IOSurface-PUY4J66JHWOBOPBH58M3U7ZT.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AVRouting-9B0G6947KY7NL1SCLJSZGHZ7F.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/AudioToolbox-CM4993C9KD1C70NFZVL7NQ3KU.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ImageIO-COMYN58T7CWU9S73R9I854STU.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MachO-25CUFC1FODCO28P43IJMGX36F.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/DeveloperToolsSupport-2L3HAC6FEBWQ0HA6VES979P9X.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/CoreMIDI-PYQGGJD3EQ0F4NZ0JNCGN4L9.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/MediaAccessibility-1AYHOAKS37FUDQ4KDY28C4928.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_stddef-1HITIJFHHUBH9YQFDQVRJW92H.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Dispatch-KP9YJHTSFOC6NDPDSGYM3U7C.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Spatial-EITJU47730YF4IK7EJO7AA78Q.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/ptrcheck-1076RK3ZZRNW8JTII1GBWFCWX.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Accessibility-1AW7QOPDQAA7Y1T0CKDNEZT0Z.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_Builtin_intrinsics-E32G1HM4D2WN1KO8LNHRW9BH5.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_AvailabilityInternal-F5GNZUIDVLMCK3KDN5238OYKB.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation2-AWNM2SWKEVMKF8ITUUB5JO3WI.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/_DarwinFoundation1-CFMUVO40OXSXJQLD8ALEF83C4.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/SwiftUI-42UXZO4FP7TWPJP06F0WOWVGY.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Security-32WYZH1HPJJUW86JAQ9Q4GDWB.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Symbols-BW302IOJ5PKQTJNHL39W4QQO5.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/os_object-6SHICL02WDVILKYM2VEBC55MS.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/UniformTypeIdentifiers-L65LG0PSC5V3Z1XLULAWWZ7R.pcm /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-dependencies-1.json /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-primary-Bridging-header.pch (in target 'Sevbify' from project 'Sevbify')
+
+CompileSwift normal arm64 (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:47:12: warning: 'bg' mutated after capture by sendable closure
+        bg = UIApplication.shared.beginBackgroundTask(withName: "download") { UIApplication.shared.endBackgroundTask(bg) }
+           ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:46:13: note: variable defined here
+        var bg: UIBackgroundTaskIdentifier = .invalid
+            ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:47:77: note: variable captured by sendable closure
+        bg = UIApplication.shared.beginBackgroundTask(withName: "download") { UIApplication.shared.endBackgroundTask(bg) }
+                                                                            ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:47:118: note: capturing use
+        bg = UIApplication.shared.beginBackgroundTask(withName: "download") { UIApplication.shared.endBackgroundTask(bg) }
+                                                                                                                     ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:46:13: note: variable defined here
+        var bg: UIBackgroundTaskIdentifier = .invalid
+            ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:47:77: note: variable captured by sendable closure
+        bg = UIApplication.shared.beginBackgroundTask(withName: "download") { UIApplication.shared.endBackgroundTask(bg) }
+                                                                            ^
+/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Downloads.swift:47:118: note: capturing use
+        bg = UIApplication.shared.beginBackgroundTask(withName: "download") { UIApplication.shared.endBackgroundTask(bg) }
+                                                                                                                     ^
+
+SwiftDriverJobDiscovery normal arm64 Compiling App.swift, AppUpdates.swift, Bridge.swift, CarPlayInfo.swift, Downloads.swift, HomeView.swift, ImportChecker.swift, Library.swift, LibraryView.swift, Models.swift, NowPlayingView.swift, Player.swift, PreviewView.swift, Profile.swift, SearchView.swift, SettingsView.swift, Theme.swift, GeneratedAssetSymbols.swift (in target 'Sevbify' from project 'Sevbify')
+
+SwiftDriver\ Compilation\ Requirements Sevbify normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Sevbify -O -whole-module-optimization @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -target arm64-apple-ios16.0 -g -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -swift-version 5 -I /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F /Users/runner/work/Sevbify/Sevbify/ios -F . -c -num-threads 3 -Xcc -ivfsstatcache -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache -output-file-map /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -sdk-module-cache-path /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-generated-files.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-own-target-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-project-headers.hmap -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/include -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework/Headers -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources -emit-objc-header -emit-objc-header-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-Swift.h -import-objc-header /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Sevbify-Bridging-Header.h -working-directory /Users/runner/work/Sevbify/Sevbify/ios -no-emit-module-separately-wmo
+
+SwiftMergeGeneratedHeaders /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/Sevbify-Swift.h /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-Swift.h (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-swiftHeaderTool -arch arm64 /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-Swift.h -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources/Sevbify-Swift.h
+
+Copy /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.swiftmodule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.swiftmodule
+
+Copy /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.abi.json /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.abi.json (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.abi.json /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.abi.json
+
+Copy /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.swiftdoc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftdoc (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftdoc /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/arm64-apple-ios.swiftdoc
+
+Copy /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftsourceinfo (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftsourceinfo /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo
+
+ScanDependencies /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.o /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/PyBridge.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    
+    Using response file: /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    builtin-ScanDependencies -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.o.scan -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache -target arm64-apple-ios16.0 -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Werror\=return-type -Wdocumentation -Wunreachable-code -Werror\=deprecated-objc-isa-usage -Werror\=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wnon-literal-null-conversion -Wobjc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wstrict-prototypes -Wno-semicolon-before-method-body -Wunguarded-availability @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.d --serialize-diagnostics /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.dia -c /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/PyBridge.c -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.o
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdbool-6SM47UF9JEGTS2RTZV5ZDOWH4.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdbool-6SM47UF9JEGTS2RTZV5ZDOWH4.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-4XQ8VLIY9EUT06FS3KYFHGWJ9.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-4XQ8VLIY9EUT06FS3KYFHGWJ9.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_AvailabilityInternal-7BA6PC09F0D113APBT7O43KUA.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_AvailabilityInternal-7BA6PC09F0D113APBT7O43KUA.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-AQNREBFBVZQRKZ64UFADT2JVC.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-AQNREBFBVZQRKZ64UFADT2JVC.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-3HEHCU7FNMQMSMQ7FOFKYUZNW.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-3HEHCU7FNMQMSMQ7FOFKYUZNW.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation1-ELS2SF0SZMUKVS7H0WLR3RMIO.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation1-ELS2SF0SZMUKVS7H0WLR3RMIO.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_limits-9B6OFVUT8J0LNQZYPHQKMESP6.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_limits-9B6OFVUT8J0LNQZYPHQKMESP6.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation2-DBL5OO1JC60X1PEA1DBS0S40R.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation2-DBL5OO1JC60X1PEA1DBS0S40R.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-CM3X0MEVBEG4PAGSQ7GIK2OWG.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-CM3X0MEVBEG4PAGSQ7GIK2OWG.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation3-C7L4WKK4XF0I1MAT7RY0SY76Q.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_DarwinFoundation3-C7L4WKK4XF0I1MAT7RY0SY76Q.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_inttypes-1PXQXCPYW1OHD8W6HT7XTQBC.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_inttypes-1PXQXCPYW1OHD8W6HT7XTQBC.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/Darwin-T6B8Q97QUVVDIXPEI536XX0M.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/Darwin-T6B8Q97QUVVDIXPEI536XX0M.scan
+
+PrecompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/Python-BQ7SI9X5FWKKLZ1Q2XMTJ39NV.scan
+    cd /
+    builtin-precompileModule /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/ExplicitPrecompiledModules/Python-BQ7SI9X5FWKKLZ1Q2XMTJ39NV.scan
+
+CompileC /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.o /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/PyBridge.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    
+    Using response file: /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache -target arm64-apple-ios16.0 -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Werror\=return-type -Wdocumentation -Wunreachable-code -Werror\=deprecated-objc-isa-usage -Werror\=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wnon-literal-null-conversion -Wobjc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wstrict-prototypes -Wno-semicolon-before-method-body -Wunguarded-availability @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.d --serialize-diagnostics /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.dia -c /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/PyBridge.c -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/PyBridge.o
+
+Ld /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify normal (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios16.0 -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos -L/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Release-iphoneos -F/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos -F/Users/runner/work/Sevbify/Sevbify/ios -F. -filelist /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_lto.o -rdynamic -Xlinker -dependency_info -Xlinker /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.swiftmodule @/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify-linker-args.resp -framework Python -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify
+
+Copy /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks/Python.framework /Users/runner/work/Sevbify/Sevbify/ios/Python.xcframework/ios-arm64/Python.framework (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -bitcode-strip all -bitcode-strip-tool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip -resolve-src-symlinks -remove-static-executable /Users/runner/work/Sevbify/Sevbify/ios/Python.xcframework/ios-arm64/Python.framework /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks
+/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip /Users/runner/work/Sevbify/Sevbify/ios/Python.xcframework/ios-arm64/Python.framework/Python -r -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks/Python.framework/Python
+ProcessInfoPlistFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Info.plist /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Info.plist (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-infoPlistUtility /Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks/Python.framework -requiredArchitecture arm64 -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Info.plist
+
+PhaseScriptExecution Process\ Python\ libraries /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Script-5E20CACBF58E9B733DE95B5A.sh (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    export ACTION\=build
+    export AD_HOC_CODE_SIGNING_ALLOWED\=NO
+    export AGGREGATE_TRACKED_DOMAINS\=YES
+    export ALLOW_BUILD_REQUEST_OVERRIDES\=NO
+    export ALLOW_TARGET_PLATFORM_SPECIALIZATION\=NO
+    export ALTERNATE_GROUP\=staff
+    export ALTERNATE_MODE\=u+w,go-w,a+rX
+    export ALTERNATE_OWNER\=runner
+    export ALTERNATIVE_DISTRIBUTION_WEB\=NO
+    export ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES\=NO
+    export ALWAYS_SEARCH_USER_PATHS\=NO
+    export ALWAYS_USE_SEPARATE_HEADERMAPS\=NO
+    export ANDROID_DEPLOYMENT_TARGET\=21.0
+    export APPLICATION_EXTENSION_API_ONLY\=NO
+    export APPLY_RULES_IN_COPY_FILES\=NO
+    export APPLY_RULES_IN_COPY_HEADERS\=NO
+    export APP_SHORTCUTS_ENABLE_FLEXIBLE_MATCHING\=YES
+    export ARCHS\=arm64
+    export ARCHS_BASE\=arm64
+    export ARCHS_STANDARD\=arm64
+    export ARCHS_STANDARD_32_64_BIT\=armv7\ arm64
+    export ARCHS_STANDARD_32_BIT\=armv7
+    export ARCHS_STANDARD_64_BIT\=arm64
+    export ARCHS_STANDARD_INCLUDING_64_BIT\=arm64
+    export ARCHS_UNIVERSAL_IPHONE_OS\=armv7\ arm64
+    export ASSETCATALOG_COMPILER_APPICON_NAME\=AppIcon
+    export AUTOMATICALLY_MERGE_DEPENDENCIES\=NO
+    export AUTOMATION_APPLE_EVENTS\=NO
+    export AVAILABLE_PLATFORMS\=android\ appletvos\ appletvsimulator\ driverkit\ freebsd\ iphoneos\ iphonesimulator\ linux\ macosx\ none\ openbsd\ qnx\ watchos\ watchsimulator\ webassembly\ xros\ xrsimulator
+    export BUILD_ACTIVE_RESOURCES_ONLY\=NO
+    export BUILD_COMPONENTS\=headers\ build
+    export BUILD_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products
+    export BUILD_LIBRARY_FOR_DISTRIBUTION\=NO
+    export BUILD_ONLY_KNOWN_LOCALIZATIONS\=NO
+    export BUILD_ROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products
+    export BUILD_STYLE\=
+    export BUILD_VARIANTS\=normal
+    export BUILT_PRODUCTS_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+    export BUNDLE_CONTENTS_FOLDER_PATH_deep\=Contents/
+    export BUNDLE_EXECUTABLE_FOLDER_NAME_deep\=MacOS
+    export BUNDLE_EXTENSIONS_FOLDER_PATH\=Extensions
+    export BUNDLE_FORMAT\=shallow
+    export BUNDLE_FRAMEWORKS_FOLDER_PATH\=Frameworks
+    export BUNDLE_PLUGINS_FOLDER_PATH\=PlugIns
+    export BUNDLE_PRIVATE_HEADERS_FOLDER_PATH\=PrivateHeaders
+    export BUNDLE_PUBLIC_HEADERS_FOLDER_PATH\=Headers
+    export CACHE_ROOT\=/var/folders/n6/hn37q6pj7sj_9dmqqc2113800000gn/C/com.apple.DeveloperTools/26.6-17F113/Xcode
+    export CCHROOT\=/var/folders/n6/hn37q6pj7sj_9dmqqc2113800000gn/C/com.apple.DeveloperTools/26.6-17F113/Xcode
+    export CHMOD\=/bin/chmod
+    export CHOWN\=chown
+    export CLANG_ANALYZER_NONNULL\=YES
+    export CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION\=YES_AGGRESSIVE
+    export CLANG_CACHE_FINE_GRAINED_OUTPUTS\=YES
+    export CLANG_CXX_LANGUAGE_STANDARD\=gnu++14
+    export CLANG_CXX_LIBRARY\=libc++
+    export CLANG_ENABLE_EXPLICIT_MODULES\=YES
+    export CLANG_ENABLE_MODULES\=YES
+    export CLANG_ENABLE_OBJC_ARC\=YES
+    export CLANG_ENABLE_OBJC_WEAK\=YES
+    export CLANG_MODULES_BUILD_SESSION_FILE\=/Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex/Session.modulevalidation
+    export CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING\=YES
+    export CLANG_WARN_BOOL_CONVERSION\=YES
+    export CLANG_WARN_COMMA\=YES
+    export CLANG_WARN_CONSTANT_CONVERSION\=YES
+    export CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS\=YES
+    export CLANG_WARN_DIRECT_OBJC_ISA_USAGE\=YES_ERROR
+    export CLANG_WARN_DOCUMENTATION_COMMENTS\=YES
+    export CLANG_WARN_EMPTY_BODY\=YES
+    export CLANG_WARN_ENUM_CONVERSION\=YES
+    export CLANG_WARN_INFINITE_RECURSION\=YES
+    export CLANG_WARN_INT_CONVERSION\=YES
+    export CLANG_WARN_NON_LITERAL_NULL_CONVERSION\=YES
+    export CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF\=YES
+    export CLANG_WARN_OBJC_LITERAL_CONVERSION\=YES
+    export CLANG_WARN_OBJC_ROOT_CLASS\=YES_ERROR
+    export CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER\=NO
+    export CLANG_WARN_RANGE_LOOP_ANALYSIS\=YES
+    export CLANG_WARN_STRICT_PROTOTYPES\=YES
+    export CLANG_WARN_SUSPICIOUS_MOVE\=YES
+    export CLANG_WARN_UNGUARDED_AVAILABILITY\=YES_AGGRESSIVE
+    export CLANG_WARN_UNREACHABLE_CODE\=YES
+    export CLANG_WARN__DUPLICATE_METHOD_MATCH\=YES
+    export CLASS_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/JavaClasses
+    export CLEAN_PRECOMPS\=YES
+    export CLONE_HEADERS\=NO
+    export CODESIGNING_FOLDER_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+    export CODE_SIGNING_ALLOWED\=NO
+    export CODE_SIGNING_REQUIRED\=NO
+    export CODE_SIGN_CONTEXT_CLASS\=XCiPhoneOSCodeSignContext
+    export CODE_SIGN_INJECT_BASE_ENTITLEMENTS\=YES
+    export CODE_SIGN_STYLE\=Manual
+    export COLOR_DIAGNOSTICS\=NO
+    export COMBINE_HIDPI_IMAGES\=NO
+    export COMPILATION_CACHE_CAS_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/CompilationCache.noindex
+    export COMPILATION_CACHE_KEEP_CAS_DIRECTORY\=YES
+    export COMPILER_INDEX_STORE_ENABLE\=Default
+    export COMPOSITE_SDK_DIRS\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/CompositeSDKs
+    export COMPRESS_PNG_FILES\=YES
+    export CONFIGURATION\=Release
+    export CONFIGURATION_BUILD_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+    export CONFIGURATION_TEMP_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos
+    export CONTENTS_FOLDER_PATH\=Sevbify.app
+    export CONTENTS_FOLDER_PATH_SHALLOW_BUNDLE_NO\=Sevbify.app/Contents
+    export CONTENTS_FOLDER_PATH_SHALLOW_BUNDLE_YES\=Sevbify.app
+    export COPYING_PRESERVES_HFS_DATA\=NO
+    export COPY_HEADERS_RUN_UNIFDEF\=NO
+    export COPY_PHASE_STRIP\=NO
+    export CORRESPONDING_SIMULATOR_PLATFORM_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform
+    export CORRESPONDING_SIMULATOR_PLATFORM_NAME\=iphonesimulator
+    export CORRESPONDING_SIMULATOR_SDK_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+    export CORRESPONDING_SIMULATOR_SDK_NAME\=iphonesimulator26.5
+    export CP\=/bin/cp
+    export CREATE_INFOPLIST_SECTION_IN_BINARY\=NO
+    export CURRENT_ARCH\=undefined_arch
+    export CURRENT_PROJECT_VERSION\=30
+    export CURRENT_VARIANT\=normal
+    export DEAD_CODE_STRIPPING\=YES
+    export DEBUGGING_SYMBOLS\=YES
+    export DEBUG_INFORMATION_FORMAT\=dwarf-with-dsym
+    export DEBUG_INFORMATION_VERSION\=compiler-default
+    export DEFAULT_COMPILER\=com.apple.compilers.llvm.clang.1_0
+    export DEFAULT_DEXT_INSTALL_PATH\=/System/Library/DriverExtensions
+    export DEFAULT_KEXT_INSTALL_PATH\=/System/Library/Extensions
+    export DEFINES_MODULE\=NO
+    export DEPLOYMENT_LOCATION\=NO
+    export DEPLOYMENT_POSTPROCESSING\=NO
+    export DEPLOYMENT_TARGET_SETTING_NAME\=IPHONEOS_DEPLOYMENT_TARGET
+    export DEPLOYMENT_TARGET_SUGGESTED_VALUES\=12.0\ 12.1\ 12.2\ 12.3\ 12.4\ 13.0\ 13.1\ 13.2\ 13.3\ 13.4\ 13.5\ 13.6\ 14.0\ 14.1\ 14.2\ 14.3\ 14.4\ 14.5\ 14.6\ 14.7\ 15.0\ 15.1\ 15.2\ 15.3\ 15.4\ 15.5\ 15.6\ 16.0\ 16.1\ 16.2\ 16.3\ 16.4\ 16.5\ 16.6\ 17.0\ 17.1\ 17.2\ 17.3\ 17.4\ 17.5\ 17.6\ 18.0\ 18.1\ 18.2\ 18.3\ 18.4\ 18.5\ 18.6\ 26.0\ 26.2\ 26.3\ 26.4\ 26.5
+    export DERIVED_FILES_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources
+    export DERIVED_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources
+    export DERIVED_SOURCES_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/DerivedSources
+    export DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER\=NO
+    export DEVELOPER_APPLICATIONS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications
+    export DEVELOPER_BIN_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/usr/bin
+    export DEVELOPER_DIR\=/Applications/Xcode_26.6.app/Contents/Developer
+    export DEVELOPER_FRAMEWORKS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Library/Frameworks
+    export DEVELOPER_FRAMEWORKS_DIR_QUOTED\=/Applications/Xcode_26.6.app/Contents/Developer/Library/Frameworks
+    export DEVELOPER_LIBRARY_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Library
+    export DEVELOPER_SDK_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs
+    export DEVELOPER_TOOLS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Tools
+    export DEVELOPER_USR_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/usr
+    export DEVELOPMENT_LANGUAGE\=en
+    export DIAGNOSE_MISSING_TARGET_DEPENDENCIES\=YES
+    export DIFF\=/usr/bin/diff
+    export DOCUMENTATION_FOLDER_PATH\=Sevbify.app/en.lproj/Documentation
+    export DONT_GENERATE_INFOPLIST_FILE\=NO
+    export DSTROOT\=/tmp/Sevbify.dst
+    export DT_TOOLCHAIN_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain
+    export DUMP_DEPENDENCIES\=NO
+    export DUMP_DEPENDENCIES_OUTPUT_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-BuildDependencyInfo.json
+    export DWARF_DSYM_FILE_NAME\=Sevbify.app.dSYM
+    export DWARF_DSYM_FILE_SHOULD_ACCOMPANY_PRODUCT\=NO
+    export DWARF_DSYM_FOLDER_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+    export DYNAMIC_LIBRARY_EXTENSION\=dylib
+    export EAGER_COMPILATION_ALLOW_SCRIPTS\=NO
+    export EAGER_LINKING\=NO
+    export EFFECTIVE_PLATFORM_NAME\=-iphoneos
+    export EFFECTIVE_SWIFT_VERSION\=5
+    export EMBEDDED_CONTENT_CONTAINS_SWIFT\=NO
+    export EMBEDDED_PROFILE_NAME\=embedded.mobileprovision
+    export EMBED_ASSET_PACKS_IN_PRODUCT_BUNDLE\=NO
+    export ENABLE_APP_SANDBOX\=NO
+    export ENABLE_CODE_COVERAGE\=YES
+    export ENABLE_COHORT_ARCHS\=NO
+    export ENABLE_CPLUSPLUS_BOUNDS_SAFE_BUFFERS\=NO
+    export ENABLE_C_BOUNDS_SAFETY\=NO
+    export ENABLE_DEBUG_DYLIB\=NO
+    export ENABLE_DEFAULT_HEADER_SEARCH_PATHS\=YES
+    export ENABLE_DEFAULT_SEARCH_PATHS\=YES
+    export ENABLE_ENHANCED_SECURITY\=NO
+    export ENABLE_HARDENED_RUNTIME\=NO
+    export ENABLE_HEADER_DEPENDENCIES\=YES
+    export ENABLE_INCOMING_NETWORK_CONNECTIONS\=NO
+    export ENABLE_NS_ASSERTIONS\=NO
+    export ENABLE_ON_DEMAND_RESOURCES\=YES
+    export ENABLE_OUTGOING_NETWORK_CONNECTIONS\=NO
+    export ENABLE_POINTER_AUTHENTICATION\=NO
+    export ENABLE_PREVIEWS\=NO
+    export ENABLE_RESOURCE_ACCESS_AUDIO_INPUT\=NO
+    export ENABLE_RESOURCE_ACCESS_BLUETOOTH\=NO
+    export ENABLE_RESOURCE_ACCESS_CALENDARS\=NO
+    export ENABLE_RESOURCE_ACCESS_CAMERA\=NO
+    export ENABLE_RESOURCE_ACCESS_CONTACTS\=NO
+    export ENABLE_RESOURCE_ACCESS_LOCATION\=NO
+    export ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY\=NO
+    export ENABLE_RESOURCE_ACCESS_PRINTING\=NO
+    export ENABLE_RESOURCE_ACCESS_USB\=NO
+    export ENABLE_SDK_IMPORTS\=NO
+    export ENABLE_SECURITY_COMPILER_WARNINGS\=NO
+    export ENABLE_STRICT_OBJC_MSGSEND\=YES
+    export ENABLE_TESTABILITY\=YES
+    export ENABLE_TESTING_SEARCH_PATHS\=NO
+    export ENABLE_USER_SCRIPT_SANDBOXING\=NO
+    export ENABLE_XOJIT_PREVIEWS\=NO
+    export ENFORCE_VALID_ARCHS\=YES
+    export ENTITLEMENTS_ALLOWED\=YES
+    export ENTITLEMENTS_DESTINATION\=Signature
+    export ENTITLEMENTS_REQUIRED\=NO
+    export EXCLUDED_INSTALLSRC_SUBDIRECTORY_PATTERNS\=.DS_Store\ .svn\ .git\ .hg\ CVS
+    export EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES\=\*.nib\ \*.lproj\ \*.framework\ \*.gch\ \*.xcode\*\ \*.xcassets\ \*.icon\ \(\*\)\ .DS_Store\ CVS\ .svn\ .git\ .hg\ \*.pbproj\ \*.pbxproj
+    export EXECUTABLES_FOLDER_PATH\=Sevbify.app/Executables
+    export EXECUTABLE_FOLDER_PATH\=Sevbify.app
+    export EXECUTABLE_FOLDER_PATH_SHALLOW_BUNDLE_NO\=Sevbify.app/MacOS
+    export EXECUTABLE_FOLDER_PATH_SHALLOW_BUNDLE_YES\=Sevbify.app
+    export EXECUTABLE_NAME\=Sevbify
+    export EXECUTABLE_PATH\=Sevbify.app/Sevbify
+    export EXTENSIONS_FOLDER_PATH\=Sevbify.app/Extensions
+    export FILE_LIST\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects/LinkFileList
+    export FIXED_FILES_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/FixedFiles
+    export FRAMEWORKS_FOLDER_PATH\=Sevbify.app/Frameworks
+    export FRAMEWORK_FLAG_PREFIX\=-framework
+    export FRAMEWORK_SEARCH_PATHS\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos\ /Users/runner/work/Sevbify/Sevbify/ios\ \".\"
+    export FRAMEWORK_VERSION\=A
+    export FULL_PRODUCT_NAME\=Sevbify.app
+    export FUSE_BUILD_PHASES\=YES
+    export FUSE_BUILD_SCRIPT_PHASES\=NO
+    export GCC3_VERSION\=3.3
+    export GCC_C_LANGUAGE_STANDARD\=gnu11
+    export GCC_DYNAMIC_NO_PIC\=NO
+    export GCC_INLINES_ARE_PRIVATE_EXTERN\=YES
+    export GCC_NO_COMMON_BLOCKS\=YES
+    export GCC_PFE_FILE_C_DIALECTS\=c\ objective-c\ c++\ objective-c++
+    export GCC_SYMBOLS_PRIVATE_EXTERN\=NO
+    export GCC_THUMB_SUPPORT\=YES
+    export GCC_TREAT_WARNINGS_AS_ERRORS\=NO
+    export GCC_VERSION\=com.apple.compilers.llvm.clang.1_0
+    export GCC_VERSION_IDENTIFIER\=com_apple_compilers_llvm_clang_1_0
+    export GCC_WARN_64_TO_32_BIT_CONVERSION\=YES
+    export GCC_WARN_ABOUT_RETURN_TYPE\=YES_ERROR
+    export GCC_WARN_UNDECLARED_SELECTOR\=YES
+    export GCC_WARN_UNINITIALIZED_AUTOS\=YES_AGGRESSIVE
+    export GCC_WARN_UNUSED_FUNCTION\=YES
+    export GCC_WARN_UNUSED_VARIABLE\=YES
+    export GENERATED_MODULEMAP_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/GeneratedModuleMaps-iphoneos
+    export GENERATE_INFOPLIST_FILE\=NO
+    export GENERATE_INTERMEDIATE_TEXT_BASED_STUBS\=YES
+    export GENERATE_PKGINFO_FILE\=YES
+    export GENERATE_PRELINK_OBJECT_FILE\=NO
+    export GENERATE_PROFILING_CODE\=NO
+    export GENERATE_TEXT_BASED_STUBS\=NO
+    export GID\=20
+    export GROUP\=staff
+    export HEADERMAP_INCLUDES_FLAT_ENTRIES_FOR_TARGET_BEING_BUILT\=YES
+    export HEADERMAP_INCLUDES_FRAMEWORK_ENTRIES_FOR_ALL_PRODUCT_TYPES\=YES
+    export HEADERMAP_INCLUDES_FRAMEWORK_ENTRIES_FOR_TARGETS_NOT_BEING_BUILT\=YES
+    export HEADERMAP_INCLUDES_NONPUBLIC_NONPRIVATE_HEADERS\=YES
+    export HEADERMAP_INCLUDES_PROJECT_HEADERS\=YES
+    export HEADERMAP_USES_FRAMEWORK_PREFIX_ENTRIES\=YES
+    export HEADERMAP_USES_VFS\=NO
+    export HEADER_SEARCH_PATHS\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/include\ \"/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Python.framework/Headers\"
+    export HOME\=/Users/runner
+    export HOST_ARCH\=arm64
+    export HOST_PLATFORM\=macosx
+    export ICONV\=/usr/bin/iconv
+    export IMPLICIT_DEPENDENCY_DOMAIN\=default
+    export INDEX_STORE_COMPRESS\=NO
+    export INDEX_STORE_ONLY_PROJECT_FILES\=NO
+    export INFOPLIST_ENABLE_CFBUNDLEICONS_MERGE\=YES
+    export INFOPLIST_EXPAND_BUILD_SETTINGS\=YES
+    export INFOPLIST_FILE\=Sevbify/Info.plist
+    export INFOPLIST_OUTPUT_FORMAT\=binary
+    export INFOPLIST_PATH\=Sevbify.app/Info.plist
+    export INFOPLIST_PREPROCESS\=NO
+    export INFOSTRINGS_PATH\=Sevbify.app/en.lproj/InfoPlist.strings
+    export INLINE_PRIVATE_FRAMEWORKS\=NO
+    export INSTALLAPI_IGNORE_SKIP_INSTALL\=YES
+    export INSTALLHDRS_COPY_PHASE\=NO
+    export INSTALLHDRS_SCRIPT_PHASE\=NO
+    export INSTALL_DIR\=/tmp/Sevbify.dst/Applications
+    export INSTALL_GROUP\=staff
+    export INSTALL_MODE_FLAG\=u+w,go-w,a+rX
+    export INSTALL_OWNER\=runner
+    export INSTALL_PATH\=/Applications
+    export INSTALL_ROOT\=/tmp/Sevbify.dst
+    export IPHONEOS_DEPLOYMENT_TARGET\=16.0
+    export IS_UNOPTIMIZED_BUILD\=NO
+    export JAVAC_DEFAULT_FLAGS\=-J-Xms64m\ -J-XX:NewSize\=4M\ -J-Dfile.encoding\=UTF8
+    export JAVA_APP_STUB\=/System/Library/Frameworks/JavaVM.framework/Resources/MacOS/JavaApplicationStub
+    export JAVA_ARCHIVE_CLASSES\=YES
+    export JAVA_ARCHIVE_TYPE\=JAR
+    export JAVA_COMPILER\=/usr/bin/javac
+    export JAVA_FOLDER_PATH\=Sevbify.app/Java
+    export JAVA_FRAMEWORK_RESOURCES_DIRS\=Resources
+    export JAVA_JAR_FLAGS\=cv
+    export JAVA_SOURCE_SUBDIR\=.
+    export JAVA_USE_DEPENDENCIES\=YES
+    export JAVA_ZIP_FLAGS\=-urg
+    export JIKES_DEFAULT_FLAGS\=+E\ +OLDCSO
+    export KASAN_CFLAGS_CLASSIC\=-DKASAN\=1\ -DKASAN_CLASSIC\=1\ -fsanitize\=address\ -mllvm\ -asan-globals-live-support\ -mllvm\ -asan-force-dynamic-shadow
+    export KASAN_CFLAGS_TBI\=-DKASAN\=1\ -DKASAN_TBI\=1\ -fsanitize\=kernel-hwaddress\ -mllvm\ -hwasan-recover\=0\ -mllvm\ -hwasan-instrument-atomics\=0\ -mllvm\ -hwasan-instrument-stack\=1\ -mllvm\ -hwasan-generate-tags-with-calls\=1\ -mllvm\ -hwasan-instrument-with-calls\=1\ -mllvm\ -hwasan-use-short-granules\=0\ -mllvm\ -hwasan-memory-access-callback-prefix\=__asan_
+    export KASAN_DEFAULT_CFLAGS\=-DKASAN\=1\ -DKASAN_CLASSIC\=1\ -fsanitize\=address\ -mllvm\ -asan-globals-live-support\ -mllvm\ -asan-force-dynamic-shadow
+    export KEEP_PRIVATE_EXTERNS\=NO
+    export LD_DEPENDENCY_INFO_FILE\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/undefined_arch/Sevbify_dependency_info.dat
+    export LD_EXPORT_SYMBOLS\=YES
+    export LD_GENERATE_MAP_FILE\=NO
+    export LD_MAP_FILE_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify-LinkMap-normal-undefined_arch.txt
+    export LD_NO_PIE\=NO
+    export LD_QUOTE_LINKER_ARGUMENTS_FOR_COMPILER_DRIVER\=YES
+    export LD_RUNPATH_SEARCH_PATHS\=\ @executable_path/Frameworks
+    export LD_RUNPATH_SEARCH_PATHS_YES\=@loader_path/../Frameworks
+    export LD_SHARED_CACHE_ELIGIBLE\=Automatic
+    export LD_WARN_DUPLICATE_LIBRARIES\=NO
+    export LD_WARN_UNUSED_DYLIBS\=NO
+    export LEGACY_DEVELOPER_DIR\=/Applications/Xcode_26.6.app/Contents/PlugIns/Xcode3Core.ideplugin/Contents/SharedSupport/Developer
+    export LEX\=lex
+    export LIBRARY_DEXT_INSTALL_PATH\=/Library/DriverExtensions
+    export LIBRARY_FLAG_NOSPACE\=YES
+    export LIBRARY_FLAG_PREFIX\=-l
+    export LIBRARY_KEXT_INSTALL_PATH\=/Library/Extensions
+    export LIBRARY_SEARCH_PATHS\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos\ 
+    export LINKER_DISPLAYS_MANGLED_NAMES\=NO
+    export LINK_FILE_LIST_normal_arm64\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.LinkFileList
+    export LINK_OBJC_RUNTIME\=YES
+    export LINK_WITH_STANDARD_LIBRARIES\=YES
+    export LLVM_TARGET_TRIPLE_OS_VERSION\=ios16.0
+    export LLVM_TARGET_TRIPLE_VENDOR\=apple
+    export LM_AUX_CONST_METADATA_LIST_PATH_normal_arm64\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftConstValuesFileList
+    export LOCALIZATION_EXPORT_SUPPORTED\=YES
+    export LOCALIZATION_PREFERS_STRING_CATALOGS\=NO
+    export LOCALIZED_RESOURCES_FOLDER_PATH\=Sevbify.app/en.lproj
+    export LOCALIZED_STRING_CODE_COMMENTS\=NO
+    export LOCALIZED_STRING_MACRO_NAMES\=NSLocalizedString\ CFCopyLocalizedString
+    export LOCALIZED_STRING_SWIFTUI_SUPPORT\=YES
+    export LOCAL_ADMIN_APPS_DIR\=/Applications/Utilities
+    export LOCAL_APPS_DIR\=/Applications
+    export LOCAL_DEVELOPER_DIR\=/Library/Developer
+    export LOCAL_LIBRARY_DIR\=/Library
+    export LOCROOT\=/Users/runner/work/Sevbify/Sevbify/ios
+    export LOCSYMROOT\=/Users/runner/work/Sevbify/Sevbify/ios
+    export MACH_O_TYPE\=mh_execute
+    export MAC_OS_X_PRODUCT_BUILD_VERSION\=25G83
+    export MAC_OS_X_VERSION_ACTUAL\=260602
+    export MAC_OS_X_VERSION_MAJOR\=260000
+    export MAC_OS_X_VERSION_MINOR\=260600
+    export MAKE_MERGEABLE\=NO
+    export MARKETING_VERSION\=5.0.0
+    export MERGEABLE_LIBRARY\=NO
+    export MERGED_BINARY_TYPE\=none
+    export MERGE_LINKED_LIBRARIES\=NO
+    export METAL_LIBRARY_FILE_BASE\=default
+    export METAL_LIBRARY_OUTPUT_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+    export MODULES_FOLDER_PATH\=Sevbify.app/Modules
+    export MODULE_CACHE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/ModuleCache.noindex
+    export MTL_ENABLE_DEBUG_INFO\=NO
+    export MTL_FAST_MATH\=YES
+    export NATIVE_ARCH\=arm64
+    export NATIVE_ARCH_32_BIT\=arm
+    export NATIVE_ARCH_64_BIT\=arm64
+    export NATIVE_ARCH_ACTUAL\=arm64
+    export NO_COMMON\=YES
+    export OBJECT_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects
+    export OBJECT_FILE_DIR_normal\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal
+    export OBJROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex
+    export ONLY_ACTIVE_ARCH\=NO
+    export OS\=MACOS
+    export OSAC\=/usr/bin/osacompile
+    export PACKAGE_TYPE\=com.apple.package-type.wrapper.application
+    export PASCAL_STRINGS\=YES
+    export PATH\=/Applications/Xcode_26.6.app/Contents/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/PlugIns/SWBUniversalPlatformPlugin.bundle/Contents/Frameworks/SWBUniversalPlatform.framework/Resources:/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain/usr/bin:/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain/usr/local/bin:/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain/usr/libexec:/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin:/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/bin:/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec:/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/usr/bin:/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/usr/local/bin:/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/local/bin:/Applications/Xcode_26.6.app/Contents/Developer/usr/bin:/Applications/Xcode_26.6.app/Contents/Developer/usr/local/bin:/Users/runner/hostedtoolcache/Python/3.12.10/arm64/bin:/Users/runner/hostedtoolcache/Python/3.12.10/arm64:/opt/homebrew/opt/rustup/bin:/opt/homebrew/lib/ruby/gems/3.4.0/bin:/opt/homebrew/opt/ruby@3.4/bin:/Users/runner/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/runner/.cargo/bin:/usr/local/opt/curl/bin:/usr/local/bin:/usr/local/sbin:/Users/runner/bin:/Users/runner/.yarn/bin:/Users/runner/Library/Android/sdk/tools:/Users/runner/Library/Android/sdk/platform-tools:/Library/Frameworks/Python.framework/Versions/Current/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/usr/bin:/bin:/usr/sbin:/sbin:/Users/runner/.dotnet/tools
+    export PATH_PREFIXES_EXCLUDED_FROM_HEADER_DEPENDENCIES\=/usr/include\ /usr/local/include\ /System/Library/Frameworks\ /System/Library/PrivateFrameworks\ /Applications/Xcode_26.6.app/Contents/Developer/Headers\ /Applications/Xcode_26.6.app/Contents/Developer/SDKs\ /Applications/Xcode_26.6.app/Contents/Developer/Platforms
+    export PBDEVELOPMENTPLIST_PATH\=Sevbify.app/pbdevelopment.plist
+    export PER_ARCH_MODULE_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/undefined_arch
+    export PER_ARCH_OBJECT_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/undefined_arch
+    export PER_VARIANT_OBJECT_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal
+    export PKGINFO_FILE_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/PkgInfo
+    export PKGINFO_PATH\=Sevbify.app/PkgInfo
+    export PLATFORM_DEVELOPER_APPLICATIONS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Applications
+    export PLATFORM_DEVELOPER_BIN_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin
+    export PLATFORM_DEVELOPER_LIBRARY_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library
+    export PLATFORM_DEVELOPER_SDK_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs
+    export PLATFORM_DEVELOPER_TOOLS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Tools
+    export PLATFORM_DEVELOPER_USR_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr
+    export PLATFORM_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform
+    export PLATFORM_DISPLAY_NAME\=iOS
+    export PLATFORM_FAMILY_NAME\=iOS
+    export PLATFORM_NAME\=iphoneos
+    export PLATFORM_PREFERRED_ARCH\=arm64
+    export PLATFORM_PRODUCT_BUILD_VERSION\=23F81a
+    export PLATFORM_REQUIRES_SWIFT_AUTOLINK_EXTRACT\=NO
+    export PLATFORM_REQUIRES_SWIFT_MODULEWRAP\=NO
+    export PLATFORM_USES_DSYMS\=YES
+    export PLIST_FILE_OUTPUT_FORMAT\=binary
+    export PLUGINS_FOLDER_PATH\=Sevbify.app/PlugIns
+    export PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR\=YES
+    export PRECOMP_DESTINATION_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/PrefixHeaders
+    export PRIVATE_HEADERS_FOLDER_PATH\=Sevbify.app/PrivateHeaders
+    export PROCESSED_INFOPLIST_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/undefined_arch/Processed-Info.plist
+    export PRODUCT_BUNDLE_IDENTIFIER\=com.obamna1234.sevbify
+    export PRODUCT_BUNDLE_PACKAGE_TYPE\=APPL
+    export PRODUCT_MODULE_NAME\=Sevbify
+    export PRODUCT_NAME\=Sevbify
+    export PRODUCT_SETTINGS_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/Sevbify/Info.plist
+    export PRODUCT_TYPE\=com.apple.product-type.application
+    export PROFILING_CODE\=NO
+    export PROJECT\=Sevbify
+    export PROJECT_DERIVED_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/DerivedSources
+    export PROJECT_DIR\=/Users/runner/work/Sevbify/Sevbify/ios
+    export PROJECT_FILE_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    export PROJECT_GUID\=62195c35455db4d2bd8b1e2c2cd0eac8
+    export PROJECT_NAME\=Sevbify
+    export PROJECT_TEMP_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build
+    export PROJECT_TEMP_ROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex
+    export PROVISIONING_PROFILE_REQUIRED\=YES
+    export PROVISIONING_PROFILE_REQUIRED_YES_YES\=YES
+    export PROVISIONING_PROFILE_SUPPORTED\=YES
+    export PUBLIC_HEADERS_FOLDER_PATH\=Sevbify.app/Headers
+    export RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET\=15.0
+    export RECURSIVE_SEARCH_PATHS_FOLLOW_SYMLINKS\=YES
+    export REMOVE_CVS_FROM_RESOURCES\=YES
+    export REMOVE_GIT_FROM_RESOURCES\=YES
+    export REMOVE_HEADERS_FROM_EMBEDDED_BUNDLES\=YES
+    export REMOVE_HG_FROM_RESOURCES\=YES
+    export REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES\=YES
+    export REMOVE_SVN_FROM_RESOURCES\=YES
+    export RESCHEDULE_INDEPENDENT_HEADERS_PHASES\=YES
+    export REZ_COLLECTOR_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/ResourceManagerResources
+    export REZ_OBJECTS_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/ResourceManagerResources/Objects
+    export REZ_SEARCH_PATHS\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos\ 
+    export RPATH_ORIGIN\=@loader_path
+    export RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES\=NO
+    export RUNTIME_EXCEPTION_ALLOW_JIT\=NO
+    export RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY\=NO
+    export RUNTIME_EXCEPTION_DEBUGGING_TOOL\=NO
+    export RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION\=NO
+    export RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION\=NO
+    export SCANNING_PCM_KEEP_CACHE_DIRECTORY\=YES
+    export SCAN_ALL_SOURCE_FILES_FOR_INCLUDES\=NO
+    export SCRIPTS_FOLDER_PATH\=Sevbify.app/Scripts
+    export SCRIPT_INPUT_FILE_COUNT\=0
+    export SCRIPT_INPUT_FILE_LIST_COUNT\=0
+    export SCRIPT_OUTPUT_FILE_COUNT\=0
+    export SCRIPT_OUTPUT_FILE_LIST_COUNT\=0
+    export SDKROOT\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk
+    export SDK_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk
+    export SDK_DIR_iphoneos\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk
+    export SDK_DIR_iphoneos26_5\=/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk
+    export SDK_NAME\=iphoneos26.5
+    export SDK_NAMES\=iphoneos26.5
+    export SDK_PRODUCT_BUILD_VERSION\=23F81a
+    export SDK_STAT_CACHE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build
+    export SDK_STAT_CACHE_ENABLE\=YES
+    export SDK_STAT_CACHE_PATH\=/Users/runner/work/Sevbify/Sevbify/ios/build/SDKStatCaches.noindex/iphoneos26.5-23F81a-688ef53f1462e2c8f657fdc38a81448fee66e23052a0157c865c76b268046726.sdkstatcache
+    export SDK_VERSION\=26.5
+    export SDK_VERSION_ACTUAL\=260500
+    export SDK_VERSION_MAJOR\=260000
+    export SDK_VERSION_MINOR\=260500
+    export SED\=/usr/bin/sed
+    export SEPARATE_STRIP\=NO
+    export SEPARATE_SYMBOL_EDIT\=NO
+    export SET_DIR_MODE_OWNER_GROUP\=YES
+    export SET_FILE_MODE_OWNER_GROUP\=NO
+    export SEVBIFY_VERSION\=5.0.0-beta.30
+    export SHALLOW_BUNDLE\=YES
+    export SHALLOW_BUNDLE_TRIPLE\=ios
+    export SHALLOW_BUNDLE_ios_macabi\=NO
+    export SHALLOW_BUNDLE_macos\=NO
+    export SHARED_DERIVED_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/DerivedSources
+    export SHARED_FRAMEWORKS_FOLDER_PATH\=Sevbify.app/SharedFrameworks
+    export SHARED_PRECOMPS_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/PrecompiledHeaders
+    export SHARED_SUPPORT_FOLDER_PATH\=Sevbify.app/SharedSupport
+    export SKIP_INSTALL\=NO
+    export SKIP_MERGEABLE_LIBRARY_BUNDLE_HOOK\=NO
+    export SOURCE_ROOT\=/Users/runner/work/Sevbify/Sevbify/ios
+    export SRCROOT\=/Users/runner/work/Sevbify/Sevbify/ios
+    export STRINGSDATA_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/undefined_arch
+    export STRINGSDATA_ROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build
+    export STRINGS_FILE_INFOPLIST_RENAME\=YES
+    export STRINGS_FILE_OUTPUT_ENCODING\=binary
+    export STRING_CATALOG_GENERATE_SYMBOLS\=NO
+    export STRIP_BITCODE_FROM_COPIED_FILES\=YES
+    export STRIP_INSTALLED_PRODUCT\=NO
+    export STRIP_STYLE\=all
+    export STRIP_SWIFT_SYMBOLS\=YES
+    export SUPPORTED_DEVICE_FAMILIES\=1,2
+    export SUPPORTED_PLATFORMS\=iphoneos\ iphonesimulator
+    export SUPPORTS_MACCATALYST\=NO
+    export SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD\=YES
+    export SUPPORTS_ON_DEMAND_RESOURCES\=YES
+    export SUPPORTS_TEXT_BASED_API\=NO
+    export SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD\=YES
+    export SUPPRESS_WARNINGS\=NO
+    export SWIFT_COMPILATION_MODE\=wholemodule
+    export SWIFT_EMIT_CONST_VALUE_PROTOCOLS\=AnyResolverProviding\ AppEntity\ AppEnum\ AppExtension\ AppIntent\ AppIntentsPackage\ AppShortcutProviding\ AppShortcutsProvider\ DynamicOptionsProvider\ EntityQuery\ ExtensionPointDefining\ IntentValueQuery\ Resolver\ TransientEntity\ _AssistantIntentsProvider\ _GenerativeFunctionExtractable\ _IntentValueRepresentable
+    export SWIFT_EMIT_LOC_STRINGS\=NO
+    export SWIFT_ENABLE_EXPLICIT_MODULES\=YES
+    export SWIFT_OBJC_BRIDGING_HEADER\=Sevbify/Sevbify-Bridging-Header.h
+    export SWIFT_OPTIMIZATION_LEVEL\=-O
+    export SWIFT_PLATFORM_TARGET_PREFIX\=ios
+    export SWIFT_RESPONSE_FILE_PATH_normal_arm64\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList
+    export SWIFT_VERSION\=5.0
+    export SYMROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products
+    export SYSTEM_ADMIN_APPS_DIR\=/Applications/Utilities
+    export SYSTEM_APPS_DIR\=/Applications
+    export SYSTEM_CORE_SERVICES_DIR\=/System/Library/CoreServices
+    export SYSTEM_DEMOS_DIR\=/Applications/Extras
+    export SYSTEM_DEVELOPER_APPS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications
+    export SYSTEM_DEVELOPER_BIN_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/usr/bin
+    export SYSTEM_DEVELOPER_DEMOS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications/Utilities/Built\ Examples
+    export SYSTEM_DEVELOPER_DIR\=/Applications/Xcode_26.6.app/Contents/Developer
+    export SYSTEM_DEVELOPER_DOC_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/ADC\ Reference\ Library
+    export SYSTEM_DEVELOPER_GRAPHICS_TOOLS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications/Graphics\ Tools
+    export SYSTEM_DEVELOPER_JAVA_TOOLS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications/Java\ Tools
+    export SYSTEM_DEVELOPER_PERFORMANCE_TOOLS_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications/Performance\ Tools
+    export SYSTEM_DEVELOPER_RELEASENOTES_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/ADC\ Reference\ Library/releasenotes
+    export SYSTEM_DEVELOPER_TOOLS\=/Applications/Xcode_26.6.app/Contents/Developer/Tools
+    export SYSTEM_DEVELOPER_TOOLS_DOC_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/ADC\ Reference\ Library/documentation/DeveloperTools
+    export SYSTEM_DEVELOPER_TOOLS_RELEASENOTES_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/ADC\ Reference\ Library/releasenotes/DeveloperTools
+    export SYSTEM_DEVELOPER_USR_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/usr
+    export SYSTEM_DEVELOPER_UTILITIES_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Applications/Utilities
+    export SYSTEM_DEXT_INSTALL_PATH\=/System/Library/DriverExtensions
+    export SYSTEM_DOCUMENTATION_DIR\=/Library/Documentation
+    export SYSTEM_EXTENSIONS_FOLDER_PATH\=Sevbify.app/SystemExtensions
+    export SYSTEM_EXTENSIONS_FOLDER_PATH_SHALLOW_BUNDLE_NO\=Sevbify.app/Library/SystemExtensions
+    export SYSTEM_EXTENSIONS_FOLDER_PATH_SHALLOW_BUNDLE_YES\=Sevbify.app/SystemExtensions
+    export SYSTEM_KEXT_INSTALL_PATH\=/System/Library/Extensions
+    export SYSTEM_LIBRARY_DIR\=/System/Library
+    export TAPI_DEMANGLE\=YES
+    export TAPI_ENABLE_PROJECT_HEADERS\=NO
+    export TAPI_LANGUAGE\=objective-c
+    export TAPI_LANGUAGE_STANDARD\=compiler-default
+    export TAPI_USE_SRCROOT\=YES
+    export TAPI_VERIFY_MODE\=Pedantic
+    export TARGETED_DEVICE_FAMILY\=1,2
+    export TARGETNAME\=Sevbify
+    export TARGET_BUILD_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos
+    export TARGET_NAME\=Sevbify
+    export TARGET_TEMP_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build
+    export TEMP_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build
+    export TEMP_FILES_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build
+    export TEMP_FILE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build
+    export TEMP_ROOT\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex
+    export TEMP_SANDBOX_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/TemporaryTaskSandboxes
+    export TEST_FRAMEWORK_SEARCH_PATHS\=\ /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks\ /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks
+    export TEST_LIBRARY_SEARCH_PATHS\=\ /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib
+    export TOOLCHAINS\=com.apple.dt.toolchain.Metal.32023.883\ com.apple.dt.toolchain.XcodeDefault
+    export TOOLCHAIN_DIR\=/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain
+    export TOOLCHAIN_VERSION\=32023.883
+    export TREAT_MISSING_BASELINES_AS_TEST_FAILURES\=NO
+    export TREAT_MISSING_SCRIPT_PHASE_OUTPUTS_AS_ERRORS\=NO
+    export UID\=501
+    export UNINSTALLED_PRODUCTS_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/UninstalledProducts
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH\=Sevbify.app
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH_SHALLOW_BUNDLE_NO\=Sevbify.app/Resources
+    export UNLOCALIZED_RESOURCES_FOLDER_PATH_SHALLOW_BUNDLE_YES\=Sevbify.app
+    export UNSTRIPPED_PRODUCT\=NO
+    export USER\=runner
+    export USER_APPS_DIR\=/Users/runner/Applications
+    export USER_LIBRARY_DIR\=/Users/runner/Library
+    export USE_DYNAMIC_NO_PIC\=YES
+    export USE_HEADERMAP\=YES
+    export USE_HEADER_SYMLINKS\=NO
+    export VALIDATE_DEVELOPMENT_ASSET_PATHS\=YES_ERROR
+    export VALIDATE_PRODUCT\=NO
+    export VALID_ARCHS\=arm64\ arm64e\ armv7\ armv7s
+    export VERBOSE_PBXCP\=NO
+    export VERSIONPLIST_PATH\=Sevbify.app/version.plist
+    export VERSION_INFO_BUILDER\=runner
+    export VERSION_INFO_FILE\=Sevbify_vers.c
+    export VERSION_INFO_STRING\=\"@\(\#\)PROGRAM:Sevbify\ \ PROJECT:Sevbify-30\"
+    export WORKSPACE_DIR\=/Users/runner/work/Sevbify/Sevbify/ios/Sevbify.xcodeproj
+    export WRAPPER_EXTENSION\=app
+    export WRAPPER_NAME\=Sevbify.app
+    export WRAPPER_SUFFIX\=.app
+    export WRAP_ASSET_PACKS_IN_SEPARATE_DIRECTORIES\=NO
+    export XCODE_APP_SUPPORT_DIR\=/Applications/Xcode_26.6.app/Contents/Developer/Library/Xcode
+    export XCODE_PRODUCT_BUILD_VERSION\=17F113
+    export XCODE_VERSION_ACTUAL\=2660
+    export XCODE_VERSION_MAJOR\=2600
+    export XCODE_VERSION_MINOR\=2660
+    export XPCSERVICES_FOLDER_PATH\=Sevbify.app/XPCServices
+    export YACC\=yacc
+    export _DISCOVER_COMMAND_LINE_LINKER_INPUTS\=YES
+    export _DISCOVER_COMMAND_LINE_LINKER_INPUTS_INCLUDE_WL\=YES
+    export _LD_MULTIARCH\=YES
+    export _WRAPPER_CONTENTS_DIR_SHALLOW_BUNDLE_NO\=/Contents
+    export _WRAPPER_PARENT_PATH_SHALLOW_BUNDLE_NO\=/..
+    export _WRAPPER_RESOURCES_DIR_SHALLOW_BUNDLE_NO\=/Resources
+    export __DIAGNOSE_DEPRECATED_ARCHS\=YES
+    export __IS_NOT_MACOS\=YES
+    export __IS_NOT_MACOS_macosx\=NO
+    export __IS_NOT_SIMULATOR\=YES
+    export __IS_NOT_SIMULATOR_simulator\=NO
+    export __ORIGINAL_SDK_DEFINED_LLVM_TARGET_TRIPLE_SYS\=ios
+    export arch\=undefined_arch
+    export variant\=normal
+    /bin/sh -c /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Script-5E20CACBF58E9B733DE95B5A.sh
+Installing Python modules for iOS Device
+Install Python python3.13 standard library extension modules...
+Creating framework for python/lib/python3.13/lib-dynload/xxlimited.cpython-313-iphoneos.so
+Installing binary for Frameworks/xxlimited.framework/xxlimited
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_contextvars.cpython-313-iphoneos.so
+Installing binary for Frameworks/_contextvars.framework/_contextvars
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_kr.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_kr.framework/_codecs_kr
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_tw.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_tw.framework/_codecs_tw
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_heapq.cpython-313-iphoneos.so
+Installing binary for Frameworks/_heapq.framework/_heapq
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_asyncio.cpython-313-iphoneos.so
+Installing binary for Frameworks/_asyncio.framework/_asyncio
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/math.cpython-313-iphoneos.so
+Installing binary for Frameworks/math.framework/math
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_dbm.cpython-313-iphoneos.so
+Installing binary for Frameworks/_dbm.framework/_dbm
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_md5.cpython-313-iphoneos.so
+Installing binary for Frameworks/_md5.framework/_md5
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/xxlimited_35.cpython-313-iphoneos.so
+Installing binary for Frameworks/xxlimited_35.framework/xxlimited_35
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testexternalinspection.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testexternalinspection.framework/_testexternalinspection
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/mmap.cpython-313-iphoneos.so
+Installing binary for Frameworks/mmap.framework/mmap
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_queue.cpython-313-iphoneos.so
+Installing binary for Frameworks/_queue.framework/_queue
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/select.cpython-313-iphoneos.so
+Installing binary for Frameworks/select.framework/select
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/array.cpython-313-iphoneos.so
+Installing binary for Frameworks/array.framework/array
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_decimal.cpython-313-iphoneos.so
+Installing binary for Frameworks/_decimal.framework/_decimal
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testmultiphase.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testmultiphase.framework/_testmultiphase
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/xxsubtype.cpython-313-iphoneos.so
+Installing binary for Frameworks/xxsubtype.framework/xxsubtype
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_pickle.cpython-313-iphoneos.so
+Installing binary for Frameworks/_pickle.framework/_pickle
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_zoneinfo.cpython-313-iphoneos.so
+Installing binary for Frameworks/_zoneinfo.framework/_zoneinfo
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/cmath.cpython-313-iphoneos.so
+Installing binary for Frameworks/cmath.framework/cmath
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/resource.cpython-313-iphoneos.so
+Installing binary for Frameworks/resource.framework/resource
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_ctypes_test.cpython-313-iphoneos.so
+Installing binary for Frameworks/_ctypes_test.framework/_ctypes_test
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testcapi.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testcapi.framework/_testcapi
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_interpqueues.cpython-313-iphoneos.so
+Installing binary for Frameworks/_interpqueues.framework/_interpqueues
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/termios.cpython-313-iphoneos.so
+Installing binary for Frameworks/termios.framework/termios
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/unicodedata.cpython-313-iphoneos.so
+Installing binary for Frameworks/unicodedata.framework/unicodedata
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_multibytecodec.cpython-313-iphoneos.so
+Installing binary for Frameworks/_multibytecodec.framework/_multibytecodec
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_bisect.cpython-313-iphoneos.so
+Installing binary for Frameworks/_bisect.framework/_bisect
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_ssl.cpython-313-iphoneos.so
+Installing binary for Frameworks/_ssl.framework/_ssl
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_sha3.cpython-313-iphoneos.so
+Installing binary for Frameworks/_sha3.framework/_sha3
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_iso2022.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_iso2022.framework/_codecs_iso2022
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_statistics.cpython-313-iphoneos.so
+Installing binary for Frameworks/_statistics.framework/_statistics
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_socket.cpython-313-iphoneos.so
+Installing binary for Frameworks/_socket.framework/_socket
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/fcntl.cpython-313-iphoneos.so
+Installing binary for Frameworks/fcntl.framework/fcntl
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_bz2.cpython-313-iphoneos.so
+Installing binary for Frameworks/_bz2.framework/_bz2
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/binascii.cpython-313-iphoneos.so
+Installing binary for Frameworks/binascii.framework/binascii
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/pyexpat.cpython-313-iphoneos.so
+Installing binary for Frameworks/pyexpat.framework/pyexpat
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_struct.cpython-313-iphoneos.so
+Installing binary for Frameworks/_struct.framework/_struct
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_lsprof.cpython-313-iphoneos.so
+Installing binary for Frameworks/_lsprof.framework/_lsprof
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_jp.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_jp.framework/_codecs_jp
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_sqlite3.cpython-313-iphoneos.so
+Installing binary for Frameworks/_sqlite3.framework/_sqlite3
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/zlib.cpython-313-iphoneos.so
+Installing binary for Frameworks/zlib.framework/zlib
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_elementtree.cpython-313-iphoneos.so
+Installing binary for Frameworks/_elementtree.framework/_elementtree
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_ctypes.cpython-313-iphoneos.so
+Installing binary for Frameworks/_ctypes.framework/_ctypes
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_lzma.cpython-313-iphoneos.so
+Installing binary for Frameworks/_lzma.framework/_lzma
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_sha1.cpython-313-iphoneos.so
+Installing binary for Frameworks/_sha1.framework/_sha1
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_blake2.cpython-313-iphoneos.so
+Installing binary for Frameworks/_blake2.framework/_blake2
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_interpreters.cpython-313-iphoneos.so
+Installing binary for Frameworks/_interpreters.framework/_interpreters
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_sha2.cpython-313-iphoneos.so
+Installing binary for Frameworks/_sha2.framework/_sha2
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_cn.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_cn.framework/_codecs_cn
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_uuid.cpython-313-iphoneos.so
+Installing binary for Frameworks/_uuid.framework/_uuid
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_json.cpython-313-iphoneos.so
+Installing binary for Frameworks/_json.framework/_json
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_datetime.cpython-313-iphoneos.so
+Installing binary for Frameworks/_datetime.framework/_datetime
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testclinic_limited.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testclinic_limited.framework/_testclinic_limited
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_random.cpython-313-iphoneos.so
+Installing binary for Frameworks/_random.framework/_random
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testclinic.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testclinic.framework/_testclinic
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_xxtestfuzz.cpython-313-iphoneos.so
+Installing binary for Frameworks/_xxtestfuzz.framework/_xxtestfuzz
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testimportmultiple.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testimportmultiple.framework/_testimportmultiple
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_csv.cpython-313-iphoneos.so
+Installing binary for Frameworks/_csv.framework/_csv
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testbuffer.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testbuffer.framework/_testbuffer
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_opcode.cpython-313-iphoneos.so
+Installing binary for Frameworks/_opcode.framework/_opcode
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testlimitedcapi.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testlimitedcapi.framework/_testlimitedcapi
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testinternalcapi.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testinternalcapi.framework/_testinternalcapi
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_interpchannels.cpython-313-iphoneos.so
+Installing binary for Frameworks/_interpchannels.framework/_interpchannels
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_hashlib.cpython-313-iphoneos.so
+Installing binary for Frameworks/_hashlib.framework/_hashlib
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_testsinglephase.cpython-313-iphoneos.so
+Installing binary for Frameworks/_testsinglephase.framework/_testsinglephase
+Signing framework as  (-)...
+Creating framework for python/lib/python3.13/lib-dynload/_codecs_hk.cpython-313-iphoneos.so
+Installing binary for Frameworks/_codecs_hk.framework/_codecs_hk
+Signing framework as  (-)...
+Installing app extension modules ...
+Installing app_packages extension modules ...
+
+GenerateDSYMFile /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app.dSYM /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify -o /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app.dSYM
+
+CopySwiftLibs /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify --scan-folder /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks --scan-folder /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/PlugIns --scan-folder /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/SystemExtensions --scan-folder /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Extensions --platform iphoneos --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain --toolchain /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.VZF3pl/Metal.xctoolchain --module-name Sevbify --sdk-root /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 16.0 --bundle-identifier com.obamna1234.sevbify --output /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app --target-triple arm64-apple-ios16.0 --binary-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Sevbify --dependency-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify_dependency_info.dat --stringsdata-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftFileList --metadata-file-list /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyMetadataFileList --static-metadata-file-list /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyStaticMetadataFileList --swift-const-vals-list /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Objects-normal/arm64/Sevbify.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-11-02 00:14:59.247 appintentsmetadataprocessor[6854:20588] Starting appintentsmetadataprocessor export
+2026-11-02 00:14:59.251 appintentsmetadataprocessor[6854:20588] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Info.plist --temp-dir-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/ssu --bundle-id com.obamna1234.sevbify --product-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app --extracted-metadata-path /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Metadata.appintents --metadata-file-list /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Intermediates.noindex/Sevbify.build/Release-iphoneos/Sevbify.build/Sevbify.DependencyMetadataFileList --source-file /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app/Info.plist --archive-ssu-assets
+2026-11-02 00:14:59.312 appintentsnltrainingprocessor[6860:20610] Parsing options for appintentsnltrainingprocessor
+2026-11-02 00:14:59.314 appintentsnltrainingprocessor[6860:20610] Starting AppIntents SSU YAML Generation
+2026-11-02 00:14:59.314 appintentsnltrainingprocessor[6860:20610] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+
+Validate /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    builtin-validationUtility /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app (in target 'Sevbify' from project 'Sevbify')
+    cd /Users/runner/work/Sevbify/Sevbify/ios
+    /usr/bin/touch -c /Users/runner/work/Sevbify/Sevbify/ios/build/Build/Products/Release-iphoneos/Sevbify.app
+
+note: Run script build phase 'Process Python libraries' will be run during every build because the option to run the script phase "Based on dependency analysis" is unchecked. (in target 'Sevbify' from project 'Sevbify')
+** BUILD SUCCEEDED **
+

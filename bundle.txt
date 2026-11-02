@@ -1,0 +1,97 @@
+== Frameworks
+_asyncio.framework
+_bisect.framework
+_blake2.framework
+_bz2.framework
+_codecs_cn.framework
+_codecs_hk.framework
+_codecs_iso2022.framework
+_codecs_jp.framework
+_codecs_kr.framework
+_codecs_tw.framework
+_contextvars.framework
+_csv.framework
+_ctypes_test.framework
+_ctypes.framework
+_datetime.framework
+_dbm.framework
+_decimal.framework
+_elementtree.framework
+_hashlib.framework
+_heapq.framework
+_interpchannels.framework
+_interpqueues.framework
+_interpreters.framework
+_json.framework
+_lsprof.framework
+_lzma.framework
+_md5.framework
+_multibytecodec.framework
+_opcode.framework
+_pickle.framework
+_queue.framework
+_random.framework
+_sha1.framework
+_sha2.framework
+_sha3.framework
+_socket.framework
+_sqlite3.framework
+_ssl.framework
+_statistics.framework
+_struct.framework
+_testbuffer.framework
+_testcapi.framework
+_testclinic_limited.framework
+_testclinic.framework
+_testexternalinspection.framework
+_testimportmultiple.framework
+_testinternalcapi.framework
+_testlimitedcapi.framework
+_testmultiphase.framework
+_testsinglephase.framework
+== top
+__preview.dylib
+_CodeSignature
+app
+app_packages
+AppIcon60x60@2x.png
+AppIcon76x76@2x~ipad.png
+ar.lproj
+Assets.car
+de.lproj
+en.lproj
+es.lproj
+fr.lproj
+Frameworks
+hi.lproj
+id.lproj
+Info.plist
+it.lproj
+ja.lproj
+ko.lproj
+nl.lproj
+PkgInfo
+pl.lproj
+pt.lproj
+python
+ru.lproj
+Sevbify
+Sevbify.debug.dylib
+sv.lproj
+th.lproj
+tr.lproj
+uk.lproj
+vi.lproj
+zh-Hans.lproj
+== python
+python3.13
+ios/build/Build/Products/Debug-iphonesimulator/Sevbify.app/Sevbify:
+	@rpath/Sevbify.debug.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+          cmd LC_RPATH
+      cmdsize 32
+         path @executable_path (offset 12)
+--
+          cmd LC_RPATH
+      cmdsize 40
+         path @executable_path/Frameworks (offset 12)
