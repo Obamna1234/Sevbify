@@ -37,6 +37,10 @@ Jellyfin/Nextcloud sign-in path or to podcast playback:
    legacy http podcast episodes. Recommended: scope it to a `domain-config` allow-list — needs the list of
    http-only feed domains.
 
+4. **Android: server sign-in on redirects (Low).** The separate "signed-in" connection that refused cross-host
+   redirects for Jellyfin/Nextcloud songs was removed in beta.30 because it coincided with songs not starting
+   at all. Re-add it as a redirect-checking step only after playback is confirmed stable on a device.
+
 ## Reporting a problem
 
 Open an issue on GitHub (without personal data), or contact the repository owner.
