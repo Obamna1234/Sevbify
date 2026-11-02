@@ -1,4 +1,12 @@
-## What's new in beta.34 (Android)
+## What's new in beta.35 (Android)
+
+- **Smoother skipping.** The player no longer jumps around when you skip: the status line keeps its place, the background colour fades to the next cover's colour instead of flashing grey, covers fade in, and the covers of the next and previous songs are fetched ahead of time.
+- **Song radio no longer restarts the song.** "Go to song radio" on the song that's playing carries on from where it is; only the queue after it changes. Asking for the same song twice in a moment (two screens at once) now plays it once.
+- **Picking a new song stops the old sound straight away** instead of the old song/podcast carrying on while the new one is found.
+- **Podcast Video button, step 2.** It now says why it couldn't find the video (e.g. "10 results, best match 40%"), the length check is more forgiving (ads make the podcast audio a different length), and the same note appears in Settings → About and updates → Playback status so it can be tuned.
+- Note: ads you hear in a podcast (like Fin vs History) are part of the show's own audio file from the podcast's host, not something Sevbify adds. YouTube versions of episodes have their sponsor segments skipped automatically (Settings → Playback).
+
+### Earlier, in beta.34 (Android)
 
 - **No more flicker between Home and Search.** Coming back to Search shows your last search straight away instead of an empty page that searches again, and Home keeps its shelves (Trending podcasts, Top in Comedy, …) instead of clearing and reloading them every time you switch tabs.
 

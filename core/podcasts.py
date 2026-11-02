@@ -230,38 +230,50 @@ def find_youtube_channel(title, author="", extract=None):
 
 
 def find_youtube_episode(show_title, episode_title, duration_ms=0, extract=None):
-    """The YouTube video of one podcast episode (the show's video version), or "". Searches YouTube for the
-    show and episode and accepts only a video whose title says the episode's words (and whose length matches
-    when both are known), so a different video is never picked. `extract` replaces yt-dlp in tests."""
+    """The YouTube video of one podcast episode (the show's video version), or "". See find_youtube_episode_ex."""
+    return find_youtube_episode_ex(show_title, episode_title, duration_ms, extract)[0]
+
+
+def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=None):
+    """(video link or "", a short note on what was found). Searches YouTube for the show and episode and accepts
+    only a video whose title says the episode's words (and whose length is in the same range when both are
+    known; ads in the podcast's audio make the lengths differ a little), so a different video is never picked.
+    `extract` replaces yt-dlp in tests."""
     if extract is None:
         from core import downloader
         e = downloader.engine()
         if e.yt_dlp is None:
-            return ""
+            return "", "yt-dlp isn't available"
 
         def extract(query):
             opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY}
+                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY,
+                    "extractor_args": e.yt_extractor_args()}
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(query, download=False)
     stop = {"the", "a", "an", "of", "and", "in", "to", "is", "was", "with", "for", "on", "part"}
     words = {w for w in _norm(episode_title).split() if w not in stop}
     if not words:
-        return ""
-    info = extract(f"ytsearch8:{show_title} {episode_title}") or {}
-    best, best_score = "", 0.0
-    for entry in info.get("entries") or []:
+        return "", "the episode has no usable title"
+    info = extract(f"ytsearch10:{show_title} {episode_title}") or {}
+    entries = info.get("entries") or []
+    best, best_score, best_title, skipped_len = "", 0.0, "", 0
+    for entry in entries:
         url = entry.get("url") or entry.get("webpage_url") or ""
         if not is_youtube_video(url):
             continue
         got = {w for w in _norm(entry.get("title") or "").split() if w not in stop}
         score = len(words & got) / len(words)
         secs = entry.get("duration") or 0
-        if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.2 * duration_ms:
-            continue                                     # a clip or a different cut of the show
+        if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.35 * duration_ms:
+            skipped_len += 1                             # a clip or a different cut of the show
+            continue
         if score > best_score:
-            best, best_score = url, score
-    return best if best_score >= 0.6 else ""
+            best, best_score, best_title = url, score, entry.get("title") or ""
+    if best_score >= 0.6:
+        return best, f"matched {best_score:.0%}: {best_title[:60]}"
+    return "", (f"{len(entries)} results, best match {best_score:.0%}"
+                + (f", {skipped_len} the wrong length" if skipped_len else ""))
 
 
 def top_shows(net, country="us", limit=25):

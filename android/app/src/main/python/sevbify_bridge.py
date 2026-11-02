@@ -415,9 +415,10 @@ def youtube_video(page_url, quality="auto"):
 
 @_call
 def youtube_episode_for(show_title, episode_title, duration_ms=0):
-    """The YouTube video of a podcast episode (its video version), or "" if there isn't one."""
+    """{"url": the YouTube video of a podcast episode ("" if there isn't one), "note": why/what was found}."""
     from core import podcasts
-    return podcasts.find_youtube_episode(show_title, episode_title, int(duration_ms or 0))
+    url, note = podcasts.find_youtube_episode_ex(show_title, episode_title, int(duration_ms or 0))
+    return {"url": url, "note": note}
 
 
 @_call

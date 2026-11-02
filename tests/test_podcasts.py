@@ -196,3 +196,10 @@ def test_find_youtube_episode_matches_title_and_length():
     assert got.endswith("ccccccccccc")
     assert podcasts.find_youtube_episode("Fin vs History", "Something nobody uploaded", 1000,
                                          extract=lambda q: entries) == ""
+
+
+def test_find_youtube_episode_says_why_not():
+    from core import podcasts
+    url, note = podcasts.find_youtube_episode_ex(
+        "Show", "Some Long Episode Title Here", 1000, extract=lambda q: {"entries": []})
+    assert url == "" and "0 results" in note
