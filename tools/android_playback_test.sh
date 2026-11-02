@@ -83,6 +83,7 @@ play_and_check() {   # $1 = song number
   done
   [ -f $OUT/session_debug.txt ] || adb shell dumpsys media_session | grep -n "package=\|PlaybackState\|description=" | head -30 > $OUT/session_debug.txt
   if [ $ok = 1 ]; then
+    sleep 2; read s p t < <(session_state)     # let the position settle (it resets a moment after the title changes)
     local p1=$p; sleep 4; read s p t < <(session_state)
     echo "after 4s: state=$s position=$p title=$t (was $p1)"
     if [ "$s" = "3" ] && [ "$p" -gt "$p1" ]; then echo "PASS song $1" | tee -a $OUT/result.txt; return; fi
