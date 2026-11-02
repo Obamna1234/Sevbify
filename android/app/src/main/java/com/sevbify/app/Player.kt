@@ -217,15 +217,36 @@ object Player {
     /** The episode playing now is being watched (the video player has it). */
     val videoMode: Boolean get() = current?.let { VideoPlayer.track?.itemKey == it.itemKey } == true && VideoPlayer.player != null
 
-    fun canWatch(t: Track?) = t != null && t.source == "youtube" && t.pageUrl.isNotEmpty()
+    fun canWatch(t: Track?) = t != null && ((t.source == "youtube" && t.pageUrl.isNotEmpty()) || t.source == "podcast")
+
+    /** Episode → its YouTube video, found once per episode (ordinary podcasts have no video of their own). */
+    private val episodeVideo = HashMap<String, String>()
+    var findingVideo by mutableStateOf(false)
 
     /** Switch from listening to watching, at the same point. */
     fun switchToVideo(context: Context) {
         val t = current ?: return
         if (!canWatch(t)) return
         val at = position
-        controller?.pause()
-        SevbifyApp.instance.scope.launch { VideoPlayer.load(context, t, Library.settings.videoQuality, at.takeIf { it > 0 }) }
+        SevbifyApp.instance.scope.launch {
+            var watch = t
+            if (t.source != "youtube") {
+                val page = episodeVideo[t.itemKey] ?: run {
+                    findingVideo = true
+                    try {
+                        (Bridge.call("youtube_episode_for", t.artist, t.title, t.durationMs) as? String).orEmpty()
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        ""
+                    } finally { findingVideo = false }
+                }
+                if (page.isEmpty()) { Nav.say("Couldn't find a video of this episode on YouTube"); return@launch }
+                episodeVideo[t.itemKey] = page
+                watch = t.copy(pageUrl = page)
+            }
+            controller?.pause()
+            VideoPlayer.load(context, watch, Library.settings.videoQuality, at.takeIf { it > 0 })
+        }
     }
 
     /** Switch from watching back to listening, at the same point. */

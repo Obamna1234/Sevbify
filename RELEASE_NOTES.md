@@ -1,4 +1,8 @@
-## What's new in beta.31 (Android)
+## What's new in beta.32 (Android)
+
+- **Audio / Video switch for ordinary podcasts.** Open any podcast episode (like Fin vs History) and the **Audio | Video** switch is on the Now Playing screen. Tap **Video** and Sevbify finds that episode's video on YouTube and carries on from the same point (it only picks a video whose title and length match, otherwise it tells you it couldn't find one).
+
+### Earlier, in beta.31 (Android)
 
 - **Songs play again (the real cause found).** The Android Auto support added a rule that threw away every song the app handed to its own player, so each one "ended" the instant it started and Sevbify skipped on to the next. That's why local songs, streamed songs and podcasts all failed together. Only songs picked on a car's screen are special-cased now; everything else plays normally.
 

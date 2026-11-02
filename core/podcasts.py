@@ -229,6 +229,41 @@ def find_youtube_channel(title, author="", extract=None):
     return Show(title=name, author=name, feed_url=url, kind="youtube", link=url, verified=verified, channel=name)
 
 
+def find_youtube_episode(show_title, episode_title, duration_ms=0, extract=None):
+    """The YouTube video of one podcast episode (the show's video version), or "". Searches YouTube for the
+    show and episode and accepts only a video whose title says the episode's words (and whose length matches
+    when both are known), so a different video is never picked. `extract` replaces yt-dlp in tests."""
+    if extract is None:
+        from core import downloader
+        e = downloader.engine()
+        if e.yt_dlp is None:
+            return ""
+
+        def extract(query):
+            opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY}
+            with e.yt_dlp.YoutubeDL(opts) as ydl:
+                return ydl.extract_info(query, download=False)
+    stop = {"the", "a", "an", "of", "and", "in", "to", "is", "was", "with", "for", "on", "part"}
+    words = {w for w in _norm(episode_title).split() if w not in stop}
+    if not words:
+        return ""
+    info = extract(f"ytsearch8:{show_title} {episode_title}") or {}
+    best, best_score = "", 0.0
+    for entry in info.get("entries") or []:
+        url = entry.get("url") or entry.get("webpage_url") or ""
+        if not is_youtube_video(url):
+            continue
+        got = {w for w in _norm(entry.get("title") or "").split() if w not in stop}
+        score = len(words & got) / len(words)
+        secs = entry.get("duration") or 0
+        if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.2 * duration_ms:
+            continue                                     # a clip or a different cut of the show
+        if score > best_score:
+            best, best_score = url, score
+    return best if best_score >= 0.6 else ""
+
+
 def top_shows(net, country="us", limit=25):
     data = net.get_json(f"https://rss.applemarketingtools.com/api/v2/{country}/podcasts/top/{limit}/podcasts.json",
                         ttl=12 * 3600)
