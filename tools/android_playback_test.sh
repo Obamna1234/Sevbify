@@ -8,20 +8,30 @@ APK=${1:-Sevbify-Android.apk}; PKG=com.obamna1234.sevbify; OUT=playback-test
 mkdir -p $OUT music
 adb wait-for-device
 python3 - <<'PY'
-import math, struct, wave
+import math, os, shutil, struct, subprocess, wave
 for i in (1, 2, 3):
-    with wave.open(f"music/Playback Test {i}.wav", "wb") as w:
+    wav = f"music/PlaybackTest{i}.wav"
+    with wave.open(wav, "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
         w.writeframes(b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * 220 * i * n / 22050)))
                                for n in range(22050 * 90)))
+    if shutil.which("ffmpeg"):       # tagged mp3 like a real song; Android indexes these reliably
+        mp3 = wav[:-4] + ".mp3"
+        r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-metadata", f"title=PlaybackTest{i}",
+                            "-metadata", "artist=Sevbify CI", mp3])
+        if r.returncode == 0:
+            os.remove(wav)
+print(os.listdir("music"))
 PY
-adb shell mkdir -p /sdcard/Music/PlaybackTest
-adb push music/. /sdcard/Music/PlaybackTest/
+adb shell mkdir -p /sdcard/Music/Test
+adb push music/. /sdcard/Music/Test/
 adb shell content call --uri content://media/ --method scan_volume --arg external_primary 2>&1 | head -3
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test 2>&1 | head -2
 for k in $(seq 1 20); do
-  N=$(adb shell content query --uri content://media/external/audio/media --projection _id:_display_name 2>/dev/null | grep -c "Playback Test")
+  N=$(adb shell content query --uri content://media/external/audio/media --projection _id:_display_name:relative_path 2>/dev/null | grep -c "PlaybackTest")
   echo "indexed: $N"; [ "$N" -ge 3 ] && break; sleep 3
 done
+adb shell content query --uri content://media/external/audio/media --projection _id:_display_name:relative_path | tee $OUT/media_index.txt | tail -8
 sleep 15
 adb install -r -g $APK
 adb shell pm grant $PKG android.permission.READ_MEDIA_AUDIO || true
@@ -32,9 +42,9 @@ adb logcat -c
 adb shell am start -W -n $PKG/com.sevbify.app.MainActivity
 sleep 20
 
-uri_of() {   # content:// link of "Playback Test N"
+uri_of() {   # media id of "PlaybackTestN.*" from the index (no quoting tricks)
   adb shell content query --uri content://media/external/audio/media --projection _id:_display_name \
-    --where "_display_name='Playback Test $1.wav'" | grep -o "_id=[0-9]*" | head -1 | cut -d= -f2
+    | grep "PlaybackTest$1" | grep -o "_id=[0-9]*" | head -1 | cut -d= -f2
 }
 
 # "state position" of Sevbify's media session, from dumpsys (state 3 = PLAYING).
@@ -53,7 +63,7 @@ FAILED=0
 play_and_check() {   # $1 = song number
   local id; id=$(uri_of $1)
   echo "== song $1 (media id $id)" | tee -a $OUT/result.txt
-  adb shell am start -W -a android.intent.action.VIEW -d "content://media/external/audio/media/$id" -t audio/x-wav \
+  adb shell am start -W -a android.intent.action.VIEW -d "content://media/external/audio/media/$id" -t audio/mpeg \
       -n $PKG/com.sevbify.app.MainActivity
   local ok=0 s p
   for k in $(seq 1 25); do
@@ -62,6 +72,7 @@ play_and_check() {   # $1 = song number
     if [ "$s" = "3" ]; then ok=1; break; fi
     sleep 1
   done
+  [ -f $OUT/session_debug.txt ] || adb shell dumpsys media_session | grep -n "package=\|PlaybackState" | head -20 > $OUT/session_debug.txt
   if [ $ok = 1 ]; then
     local p1=$p; sleep 4; read s p < <(session_state)
     echo "after 4s: state=$s position=$p (was $p1)"

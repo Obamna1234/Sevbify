@@ -340,6 +340,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+          sudo apt-get install -y -q ffmpeg >/dev/null
       - name: Play songs on an emulator (must really play, not skip)
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
@@ -354,6 +355,9 @@ jobs:
         if: always()
         run: |
           cat playback-test/result.txt || true
+          # Debug aids in the log (artifacts can't always be downloaded): what the media session looked like.
+          cat playback-test/session_debug.txt || true
+          grep -E "ENDED|BUFFERING|READY|ExoPlayer|PlaybackService|Sevbify" playback-test/logcat.txt | tail -40 || true
           [ -f playback-test/failed.txt ] && [ "$(cat playback-test/failed.txt)" = "0" ] \
             || { echo "::error title=Android playback::Songs did not play on the emulator. See the playback-test artifact."; exit 1; }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
