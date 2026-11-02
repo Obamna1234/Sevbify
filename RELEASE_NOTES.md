@@ -1,4 +1,8 @@
-## What's new in beta.29 (Android)
+## What's new in beta.30 (Android)
+
+- **Playback fix attempt: back to the player setup from the stable version.** A security update had put an extra layer between the player and every song (local and streamed). Your Playback status log showed songs going straight from "loading" to "ended" without ever starting, so this build removes that layer and plays songs exactly as the stable build did. After installing, play a local song and a podcast; if either still fails, open **Settings → About and updates → Playback status → Copy** and send it over.
+
+### Earlier, in beta.29 (Android)
 
 - **Playback status readout (to track down songs that won't play).** Settings → About and updates → **Playback status** shows what the player last did, including *why* it stopped. If a song won't play, tap it, come back here, tap **Copy**, and send it over.
 - **Less lag.** The app no longer re-saves your whole library on the UI thread every time a song changes, so navigation should feel smoother.
