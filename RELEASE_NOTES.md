@@ -1,6 +1,10 @@
+## What's new in beta.31 (Android)
+
+- **Songs play again (the real cause found).** The Android Auto support added a rule that threw away every song the app handed to its own player, so each one "ended" the instant it started and Sevbify skipped on to the next. That's why local songs, streamed songs and podcasts all failed together. Only songs picked on a car's screen are special-cased now; everything else plays normally.
+
 ## What's new in beta.30 (Android)
 
-- **Playback fix attempt: back to the player setup from the stable version.** A security update had put an extra layer between the player and every song (local and streamed). Your Playback status log showed songs going straight from "loading" to "ended" without ever starting, so this build removes that layer and plays songs exactly as the stable build did. After installing, play a local song and a podcast; if either still fails, open **Settings → About and updates → Playback status → Copy** and send it over.
+- Removed an extra security layer from the player (this turned out not to be the cause of songs not playing — see beta.31). Server sign-ins on Jellyfin/Nextcloud are unaffected for normal use; the redirect hardening will come back later.
 
 ### Earlier, in beta.29 (Android)
 
