@@ -65,12 +65,38 @@ class DownloadService : Service() {
             if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
                 nm.createNotificationChannel(NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW))
             }
+            val total = Downloads.batchTotal()
             val waiting = Downloads.waiting()
-            return NotificationCompat.Builder(context, CHANNEL)
+            val done = (total - waiting).coerceAtLeast(0)
+            val now = Downloads.currentTrack()
+            val next = Downloads.upcoming(5)
+            val open = android.app.PendingIntent.getActivity(context, 0,
+                Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+            val b = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle("Sevbify")
-                .setContentText(if (waiting > 0) "Downloading · $waiting to go" else "Downloads finished")
-                .setOngoing(true).setSilent(true).build()
+                .setContentIntent(open)
+                .setOngoing(true).setSilent(true).setOnlyAlertOnce(true)
+            if (waiting == 0) return b.setContentTitle("Sevbify").setContentText("Downloads finished").build()
+            // "Downloading Song title" / "Artist · 3 more", with a bar for the whole batch (a single song just
+            // shows a moving bar: the download's own progress isn't reported by the song finder).
+            b.setContentTitle(if (now != null) "Downloading ${now.title}" else "Downloading")
+                .setContentText(buildString {
+                    now?.let { append(it.artist) }
+                    if (waiting > 1) { if (isNotEmpty()) append(" · "); append("${waiting - 1} more") }
+                })
+                .setSubText(if (total > 1) "$done of $total" else null)
+                .setProgress(if (total > 1) total else 0, if (total > 1) done else 0, total <= 1)
+            if (next.isNotEmpty()) {
+                val style = NotificationCompat.InboxStyle().setBigContentTitle(
+                    if (now != null) "Downloading ${now.title}" else "Downloading")
+                now?.let { style.addLine("▶ ${it.title} — ${it.artist}") }
+                next.forEach { style.addLine("${it.title} — ${it.artist}") }
+                if (waiting - (if (now != null) 1 else 0) > next.size)
+                    style.setSummaryText("+ ${waiting - (if (now != null) 1 else 0) - next.size} more")
+                b.setStyle(style)
+            }
+            return b.build()
         }
 
         fun update(context: Context) {

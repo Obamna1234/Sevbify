@@ -1,4 +1,9 @@
-## What's new in beta.32 (Android)
+## What's new in beta.33 (Android)
+
+- **Download notification shows what's downloading.** The notification now reads "Downloading *Song title*" with the artist underneath and how many are still to go, a progress bar for the whole batch ("2 of 5"), and when you pull it open it lists the next songs in the queue. Tapping it opens Sevbify.
+- **Automatic playback check.** Every build is now played on a test phone before it can be called good, so a build where songs don't play gets caught before you see it.
+
+### Earlier, in beta.32 (Android)
 
 - **Audio / Video switch for ordinary podcasts.** Open any podcast episode (like Fin vs History) and the **Audio | Video** switch is on the Now Playing screen. Tap **Video** and Sevbify finds that episode's video on YouTube and carries on from the same point (it only picks a video whose title and length match, otherwise it tells you it couldn't find one).
 
