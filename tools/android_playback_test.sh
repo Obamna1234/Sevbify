@@ -47,16 +47,24 @@ uri_of() {   # media id of "PlaybackTestN.*" from the index (no quoting tricks)
     | grep "PlaybackTest$1" | grep -o "_id=[0-9]*" | head -1 | cut -d= -f2
 }
 
-# "state position" of Sevbify's media session, from dumpsys (state 3 = PLAYING).
+# "state position title" of Sevbify's media session, from dumpsys (state 3 = PLAYING).
 session_state() {
   adb shell dumpsys media_session | PKG=$PKG python3 -c '
 import os, re, sys
-ours = False
+mine = "package=" + os.environ["PKG"]
+blocks, cur = [], None
 for line in sys.stdin:
-    if "package=" in line: ours = ("package=" + os.environ["PKG"]) in line
+    if "package=" in line:
+        cur = {"ours": mine in line, "state": None, "desc": ""}; blocks.append(cur)
+    if cur is None or not cur["ours"]: continue
     m = re.search(r"PlaybackState \{state=\w+\((\d+)\), position=(-?\d+)", line)
-    if m and ours: print(m.group(1), m.group(2)); sys.exit()
-print("none 0")'
+    if m and cur["state"] is None: cur["state"] = (m.group(1), m.group(2))
+    d = re.search(r"description=(.*)", line)
+    if d and not cur["desc"]: cur["desc"] = d.group(1).strip()
+for b in blocks:
+    if b["ours"] and b["state"]:
+        print(b["state"][0], b["state"][1], b["desc"] or "-"); sys.exit()
+print("none 0 -")'
 }
 
 FAILED=0
@@ -65,17 +73,18 @@ play_and_check() {   # $1 = song number
   echo "== song $1 (media id $id)" | tee -a $OUT/result.txt
   adb shell am start -W -a android.intent.action.VIEW -d "content://media/external/audio/media/$id" -t audio/mpeg \
       -n $PKG/com.sevbify.app.MainActivity
-  local ok=0 s p
+  local ok=0 s p t
   for k in $(seq 1 25); do
-    read s p < <(session_state)
-    echo "t+${k}s state=$s position=$p"
-    if [ "$s" = "3" ]; then ok=1; break; fi
+    read s p t < <(session_state)
+    echo "t+${k}s state=$s position=$p title=$t"
+    # PLAYING and it's *this* song (not the previous one still finishing its last second).
+    if [ "$s" = "3" ] && { [ "$t" = "-" ] || [[ "$t" == *"PlaybackTest$1"* ]]; }; then ok=1; break; fi
     sleep 1
   done
-  [ -f $OUT/session_debug.txt ] || adb shell dumpsys media_session | grep -n "package=\|PlaybackState" | head -20 > $OUT/session_debug.txt
+  [ -f $OUT/session_debug.txt ] || adb shell dumpsys media_session | grep -n "package=\|PlaybackState\|description=" | head -30 > $OUT/session_debug.txt
   if [ $ok = 1 ]; then
-    local p1=$p; sleep 4; read s p < <(session_state)
-    echo "after 4s: state=$s position=$p (was $p1)"
+    local p1=$p; sleep 4; read s p t < <(session_state)
+    echo "after 4s: state=$s position=$p title=$t (was $p1)"
     if [ "$s" = "3" ] && [ "$p" -gt "$p1" ]; then echo "PASS song $1" | tee -a $OUT/result.txt; return; fi
   fi
   echo "FAIL song $1: the player never kept playing (state=$s)" | tee -a $OUT/result.txt
