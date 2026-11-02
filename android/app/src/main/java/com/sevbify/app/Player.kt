@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.getValue
+import coil.imageLoader
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -154,7 +155,7 @@ object Player {
     }
 
     // --- choosing what plays ---------------------------------------------------------------------------------
-    fun play(track: Track, queue: List<Track> = listOf(track), source: String = "") {
+    fun play(track: Track, queue: List<Track> = listOf(track), source: String = "", keepCurrent: Boolean = false) {
         if (controller == null) { pendingPlay = Triple(track, queue, source); return }  // not connected yet: start on connect
         failuresInARow = 0
         original = queue
@@ -163,6 +164,14 @@ object Player {
         val order = if (shuffle && !queue.all { it.isItem }) listOf(track) + queue.filter { it !== track }.shuffled() else queue
         context.clear(); context.addAll(order)
         index = order.indexOfFirst { it === track }.coerceAtLeast(0)
+        // Song radio of the song that's playing right now: carry on from where it is (no restart, no reload),
+        // only the queue after it changes.
+        val c = controller
+        if (keepCurrent && c != null && current?.matchKey == track.matchKey &&
+            c.currentMediaItem?.mediaId == track.matchKey && c.playbackState != MediaPlayer.STATE_ENDED) {
+            if (!c.isPlaying) c.play()
+            return
+        }
         start()
     }
 
@@ -222,6 +231,7 @@ object Player {
     /** Episode → its YouTube video, found once per episode (ordinary podcasts have no video of their own). */
     private val episodeVideo = HashMap<String, String>()
     var findingVideo by mutableStateOf(false)
+    private var lastVideoNote = ""
 
     /** Switch from listening to watching, at the same point. */
     fun switchToVideo(context: Context) {
@@ -233,14 +243,25 @@ object Player {
             if (t.source != "youtube") {
                 val page = episodeVideo[t.itemKey] ?: run {
                     findingVideo = true
+                    status = "Looking for this episode's video…"
                     try {
-                        (Bridge.call("youtube_episode_for", t.artist, t.title, t.durationMs) as? String).orEmpty()
+                        val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
+                        diagLog("video lookup: ${r.optString("note")}")
+                        if (r.optString("url").isEmpty()) lastVideoNote = r.optString("note")
+                        r.optString("url")
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
+                        diagLog("video lookup failed: ${e.message?.take(80)}")
+                        lastVideoNote = e.message.orEmpty().take(80)
                         ""
                     } finally { findingVideo = false }
                 }
-                if (page.isEmpty()) { status = "Couldn't find a video of this episode on YouTube"; return@launch }
+                if (page.isEmpty()) {
+                    status = "Couldn't find a video of this episode on YouTube" +
+                        (if (lastVideoNote.isNotEmpty()) " ($lastVideoNote)" else "")
+                    return@launch
+                }
+                status = ""
                 episodeVideo[t.itemKey] = page
                 watch = t.copy(pageUrl = page)
             }
@@ -350,7 +371,7 @@ object Player {
                     .filter { Library.settings.explicitOk || !it.explicit }
                 if (songs.isEmpty()) { status = "No radio for this song"; return@launch }
                 val list = if (autoplay) songs else listOf(seed) + songs
-                play(list.first(), list, "${seed.title} Radio")
+                play(list.first(), list, "${seed.title} Radio", keepCurrent = !autoplay)
                 status = ""
                 if (!autoplay) {
                     // Open the radio's own page, so it's obvious what's playing (like Spotify's "… Radio").
@@ -365,13 +386,25 @@ object Player {
     }
 
     // --- getting a song to play --------------------------------------------------------------------------------
+    private var lastStartKey = ""
+    private var lastStartAt = 0L
+
     private fun start() {
         val t = context.getOrNull(index) ?: return
+        // The same song asked for twice within a moment (a double tap, or two screens both asking): once is enough.
+        val now = System.currentTimeMillis()
+        val c0 = controller
+        if (t.matchKey == lastStartKey && now - lastStartAt < 1500 && c0 != null &&
+            c0.currentMediaItem?.mediaId == t.matchKey && c0.playbackState != MediaPlayer.STATE_ENDED) return
+        lastStartKey = t.matchKey; lastStartAt = now
         if (VideoPlayer.track != null && VideoPlayer.track?.itemKey != t.itemKey) VideoPlayer.stop()
+        // Like Spotify: the old sound stops the moment you pick something else, not after the new song is found.
+        if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
         handledEnd = false
         position = 0; duration = t.durationMs
         loadSponsor(t)
+        preloadCovers()
         Library.played(t)
         loadJob?.cancel()
         loadJob = SevbifyApp.instance.scope.launch {
@@ -392,6 +425,14 @@ object Player {
                 if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                 status = "⚠ ${t.title}: ${e.message}"
             }
+        }
+    }
+
+    /** Fetch the covers of the songs before/after this one now, so Next/Previous show them straight away. */
+    private fun preloadCovers() {
+        val app = SevbifyApp.instance
+        listOf(index - 1, index + 1).mapNotNull { context.getOrNull(it)?.art?.takeIf { a -> a.isNotEmpty() } }.forEach { url ->
+            try { app.imageLoader.enqueue(coil.request.ImageRequest.Builder(app).data(url).build()) } catch (_: Exception) {}
         }
     }
 

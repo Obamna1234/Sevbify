@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -142,9 +143,11 @@ fun NowPlayingScreen() {
             Spacer(Modifier.weight(1f))
             Text(clock(Player.duration), style = MaterialTheme.typography.labelSmall)
         }
-        if (Player.status.isNotEmpty()) {
-            Text(Player.status, style = MaterialTheme.typography.labelSmall, maxLines = 1, textAlign = TextAlign.Center,
-                 modifier = Modifier.fillMaxWidth())
+        Box(Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {      // fixed height: no jump
+            if (Player.status.isNotEmpty()) {
+                Text(Player.status, style = MaterialTheme.typography.labelSmall, maxLines = 1, textAlign = TextAlign.Center,
+                     modifier = Modifier.fillMaxWidth())
+            }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {

@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun rememberCoverColour(url: String?, fallback: Color = Color(0xFF3A3A3A)): Color {
     val context = LocalContext.current
-    var colour by remember(url) { mutableStateOf(fallback) }
+    var colour by remember { mutableStateOf(fallback) }      // kept while the next cover's colour is worked out
     LaunchedEffect(url) {
         if (url.isNullOrEmpty()) return@LaunchedEffect
         val result = context.imageLoader.execute(ImageRequest.Builder(context).data(url).allowHardware(false).size(96).build())
@@ -34,5 +34,5 @@ fun rememberCoverColour(url: String?, fallback: Color = Color(0xFF3A3A3A)): Colo
             colour = Color(red = c.red * 0.7f, green = c.green * 0.7f, blue = c.blue * 0.7f)
         }
     }
-    return colour
+    return androidx.compose.animation.animateColorAsState(colour, androidx.compose.animation.core.tween(450), label = "cover colour").value
 }

@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -68,8 +69,10 @@ fun Cover(url: String?, size: Dp, shape: Shape = RoundedCornerShape(4.dp), modif
         Placeholder(box, size)
         return
     }
-    SubcomposeAsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = box,
-                         loading = { Placeholder(Modifier.fillMaxSize(), size) },
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val request = remember(url) { coil.request.ImageRequest.Builder(context).data(url).crossfade(200).build() }
+    SubcomposeAsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = box,
+                         loading = { Box(Modifier.fillMaxSize().background(C.Card)) },
                          error = { Placeholder(Modifier.fillMaxSize(), size) })
 }
 
