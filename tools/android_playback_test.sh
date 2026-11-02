@@ -54,7 +54,7 @@ import os, re, sys
 ours = False
 for line in sys.stdin:
     if "package=" in line: ours = ("package=" + os.environ["PKG"]) in line
-    m = re.search(r"PlaybackState \{state=(\d+), position=(-?\d+)", line)
+    m = re.search(r"PlaybackState \{state=\w+\((\d+)\), position=(-?\d+)", line)
     if m and ours: print(m.group(1), m.group(2)); sys.exit()
 print("none 0")'
 }
