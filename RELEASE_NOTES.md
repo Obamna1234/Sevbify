@@ -1,4 +1,14 @@
-## What's new in beta.35 (Android)
+## What's new in beta.36 (Android)
+
+- **Picking a new song no longer shows the old song's progress or keeps playing the old song.** While the new song is being found, the player now shows it at 0:00 and the previous song stays paused. The progress bar also only switches to the song's real length once it's known, which was a cause of it jumping around while streaming.
+- **Next song is found in advance.** While a streamed song plays, the next one is looked up in the background, so Next starts quickly instead of "Finding the full song…".
+- **Search works like Spotify's.** The Search tab shows a search bar and Browse all; tap the bar (or tap the Search tab again) to open the search page with the keyboard and your Recent searches (each with an X, plus "Clear recent searches"). Back returns to Browse all.
+- **Typing in Search is smoother.** Searching your own songs now happens in the background after you pause typing.
+- **Song radio like Spotify.** "Go to song radio" just opens the radio page. It doesn't start playing and doesn't touch your queue; press Play there to listen. Radios also have more songs.
+- **Menus and the Share sheet are no longer cut off.** Song menu, Share, Add to playlist and similar sheets now open fully and scroll if they're taller than the screen.
+- **Podcast video stays on.** If you're watching an episode and go to the next one (Next, or when it finishes), it opens as video too (or plays audio if that episode has no video). Switching back to audio resumes more reliably.
+
+### Earlier, in beta.35 (Android)
 
 - **Smoother skipping.** The player no longer jumps around when you skip: the status line keeps its place, the background colour fades to the next cover's colour instead of flashing grey, covers fade in, and the covers of the next and previous songs are fetched ahead of time.
 - **Song radio no longer restarts the song.** "Go to song radio" on the song that's playing carries on from where it is; only the queue after it changes. Asking for the same song twice in a moment (two screens at once) now plays it once.

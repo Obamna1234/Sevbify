@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -84,8 +85,9 @@ private fun SongMenuSheet(m: SongMenu) {
     val t = m.track
     val close = { Nav.songMenu = null }
     val context = LocalContext.current
-    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
-        Column(Modifier.navigationBarsPadding()) {
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).navigationBarsPadding()) {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Cover(t.art, 48.dp)
                 Spacer(Modifier.width(12.dp))
@@ -134,8 +136,9 @@ private fun SongMenuSheet(m: SongMenu) {
 @Composable
 private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
     val close = { Nav.playlistMenu = null }
-    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
-        Column(Modifier.navigationBarsPadding()) {
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).navigationBarsPadding()) {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 PlaylistCover(pl, 48.dp)
                 Spacer(Modifier.width(12.dp))
@@ -179,8 +182,9 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
 @Composable
 private fun FolderMenuSheet(folder: String) {
     val close = { Nav.folderMenu = null }
-    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
-        Column(Modifier.navigationBarsPadding()) {
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).navigationBarsPadding()) {
             Text(folder, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             HorizontalDivider(color = C.Highlight)
             SheetItem(Icons.Filled.Edit, tr("Rename folder")) {
@@ -200,7 +204,8 @@ private fun FolderMenuSheet(folder: String) {
 @Composable
 private fun AddToSheet(tracks: List<Track>) {
     val close = { Nav.addTo = null }
-    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated) {
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Text(tr("Add to playlist"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp))
         Gap(8.dp)
         LazyColumn(Modifier.navigationBarsPadding()) {
@@ -227,7 +232,8 @@ private fun AddToSheet(tracks: List<Track>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateSheet(onClose: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onClose, containerColor = C.Elevated) {
+    ModalBottomSheet(onDismissRequest = onClose, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
             SheetItem(Icons.Filled.MusicNote, tr("Playlist")) {
                 onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.PlaylistPage(Library.newPlaylist().id))

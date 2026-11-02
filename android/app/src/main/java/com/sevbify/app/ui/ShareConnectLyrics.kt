@@ -11,6 +11,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -100,8 +101,9 @@ fun ShareSheet(t: Track) {
         Nav.say("$what link copied")
         Nav.shareFor = null
     }
-    ModalBottomSheet(onDismissRequest = { Nav.shareFor = null }, containerColor = C.Elevated) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    ModalBottomSheet(onDismissRequest = { Nav.shareFor = null }, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // The song card (what Spotify shows as a sticker)
             Column(Modifier.width(220.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2A2A2A)).padding(14.dp)) {
                 Cover(t.art, 192.dp, RoundedCornerShape(6.dp))
@@ -199,7 +201,8 @@ object AudioOutput {
 fun ConnectSheet() {
     val context = LocalContext.current
     val t = Player.current
-    ModalBottomSheet(onDismissRequest = { Nav.connectOpen = false }, containerColor = C.Elevated) {
+    ModalBottomSheet(onDismissRequest = { Nav.connectOpen = false }, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(tr("Connect"), style = MaterialTheme.typography.headlineSmall)
             Gap(12.dp)
