@@ -38,6 +38,7 @@ object Downloads {
     fun trackFor(key: String): Track? = jobs[key]
 
     fun request(tracks: List<Track>): Int {
+        if (waiting() == 0) batchSize = 0            // a new round of downloads: the notification's bar starts again
         var added = 0
         for (t in tracks) {
             if (!t.isItem && (t.isLocal || Library.localFor(t) != null)) continue
@@ -48,7 +49,8 @@ object Downloads {
             notes.remove(key)
             added++
         }
-        if (added > 0) kick()
+        batchSize += added
+        if (added > 0) { kick(); DownloadService.update(SevbifyApp.instance) }
         return added
     }
 
@@ -68,13 +70,22 @@ object Downloads {
 
     fun cancel(key: String) {
         val wasActive = states[key] == State.DOWNLOADING
+        val counted = states[key] == State.QUEUED || wasActive
         states.remove(key); notes.remove(key); jobs.remove(key)
+        if (counted && batchSize > 0) batchSize--
         if (wasActive) { worker?.cancel(); worker = null; kick() }
     }
 
     fun retry(key: String) { if (jobs.containsKey(key)) { states[key] = State.QUEUED; notes.remove(key); kick() } }
 
     fun waiting() = states.count { it.value == State.QUEUED || it.value == State.DOWNLOADING }
+
+    // For the notification: how many songs this round of downloads started with, what's downloading, what's next.
+    private var batchSize = 0
+    fun batchTotal() = maxOf(batchSize, waiting())
+    fun currentTrack(): Track? = states.entries.firstOrNull { it.value == State.DOWNLOADING }?.key?.let { jobs[it] }
+    fun upcoming(n: Int): List<Track> =
+        states.entries.filter { it.value == State.QUEUED }.take(n).mapNotNull { jobs[it.key] }
 
     private fun kick() {
         if (worker?.isActive == true) return
@@ -102,6 +113,7 @@ object Downloads {
                     if (t.isItem) downloadItem(app, t) else downloadSong(app, t)
                     states.remove(key); jobs.remove(key)
                     doneCount++
+                    DownloadService.update(app)
                     Library.changed()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
@@ -114,6 +126,7 @@ object Downloads {
                         delay(60_000)
                     } else {
                         states[key] = State.FAILED; notes[key] = msg
+                        DownloadService.update(app)
                     }
                 }
             }
