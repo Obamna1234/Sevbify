@@ -1,4 +1,8 @@
-## What's new in beta.33 (Android)
+## What's new in beta.34 (Android)
+
+- **No more flicker between Home and Search.** Coming back to Search shows your last search straight away instead of an empty page that searches again, and Home keeps its shelves (Trending podcasts, Top in Comedy, …) instead of clearing and reloading them every time you switch tabs.
+
+### Earlier, in beta.33 (Android)
 
 - **Download notification shows what's downloading.** The notification now reads "Downloading *Song title*" with the artist underneath and how many are still to go, a progress bar for the whole batch ("2 of 5"), and when you pull it open it lists the next songs in the queue. Tapping it opens Sevbify.
 - **Automatic playback check.** Every build is now played on a test phone before it can be called good, so a build where songs don't play gets caught before you see it.

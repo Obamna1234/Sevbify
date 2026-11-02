@@ -60,21 +60,40 @@ import org.json.JSONObject
 val TileColours = listOf(0xFFE13300, 0xFF1E3264, 0xFF8400E7, 0xFF148A08, 0xFFE8115B, 0xFF477D95, 0xFFBA5D07,
                          0xFF503750, 0xFF0D73EC, 0xFF8D67AB, 0xFF27856A, 0xFFAF2896)
 
+/** The Search tab's state, kept for as long as the app runs (not just while the tab is on screen). */
+object SearchState {
+    var query by mutableStateOf("")
+    var chip by mutableStateOf("all")
+    var web by mutableStateOf<List<Track>>(emptyList())
+    var artists by mutableStateOf<List<JSONObject>>(emptyList())
+    var shows by mutableStateOf<List<Show>>(emptyList())
+    var books by mutableStateOf<List<Show>>(emptyList())
+    var note by mutableStateOf("")
+    var genres by mutableStateOf<List<JSONObject>>(emptyList())
+    var better by mutableStateOf("")
+    var correctedFrom by mutableStateOf("")
+    var asTyped by mutableStateOf("")
+    /** "chip|query" of the search whose results are on show (empty while one is running or failed). */
+    var doneKey = ""
+}
+
 /** Search like Spotify's on Android: Browse all while empty; your songs first, then the web, artists, podcasts. */
 @Composable
 fun SearchScreen() {
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes
-    var query by rememberSaveable { mutableStateOf("") }
-    var chip by rememberSaveable { mutableStateOf("all") }
-    var web by remember { mutableStateOf<List<Track>>(emptyList()) }
-    var artists by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
-    var books by remember { mutableStateOf<List<Show>>(emptyList()) }
-    var note by remember { mutableStateOf("") }
-    var genres by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var better by remember { mutableStateOf("") }               // the corrected spelling being shown
-    var correctedFrom by remember { mutableStateOf("") }        // what was typed (for "Search instead for")
-    var asTyped by remember { mutableStateOf("") }              // searched exactly as typed: don't correct again
+    // Kept outside the screen so leaving Search and coming back (Home <-> Search) shows what you left, instead of
+    // an empty page that searches again ("flicker").
+    var query by SearchState::query
+    var chip by SearchState::chip
+    var web by SearchState::web
+    var artists by SearchState::artists
+    var shows by SearchState::shows
+    var books by SearchState::books
+    var note by SearchState::note
+    var genres by SearchState::genres
+    var better by SearchState::better                           // the corrected spelling being shown
+    var correctedFrom by SearchState::correctedFrom             // what was typed (for "Search instead for")
+    var asTyped by SearchState::asTyped                         // searched exactly as typed: don't correct again
 
     LaunchedEffect(Library.settings.online) {
         if (Library.settings.online && genres.isEmpty()) {
@@ -99,6 +118,9 @@ fun SearchScreen() {
         }
     }
     LaunchedEffect(query, chip) {
+        val key = "$chip|${query.trim()}"
+        if (key == SearchState.doneKey) return@LaunchedEffect       // already showing this search's results
+        SearchState.doneKey = ""
         web = emptyList(); artists = emptyList(); shows = emptyList(); books = emptyList(); note = ""
         val q = query.trim()
         if (q.length < 2 || !Library.settings.online) return@LaunchedEffect
@@ -116,6 +138,7 @@ fun SearchScreen() {
                 val a = Bridge.arr("books", "search", q); books = (0 until a.length()).map { Show(a.getJSONObject(it)) }
             }
             note = ""
+            SearchState.doneKey = key
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
             note = "Web search isn't available right now (${e.message})."
