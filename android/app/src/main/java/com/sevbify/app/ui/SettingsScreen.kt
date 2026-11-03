@@ -226,6 +226,13 @@ fun SettingsPageScreen(key: String) {
                    s.skipSponsors) { s.skipSponsors = it; Library.changed() }
         }
         item {
+            Toggle(tr("Ad-free podcasts"), "Plays a podcast episode from its YouTube version when there is one, because the " +
+                   "audio in the podcast's own feed has ads built in. Sponsor reads in it are skipped (the switch above), " +
+                   "downloads are ad-free too, and Audio ↔ Video keeps your place. Episodes with no YouTube version play " +
+                   "from the feed as before. Needs the notice about full songs to be accepted.",
+                   s.adFreePodcasts) { s.adFreePodcasts = it; Library.changed() }
+        }
+        item {
             Toggle(tr("Play 30-second previews"),
                    "For songs you don't have yet, play a short preview instead of streaming the full song. " +
                    "Your own and downloaded songs always play in full. Off = full songs (default).",

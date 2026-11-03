@@ -422,10 +422,11 @@ def youtube_episode_for(show_title, episode_title, duration_ms=0):
 
 
 @_call
-def youtube_channel_for(title, author=""):
-    """A podcast's own YouTube channel (its video version), or None."""
+def youtube_channel_for(title, author="", episode_title=""):
+    """A podcast's own YouTube channel (its video version), or None. The episode title lets it find the channel
+    by the show's episode when no channel is named like the show."""
     from core import podcasts
-    show = podcasts.find_youtube_channel(title, author)
+    show = podcasts.find_youtube_channel(title, author, episode_title=episode_title)
     return _show(show) if show else None
 
 

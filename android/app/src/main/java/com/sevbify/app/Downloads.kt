@@ -162,6 +162,8 @@ object Downloads {
         val safe = safeName(t.album.ifEmpty { t.artist } + " - " + t.title, "Episode").take(120)
         val path = if (t.source == "youtube") {
             Bridge.call("download_youtube", t.pageUrl, File(dir, safe).absolutePath, Library.settings.songQuality) as String
+        } else if (adFreeDownload(t, dir, safe)) {
+            Library.offline[t.itemKey].orEmpty()
         } else {
             // The extension of the file in the link ("…/episode.m4a?x=1" → m4a); mp3 when there isn't a clear one.
             val last = t.downloadUrl.ifEmpty { t.streamUrl }.substringBefore("?").substringBefore("#").substringAfterLast('/')
@@ -170,6 +172,26 @@ object Downloads {
         }
         Library.offline[t.itemKey] = path
         Library.save()
+    }
+
+    /** A podcast episode saved from its YouTube version (no ads in it; sponsor reads are skipped when played). Falls
+     *  back to the feed's file when there is no such version. True when the file was saved. */
+    private suspend fun adFreeDownload(t: Track, dir: File, safe: String): Boolean {
+        if (!Player.adFreeAllowed(t)) return false
+        val page = Player.episodePage(t, 20_000)
+        if (page.isEmpty()) return false
+        return try {
+            val path = Bridge.call("download_youtube", page, File(dir, safe).absolutePath, Library.settings.songQuality) as String
+            Library.offline[t.itemKey] = path
+            Library.adFree[t.itemKey] = page
+            try {                                   // keep the sponsor segments too, so they're skipped offline
+                if (Library.settings.skipSponsors) Library.sponsorCache[t.itemKey] = Bridge.arr("sponsor_segments", page).toString()
+            } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+            true
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            false
+        }
     }
 
     /** A name that is safe as a file or folder name: no path characters, control characters or "..". */

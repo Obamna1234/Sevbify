@@ -1,4 +1,13 @@
-## What's new in beta.36 (Android)
+## What's new in beta.37 (Android)
+
+- **Ad-free podcasts (new setting, on by default).** A podcast's own feed has ads built into the audio, so Sevbify now plays the episode's YouTube version when there is one and skips its sponsor reads (Settings → Playback → Ad-free podcasts; the sponsor switch above it stays on by default). If an episode has no YouTube version, or the search takes longer than 12 seconds, it plays from the feed as before. The next episode is looked up ahead of time so Next is quick. Downloads are ad-free too, with the sponsor segments saved so they're skipped offline. An episode you already started from the feed keeps playing from the feed, so your place stays right.
+- **Audio ↔ Video keeps your place.** The YouTube audio and the video are the same recording, so switching no longer lands at a different point because of ads, and the video is already known (no second search). If audio hasn't resumed within 5 seconds of switching back, it's loaded again from the same point.
+- **"Watch video" on a show's page.** It searched YouTube without the phone-friendly settings the rest of the app uses, and only accepted a channel with exactly the show's name. It now uses those settings and, when no channel is named like the show, finds the channel of the video that matches one of the show's episodes.
+- **Smoother app.** The release build is now shrunk and optimised (R8), which Compose and the player run noticeably faster with than the unoptimised build.
+- **Podcast resume no longer jumps back.** After a buffering pause an episode no longer jumped back to the last saved spot (up to 5 seconds).
+- **Mini video player: the expand arrows work.** Tap them to open the video full size; drag them to resize it.
+
+### Earlier, in beta.36 (Android)
 
 - **Picking a new song no longer shows the old song's progress or keeps playing the old song.** While the new song is being found, the player now shows it at 0:00 and the previous song stays paused. The progress bar also only switches to the song's real length once it's known, which was a cause of it jumping around while streaming.
 - **Next song is found in advance.** While a streamed song plays, the next one is looked up in the background, so Next starts quickly instead of "Finding the full song…".

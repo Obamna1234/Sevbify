@@ -184,6 +184,25 @@ def test_find_youtube_channel_only_accepts_the_shows_own_channel():
     assert find_youtube_channel("Bad Friends", extract=lambda q: {"entries": bad}) is None
 
 
+def test_find_youtube_channel_falls_back_to_the_channel_of_a_matching_episode():
+    from core.podcasts import find_youtube_channel
+    calls = []
+
+    def extract(q):
+        calls.append(q)
+        if q.startswith("ytsearch15"):          # nothing named like the show
+            return {"entries": [{"channel": "Someone Else", "channel_url": "https://www.youtube.com/@else"}]}
+        return {"entries": [
+            {"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "Totally different video",
+             "channel": "Wrong", "channel_url": "https://www.youtube.com/@wrong"},
+            {"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb", "title": "Episode 12: The Big Heist (Full Show)",
+             "channel": "PowerfulHost", "channel_url": "https://www.youtube.com/@host", "channel_is_verified": True}]}
+    show = find_youtube_channel("Heist Show", episode_title="The Big Heist", extract=extract)
+    assert show and show.feed_url == "https://www.youtube.com/@host" and show.verified
+    assert find_youtube_channel("Heist Show", extract=extract) is None                  # no episode given: as before
+    assert find_youtube_channel("Heist Show", episode_title="Unrelated words here", extract=extract) is None
+
+
 def test_find_youtube_episode_matches_title_and_length():
     from core import podcasts
     entries = {"entries": [

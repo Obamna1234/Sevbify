@@ -45,7 +45,7 @@ object Profile {
             put("settings", JSONObject().apply {
                 put("online", s.online); put("stream_full", s.streamFull); put("explicit_ok", s.explicitOk)
                 put("autoplay", s.autoplay); put("song_quality", s.songQuality)
-                put("show_playlist_origin", s.showPlaylistOrigin); put("skip_sponsors", s.skipSponsors)
+                put("show_playlist_origin", s.showPlaylistOrigin); put("skip_sponsors", s.skipSponsors); put("ad_free_podcasts", s.adFreePodcasts)
                 put("lyrics", s.lyrics); put("shuffle", s.shuffle); put("repeat", s.repeat)
             })
         }
@@ -113,6 +113,7 @@ object Profile {
             if (m.optString("song_quality") in listOf("best", "small")) s.songQuality = m.getString("song_quality")
             if (m.has("show_playlist_origin")) s.showPlaylistOrigin = m.getBoolean("show_playlist_origin")
             if (m.has("skip_sponsors")) s.skipSponsors = m.getBoolean("skip_sponsors")
+            if (m.has("ad_free_podcasts")) s.adFreePodcasts = m.getBoolean("ad_free_podcasts")
             if (m.has("lyrics")) s.lyrics = m.getBoolean("lyrics")
         }
         Library.changed()

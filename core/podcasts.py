@@ -193,10 +193,15 @@ def search(net, term, limit=25, country="us"):
     return rank_shows(term, out)
 
 
-def find_youtube_channel(title, author="", extract=None):
+_STOP = {"the", "a", "an", "of", "and", "in", "to", "is", "was", "with", "for", "on", "part"}
+
+
+def find_youtube_channel(title, author="", extract=None, episode_title=""):
     """The show's own YouTube channel (its video version), or None. Searches YouTube for the show and only
     accepts a channel whose name is the show's name (or its host's), so an unrelated channel isn't picked.
-    Returns a Show of kind "youtube". `extract` replaces yt-dlp in tests."""
+    When no channel is named like the show (the channel is often called something else, e.g. the host), the
+    channel of the video that matches one of the show's episodes (`episode_title`) is used instead: the same
+    matching as playing an episode's video. Returns a Show of kind "youtube". `extract` replaces yt-dlp in tests."""
     if extract is None:
         from core import downloader
         e = downloader.engine()
@@ -205,7 +210,8 @@ def find_youtube_channel(title, author="", extract=None):
 
         def extract(query):
             opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY}
+                    "skip_download": True, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY,
+                    "extractor_args": e.yt_extractor_args()}       # on the phones: the clients that work without a JS runtime
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(query, download=False)
     info = extract(f"ytsearch15:{title} podcast") or {}
@@ -223,6 +229,22 @@ def find_youtube_channel(title, author="", extract=None):
         if url and is_web_url(url) and (n in wanted or _norm(name) in wanted):
             v = votes.setdefault(url, [0, name, bool(entry.get("channel_is_verified"))])
             v[0] += 1
+    if not votes and episode_title:
+        words = {w for w in _norm(episode_title).split() if w not in _STOP}
+        info = extract(f"ytsearch10:{title} {episode_title}") or {} if words else {}
+        for entry in info.get("entries") or []:
+            if not is_youtube_video(entry.get("url") or entry.get("webpage_url") or ""):
+                continue
+            got = {w for w in _norm(entry.get("title") or "").split() if w not in _STOP}
+            if len(words & got) / len(words) < 0.6:
+                continue
+            name = entry.get("channel") or entry.get("uploader") or ""
+            url = entry.get("channel_url") or entry.get("uploader_url") or ""
+            if not url and entry.get("channel_id"):
+                url = f"https://www.youtube.com/channel/{entry['channel_id']}"
+            if url and is_web_url(url):
+                v = votes.setdefault(url, [0, name, bool(entry.get("channel_is_verified"))])
+                v[0] += 1
     if not votes:
         return None
     url, (_count, name, verified) = max(votes.items(), key=lambda kv: (kv[1][0], kv[1][2]))
@@ -251,7 +273,7 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
                     "extractor_args": e.yt_extractor_args()}
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(query, download=False)
-    stop = {"the", "a", "an", "of", "and", "in", "to", "is", "was", "with", "for", "on", "part"}
+    stop = _STOP
     words = {w for w in _norm(episode_title).split() if w not in stop}
     if not words:
         return "", "the episode has no usable title"

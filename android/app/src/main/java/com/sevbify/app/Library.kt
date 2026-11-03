@@ -40,6 +40,7 @@ data class Settings(
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
     var showPlaylistOrigin: Boolean = false,
     var skipSponsors: Boolean = true,
+    var adFreePodcasts: Boolean = true,        // play a podcast episode's YouTube version (no built-in ads) when there is one
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
@@ -53,7 +54,7 @@ data class Settings(
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
-        put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors)
+        put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors); put("ad_free_podcasts", adFreePodcasts)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
@@ -83,6 +84,7 @@ data class Settings(
             s.lyrics = o.optBoolean("lyrics", true)
             s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
+            s.adFreePodcasts = o.optBoolean("ad_free_podcasts", true)
             s.profileBackup = o.optBoolean("profile_backup", false); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
             s.betaUpdates = o.optBoolean("beta_updates", true)
@@ -106,6 +108,10 @@ object Library {
     val recent = mutableStateListOf<Track>()            // recently played (not in a private session)
     val searches = mutableStateListOf<String>()         // Search ▸ Recent searches (newest first)
     val offline = mutableMapOf<String, String>()        // song / episode key -> downloaded file
+    /** Podcast episode key -> the YouTube page its audio came from (played or downloaded ad-free). */
+    val adFree = mutableMapOf<String, String>()
+    /** Episode key -> its sponsor segments as JSON [[start,end],...] (so a downloaded episode skips them offline). */
+    val sponsorCache = mutableMapOf<String, String>()
     val resume = mutableMapOf<String, Long>()           // episode / chapter key -> where you stopped (ms)
     val finished = mutableSetOf<String>()
     var localSongs by mutableStateOf<List<Track>>(emptyList())
@@ -156,6 +162,10 @@ object Library {
         o.optJSONArray("searches")?.let { a -> for (i in 0 until a.length()) searches.add(a.getString(i)) }
         offline.clear()
         o.optJSONObject("offline")?.let { m -> m.keys().forEach { k -> offline[k] = m.getString(k) } }
+        adFree.clear()
+        o.optJSONObject("ad_free")?.let { m -> m.keys().forEach { k -> adFree[k] = m.getString(k) } }
+        sponsorCache.clear()
+        o.optJSONObject("sponsor_cache")?.let { m -> m.keys().forEach { k -> sponsorCache[k] = m.getString(k) } }
         resume.clear()
         o.optJSONObject("resume")?.let { m -> m.keys().forEach { k -> resume[k] = m.getLong(k) } }
         finished.clear()
@@ -191,6 +201,8 @@ object Library {
             put("searches", JSONArray(searches.take(30)))
             put("offline", JSONObject(offline as Map<*, *>))
             put("resume", JSONObject(resume as Map<*, *>))
+            put("ad_free", JSONObject(adFree as Map<*, *>))
+            put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
         }
         val text = o.toString()

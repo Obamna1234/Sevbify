@@ -90,7 +90,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Shrunk and optimised by R8 (proguard-rules.pro): Compose and Media3 run much smoother than unoptimised.
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (haveReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
