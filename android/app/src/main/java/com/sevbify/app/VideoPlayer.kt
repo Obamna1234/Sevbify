@@ -5,13 +5,17 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.SingleSampleMediaSource
 
 /**
  * Watching a video podcast (a YouTube episode). Separate from the music player: music pauses while a video
@@ -27,6 +31,16 @@ object VideoPlayer {
     var error by mutableStateOf("")
     var height by mutableStateOf(0)                // the quality YouTube gave (720 = 720p)
     var inPip by mutableStateOf(false)             // shown in the floating mini player
+    var fullscreen by mutableStateOf(false)        // the landscape full-screen view
+    var zoomFill by mutableStateOf(false)          // pinched out: fill the screen (crops the edges) instead of fitting
+    var speed by mutableStateOf(1f)                // playback speed
+    /** A caption track YouTube has for the video. */
+    class Caption(val lang: String, val name: String, val url: String)
+    var captions by mutableStateOf<List<Caption>>(emptyList())
+    var captionLang by mutableStateOf("")          // the track in use ("" = none available)
+    var captionsOn by mutableStateOf(false)
+    private var lastInfo: org.json.JSONObject? = null
+    private var lastHeaders: Map<String, String> = emptyMap()
     var player: ExoPlayer? = null
         private set
 
@@ -58,21 +72,24 @@ object VideoPlayer {
         track = t
         loading = true
         error = ""
+        zoomFill = false
+        captions = emptyList(); captionLang = ""
+        captionsOn = Library.settings.videoCaptions
         val p0 = get(context)
         p0.pause()
         try {
             val o = Bridge.obj("youtube_video", t.pageUrl, quality)
             val headers = o.optJSONObject("headers")?.let { h -> h.keys().asSequence().associateWith { h.getString(it) } } ?: emptyMap()
-            val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setDefaultRequestProperties(headers)
-            val factory = ProgressiveMediaSource.Factory(http)
-            val video = factory.createMediaSource(MediaItem.fromUri(Uri.parse(o.getString("video"))))
-            val audioUrl = o.optString("audio")
-            val source = if (audioUrl.isNotEmpty())
-                MergingMediaSource(video, factory.createMediaSource(MediaItem.fromUri(Uri.parse(audioUrl))))
-            else video
+            lastInfo = o; lastHeaders = headers
+            captions = (o.optJSONArray("captions") ?: org.json.JSONArray()).let { a ->
+                (0 until a.length()).map { i -> a.getJSONObject(i).let { c -> Caption(c.getString("lang"), c.optString("name", c.getString("lang")), c.getString("url")) } }
+            }
+            captionLang = pickCaption(captions)
             height = o.optInt("height")
             val p = get(context)
-            p.setMediaSource(source)
+            p.setMediaSource(buildSource(captionLang))
+            applyCaptionSetting(p)
+            p.setPlaybackSpeed(speed)
             p.prepare()
             val at = startMs ?: Library.resume[t.itemKey]?.takeIf { it > 5000 } ?: 0L
             if (at > 0) p.seekTo(at)
@@ -85,7 +102,69 @@ object VideoPlayer {
         }
     }
 
+    /** The picture, the sound and (when there is one) the captions as one source. A caption that can't be
+     *  loaded just doesn't show; it never stops the video. */
+    private fun buildSource(lang: String): MediaSource {
+        val o = lastInfo ?: throw IllegalStateException("no video loaded")
+        val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setDefaultRequestProperties(lastHeaders)
+        val factory = ProgressiveMediaSource.Factory(http)
+        val video = factory.createMediaSource(MediaItem.fromUri(Uri.parse(o.getString("video"))))
+        val parts = ArrayList<MediaSource>()
+        parts.add(video)
+        val audioUrl = o.optString("audio")
+        if (audioUrl.isNotEmpty()) parts.add(factory.createMediaSource(MediaItem.fromUri(Uri.parse(audioUrl))))
+        captions.firstOrNull { it.lang == lang }?.let { c ->
+            val sub = MediaItem.SubtitleConfiguration.Builder(Uri.parse(c.url)).setMimeType(MimeTypes.TEXT_VTT)
+                .setLanguage(c.lang.substringBefore("-orig")).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+            parts.add(SingleSampleMediaSource.Factory(http).setTreatLoadErrorsAsEndOfStream(true)
+                          .createMediaSource(sub, C.TIME_UNSET))
+        }
+        return if (parts.size == 1) video else MergingMediaSource(*parts.toTypedArray())
+    }
+
+    /** Your phone's language first, then English, then whatever there is. */
+    private fun pickCaption(list: List<Caption>): String {
+        if (list.isEmpty()) return ""
+        val mine = java.util.Locale.getDefault().language
+        return (list.firstOrNull { it.lang.substringBefore("-") == mine } ?: list.firstOrNull { it.lang.substringBefore("-") == "en" }
+            ?: list.first()).lang
+    }
+
+    private fun applyCaptionSetting(p: ExoPlayer) {
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !(captionsOn && captionLang.isNotEmpty())).build()
+    }
+
+    fun setCaptions(on: Boolean) {
+        captionsOn = on
+        Library.settings.videoCaptions = on; Library.changed()
+        player?.let { applyCaptionSetting(it) }
+    }
+
+    /** Another caption language: the source is rebuilt, and the video carries on from the same moment. */
+    fun chooseCaption(lang: String) {
+        val p = player ?: return
+        captionLang = lang
+        captionsOn = true
+        Library.settings.videoCaptions = true; Library.changed()
+        try {
+            val at = p.currentPosition; val was = p.playWhenReady
+            p.setMediaSource(buildSource(lang), at)
+            applyCaptionSetting(p)
+            p.prepare(); p.playWhenReady = was
+        } catch (e: Exception) { error = "Couldn't switch the captions" }
+    }
+
+    fun changeSpeed(s: Float) { speed = s; player?.setPlaybackSpeed(s) }
+
+    fun seekBy(ms: Long) {
+        val p = player ?: return
+        val dur = p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE
+        p.seekTo((p.currentPosition + ms).coerceIn(0L, dur))
+    }
+
     fun position(): Long = player?.currentPosition ?: 0L
+    fun duration(): Long = player?.duration?.takeIf { it > 0 } ?: 0L
 
     /** Remember where you are (like podcasts), unless in a private session. */
     fun savePosition() {
@@ -103,5 +182,7 @@ object VideoPlayer {
         playing = false
         track = null
         inPip = false
+        fullscreen = false
+        lastInfo = null
     }
 }

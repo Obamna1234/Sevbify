@@ -222,3 +222,29 @@ def test_find_youtube_episode_says_why_not():
     url, note = podcasts.find_youtube_episode_ex(
         "Show", "Some Long Episode Title Here", 1000, extract=lambda q: {"entries": []})
     assert url == "" and "0 results" in note
+
+
+def test_video_captions_lists_own_captions_then_the_automatic_one_in_the_videos_language():
+    from core import podcasts
+    yt = "https://www.youtube.com/api/timedtext?v=abc&lang={}&fmt=vtt"
+    info = {"language": "en",
+            "subtitles": {"es": [{"ext": "srv1", "url": yt.format("es")}, {"ext": "vtt", "url": yt.format("es"), "name": "Spanish"}],
+                          "live_chat": [{"ext": "json", "url": "https://www.youtube.com/x"}]},
+            "automatic_captions": {"en-orig": [{"ext": "vtt", "url": yt.format("en"), "name": "English (Original)"}],
+                                   "fr": [{"ext": "vtt", "url": yt.format("fr")}],
+                                   "es-orig": [{"ext": "vtt", "url": yt.format("es")}]}}
+    caps = podcasts.video_captions(info)
+    assert [(c["lang"], c["auto"]) for c in caps] == [("es", False), ("en-orig", True)]   # Spanish isn't doubled by an automatic one
+    assert caps[0]["name"] == "Spanish" and caps[1]["name"].endswith("(automatic)")
+    # only https links on YouTube itself are accepted
+    bad = {"subtitles": {"en": [{"ext": "vtt", "url": "https://evil.example/x.vtt"}, {"ext": "vtt", "url": "http://www.youtube.com/x"}]}}
+    assert podcasts.video_captions(bad) == [] and podcasts.video_captions({}) == []
+
+
+def test_youtube_video_streams_carries_the_captions():
+    from core import podcasts
+    cap = [{"ext": "vtt", "url": "https://www.youtube.com/api/timedtext?x=1", "name": "English"}]
+    info = {"requested_formats": [{"url": "https://v/1", "height": 720}, {"url": "https://a/1"}],
+            "http_headers": {}, "subtitles": {"en": cap}}
+    out = podcasts.youtube_video_streams("https://www.youtube.com/watch?v=aaaaaaaaaaa", extract=lambda u: info)
+    assert out["video"] == "https://v/1" and [c["lang"] for c in out["captions"]] == ["en"]

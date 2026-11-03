@@ -122,7 +122,8 @@ fun AppRoot() {
         AnimatedVisibility(Nav.nowPlayingOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
             NowPlayingScreen()
         }
-        if (Player.videoMode && !Nav.nowPlayingOpen) FloatingVideo()    // keeps playing while you browse
+        if (Player.videoMode && !Nav.nowPlayingOpen && !com.sevbify.app.VideoPlayer.fullscreen) FloatingVideo()   // keeps playing while you browse
+        if (Player.videoMode && com.sevbify.app.VideoPlayer.fullscreen) FullscreenVideo()
         AnimatedVisibility(Nav.lyricsOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) { LyricsScreen() }
         Nav.shareFor?.let { ShareSheet(it) }
         if (Nav.connectOpen) ConnectSheet()

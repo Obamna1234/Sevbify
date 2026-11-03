@@ -105,11 +105,14 @@ fun NowPlayingScreen() {
             if (Player.videoMode) {
                 Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Color.Black),
                     contentAlignment = Alignment.Center) {
-                    VideoSurface(showControls = false)
-                    if (com.sevbify.app.VideoPlayer.loading) androidx.compose.material3.CircularProgressIndicator(color = C.Green)
+                    // (In full screen the picture is shown there: one player can only draw on one screen.)
+                    if (!com.sevbify.app.VideoPlayer.fullscreen) {
+                        VideoSurface(showControls = false)
+                        VideoControls(fullscreen = false)
+                    }
                 }
                 val v = com.sevbify.app.VideoPlayer
-                Text(v.error.ifEmpty { "Close this screen and the video keeps playing in a small window you can move and resize." +
+                Text(v.error.ifEmpty { "Pinch to fill the screen, double-tap the sides to skip 10 s. Close this screen and the video keeps playing in a small window." +
                          (v.height.takeIf { it > 0 }?.let { " Playing ${it}p." } ?: "") },
                      style = MaterialTheme.typography.bodySmall.copy(color = if (v.error.isNotEmpty()) C.Red else C.Sub),
                      textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))

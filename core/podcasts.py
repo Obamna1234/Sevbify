@@ -555,15 +555,50 @@ def youtube_stream(page_url, video=False, extract=None, max_height=720):
     return info["url"], dict(info.get("http_headers") or {})
 
 
+def video_captions(info):
+    """The subtitle tracks of a YouTube video as [{"lang", "name", "auto", "url"}] (WebVTT, from YouTube itself):
+    the uploader's own captions, then the automatic captions in the video's own language. Newest first is not
+    needed; an empty list when the video has none (or YouTube didn't hand them out)."""
+    def vtt(entries):
+        for f in entries or []:
+            url = f.get("url") or ""
+            if f.get("ext") == "vtt" and url.startswith("https://"):
+                host = (urllib.parse.urlparse(url).hostname or "").lower()
+                if host == "youtube.com" or host.endswith(".youtube.com"):
+                    return url
+        return ""
+    out, seen = [], set()
+    for lang, entries in (info.get("subtitles") or {}).items():
+        url = vtt(entries) if lang != "live_chat" else ""
+        if url:
+            name = next((f.get("name") for f in entries if f.get("name")), lang)
+            out.append({"lang": lang, "name": name, "auto": False, "url": url})
+            seen.add(lang.split("-")[0])
+    own = (info.get("language") or "").split("-")[0]
+    for lang, entries in (info.get("automatic_captions") or {}).items():
+        base = lang.split("-")[0]
+        if base in seen or not (lang.endswith("-orig") or (own and lang == own)):
+            continue
+        url = vtt(entries)
+        if url:
+            name = next((f.get("name") for f in entries if f.get("name")), lang)
+            out.append({"lang": lang, "name": f"{name} (automatic)", "auto": True, "url": url})
+            seen.add(base)
+    return out[:25]
+
+
 def youtube_video_streams(page_url, max_height=720, extract=None):
     """Separate video and audio links (YouTube's HD needs both), for players that can join them (the Android
-    app). Returns {"video", "audio", "headers", "height"}; "audio" is "" when the one link has both."""
+    app). Returns {"video", "audio", "headers", "height", "captions"}; "audio" is "" when the one link has both."""
     h = int(max_height or 720)
     if extract is None:
         def extract(url):
             fmt = (f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]/bv*[height<={h}]+ba/"
                    f"b[height<={h}]/b")
-            with _ydl({"format": fmt, "skip_download": True}) as ydl:
+            # writesubtitles/writeautomaticsub only make yt-dlp list the caption tracks in the answer; with
+            # download=False nothing is written to disk.
+            with _ydl({"format": fmt, "skip_download": True, "writesubtitles": True,
+                       "writeautomaticsub": True}) as ydl:
                 return ydl.extract_info(url, download=False)
     if not is_youtube_video(page_url):
         raise ValueError("That isn't a YouTube video link.")
@@ -572,10 +607,11 @@ def youtube_video_streams(page_url, max_height=720, extract=None):
     headers = dict(info.get("http_headers") or {})
     if len(parts) >= 2 and parts[0].get("url") and parts[1].get("url"):
         return {"video": parts[0]["url"], "audio": parts[1]["url"], "headers": headers,
-                "height": int(parts[0].get("height") or 0)}
+                "height": int(parts[0].get("height") or 0), "captions": video_captions(info)}
     if not info.get("url"):
         raise ValueError("YouTube didn't give a playable link for this video.")
-    return {"video": info["url"], "audio": "", "headers": headers, "height": int(info.get("height") or 0)}
+    return {"video": info["url"], "audio": "", "headers": headers, "height": int(info.get("height") or 0),
+            "captions": video_captions(info)}
 
 
 def download_youtube_audio(page_url, out_path_without_ext):
