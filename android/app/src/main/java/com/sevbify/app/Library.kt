@@ -40,6 +40,7 @@ data class Settings(
     var lyrics: Boolean = true,                // lyrics under Now playing (from your .lrc files or LRCLIB)
     var showPlaylistOrigin: Boolean = false,
     var skipSponsors: Boolean = true,
+    var videoCaptions: Boolean = false,        // show captions in videos that have them (remembered, like YouTube)
     var adFreePodcasts: Boolean = true,        // play a podcast episode's YouTube version (no built-in ads) when there is one
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
@@ -54,7 +55,7 @@ data class Settings(
         put("library_view", libraryView); put("library_sort", librarySort)
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
-        put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors); put("ad_free_podcasts", adFreePodcasts)
+        put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors); put("ad_free_podcasts", adFreePodcasts); put("video_captions", videoCaptions)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
@@ -85,6 +86,7 @@ data class Settings(
             s.showPlaylistOrigin = o.optBoolean("show_playlist_origin", false)
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
             s.adFreePodcasts = o.optBoolean("ad_free_podcasts", true)
+            s.videoCaptions = o.optBoolean("video_captions", false)
             s.profileBackup = o.optBoolean("profile_backup", false); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
             s.betaUpdates = o.optBoolean("beta_updates", true)

@@ -1,4 +1,14 @@
-## What's new in beta.37 (Android)
+## What's new in beta.38 (Android)
+
+- **A proper video player for video podcasts.** Tap the video for controls: play/pause, back/forward 10 seconds, a seek bar with the time, captions, speed and full screen. They fade away after 3 seconds. Double-tap the left or right side to skip 10 seconds (double-tap the middle to switch fill/fit).
+- **Pinch to fill.** Pinch out to fill the screen (the edges are cropped, like YouTube), pinch in to fit it again.
+- **Full screen.** The full-screen button turns the phone to landscape with no bars and the screen kept on; back (or the arrow) returns.
+- **Captions.** When YouTube has captions for an episode, the CC button turns them on and lets you pick a language (your phone's language first, then English). They're remembered. Not every video has captions, and YouTube doesn't always hand them out, so the button only appears when there are some.
+- **Playback speed.** 0.75×, 1×, 1.25×, 1.5× and 2× from the video's top bar.
+- **Cast.** The cast button opens your phone's own Cast / screen-mirroring screen so you can show the video on a TV (use full screen). Sevbify doesn't send the video to the TV itself, because YouTube's links only work on the phone.
+- **A cleaner mini video player.** Just the picture, with a thin progress line. Drag it to move it, pinch to resize it. Tap it to show play/pause, an expand button (opens the full video) and a close button; double-tap opens the full video. The corner resize handle is gone.
+
+### Earlier, in beta.37 (Android)
 
 - **Ad-free podcasts (new setting, on by default).** A podcast's own feed has ads built into the audio, so Sevbify now plays the episode's YouTube version when there is one and skips its sponsor reads (Settings → Playback → Ad-free podcasts; the sponsor switch above it stays on by default). If an episode has no YouTube version, or the search takes longer than 12 seconds, it plays from the feed as before. The next episode is looked up ahead of time so Next is quick. Downloads are ad-free too, with the sponsor segments saved so they're skipped offline. An episode you already started from the feed keeps playing from the feed, so your place stays right.
 - **Audio ↔ Video keeps your place.** The YouTube audio and the video are the same recording, so switching no longer lands at a different point because of ads, and the video is already known (no second search). If audio hasn't resumed within 5 seconds of switching back, it's loaded again from the same point.
