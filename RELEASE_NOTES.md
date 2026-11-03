@@ -1,4 +1,8 @@
-## What's new in beta.40 (Android)
+## What's new in beta.41 (Android)
+
+- **Gapless songs.** While a song plays, the next one (once it has been found, or if it's on your phone) is handed to the player in advance, so the change between songs happens without a pause or a "Finding the full song…" wait. The queue, Next/Previous, the lock screen and the Now Playing queue behave as before, and changing the queue, shuffle or repeat while a song plays simply drops the waiting song and picks it again. If the waiting song turns out not to load, it's dropped, marked, and loaded the normal way when its turn comes; the song that's playing carries on. Podcasts and audiobooks aren't affected, and repeat-one plays the same song again as before. The Playback status log shows `next ready: '<song>'` and `gapless → '<song>'`.
+
+### Earlier, in beta.40 (Android)
 
 Smoothness, so playing feels more like Spotify:
 

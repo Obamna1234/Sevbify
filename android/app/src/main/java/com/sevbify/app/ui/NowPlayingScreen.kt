@@ -205,7 +205,7 @@ private fun QueueSheet() {
             if (Player.userQueue.isNotEmpty()) {
                 item { SectionTitle(tr("Next in queue")) }
                 itemsIndexed(Player.userQueue.toList()) { i, t ->
-                    TrackRow(t, onClick = {}, onMore = { Player.userQueue.removeAt(i) })
+                    TrackRow(t, onClick = {}, onMore = { Player.removeFromQueue(i) })
                 }
             }
             val rest = Player.context.drop(Player.index + 1)
