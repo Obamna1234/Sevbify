@@ -239,8 +239,8 @@ private fun MiniPlayer() {
                 Icon(Icons.Filled.Devices, "Connect to a device", tint = if (AudioOutput.kind != "speaker") C.Green else C.Text)
             }
             IconButton(onClick = { Player.playPause() }) {
-                Icon(if (Player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                     if (Player.isPlaying) "Pause" else "Play", tint = C.Text, modifier = Modifier.size(30.dp))
+                Icon(if (Player.showPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                     if (Player.showPlaying) "Pause" else "Play", tint = C.Text, modifier = Modifier.size(30.dp))
             }
         }
         val d = Player.duration

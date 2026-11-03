@@ -161,8 +161,8 @@ fun NowPlayingScreen() {
             IconButton(onClick = { Player.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", Modifier.size(40.dp), tint = C.Text) }
             Surface(onClick = { Player.playPause() }, shape = CircleShape, color = Color.White, modifier = Modifier.size(68.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(if (Player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                         if (Player.isPlaying) "Pause" else "Play", tint = Color.Black, modifier = Modifier.size(38.dp))
+                    Icon(if (Player.showPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                         if (Player.showPlaying) "Pause" else "Play", tint = Color.Black, modifier = Modifier.size(38.dp))
                 }
             }
             IconButton(onClick = { Player.next() }) { Icon(Icons.Filled.SkipNext, "Next", Modifier.size(40.dp), tint = C.Text) }

@@ -114,6 +114,8 @@ object Library {
     val adFree = mutableMapOf<String, String>()
     /** Episode key -> its sponsor segments as JSON [[start,end],...] (so a downloaded episode skips them offline). */
     val sponsorCache = mutableMapOf<String, String>()
+    /** Show -> how many of its episodes in a row had no YouTube version (3 = stop looking for that show). */
+    val adFreeMiss = mutableMapOf<String, Int>()
     val resume = mutableMapOf<String, Long>()           // episode / chapter key -> where you stopped (ms)
     val finished = mutableSetOf<String>()
     var localSongs by mutableStateOf<List<Track>>(emptyList())
@@ -166,6 +168,8 @@ object Library {
         o.optJSONObject("offline")?.let { m -> m.keys().forEach { k -> offline[k] = m.getString(k) } }
         adFree.clear()
         o.optJSONObject("ad_free")?.let { m -> m.keys().forEach { k -> adFree[k] = m.getString(k) } }
+        adFreeMiss.clear()
+        o.optJSONObject("ad_free_miss")?.let { m -> m.keys().forEach { k -> adFreeMiss[k] = m.getInt(k) } }
         sponsorCache.clear()
         o.optJSONObject("sponsor_cache")?.let { m -> m.keys().forEach { k -> sponsorCache[k] = m.getString(k) } }
         resume.clear()
@@ -204,6 +208,7 @@ object Library {
             put("offline", JSONObject(offline as Map<*, *>))
             put("resume", JSONObject(resume as Map<*, *>))
             put("ad_free", JSONObject(adFree as Map<*, *>))
+            put("ad_free_miss", JSONObject(adFreeMiss as Map<*, *>))
             put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
         }

@@ -353,8 +353,8 @@ fun LyricsScreen() {
             Text(clock(Player.position), style = MaterialTheme.typography.labelSmall)
             Spacer(Modifier.weight(1f))
             Box(Modifier.size(64.dp).clip(CircleShape).background(Color.White).clickable { Player.playPause() }, contentAlignment = Alignment.Center) {
-                Icon(if (Player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                     if (Player.isPlaying) "Pause" else "Play", tint = Color.Black, modifier = Modifier.size(34.dp))
+                Icon(if (Player.showPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                     if (Player.showPlaying) "Pause" else "Play", tint = Color.Black, modifier = Modifier.size(34.dp))
             }
             Spacer(Modifier.weight(1f))
             Text(clock(Player.duration), style = MaterialTheme.typography.labelSmall)

@@ -156,7 +156,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                     Spacer(Modifier.width(8.dp))
                     GreenPlay(onClick = {
                         if (playingHere) Player.playPause() else Player.playAll(tracks, source, shuffled = Player.shuffle)
-                    }, playing = playingHere && Player.isPlaying)
+                    }, playing = playingHere && Player.showPlaying)
                 }
             }
         }
@@ -406,7 +406,7 @@ fun GenreScreen(g: Screen.Genre) {
                     Spacer(Modifier.width(8.dp))
                     GreenPlay(onClick = {
                         if (playingHere) Player.playPause() else Player.playAll(songs, source, shuffled = Player.shuffle)
-                    }, playing = playingHere && Player.isPlaying)
+                    }, playing = playingHere && Player.showPlaying)
                 }
             }
             item { SectionTitle(tr("Popular songs")) }
