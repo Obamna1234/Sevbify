@@ -155,7 +155,7 @@ object VideoPlayer {
         } catch (e: Exception) { error = "Couldn't switch the captions" }
     }
 
-    fun setSpeed(s: Float) { speed = s; player?.setPlaybackSpeed(s) }
+    fun changeSpeed(s: Float) { speed = s; player?.setPlaybackSpeed(s) }
 
     fun seekBy(ms: Long) {
         val p = player ?: return

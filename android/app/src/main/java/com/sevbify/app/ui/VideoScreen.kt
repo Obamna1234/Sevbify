@@ -208,7 +208,7 @@ fun VideoControls(fullscreen: Boolean, modifier: Modifier = Modifier.fillMaxSize
                     Text(if (v.speed == 1f) "1×" else "${v.speed.toString().removeSuffix(".0")}×", color = Color.White,
                          modifier = Modifier.clip(RoundedCornerShape(50)).clickable {
                              val steps = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
-                             v.setSpeed(steps[(steps.indexOf(v.speed).let { if (it < 0) 1 else it } + 1) % steps.size]); bump++
+                             v.changeSpeed(steps[(steps.indexOf(v.speed).let { if (it < 0) 1 else it } + 1) % steps.size]); bump++
                          }.padding(horizontal = 10.dp, vertical = 8.dp))
                     VideoIcon(Icons.Filled.Cast, "Cast: show this on a TV") { castToTv(context) }
                 }
