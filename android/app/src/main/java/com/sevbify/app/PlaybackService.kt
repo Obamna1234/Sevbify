@@ -10,6 +10,10 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -37,7 +41,13 @@ class PlaybackService : MediaLibraryService() {
         super.onCreate()
         val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
             .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36")
-        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, http)) { spec ->
+        // Streamed audio is also kept in a private cache (256 MB, oldest dropped first, in the app's cache folder:
+        // Android can clear it, other apps can't read it), so seeking back, replaying and going back to the
+        // previous song don't download it again. Your own files (file:// and content://) never go through it.
+        val cached = CacheDataSource.Factory().setCache(audioCache(this)).setUpstreamDataSourceFactory(http)
+            .setCacheKeyFactory { spec -> cacheKeyOf(spec.uri) }
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, cached)) { spec ->
             val extra = headers[spec.uri.toString()]
             if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
         }
@@ -147,6 +157,8 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         session?.run { player.release(); release() }
         session = null
+        try { cache?.release() } catch (e: Exception) { /* already released */ }
+        cache = null
         super.onDestroy()
     }
 
@@ -165,6 +177,25 @@ class PlaybackService : MediaLibraryService() {
             system || installer == "com.android.vending"
         } catch (e: Exception) { false }
         @Volatile var carConnected = false
+        @Volatile private var cache: SimpleCache? = null
+
+        @Synchronized
+        private fun audioCache(context: android.content.Context): SimpleCache = cache ?: SimpleCache(
+            java.io.File(context.cacheDir, "audio-cache"), LeastRecentlyUsedCacheEvictor(256L * 1024 * 1024),
+            StandaloneDatabaseProvider(context)).also { cache = it }
+
+        /** YouTube's audio links change every time (they're signed and expire), but the same audio has the same
+         *  id / format / size in them: use those as the cache key, so a song found again is still found in the
+         *  cache. Any other link is its own key. */
+        fun cacheKeyOf(uri: Uri): String {
+            val host = uri.host.orEmpty()
+            if (host.endsWith("googlevideo.com")) {
+                val id = uri.getQueryParameter("id"); val itag = uri.getQueryParameter("itag")
+                val len = uri.getQueryParameter("clen")
+                if (!id.isNullOrEmpty() && !itag.isNullOrEmpty() && !len.isNullOrEmpty()) return "yt:$id:$itag:$len"
+            }
+            return uri.toString()
+        }
         /** HTTP headers some streams need (yt-dlp gives them with the link). */
         val headers = ConcurrentHashMap<String, Map<String, String>>()
     }

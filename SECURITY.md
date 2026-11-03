@@ -41,6 +41,16 @@ Jellyfin/Nextcloud sign-in path or to podcast playback:
    redirects for Jellyfin/Nextcloud songs was removed in beta.30 because it coincided with songs not starting
    at all. Re-add it as a redirect-checking step only after playback is confirmed stable on a device.
 
+### Speed-up notes (beta.40)
+
+- **Remembered song pages** (`song_pages.json`) are re-validated when loaded: only https pages on YouTube or
+  Bandcamp, with a known source name, are accepted; anything else in the file is ignored.
+- **Plain-http podcast hosts** are remembered only after the https attempt failed and the http version then
+  played. This is a deliberate trade-off for old podcast hosts (public audio, no sign-in); the list can be
+  cleared by clearing the app's data.
+- **Audio cache** lives in the app's private cache folder (256 MB, oldest dropped first); it holds only
+  streamed audio and is never used for your own files or server sign-ins.
+
 ## Reporting a problem
 
 Open an issue on GitHub (without personal data), or contact the repository owner.

@@ -86,6 +86,8 @@ object Player {
     private var handledEnd = false
     private var lastResumeSave = 0L
     private var failuresInARow = 0
+    private var plainHost = ""                  // host whose https failed, waiting to see if plain http plays
+    private fun hostOf(link: String): String = try { Uri.parse(link).host.orEmpty().lowercase() } catch (e: Exception) { "" }
     private var plainHttpFor = ""               // episode whose https:// version failed              // stops skipping when nothing in the queue can play
 
     fun connect(context: Context) {
@@ -98,6 +100,10 @@ object Player {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                     if (playing && ownItemLoaded()) loading = false
+                    // The plain-http version of an episode played after its https one failed: remember the host.
+                    if (playing && plainHost.isNotEmpty()) {
+                        Library.plainHttpHosts.add(plainHost); Library.save(); plainHost = ""
+                    }
                     if (playing) { failuresInARow = 0; prefetchNext() }
                     diagLog("isPlaying=$playing")
                 }
@@ -125,6 +131,7 @@ object Player {
                     if (t != null && t.isItem && plainHttpFor != t.itemKey &&
                         t.streamUrl.ifEmpty { t.downloadUrl }.startsWith("http://")) {
                         plainHttpFor = t.itemKey          // the https version didn't work: try the original link
+                        plainHost = hostOf(t.streamUrl.ifEmpty { t.downloadUrl })
                         start(); return
                     }
                     status = "Couldn't play this song (${error.errorCodeName}); skipping"
@@ -525,6 +532,7 @@ object Player {
         preloadCovers()
         Library.played(t)
         loadJob?.cancel()
+        warmJob?.cancel()                       // you chose something: stop looking up the others
         loading = false
         // Watching? Keep watching: the next episode opens as video too (listening if it has no video).
         if (preferVideo && canWatch(t) && Library.settings.online) {
@@ -562,13 +570,27 @@ object Player {
     }
 
     private var prefetchJob: Job? = null
+    private var warmJob: Job? = null
 
-    /** While a streamed song plays, find the next one's stream in the background (the finder remembers it), so
-     *  Next starts at once instead of "Finding the full song…" for several seconds. */
+    /** Can this song be looked up online ahead of time (a streamed song, not one you have or your own server's)? */
+    private fun streamable(t: Track): Boolean {
+        val s = Library.settings
+        return !t.isItem && !t.isLocal && Library.localFor(t) == null && t.source != "jellyfin" && t.source != "webdav" &&
+            s.online && s.streamFull && s.onlineNoticeAccepted
+    }
+
+    private suspend fun resolveQuietly(t: Track) {
+        try { Bridge.obj("resolve", t.artist, t.title, t.durationMs) }
+        catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+    }
+
+    /** While a streamed song plays, find the next ones' streams in the background (the finder remembers them), so
+     *  Next starts at once instead of "Finding the full song…" for several seconds. Three songs ahead for music
+     *  (one after the other, so the phone isn't flooded); one episode ahead for podcasts. */
     private fun prefetchNext() {
         prefetchJob?.cancel()
-        val nxt = userQueue.firstOrNull() ?: context.getOrNull(index + 1) ?: return
-        val s = Library.settings
+        val ahead = (userQueue.toList() + context.drop(index + 1)).take(3)
+        val nxt = ahead.firstOrNull() ?: return
         if (nxt.isItem) {
             // The next podcast episode: find its ad-free version and audio link now, so Next / the end of this one is quick.
             if (!adFreeAllowed(nxt)) return
@@ -581,12 +603,24 @@ object Player {
             }
             return
         }
-        if (nxt.isLocal || Library.localFor(nxt) != null || nxt.source == "jellyfin" || nxt.source == "webdav") return
-        if (!s.online || !s.streamFull || !s.onlineNoticeAccepted) return
+        val todo = ahead.filter { streamable(it) }
+        if (todo.isEmpty()) return
         prefetchJob = SevbifyApp.instance.scope.launch {
             delay(4000)
-            try { Bridge.obj("resolve", nxt.artist, nxt.title, nxt.durationMs) }
-            catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+            for (t in todo) { resolveQuietly(t); delay(500) }
+        }
+    }
+
+    /** A page of songs is open (a genre, a playlist, search results): find the first few songs' streams while you
+     *  look, so tapping one starts quickly. Stops as soon as you play something. Only for streamed songs, and only
+     *  with the same settings that allow streaming at all. */
+    fun warmUp(songs: List<Track>) {
+        val todo = songs.filter { streamable(it) }.take(3)
+        if (todo.isEmpty()) return
+        warmJob?.cancel()
+        warmJob = SevbifyApp.instance.scope.launch {
+            delay(1200)
+            for (t in todo) { resolveQuietly(t); delay(300) }
         }
     }
 
@@ -625,7 +659,9 @@ object Player {
             }
             val link = t.streamUrl.ifEmpty { t.downloadUrl }
             // Ask for the secure (https) version of old http:// episode links first; plain http only if that fails.
-            val url = if (link.startsWith("http://") && plainHttpFor != t.itemKey) "https://" + link.removePrefix("http://") else link
+            // (A host that only worked over http before, and that we've already seen fail over https, goes straight to http.)
+            val url = if (link.startsWith("http://") && plainHttpFor != t.itemKey && hostOf(link) !in Library.plainHttpHosts)
+                "https://" + link.removePrefix("http://") else link
             return Triple(url, null, if (t.source == "audiobook") "Audiobook" else "Podcast")
         }
         Library.localFor(t)?.let { local ->

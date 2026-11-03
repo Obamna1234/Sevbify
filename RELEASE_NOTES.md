@@ -1,4 +1,14 @@
-## What's new in beta.39 (Android)
+## What's new in beta.40 (Android)
+
+Smoothness, so playing feels more like Spotify:
+
+- **Songs ahead are found in advance.** While a song plays, the next three in the queue are looked up in the background (one at a time), and when a genre, playlist or search page opens the first few songs on it are looked up while you read. Tapping one then starts quickly. It stops the moment you play something, and only happens for streamed songs when streaming is allowed in Settings.
+- **yt-dlp is loaded at launch**, so the first song you play after opening the app isn't slowed down by it.
+- **Songs you played before are remembered between runs.** Where each song was found (not the link, which expires) is saved on your phone, so playing it again skips the searches even after you closed the app. Only YouTube and Bandcamp pages are ever read back from that file.
+- **Streamed audio is cached.** Up to 256 MB of what you've streamed is kept in the app's private cache (Android can clear it, other apps can't read it), so seeking back, replaying and going to the previous song don't download it again. Your own files never go through it.
+- **Podcast hosts that only work over plain http** are remembered, so their episodes don't waste a few seconds trying https first each time. A host is only remembered after https failed and the plain version then played.
+
+### Earlier, in beta.39 (Android)
 
 - **Streamed songs start faster.** Your recordings showed "Finding the full song…" for about 20 seconds on a genre page. Finding a song now searches Bandcamp and YouTube at the same time instead of one after the other, asks for the same song only once when a prefetch and a tap overlap, remembers where a song was found (so playing it again skips the searches), and tries one fast YouTube client before the slow full list. The Playback status log now says where the time went, e.g. `found 'Babydoll': {"bandcamp": 1.2, "youtube_search": 3.4, "extract": 8.0, "total": 11.4}`, so if it's still slow, paste it.
 - **No more "paused" look while a song loads.** After you pick a song the play button now shows pause (playing) until it starts, like Spotify, instead of a play icon that looked stuck. Tapping pause during that stops the search. Before, a tap while loading could start the previous song for a moment (the quick play/pause flips in your log).

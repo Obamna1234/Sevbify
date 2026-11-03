@@ -22,6 +22,8 @@ class SevbifyApp : Application() {
             // Starting Python takes a few seconds the first time (it unpacks itself): done in the background
             // inside Bridge.setup, so the app never freezes ("isn't responding") on its first start.
             try { Bridge.setup(this@SevbifyApp) } catch (e: Exception) { Nav.say("Online features couldn't start: ${e.message}") }
+            // Load yt-dlp and the song finder now, so the first song you play isn't slowed down by it.
+            try { Bridge.call("warm") } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
             autoUpdateYtdlp()
             try { Updater.check() } catch (_: Exception) { /* offline: try again tomorrow */ }
         }

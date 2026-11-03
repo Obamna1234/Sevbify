@@ -150,6 +150,34 @@ def test_phone_tries_one_fast_client_first_then_the_full_list(monkeypatch):
     streamer.clear_cache()
 
 
+def test_found_pages_survive_a_restart_and_only_trusted_pages_are_loaded(fake_engine, tmp_path):
+    import json
+    state, calls = fake_engine
+    store = tmp_path / "song_pages.json"
+    streamer.set_page_store(str(store))
+    state["yt"] = [{"id": "v", "title": "Artist - Song", "duration": 200}]
+    streamer.find_full_song("Artist", "Song", 200000, extract=lambda p: ("https://cdn/1", {}, 200))
+    rows = json.loads(store.read_text())
+    assert rows and rows[0][2] == "YouTube" and rows[0][3].startswith("https://www.youtube.com/watch?v=")
+    # "restart": memory is empty, the file is read again; the searches are skipped
+    streamer._pages.clear(); streamer._cache.clear()
+    streamer.set_page_store(str(store))
+    res = streamer.find_full_song("Artist", "Song", 200000, extract=lambda p: ("https://cdn/2", {}, 200))
+    assert res["url"] == "https://cdn/2" and len(calls["yt"]) == 1
+    # a tampered file: pages outside YouTube/Bandcamp, plain http, wrong names and wrong shapes are ignored
+    store.write_text(json.dumps([["a - b", downloader.SOURCE_BOTH, "YouTube", "https://evil.example/watch?v=x"],
+                                 ["c - d", downloader.SOURCE_BOTH, "YouTube", "http://www.youtube.com/watch?v=x"],
+                                 ["e - f", downloader.SOURCE_BOTH, "Other", "https://www.youtube.com/watch?v=x"],
+                                 ["g - h", downloader.SOURCE_BOTH, "YouTube", "https://www.youtube.com/watch?v=ok"],
+                                 ["short"], 5]))
+    streamer._pages.clear()
+    streamer.set_page_store(str(store))
+    assert list(streamer._pages) == [("g - h", downloader.SOURCE_BOTH)]
+    streamer.clear_cache()
+    assert not store.exists()
+    streamer._store_path = ""
+
+
 # --- in the player (needs VLC, like the other window tests) --------------------------------------------------------
 
 def remote(title, artist, preview=""):

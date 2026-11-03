@@ -8,8 +8,11 @@ saved; the song stays "not downloaded" until you download it.
 Streaming YouTube audio this way skips YouTube's own player (and its ads), which goes against YouTube's terms
 of service, like downloading does. Sevbify shows this once, the first time, and the user decides.
 """
+import json
+import os
 import threading
 import time
+import urllib.parse
 
 from core import downloader
 
@@ -18,6 +21,53 @@ _cache = {}
 _pages = {}                      # song -> the page it was found on (kept all session: finding it again skips the searches)
 _inflight = {}                   # song -> a lookup already running (a second ask waits for it instead of repeating it)
 _lock = threading.Lock()
+_store_path = ""                 # where the found pages are kept between runs (set by the phone app)
+_MAX_PAGES = 1500
+_PAGE_HOSTS = ("youtube.com", "youtu.be", "bandcamp.com")
+
+
+def _page_ok(name, page):
+    """A remembered page is only trusted when it is an https page on YouTube or Bandcamp (the file is on disk)."""
+    if name not in ("Bandcamp", "YouTube") or not isinstance(page, str):
+        return False
+    try:
+        u = urllib.parse.urlparse(page)
+    except ValueError:
+        return False
+    host = (u.hostname or "").lower()
+    return u.scheme == "https" and any(host == h or host.endswith("." + h) for h in _PAGE_HOSTS)
+
+
+def set_page_store(path):
+    """Keep where each song was found (not the links: they expire) in `path`, so a song played before skips the
+    searches even after the app was closed. Loads what is there."""
+    global _store_path
+    _store_path = path
+    try:
+        with open(path, encoding="utf-8") as f:
+            rows = json.load(f)
+    except (OSError, ValueError):
+        return
+    with _lock:
+        for row in (rows if isinstance(rows, list) else [])[-_MAX_PAGES:]:
+            if (isinstance(row, list) and len(row) == 4 and all(isinstance(x, str) for x in row)
+                    and row[1] in (downloader.SOURCE_BOTH, downloader.SOURCE_BANDCAMP, downloader.SOURCE_YOUTUBE)
+                    and _page_ok(row[2], row[3])):
+                _pages[(row[0], row[1])] = (row[2], row[3])
+
+
+def _save_pages():
+    if not _store_path:
+        return
+    with _lock:
+        rows = [[k[0], k[1], v[0], v[1]] for k, v in list(_pages.items())[-_MAX_PAGES:]]
+    tmp = _store_path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(rows, f)
+        os.replace(tmp, _store_path)
+    except OSError:
+        pass
 
 
 class NoFullSong(Exception):
@@ -191,6 +241,7 @@ def _find(line, key, duration_ms, source, extract):
         with _lock:
             _cache[key] = (time.time(), dict(result))
             _pages[key] = (name, page)
+        _save_pages()
         return result
     raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
 
@@ -218,6 +269,11 @@ def clear_cache():
         _cache.clear()
         _pages.clear()
     _preferred_attempt = 0
+    if _store_path:
+        try:
+            os.remove(_store_path)
+        except OSError:
+            pass
 
 
 def download_original_audio(page, out_without_ext, progress=None, quality="best"):
