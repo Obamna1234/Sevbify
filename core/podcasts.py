@@ -277,24 +277,39 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
     words = {w for w in _norm(episode_title).split() if w not in stop}
     if not words:
         return "", "the episode has no usable title"
-    info = extract(f"ytsearch10:{show_title} {episode_title}") or {}
-    entries = info.get("entries") or []
-    best, best_score, best_title, skipped_len = "", 0.0, "", 0
-    for entry in entries:
-        url = entry.get("url") or entry.get("webpage_url") or ""
-        if not is_youtube_video(url):
-            continue
-        got = {w for w in _norm(entry.get("title") or "").split() if w not in stop}
-        score = len(words & got) / len(words)
-        secs = entry.get("duration") or 0
-        if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.35 * duration_ms:
-            skipped_len += 1                             # a clip or a different cut of the show
-            continue
-        if score > best_score:
-            best, best_score, best_title = url, score, entry.get("title") or ""
+    # Episode titles are often "Headline | Series: Episode (Part 5)" while the video has only one of those parts:
+    # a video also counts when it has most of the words of one part (3 words or more).
+    parts = [p for p in re.split(r"\s+[|\u2013\u2014]\s+|\s+-\s+", episode_title) if p.strip()]
+    part_words = [{w for w in _norm(p).split() if w not in stop} for p in parts] if len(parts) > 1 else []
+    part_words = [pw for pw in part_words if len(pw) >= 3]
+    queries = [f"{show_title} {episode_title}"]
+    if len(parts) > 1:
+        queries.append(f"{show_title} {max(parts, key=len)}")      # a shorter, plainer search
+    best, best_score, best_title, skipped_len, seen = "", 0.0, "", 0, 0
+    for query in queries:
+        info = extract(f"ytsearch10:{query}") or {}
+        entries = info.get("entries") or []
+        seen += len(entries)
+        for entry in entries:
+            url = entry.get("url") or entry.get("webpage_url") or ""
+            if not is_youtube_video(url):
+                continue
+            got = {w for w in _norm(entry.get("title") or "").split() if w not in stop}
+            score = len(words & got) / len(words)
+            for pw in part_words:                       # one part of the title is enough if it matches closely
+                if len(pw & got) / len(pw) >= 0.75:
+                    score = max(score, 0.6)
+            secs = entry.get("duration") or 0
+            if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.35 * duration_ms:
+                skipped_len += 1                         # a clip or a different cut of the show
+                continue
+            if score > best_score:
+                best, best_score, best_title = url, score, entry.get("title") or ""
+        if best_score >= 0.6:
+            break
     if best_score >= 0.6:
         return best, f"matched {best_score:.0%}: {best_title[:60]}"
-    return "", (f"{len(entries)} results, best match {best_score:.0%}"
+    return "", (f"{seen} results over {len(queries)} search{'es' if len(queries) > 1 else ''}, best match {best_score:.0%}"
                 + (f", {skipped_len} the wrong length" if skipped_len else ""))
 
 

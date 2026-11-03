@@ -33,6 +33,9 @@ import java.io.File
 object Player {
     var current by mutableStateOf<Track?>(null)
     var isPlaying by mutableStateOf(false)
+    /** A song is being found / buffered after you picked it: shown as playing (like Spotify), not as paused. */
+    var loading by mutableStateOf(false)
+    val showPlaying: Boolean get() = isPlaying || loading
     var position by mutableLongStateOf(0L)
     var duration by mutableLongStateOf(0L)
     var status by mutableStateOf("")            // "Finding the full song…", "30-second preview", errors
@@ -94,6 +97,7 @@ object Player {
             controller?.addListener(object : MediaPlayer.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
+                    if (playing && ownItemLoaded()) loading = false
                     if (playing) { failuresInARow = 0; prefetchNext() }
                     diagLog("isPlaying=$playing")
                 }
@@ -102,6 +106,7 @@ object Player {
                 }
                 override fun onPlaybackStateChanged(state: Int) {
                     diagLog(stateName(state))
+                    if (state == MediaPlayer.STATE_ENDED || (state == MediaPlayer.STATE_READY && ownItemLoaded())) loading = false
                     if (state == MediaPlayer.STATE_READY) {
                         duration = controller?.duration?.takeIf { it > 0 } ?: duration
                         // Once per start: going READY again after a buffering gap must not jump back to the last saved spot.
@@ -115,6 +120,7 @@ object Player {
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     diagLog("ERROR ${error.errorCodeName}: ${error.message?.take(80)}")
+                    loading = false
                     val t = current
                     if (t != null && t.isItem && plainHttpFor != t.itemKey &&
                         t.streamUrl.ifEmpty { t.downloadUrl }.startsWith("http://")) {
@@ -151,7 +157,10 @@ object Player {
                         position = 0
                         if (c.isPlaying && loadJob?.isActive == true) c.pause()
                     } else {
-                        position = c.currentPosition.coerceAtLeast(0)
+                        val p = c.currentPosition.coerceAtLeast(0)
+                        // Just after you moved the bar, keep showing where you moved it to until the player has
+                        // caught up (otherwise the bar jumps back for a moment, then forward).
+                        position = if (System.currentTimeMillis() - lastSeekAt < 1200 && kotlin.math.abs(p - lastSeekTo) > 2000) lastSeekTo else p
                         if (c.isPlaying) skipSponsor(position)?.let { c.seekTo(it); position = it }
                         // The real length, once known (before that the length from the search result is used).
                         if (c.duration > 0 && c.playbackState == MediaPlayer.STATE_READY) duration = c.duration
@@ -163,7 +172,7 @@ object Player {
                         }
                     }
                 }
-                delay(500)
+                delay(250)
             }
         }
     }
@@ -200,9 +209,17 @@ object Player {
     fun playPause() {
         if (videoMode) { VideoPlayer.player?.let { if (it.isPlaying) it.pause() else it.play() }; return }
         val c = controller ?: return
-        if (current == null && context.isNotEmpty()) { start(); return }
+        val cur = current
+        if (cur == null && context.isNotEmpty()) { start(); return }
+        // Pause pressed while the song is still being found: stop looking (the old song must not start again).
+        if (loading) { loadJob?.cancel(); loading = false; status = ""; return }
+        // Its sound isn't loaded (it was stopped while being found): find it again.
+        if (cur != null && c.currentMediaItem?.mediaId != cur.matchKey) { start(); return }
         if (c.isPlaying) c.pause() else c.play()
     }
+
+    /** The player holds the song you picked (not the one before it, which stays loaded while the new one is found). */
+    private fun ownItemLoaded(): Boolean = controller?.currentMediaItem?.mediaId == current?.matchKey
 
     // --- SponsorBlock: skip the ad reads in YouTube episodes (Settings; only a 4-character hash is sent) --------
     private var sponsor: Pair<String, List<LongArray>> = "" to emptyList()
@@ -248,9 +265,16 @@ object Player {
         return seg[1]
     }
 
-    fun seekTo(ms: Long) { if (videoMode) VideoPlayer.player?.seekTo(ms) else controller?.seekTo(ms) }
+    private var lastSeekAt = 0L
+    private var lastSeekTo = 0L
 
-    fun pause() { controller?.pause() }
+    fun seekTo(ms: Long) {
+        lastSeekAt = System.currentTimeMillis(); lastSeekTo = ms
+        position = ms                                   // the bar moves at once, not after the next refresh
+        if (videoMode) VideoPlayer.player?.seekTo(ms) else controller?.seekTo(ms)
+    }
+
+    fun pause() { loadJob?.cancel(); loading = false; controller?.pause() }
 
     // --- video podcasts: the same episode as a video (Now playing's Audio / Video switch) -------------------
     /** The episode playing now is being watched (the video player has it). */
@@ -270,7 +294,13 @@ object Player {
                 val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
                 diagLog("video lookup: ${r.optString("note")}")
                 val url = r.optString("url")
-                if (url.isEmpty()) { lastVideoNote = r.optString("note"); noVideo.add(t.itemKey) } else episodeVideo[t.itemKey] = url
+                if (url.isEmpty()) {
+                    lastVideoNote = r.optString("note"); noVideo.add(t.itemKey)
+                    Library.adFreeMiss[t.artist] = (Library.adFreeMiss[t.artist] ?: 0) + 1; Library.save()
+                } else {
+                    episodeVideo[t.itemKey] = url
+                    if (Library.adFreeMiss.remove(t.artist) != null) Library.save()
+                }
                 url
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -296,7 +326,8 @@ object Player {
     fun adFreeAllowed(t: Track): Boolean {
         val s = Library.settings
         return t.source == "podcast" && s.adFreePodcasts && s.online && s.onlineNoticeAccepted &&
-            !((Library.resume[t.itemKey] ?: 0L) > 30_000 && t.itemKey !in Library.adFree)
+            !((Library.resume[t.itemKey] ?: 0L) > 30_000 && t.itemKey !in Library.adFree) &&
+            (Library.adFreeMiss[t.artist] ?: 0) < 3          // this show has had no YouTube version 3 times: don't keep waiting
     }
 
     /** Watching rather than listening: kept for the next episode (Next, or when one finishes), like YouTube. */
@@ -421,7 +452,7 @@ object Player {
             // the player "spazzing out"). A short run of failures means a bad connection or the song finder
             // is down, not one unplayable track, so skipping further won't help.
             if (failuresInARow >= maxOf(1, minOf(4, context.size + userQueue.size))) {
-                controller?.pause()
+                controller?.pause(); loading = false
                 status = if (Library.settings.online) "Couldn't play these right now — check your connection, or update yt-dlp in Settings" else
                     "You're offline and none of these songs are downloaded"
                 return
@@ -440,7 +471,7 @@ object Player {
         if (auto && Library.settings.autoplay && Library.settings.online && last != null && !last.isItem) {
             startRadio(last, autoplay = true)                  // keep playing similar songs, like Spotify
         } else {
-            controller?.pause()
+            controller?.pause(); loading = false
         }
     }
 
@@ -494,6 +525,7 @@ object Player {
         preloadCovers()
         Library.played(t)
         loadJob?.cancel()
+        loading = false
         // Watching? Keep watching: the next episode opens as video too (listening if it has no video).
         if (preferVideo && canWatch(t) && Library.settings.online) {
             controller?.pause()
@@ -506,9 +538,10 @@ object Player {
     /** Find where to play this song/episode from and start it in the (audio) player. */
     private fun startAudio(t: Track) {
         loadJob?.cancel()
+        loading = true
         loadJob = SevbifyApp.instance.scope.launch {
             try {
-                val (uri, headers, note) = locate(t) ?: return@launch
+                val (uri, headers, note) = locate(t) ?: run { loading = false; return@launch }
                 status = note
                 PlaybackService.headers.clear()             // only the playing song's link needs them
                 headers?.let { PlaybackService.headers[uri] = it }
@@ -522,6 +555,7 @@ object Player {
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
+                loading = false
                 status = "⚠ ${t.title}: ${e.message}"
             }
         }
@@ -576,7 +610,7 @@ object Player {
             }
             if (adFreeAllowed(t)) {
                 status = "Finding the ad-free version…"
-                val page = episodePage(t, 12_000)
+                val page = episodePage(t, 8_000)
                 if (page.isNotEmpty()) {
                     try {
                         val s = adStreams.remove(t.itemKey) ?: Bridge.obj("youtube_stream", page, false)
@@ -620,6 +654,7 @@ object Player {
         status = "Finding the full song…"
         try {
             val r = Bridge.obj("resolve", t.artist, t.title, t.durationMs)
+            diagLog("found '${t.title}': ${r.optJSONObject("timings")?.toString() ?: "?"} (seconds)")
             return Triple(r.getString("url"), headersOf(r), "Full song · ${r.optString("source")} · not downloaded")
         } catch (e: CoreError) {
             throw CoreError("full song not found")

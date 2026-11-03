@@ -248,3 +248,22 @@ def test_youtube_video_streams_carries_the_captions():
             "http_headers": {}, "subtitles": {"en": cap}}
     out = podcasts.youtube_video_streams("https://www.youtube.com/watch?v=aaaaaaaaaaa", extract=lambda u: info)
     assert out["video"] == "https://v/1" and [c["lang"] for c in out["captions"]] == ["en"]
+
+
+def test_find_youtube_episode_second_search_and_one_part_of_the_title_is_enough():
+    from core import podcasts
+    asked = []
+
+    def extract(q):
+        asked.append(q)
+        if q.count("|"):                                   # the long title finds nothing useful
+            return {"entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "Unrelated", "duration": 3000}]}
+        return {"entries": [{"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb",
+                             "title": "Stalin: Yalta & Last Days", "duration": 2800}]}
+    url, note = podcasts.find_youtube_episode_ex(
+        "Fin vs History", "Russian Humour Is Pushing People Into Canals | Stalin: Yalta & Last Days (Part 5)", 2820000, extract)
+    assert url.endswith("bbbbbbbbbbb") and len(asked) == 2 and "|" not in asked[1]
+    # nothing close in either search: no video, and the note counts both searches
+    url, note = podcasts.find_youtube_episode_ex("Fin vs History", "A | B C D E", 0,
+                                                 lambda q: {"entries": [{"url": "https://www.youtube.com/watch?v=ccccccccccc", "title": "Cats"}]})
+    assert url == "" and "2 searches" in note

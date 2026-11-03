@@ -230,7 +230,7 @@ fun SettingsPageScreen(key: String) {
                    "audio in the podcast's own feed has ads built in. Sponsor reads in it are skipped (the switch above), " +
                    "downloads are ad-free too, and Audio ↔ Video keeps your place. Episodes with no YouTube version play " +
                    "from the feed as before. Needs the notice about full songs to be accepted.",
-                   s.adFreePodcasts) { s.adFreePodcasts = it; Library.changed() }
+                   s.adFreePodcasts) { s.adFreePodcasts = it; if (it) Library.adFreeMiss.clear(); Library.changed() }
         }
         item {
             Toggle(tr("Play 30-second previews"),

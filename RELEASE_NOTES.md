@@ -1,4 +1,11 @@
-## What's new in beta.38 (Android)
+## What's new in beta.39 (Android)
+
+- **Streamed songs start faster.** Your recordings showed "Finding the full song…" for about 20 seconds on a genre page. Finding a song now searches Bandcamp and YouTube at the same time instead of one after the other, asks for the same song only once when a prefetch and a tap overlap, remembers where a song was found (so playing it again skips the searches), and tries one fast YouTube client before the slow full list. The Playback status log now says where the time went, e.g. `found 'Babydoll': {"bandcamp": 1.2, "youtube_search": 3.4, "extract": 8.0, "total": 11.4}`, so if it's still slow, paste it.
+- **No more "paused" look while a song loads.** After you pick a song the play button now shows pause (playing) until it starts, like Spotify, instead of a play icon that looked stuck. Tapping pause during that stops the search. Before, a tap while loading could start the previous song for a moment (the quick play/pause flips in your log).
+- **Progress bar no longer snaps back.** After you drag or tap the bar it stays where you put it instead of jumping back for a moment, and it updates twice as often (smoother).
+- **Podcast video lookup finds more.** Episode titles like "Headline | Series: Episode (Part 5)" are now also searched by their plainer part, and a video matches when it has most of the words of one part. Shows with no YouTube version at all (three episodes in a row) are no longer searched, so their episodes start without waiting; turning "Ad-free podcasts" off and on again resets that. The ad-free wait before falling back to the feed is 8 seconds.
+
+### Earlier, in beta.38 (Android)
 
 - **A proper video player for video podcasts.** Tap the video for controls: play/pause, back/forward 10 seconds, a seek bar with the time, captions, speed and full screen. They fade away after 3 seconds. Double-tap the left or right side to skip 10 seconds (double-tap the middle to switch fill/fit).
 - **Pinch to fill.** Pinch out to fill the screen (the edges are cropped, like YouTube), pinch in to fit it again.

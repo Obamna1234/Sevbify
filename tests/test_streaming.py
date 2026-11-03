@@ -88,6 +88,68 @@ def test_found_streams_are_remembered_for_a_while(fake_engine):
     assert len(calls["bc"]) == 1
 
 
+def test_the_same_song_asked_for_twice_at_once_is_looked_up_once(fake_engine):
+    import threading, time
+    state, calls = fake_engine
+    state["yt"] = [{"id": "v", "title": "Artist - Song", "duration": 200}]
+    runs = []
+
+    def slow(page):
+        runs.append(page); time.sleep(0.3)
+        return "https://cdn/yt.webm", {}, 200
+    out = []
+    ts = [threading.Thread(target=lambda: out.append(streamer.find_full_song("Artist", "Song", 200000, extract=slow)))
+          for _ in range(3)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+    assert len(runs) == 1 and len(out) == 3 and {o["url"] for o in out} == {"https://cdn/yt.webm"}
+    assert len(calls["yt"]) == 1
+
+
+def test_a_song_found_before_skips_the_searches_even_after_its_link_expired(fake_engine, monkeypatch):
+    state, calls = fake_engine
+    state["yt"] = [{"id": "v", "title": "Artist - Song", "duration": 200}]
+    streamer.find_full_song("Artist", "Song", 200000, extract=lambda p: ("https://cdn/1", {}, 200))
+    streamer._cache.clear()                                        # the 30-minute link memory ran out
+    res = streamer.find_full_song("Artist", "Song", 200000, extract=lambda p: ("https://cdn/2", {}, 200))
+    assert res["url"] == "https://cdn/2" and len(calls["yt"]) == 1 and len(calls["bc"]) == 1
+    assert res["timings"]["searches"] == "remembered"
+
+
+def test_timings_say_where_the_time_went(fake_engine):
+    state, _ = fake_engine
+    state["yt"] = [{"id": "v", "title": "Artist - Song", "duration": 200}]
+    t = streamer.find_full_song("Artist", "Song", 200000, extract=lambda p: ("u", {}, 200))["timings"]
+    assert {"bandcamp", "youtube_search", "extract", "total"} <= set(t)
+
+
+def test_phone_tries_one_fast_client_first_then_the_full_list(monkeypatch):
+    class Eng:
+        SONG_EXTRACTORS = ["youtube"]
+        class _QuietLogger: pass
+        def yt_extractor_args(self):
+            return {"youtube": {"player_client": ["default", "tv", "mweb", "ios", "android_vr"]}}
+        calls = []
+
+        class yt_dlp:
+            class YoutubeDL:
+                def __init__(self, opts): self.clients = opts["extractor_args"]["youtube"]["player_client"]
+                def __enter__(self): return self
+                def __exit__(self, *a): return False
+                def extract_info(self, page, download=False):
+                    Eng.calls.append(self.clients)
+                    if self.clients != ["tv"]:            # only the tv client works in this test
+                        raise RuntimeError("no audio")
+                    return {"url": "https://cdn/a", "http_headers": {}, "duration": 99}
+    e = Eng()
+    assert streamer._attempts(e)[:3] == [{"youtube": {"player_client": [c]}} for c in ("android_vr", "tv", "mweb")]
+    assert streamer._extract(e, "https://www.youtube.com/watch?v=x")[0] == "https://cdn/a"
+    assert Eng.calls == [["android_vr"], ["tv"]]
+    Eng.calls.clear()
+    streamer._extract(e, "https://www.youtube.com/watch?v=y")      # remembers: tv goes first now
+    assert Eng.calls == [["tv"]]
+    streamer.clear_cache()
+
+
 # --- in the player (needs VLC, like the other window tests) --------------------------------------------------------
 
 def remote(title, artist, preview=""):

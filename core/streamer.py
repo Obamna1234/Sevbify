@@ -15,6 +15,8 @@ from core import downloader
 
 CACHE_SECONDS = 30 * 60          # direct links from YouTube expire after a few hours; stay well inside that
 _cache = {}
+_pages = {}                      # song -> the page it was found on (kept all session: finding it again skips the searches)
+_inflight = {}                   # song -> a lookup already running (a second ask waits for it instead of repeating it)
 _lock = threading.Lock()
 
 
@@ -37,58 +39,158 @@ def _pick_youtube(e, line, duration_s):
     return url if url.startswith("http") else f"https://www.youtube.com/watch?v={entry.get('id')}"
 
 
+_preferred_attempt = 0           # which of the attempts below worked last time (tried first from then on)
+
+
+def _attempts(e):
+    """The yt-dlp settings to try for a link, fastest first. On the phones yt-dlp is told to ask several YouTube
+    clients, one after the other, which is slow; a single fast client usually works, so those go first and the
+    full list is the fallback. Desktop (no override) has just the one attempt."""
+    base = dict(e.yt_extractor_args() or {})
+    clients = list((base.get("youtube") or {}).get("player_client") or [])
+    if not clients:
+        return [base]
+    fast = [{"youtube": {**base["youtube"], "player_client": [c]}} for c in ("android_vr", "tv", "mweb") if c in clients]
+    return fast + [base]
+
+
 def _extract(e, page):
     """Direct audio link (+ the HTTP headers it needs) for a Bandcamp or YouTube page, without downloading."""
+    global _preferred_attempt
     if e.yt_dlp is None:
         raise NoFullSong("yt-dlp is not installed")
-    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
-            "format": __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT, "socket_timeout": 20,
-            "skip_download": True, "allowed_extractors": e.SONG_EXTRACTORS,
-            "extractor_args": e.yt_extractor_args()}
-    with e.yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(page, download=False)
-    url = (info or {}).get("url")
-    if not url:
-        raise NoFullSong("no playable audio link")
-    return url, dict(info.get("http_headers") or {}), info.get("duration") or 0
+    attempts = _attempts(e)
+    order = list(range(_preferred_attempt, len(attempts))) + list(range(0, min(_preferred_attempt, len(attempts))))
+    last = None
+    for i in order:
+        opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
+                "format": __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT,
+                "socket_timeout": 15 if len(attempts) > 1 else 20,
+                "skip_download": True, "allowed_extractors": e.SONG_EXTRACTORS, "extractor_args": attempts[i]}
+        try:
+            with e.yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(page, download=False)
+            url = (info or {}).get("url")
+            if not url:
+                raise NoFullSong("no playable audio link")
+        except Exception as exc:
+            last = exc
+            continue
+        _preferred_attempt = i
+        return url, dict(info.get("http_headers") or {}), info.get("duration") or 0
+    raise last if last else NoFullSong("no playable audio link")
 
 
 def find_full_song(artist, title, duration_ms=0, source=downloader.SOURCE_BOTH, extract=None):
-    """Return {"url", "headers", "page", "source", "duration_ms"} for a full-length stream, or raise NoFullSong."""
+    """Return {"url", "headers", "page", "source", "duration_ms", "timings"} for a full-length stream, or raise
+    NoFullSong. `timings` says where the seconds went (for the Playback status log). The same song asked for twice
+    at once (a prefetch and a tap) is looked up once."""
     line = downloader.song_line(artist, title)
     key = (line.casefold(), source)
     with _lock:
         hit = _cache.get(key)
         if hit and time.time() - hit[0] < CACHE_SECONDS:
             return dict(hit[1])
+        slot = _inflight.get(key)
+        owner = slot is None
+        if owner:
+            slot = _inflight[key] = {"event": threading.Event(), "result": None, "error": None}
+    if not owner:
+        slot["event"].wait(180)
+        if slot["error"] is not None:
+            raise slot["error"]
+        if slot["result"] is not None:
+            return dict(slot["result"])
+        raise NoFullSong("the lookup took too long")
+    try:
+        result = _find(line, key, duration_ms, source, extract)
+        slot["result"] = result
+        return dict(result)
+    except Exception as exc:
+        slot["error"] = exc
+        raise
+    finally:
+        slot["event"].set()
+        with _lock:
+            _inflight.pop(key, None)
+
+
+def _find(line, key, duration_ms, source, extract):
+    t0 = time.time()
+    timings = {}
     e = downloader.engine()
     extract = extract or (lambda page: _extract(e, page))
-    candidates = []
-    if source != downloader.SOURCE_YOUTUBE:
+    found = {}
+
+    def bandcamp():
+        t = time.time()
         try:
             bc = e.search_bandcamp(line)
         except Exception:
             bc = {}
-        if bc.get("found") and bc.get("url"):
-            candidates.append(("Bandcamp", bc["url"]))
-    if source != downloader.SOURCE_BANDCAMP:
+        found["bc"] = bc if (bc or {}).get("found") and bc.get("url") else None
+        timings["bandcamp"] = round(time.time() - t, 1)
+
+    def youtube():
+        t = time.time()
         try:
-            yt = _pick_youtube(e, line, int((duration_ms or 0) / 1000))
+            found["yt"] = _pick_youtube(e, line, int((duration_ms or 0) / 1000))
         except Exception:
-            yt = None
-        if yt:
-            candidates.append(("YouTube", yt))
+            found["yt"] = None
+        timings["youtube_search"] = round(time.time() - t, 1)
+
+    def candidates():
+        """(name, page) to try, in order; the searches run at the same time and YouTube is only waited for when
+        Bandcamp has nothing."""
+        threads = {}
+        for name, fn, wanted in (("bc", bandcamp, source != downloader.SOURCE_YOUTUBE),
+                                 ("yt", youtube, source != downloader.SOURCE_BANDCAMP)):
+            if wanted:
+                threads[name] = threading.Thread(target=fn, daemon=True)
+                threads[name].start()
+        if "bc" in threads:
+            threads["bc"].join()
+            if found.get("bc"):
+                yield "Bandcamp", found["bc"]["url"]
+        if "yt" in threads:
+            threads["yt"].join()
+            if found.get("yt"):
+                yield "YouTube", found["yt"]
+
     last = None
-    for name, page in candidates:
+    known = _pages.get(key)
+    tried = set()
+    if known:                                       # found before: no searches, just a fresh link
+        tried.add(known[1])
+        t = time.time()
+        try:
+            url, headers, seconds = extract(known[1])
+            timings["extract"] = round(time.time() - t, 1); timings["total"] = round(time.time() - t0, 1)
+            timings["searches"] = "remembered"
+            result = {"url": url, "headers": headers, "page": known[1], "source": known[0],
+                      "duration_ms": int((seconds or 0) * 1000), "timings": timings}
+            with _lock:
+                _cache[key] = (time.time(), dict(result))
+            return result
+        except Exception as exc:
+            last = exc
+            with _lock:
+                _pages.pop(key, None)
+    for name, page in candidates():
+        if page in tried:
+            continue
+        t = time.time()
         try:
             url, headers, seconds = extract(page)
         except Exception as exc:              # e.g. a Bandcamp track that isn't streamable: try YouTube
             last = exc
             continue
+        timings["extract"] = round(time.time() - t, 1); timings["total"] = round(time.time() - t0, 1)
         result = {"url": url, "headers": headers, "page": page, "source": name,
-                  "duration_ms": int((seconds or 0) * 1000)}
+                  "duration_ms": int((seconds or 0) * 1000), "timings": timings}
         with _lock:
             _cache[key] = (time.time(), dict(result))
+            _pages[key] = (name, page)
         return result
     raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
 
@@ -111,8 +213,11 @@ def youtube_page(artist, title, duration_ms=0, search=True):
 
 
 def clear_cache():
+    global _preferred_attempt
     with _lock:
         _cache.clear()
+        _pages.clear()
+    _preferred_attempt = 0
 
 
 def download_original_audio(page, out_without_ext, progress=None, quality="best"):
