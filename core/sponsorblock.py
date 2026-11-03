@@ -6,7 +6,8 @@ service answers with the segments of every video sharing that prefix, and the ri
 (SponsorBlock's privacy-preserving "k-anonymity" lookup).
 
 YouTube's own ads aren't in the streams Sevbify plays; what's left are ads the hosts read themselves, which is
-exactly what SponsorBlock marks. Podcast feeds (RSS) with ads stitched in by the host can't be skipped this way.
+exactly what SponsorBlock marks. Podcast feeds (RSS) with ads stitched in by the host can't be skipped this way,
+so Sevbify can play a podcast episode's YouTube version instead (Settings -> Ad-free podcasts).
 """
 import hashlib
 import json

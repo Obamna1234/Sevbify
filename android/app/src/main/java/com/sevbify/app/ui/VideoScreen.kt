@@ -3,6 +3,7 @@ package com.sevbify.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -113,8 +114,10 @@ fun FloatingVideo() {
             SmallButton(Icons.Filled.Close, "Close the video (keep listening)", Modifier.align(Alignment.TopEnd)) {
                 Player.switchToAudio()
             }
-            // Resize handle (bottom-left corner): drag left/up for bigger, right/down for smaller.
-            Box(Modifier.align(Alignment.BottomStart).size(36.dp)
+            // The expand arrows (bottom-left corner): tap = open the full video (Now playing); drag left/up for a
+            // bigger mini player, right/down for a smaller one.
+            Box(Modifier.align(Alignment.BottomStart).size(44.dp)
+                    .pointerInput(Unit) { detectTapGestures(onTap = { Nav.nowPlayingOpen = true }) }
                     .pointerInput(Unit) {
                         detectDragGestures { change, drag ->
                             change.consume()
@@ -125,7 +128,7 @@ fun FloatingVideo() {
                             widthDp = newW
                         }
                     }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.OpenInFull, "Resize", tint = Color.White, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.OpenInFull, "Expand (tap) or resize (drag)", tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
     }

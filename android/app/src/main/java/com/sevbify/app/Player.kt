@@ -16,10 +16,13 @@ import androidx.media3.common.Player as MediaPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 
 /**
@@ -101,7 +104,8 @@ object Player {
                     diagLog(stateName(state))
                     if (state == MediaPlayer.STATE_READY) {
                         duration = controller?.duration?.takeIf { it > 0 } ?: duration
-                        applyResume()
+                        // Once per start: going READY again after a buffering gap must not jump back to the last saved spot.
+                        if (!resumeDone) { resumeDone = true; applyResume() }
                     }
                     if (state == MediaPlayer.STATE_ENDED && !handledEnd) {
                         handledEnd = true
@@ -204,13 +208,29 @@ object Player {
     private var sponsor: Pair<String, List<LongArray>> = "" to emptyList()
     private var skipped = mutableSetOf<Long>()
 
+    /** The YouTube page whose sponsor segments apply: the episode's own (a YouTube show), or the YouTube version a
+     *  podcast episode is played/downloaded from (ad-free). "" if none. */
+    private fun sponsorPageFor(t: Track): String =
+        if (t.source == "youtube") t.pageUrl else Library.adFree[t.itemKey].orEmpty()
+
     private fun loadSponsor(t: Track) {
         sponsor = t.itemKey to emptyList(); skipped.clear()
-        if (t.source != "youtube" || t.pageUrl.isEmpty() || !Library.settings.skipSponsors || !Library.settings.online) return
+        if (!Library.settings.skipSponsors) return
+        val page = sponsorPageFor(t)
+        if (page.isEmpty()) return
+        Library.sponsorCache[t.itemKey]?.let { cached ->
+            try {
+                val a = org.json.JSONArray(cached)
+                sponsor = t.itemKey to (0 until a.length()).map { i -> a.getJSONArray(i).let { s -> longArrayOf(s.getLong(0), s.getLong(1)) } }
+                return                                   // known already (also works offline, for downloads)
+            } catch (e: Exception) { /* unreadable: fetch again */ }
+        }
+        if (!Library.settings.online) return
         SevbifyApp.instance.scope.launch {
             try {
-                val a = Bridge.arr("sponsor_segments", t.pageUrl)
+                val a = Bridge.arr("sponsor_segments", page)
                 val segs = (0 until a.length()).map { i -> a.getJSONArray(i).let { s -> longArrayOf(s.getLong(0), s.getLong(1)) } }
+                if (t.source != "youtube") { Library.sponsorCache[t.itemKey] = a.toString(); Library.save() }
                 if (current?.itemKey == t.itemKey) sponsor = t.itemKey to segs
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -240,6 +260,44 @@ object Player {
 
     /** Episode → its YouTube video, found once per episode (ordinary podcasts have no video of their own). */
     private val episodeVideo = HashMap<String, String>()
+    private val noVideo = HashSet<String>()                       // looked for, none (this session)
+    private val lookups = HashMap<String, Deferred<String>>()       // lookups in flight (they carry on if you stop waiting)
+    private val adStreams = HashMap<String, org.json.JSONObject>()  // the next episode's audio link, found ahead of time
+
+    private fun lookupPage(t: Track): Deferred<String> = lookups.getOrPut(t.itemKey) {
+        SevbifyApp.instance.scope.async {
+            try {
+                val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
+                diagLog("video lookup: ${r.optString("note")}")
+                val url = r.optString("url")
+                if (url.isEmpty()) { lastVideoNote = r.optString("note"); noVideo.add(t.itemKey) } else episodeVideo[t.itemKey] = url
+                url
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                diagLog("video lookup failed: ${e.message?.take(80)}")
+                lastVideoNote = e.message.orEmpty().take(80)
+                lookups.remove(t.itemKey)                             // a network problem: allow trying again
+                ""
+            }
+        }
+    }
+
+    /** The YouTube video of a podcast episode ("" if there is none, or it took longer than [waitMs]; the search
+     *  carries on in the background, so asking again is quick). Found once per episode. */
+    suspend fun episodePage(t: Track, waitMs: Long = 12_000): String {
+        episodeVideo[t.itemKey]?.let { return it }
+        Library.adFree[t.itemKey]?.let { episodeVideo[t.itemKey] = it; return it }
+        if (t.itemKey in noVideo) return ""
+        return withTimeoutOrNull(waitMs) { lookupPage(t).await() }.orEmpty()
+    }
+
+    /** Ad-free podcasts: allowed for this episode? (Not when it was already started from the feed: the two
+     *  recordings differ by the ads, so your place would be wrong.) */
+    fun adFreeAllowed(t: Track): Boolean {
+        val s = Library.settings
+        return t.source == "podcast" && s.adFreePodcasts && s.online && s.onlineNoticeAccepted &&
+            !((Library.resume[t.itemKey] ?: 0L) > 30_000 && t.itemKey !in Library.adFree)
+    }
 
     /** Watching rather than listening: kept for the next episode (Next, or when one finishes), like YouTube. */
     var preferVideo by mutableStateOf(false)
@@ -254,20 +312,10 @@ object Player {
         SevbifyApp.instance.scope.launch {
             var watch = t
             if (t.source != "youtube") {
-                val page = episodeVideo[t.itemKey] ?: run {
+                val page = episodeVideo[t.itemKey] ?: Library.adFree[t.itemKey] ?: run {
                     findingVideo = true
                     status = "Looking for this episode's video…"
-                    try {
-                        val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
-                        diagLog("video lookup: ${r.optString("note")}")
-                        if (r.optString("url").isEmpty()) lastVideoNote = r.optString("note")
-                        r.optString("url")
-                    } catch (e: Exception) {
-                        if (e is kotlinx.coroutines.CancellationException) throw e
-                        diagLog("video lookup failed: ${e.message?.take(80)}")
-                        lastVideoNote = e.message.orEmpty().take(80)
-                        ""
-                    } finally { findingVideo = false }
+                    try { episodePage(t, 30_000) } finally { findingVideo = false }
                 }
                 if (page.isEmpty()) {
                     status = "Couldn't find a video of this episode on YouTube" +
@@ -299,6 +347,17 @@ object Player {
             // a long time paused its connection may have been dropped.)
             if (c.playbackState == MediaPlayer.STATE_IDLE) c.prepare()
             c.seekTo(at); c.play()
+            // If the old connection is slow or dead (it was paused a while), load the episode afresh from here.
+            SevbifyApp.instance.scope.launch {
+                delay(5000)
+                val c2 = controller
+                if (!preferVideo && !videoMode && current?.itemKey == t.itemKey && c2 != null && c2.playWhenReady &&
+                    !c2.isPlaying && c2.playbackState != MediaPlayer.STATE_ENDED) {
+                    diagLog("audio didn't resume in 5 s: loading it again")
+                    Library.resume[t.itemKey] = at
+                    start()
+                }
+            }
         } else start()
     }
 
@@ -412,6 +471,7 @@ object Player {
     }
 
     // --- getting a song to play --------------------------------------------------------------------------------
+    private var resumeDone = false
     private var lastStartKey = ""
     private var lastStartAt = 0L
 
@@ -428,6 +488,7 @@ object Player {
         if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
         handledEnd = false
+        resumeDone = false
         position = 0; duration = t.durationMs
         loadSponsor(t)
         preloadCovers()
@@ -474,7 +535,19 @@ object Player {
         prefetchJob?.cancel()
         val nxt = userQueue.firstOrNull() ?: context.getOrNull(index + 1) ?: return
         val s = Library.settings
-        if (nxt.isItem || nxt.isLocal || Library.localFor(nxt) != null || nxt.source == "jellyfin" || nxt.source == "webdav") return
+        if (nxt.isItem) {
+            // The next podcast episode: find its ad-free version and audio link now, so Next / the end of this one is quick.
+            if (!adFreeAllowed(nxt)) return
+            prefetchJob = SevbifyApp.instance.scope.launch {
+                delay(4000)
+                try {
+                    val page = episodePage(nxt, 60_000)
+                    if (page.isNotEmpty() && nxt.itemKey !in adStreams) adStreams[nxt.itemKey] = Bridge.obj("youtube_stream", page, false)
+                } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+            }
+            return
+        }
+        if (nxt.isLocal || Library.localFor(nxt) != null || nxt.source == "jellyfin" || nxt.source == "webdav") return
         if (!s.online || !s.streamFull || !s.onlineNoticeAccepted) return
         prefetchJob = SevbifyApp.instance.scope.launch {
             delay(4000)
@@ -500,6 +573,21 @@ object Player {
                 status = "Finding the audio…"
                 val s = Bridge.obj("youtube_stream", t.pageUrl, false)
                 return Triple(s.getString("url"), headersOf(s), "Video podcast · audio")
+            }
+            if (adFreeAllowed(t)) {
+                status = "Finding the ad-free version…"
+                val page = episodePage(t, 12_000)
+                if (page.isNotEmpty()) {
+                    try {
+                        val s = adStreams.remove(t.itemKey) ?: Bridge.obj("youtube_stream", page, false)
+                        Library.adFree[t.itemKey] = page; Library.save()
+                        loadSponsor(t)
+                        return Triple(s.getString("url"), headersOf(s), "Podcast · ad-free (YouTube version)")
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        diagLog("ad-free audio failed, using the feed: ${e.message?.take(80)}")
+                    }
+                }
             }
             val link = t.streamUrl.ifEmpty { t.downloadUrl }
             // Ask for the secure (https) version of old http:// episode links first; plain http only if that fails.
