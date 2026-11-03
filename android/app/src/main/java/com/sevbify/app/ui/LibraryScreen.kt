@@ -182,7 +182,8 @@ fun LibraryScreen() {
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun SortSheet(current: String, done: (String?) -> Unit) {
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { done(null) }, containerColor = C.Elevated) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { done(null) }, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.androidxNavPadding()) {
             Text(tr("Sort by"), style = MaterialTheme.typography.titleMedium,
                  modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)

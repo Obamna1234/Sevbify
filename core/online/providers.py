@@ -327,14 +327,14 @@ class OnlineMusic:
         if artist:
             aid = artist.get("id")
             try:
-                for i, t in enumerate(self.deezer.artist_radio(aid, limit=25)):
-                    scored.append((2.2 - i / 25, t))
+                for i, t in enumerate(self.deezer.artist_radio(aid, limit=60)):
+                    scored.append((2.2 - i / 60, t))
             except ServiceError:
                 pass
-            for r, rel in enumerate(self.deezer.related(aid, limit=8)[:8]):
+            for r, rel in enumerate(self.deezer.related(aid, limit=14)[:14]):
                 try:
-                    for i, t in enumerate(self.deezer.top_tracks(rel.get("id"), limit=3)):
-                        scored.append((1.9 - r / 10 - i / 6, t))
+                    for i, t in enumerate(self.deezer.top_tracks(rel.get("id"), limit=4)):
+                        scored.append((1.9 - r / 16 - i / 8, t))
                 except ServiceError:
                     continue
         scored = [(sc + rng.uniform(0, 0.6), t) for sc, t in scored]

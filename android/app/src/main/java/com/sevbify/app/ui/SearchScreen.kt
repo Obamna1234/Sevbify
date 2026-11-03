@@ -34,6 +34,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +78,10 @@ object SearchState {
     var better by mutableStateOf("")
     var correctedFrom by mutableStateOf("")
     var asTyped by mutableStateOf("")
+    /** Spotify's two-step search: the Search tab shows a bar and Browse all; tapping the bar opens the search page. */
+    var active by mutableStateOf(false)
+    /** Set when the page was just opened by a tap (show the keyboard); not when coming back to the tab. */
+    var wantFocus by mutableStateOf(false)
     /** "chip|query" of the search whose results are on show (empty while one is running or failed). */
     var doneKey = ""
 }
@@ -145,43 +154,77 @@ fun SearchScreen() {
         }
     }
 
-    val local = remember(query, Library.localSongs, tick) {
-        // Any language: case and accents don't matter ("beyonce" finds "Beyoncé").
-        val q = fold(query.trim())
-        val exact = if (q.isEmpty()) emptyList() else Library.localSongs.filter {
-            q in fold(it.title) || q in fold(it.artist) || q in fold(it.album)
-        }.take(50)
-        // Nothing exact: small typos still find your own songs ("hustory" → "History").
-        if (exact.isNotEmpty() || q.replace(" ", "").length < 4) exact
-        else Library.localSongs.filter { closeMatch(q, fold("${it.title} ${it.artist} ${it.album}")) }.take(50)
+    // Your own songs matching what's typed. Searched on a background thread once typing pauses, so typing
+    // stays smooth even with thousands of songs.
+    val local by produceState(emptyList<Track>(), query, Library.localSongs, tick) {
+        val typed = query
+        if (typed.isBlank()) { value = emptyList(); return@produceState }
+        delay(120)
+        val songs = Library.localSongs
+        value = withContext(Dispatchers.Default) {
+            // Any language: case and accents don't matter ("beyonce" finds "Beyoncé").
+            val q = fold(typed.trim())
+            val exact = if (q.isEmpty()) emptyList() else songs.filter {
+                q in fold(it.title) || q in fold(it.artist) || q in fold(it.album)
+            }.take(50)
+            // Nothing exact: small typos still find your own songs ("hustory" → "History").
+            if (exact.isNotEmpty() || q.replace(" ", "").length < 4) exact
+            else songs.filter { closeMatch(q, fold("${it.title} ${it.artist} ${it.album}")) }.take(50)
+        }
+    }
+    val active = SearchState.active
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LaunchedEffect(active, SearchState.wantFocus) {
+        if (active && SearchState.wantFocus) {
+            SearchState.wantFocus = false
+            try { focus.requestFocus() } catch (_: Exception) {}
+            keyboard?.show()
+        }
     }
     LazyColumn {
         item {
-            Column(Modifier.statusBarsPadding().padding(16.dp)) {
-                Text(tr("Search"), style = MaterialTheme.typography.headlineMedium)
-                Gap(12.dp)
-                Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(6.dp)).background(Color.White)
-                        .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Search, null, tint = Color(0xFF121212))
-                    Spacer(Modifier.width(10.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) Text(tr("What do you want to listen to?"), color = Color(0xFF535353),
-                                                  style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
-                        BasicTextField(query, { query = it }, singleLine = true, cursorBrush = SolidColor(C.Green),
-                                       textStyle = TextStyle(color = Color(0xFF121212), fontSize = 16.sp, fontFamily = Figtree,
-                                                             fontWeight = FontWeight.SemiBold),
-                                       modifier = Modifier.fillMaxWidth())
+            if (!active) {
+                Column(Modifier.statusBarsPadding().padding(16.dp)) {
+                    Text(tr("Search"), style = MaterialTheme.typography.headlineMedium)
+                    Gap(12.dp)
+                    // Looks like the search box, but is a button: tapping opens the search page (like Spotify).
+                    Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(6.dp)).background(Color.White)
+                            .clickable { SearchState.active = true; SearchState.wantFocus = true }.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Search, null, tint = Color(0xFF121212))
+                        Spacer(Modifier.width(10.dp))
+                        Text(tr("What do you want to listen to?"), color = Color(0xFF535353),
+                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                     }
-                    if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, "Clear", tint = Color(0xFF121212)) }
+                }
+            } else {
+                Row(Modifier.statusBarsPadding().padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { SearchState.active = false; query = ""; keyboard?.hide() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = C.Text)
+                    }
+                    Row(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(6.dp)).background(C.Card)
+                            .padding(horizontal = 12.dp).padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) {
+                            if (query.isEmpty()) Text(tr("What do you want to listen to?"), color = C.Sub,
+                                                      style = MaterialTheme.typography.bodyLarge)
+                            BasicTextField(query, { query = it }, singleLine = true, cursorBrush = SolidColor(C.Green),
+                                           textStyle = TextStyle(color = C.Text, fontSize = 16.sp, fontFamily = Figtree),
+                                           modifier = Modifier.fillMaxWidth().focusRequester(focus))
+                        }
+                        if (query.isNotEmpty()) IconButton(onClick = { query = "" }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Filled.Close, "Clear", tint = C.Text)
+                        }
+                    }
                 }
             }
         }
-        if (query.isBlank() && Library.searches.isNotEmpty()) {
+        if (active && query.isBlank() && Library.searches.isNotEmpty()) {
             item {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Recent searches"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     androidx.compose.material3.TextButton(onClick = { Library.searches.clear(); Library.changed() }) {
-                        Text(tr("Clear"), color = C.Sub)
+                        Text(tr("Clear recent searches"), color = C.Sub)
                     }
                 }
             }
@@ -199,7 +242,7 @@ fun SearchScreen() {
             }
             item { Gap(12.dp) }
         }
-        if (query.isBlank()) {
+        if (!active) {
             item { Text(tr("Browse all"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) }
             val tiles = listOf(Triple("Podcasts", 0xFF006450L, -1), Triple("Audiobooks", 0xFF1E3264L, -2)) +
                 genres.mapIndexed { i, g -> Triple(g.optString("name"), TileColours[i % TileColours.size], g.optInt("id")) }
@@ -222,6 +265,7 @@ fun SearchScreen() {
             item { Gap(24.dp) }
             return@LazyColumn
         }
+        if (query.isBlank()) return@LazyColumn            // the search page with nothing typed yet: just Recents
         item {
             LazyRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf("all" to tr("All"), "songs" to tr("Songs"), "artists" to tr("Artists"), "podcasts" to tr("Podcasts"),

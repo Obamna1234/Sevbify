@@ -3,6 +3,7 @@ package com.sevbify.app.ui
 import com.sevbify.app.tr
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -190,7 +191,8 @@ fun NowPlayingScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QueueSheet() {
-    ModalBottomSheet(onDismissRequest = { Nav.queueOpen = false }, containerColor = C.Elevated) {
+    ModalBottomSheet(onDismissRequest = { Nav.queueOpen = false }, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.navigationBarsPadding()) {
             item { Text(tr("Queue"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 16.dp)) }
             Player.current?.let { cur ->

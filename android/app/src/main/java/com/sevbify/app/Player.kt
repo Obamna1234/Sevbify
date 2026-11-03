@@ -91,7 +91,7 @@ object Player {
             controller?.addListener(object : MediaPlayer.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
-                    if (playing) failuresInARow = 0
+                    if (playing) { failuresInARow = 0; prefetchNext() }
                     diagLog("isPlaying=$playing")
                 }
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -138,15 +138,25 @@ object Player {
                     delay(500); continue
                 }
                 controller?.let { c ->
-                    position = c.currentPosition.coerceAtLeast(0)
-                    if (c.isPlaying) skipSponsor(position)?.let { c.seekTo(it); position = it }
-                    if (c.duration > 0) duration = c.duration
                     val t = current
-                    if (t != null && t.isItem && c.isPlaying && !Library.privateSession &&
-                        System.currentTimeMillis() - lastResumeSave > 5000) {
-                        Library.resume[t.itemKey] = position
-                        lastResumeSave = System.currentTimeMillis()
-                        Library.save()
+                    // While the next song is being found, the previous one is still loaded in the player: its
+                    // progress must not show under the new title (it looked like the bar jumping), and it must
+                    // not carry on playing.
+                    val mine = t == null || c.currentMediaItem?.mediaId == t.matchKey
+                    if (!mine) {
+                        position = 0
+                        if (c.isPlaying && loadJob?.isActive == true) c.pause()
+                    } else {
+                        position = c.currentPosition.coerceAtLeast(0)
+                        if (c.isPlaying) skipSponsor(position)?.let { c.seekTo(it); position = it }
+                        // The real length, once known (before that the length from the search result is used).
+                        if (c.duration > 0 && c.playbackState == MediaPlayer.STATE_READY) duration = c.duration
+                        if (t != null && t.isItem && c.isPlaying && !Library.privateSession &&
+                            System.currentTimeMillis() - lastResumeSave > 5000) {
+                            Library.resume[t.itemKey] = position
+                            lastResumeSave = System.currentTimeMillis()
+                            Library.save()
+                        }
                     }
                 }
                 delay(500)
@@ -230,14 +240,17 @@ object Player {
 
     /** Episode → its YouTube video, found once per episode (ordinary podcasts have no video of their own). */
     private val episodeVideo = HashMap<String, String>()
+
+    /** Watching rather than listening: kept for the next episode (Next, or when one finishes), like YouTube. */
+    var preferVideo by mutableStateOf(false)
     var findingVideo by mutableStateOf(false)
     private var lastVideoNote = ""
 
     /** Switch from listening to watching, at the same point. */
-    fun switchToVideo(context: Context) {
+    fun switchToVideo(context: Context, at: Long? = position, auto: Boolean = false) {
         val t = current ?: return
         if (!canWatch(t)) return
-        val at = position
+        if (!auto) preferVideo = true
         SevbifyApp.instance.scope.launch {
             var watch = t
             if (t.source != "youtube") {
@@ -259,6 +272,8 @@ object Player {
                 if (page.isEmpty()) {
                     status = "Couldn't find a video of this episode on YouTube" +
                         (if (lastVideoNote.isNotEmpty()) " ($lastVideoNote)" else "")
+                    if (auto && current?.itemKey == t.itemKey) startAudio(t)        // no video for this one: just listen
+                    else if (!auto) preferVideo = false
                     return@launch
                 }
                 status = ""
@@ -266,18 +281,25 @@ object Player {
                 watch = t.copy(pageUrl = page)
             }
             controller?.pause()
-            VideoPlayer.load(context, watch, Library.settings.videoQuality, at.takeIf { it > 0 })
+            VideoPlayer.load(context, watch, Library.settings.videoQuality, at?.takeIf { it > 0 })
+            if (VideoPlayer.error.isNotEmpty() && auto && current?.itemKey == t.itemKey) startAudio(t)
         }
     }
 
     /** Switch from watching back to listening, at the same point. */
     fun switchToAudio() {
+        preferVideo = false
         val t = current ?: return
         val at = VideoPlayer.position()
         VideoPlayer.stop()
         if (at > 0) Library.resume[t.itemKey] = at
         val c = controller ?: return
-        if (c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == t.matchKey) { c.seekTo(at); c.play() } else start()
+        if (c.mediaItemCount > 0 && c.currentMediaItem?.mediaId == t.matchKey) {
+            // The listening player was only paused: carry on from where the video got to. (prepare() first: after
+            // a long time paused its connection may have been dropped.)
+            if (c.playbackState == MediaPlayer.STATE_IDLE) c.prepare()
+            c.seekTo(at); c.play()
+        } else start()
     }
 
     fun next() {
@@ -364,17 +386,21 @@ object Player {
     }
 
     fun startRadio(seed: Track, autoplay: Boolean = false) {
-        status = "Starting ${seed.title} Radio…"
+        if (autoplay) status = "Starting ${seed.title} Radio…"
+        else com.sevbify.app.ui.Nav.say("Opening ${seed.title} Radio…")
         SevbifyApp.instance.scope.launch {
             try {
-                val songs = Bridge.tracks("radio", seed.artist, seed.title, 50)
+                val songs = Bridge.tracks("radio", seed.artist, seed.title, if (autoplay) 50 else 100)
                     .filter { Library.settings.explicitOk || !it.explicit }
                 if (songs.isEmpty()) { status = "No radio for this song"; return@launch }
                 val list = if (autoplay) songs else listOf(seed) + songs
-                play(list.first(), list, "${seed.title} Radio", keepCurrent = !autoplay)
-                status = ""
-                if (!autoplay) {
-                    // Open the radio's own page, so it's obvious what's playing (like Spotify's "… Radio").
+                if (autoplay) {
+                    play(list.first(), list, "${seed.title} Radio")
+                    status = ""
+                } else {
+                    // Like Spotify: just open the radio's page. Nothing starts playing and your queue is left
+                    // alone (press Play there to listen).
+                    status = ""
                     com.sevbify.app.ui.Nav.nowPlayingOpen = false
                     com.sevbify.app.ui.Nav.go(com.sevbify.app.ui.Screen.Collection("Radio", "${seed.title} Radio", list, seed.art))
                 }
@@ -407,6 +433,18 @@ object Player {
         preloadCovers()
         Library.played(t)
         loadJob?.cancel()
+        // Watching? Keep watching: the next episode opens as video too (listening if it has no video).
+        if (preferVideo && canWatch(t) && Library.settings.online) {
+            controller?.pause()
+            switchToVideo(SevbifyApp.instance, at = null, auto = true)
+            return
+        }
+        startAudio(t)
+    }
+
+    /** Find where to play this song/episode from and start it in the (audio) player. */
+    private fun startAudio(t: Track) {
+        loadJob?.cancel()
         loadJob = SevbifyApp.instance.scope.launch {
             try {
                 val (uri, headers, note) = locate(t) ?: return@launch
@@ -425,6 +463,23 @@ object Player {
                 if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
                 status = "⚠ ${t.title}: ${e.message}"
             }
+        }
+    }
+
+    private var prefetchJob: Job? = null
+
+    /** While a streamed song plays, find the next one's stream in the background (the finder remembers it), so
+     *  Next starts at once instead of "Finding the full song…" for several seconds. */
+    private fun prefetchNext() {
+        prefetchJob?.cancel()
+        val nxt = userQueue.firstOrNull() ?: context.getOrNull(index + 1) ?: return
+        val s = Library.settings
+        if (nxt.isItem || nxt.isLocal || Library.localFor(nxt) != null || nxt.source == "jellyfin" || nxt.source == "webdav") return
+        if (!s.online || !s.streamFull || !s.onlineNoticeAccepted) return
+        prefetchJob = SevbifyApp.instance.scope.launch {
+            delay(4000)
+            try { Bridge.obj("resolve", nxt.artist, nxt.title, nxt.durationMs) }
+            catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
         }
     }
 

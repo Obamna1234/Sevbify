@@ -66,6 +66,7 @@ object Nav {
     fun switch(t: Tab) {
         motion = if (tab == t) "pop" else "tab"
         if (tab == t && stack.size > 1) { while (stack.size > 1) stack.removeAt(stack.size - 1) }   // tap again: back to the top
+        else if (tab == t && t == Tab.SEARCH) { SearchState.active = true; SearchState.wantFocus = true }                          // tap Search again: open search (keyboard)
         tab = t
     }
     fun back(): Boolean {
@@ -73,6 +74,7 @@ object Nav {
         if (lyricsOpen) { lyricsOpen = false; return true }
         if (nowPlayingOpen) { nowPlayingOpen = false; return true }
         if (stack.size > 1) { motion = "pop"; stack.removeAt(stack.size - 1); return true }
+        if (tab == Tab.SEARCH && SearchState.active) { SearchState.active = false; SearchState.query = ""; return true }
         if (tab != Tab.HOME) { motion = "tab"; tab = Tab.HOME; return true }
         return false
     }

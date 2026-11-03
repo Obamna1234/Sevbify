@@ -461,7 +461,8 @@ fun kotlinx.coroutines.CoroutineScope.launchSafely(block: suspend () -> Unit) {
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun DownloadChoiceSheet(title: String, cover: String, count: Int, onAll: () -> Unit, onChoose: () -> Unit, onDismiss: () -> Unit) {
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = C.Elevated) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp).navigationBarsPadding(),
                horizontalAlignment = Alignment.CenterHorizontally) {
             Cover(cover, 150.dp)
