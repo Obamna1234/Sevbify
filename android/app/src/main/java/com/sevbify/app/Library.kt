@@ -116,6 +116,8 @@ object Library {
     val sponsorCache = mutableMapOf<String, String>()
     /** Show -> how many of its episodes in a row had no YouTube version (3 = stop looking for that show). */
     val adFreeMiss = mutableMapOf<String, Int>()
+    /** Podcast hosts whose episodes only play over plain http:// (https failed and http then worked): not retried with https. */
+    val plainHttpHosts = mutableSetOf<String>()
     val resume = mutableMapOf<String, Long>()           // episode / chapter key -> where you stopped (ms)
     val finished = mutableSetOf<String>()
     var localSongs by mutableStateOf<List<Track>>(emptyList())
@@ -168,6 +170,8 @@ object Library {
         o.optJSONObject("offline")?.let { m -> m.keys().forEach { k -> offline[k] = m.getString(k) } }
         adFree.clear()
         o.optJSONObject("ad_free")?.let { m -> m.keys().forEach { k -> adFree[k] = m.getString(k) } }
+        plainHttpHosts.clear()
+        o.optJSONArray("plain_http_hosts")?.let { a -> for (i in 0 until a.length()) plainHttpHosts.add(a.getString(i)) }
         adFreeMiss.clear()
         o.optJSONObject("ad_free_miss")?.let { m -> m.keys().forEach { k -> adFreeMiss[k] = m.getInt(k) } }
         sponsorCache.clear()
@@ -209,6 +213,7 @@ object Library {
             put("resume", JSONObject(resume as Map<*, *>))
             put("ad_free", JSONObject(adFree as Map<*, *>))
             put("ad_free_miss", JSONObject(adFreeMiss as Map<*, *>))
+            put("plain_http_hosts", JSONArray(plainHttpHosts.toList().takeLast(200)))
             put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
         }

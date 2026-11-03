@@ -90,7 +90,17 @@ def setup(data_dir, cache_dir, online=True, lastfm_key="", version=""):
     _state["net"] = NetClient(cache_dir, enabled=lambda: _state["online_on"])
     _state["music"] = OnlineMusic(_state["net"], lastfm_key or "")
     from core.version import app_version
+    from core import streamer
+    streamer.set_page_store(os.path.join(data_dir, "song_pages.json"))     # songs found before skip the searches
     return {"version": app_version()}
+
+
+@_call
+def warm():
+    """Load yt-dlp and the song finder now (in the background at start-up), so the first song isn't slowed by it."""
+    from core import downloader, streamer
+    downloader.engine()
+    return True
 
 
 @_call

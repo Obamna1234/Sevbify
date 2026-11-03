@@ -79,6 +79,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
     @Suppress("UNUSED_VARIABLE") val tick = Library.changes + Downloads.doneCount
     val colour = rememberCoverColour(cover, Color(0xFF404040))
     val pending = tracks.filter { !it.isItem && !it.isLocal && Library.localFor(it) == null }
+    LaunchedEffect(title, tracks.size) { Player.warmUp(tracks) }       // find the first songs' streams while you look
     val playingHere = Player.sourceName == source && Player.current != null
     // Choosing songs: hold a song (or Download → Choose songs) to tick several, then download / queue / add them.
     var selection by remember(source) { mutableStateOf(setOf<Int>()) }
@@ -379,6 +380,9 @@ fun GenreScreen(g: Screen.Genre) {
     var error by remember { mutableStateOf("") }
     LaunchedEffect(g.id) {
         try { data = Bridge.obj("genre_overview", g.id) } catch (e: Exception) { error = e.message ?: "" }
+    }
+    LaunchedEffect(data) {
+        data?.optJSONArray("tracks")?.let { a -> Player.warmUp((0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) }) }
     }
     LazyColumn {
         item {

@@ -154,6 +154,9 @@ fun SearchScreen() {
         }
     }
 
+    // Found songs: look up the first few streams while you read the results, so tapping one starts quickly.
+    LaunchedEffect(web) { Player.warmUp(web) }
+
     // Your own songs matching what's typed. Searched on a background thread once typing pauses, so typing
     // stays smooth even with thousands of songs.
     val local by produceState(emptyList<Track>(), query, Library.localSongs, tick) {
