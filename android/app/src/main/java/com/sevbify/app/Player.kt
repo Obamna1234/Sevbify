@@ -107,6 +107,10 @@ object Player {
                     if (playing) { failuresInARow = 0; prefetchNext() }
                     diagLog("isPlaying=$playing")
                 }
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    if (reason == MediaPlayer.MEDIA_ITEM_TRANSITION_REASON_AUTO && mediaItem != null && mediaItem.mediaId != current?.matchKey)
+                        commitAutoAdvance(mediaItem.mediaId)
+                }
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                     diagLog("playWhenReady=$playWhenReady (${pwrReason(reason)})")
                 }
@@ -128,6 +132,16 @@ object Player {
                     diagLog("ERROR ${error.errorCodeName}: ${error.message?.take(80)}")
                     loading = false
                     val t = current
+                    // The song waiting behind this one failed to load (the player reports it early): drop it, mark it
+                    // so it's loaded the normal way later, and carry on with this song from where it was.
+                    val c = controller
+                    if (c != null && queuedKey.isNotEmpty() && c.mediaItemCount > 1 && t != null && gaplessRecovered != t.matchKey) {
+                        gaplessRecovered = t.matchKey
+                        gaplessBad.add(queuedKey)
+                        dropQueued()
+                        c.prepare(); if (!videoMode) c.play()
+                        return
+                    }
                     if (t != null && t.isItem && plainHttpFor != t.itemKey &&
                         t.streamUrl.ifEmpty { t.downloadUrl }.startsWith("http://")) {
                         plainHttpFor = t.itemKey          // the https version didn't work: try the original link
@@ -211,7 +225,9 @@ object Player {
         play(if (shuffled) queue.random() else queue.first(), queue, source)
     }
 
-    fun addToQueue(t: Track) { userQueue.add(t) }
+    fun addToQueue(t: Track) { userQueue.add(t); upcomingChanged() }
+
+    fun removeFromQueue(i: Int) { if (i in userQueue.indices) { userQueue.removeAt(i); upcomingChanged() } }
 
     fun playPause() {
         if (videoMode) { VideoPlayer.player?.let { if (it.isPlaying) it.pause() else it.play() }; return }
@@ -419,6 +435,7 @@ object Player {
         val head = context.take(index + 1)
         context.clear(); context.addAll(head + kept)
         original = original.filterNot { it in removed }
+        upcomingChanged()
         status = "Got it: less ${t.artist} on this radio"
     }
 
@@ -445,11 +462,13 @@ object Player {
             index = original.indexOfFirst { it === cur }.coerceAtLeast(0)
         }
         Library.settings.shuffle = shuffle; Library.save()
+        upcomingChanged()
     }
 
     fun cycleRepeat() {
         repeat = when (repeat) { "off" -> "all"; "all" -> "one"; else -> "off" }
         Library.settings.repeat = repeat; Library.save()
+        upcomingChanged()
     }
 
     private fun advance(auto: Boolean, failed: Boolean = false) {
@@ -533,6 +552,7 @@ object Player {
         Library.played(t)
         loadJob?.cancel()
         warmJob?.cancel()                       // you chose something: stop looking up the others
+        prefetchJob?.cancel(); queuedKey = ""
         loading = false
         // Watching? Keep watching: the next episode opens as video too (listening if it has no video).
         if (preferVideo && canWatch(t) && Library.settings.online) {
@@ -579,9 +599,61 @@ object Player {
             s.online && s.streamFull && s.onlineNoticeAccepted
     }
 
-    private suspend fun resolveQuietly(t: Track) {
+    private suspend fun resolveQuietly(t: Track): org.json.JSONObject? =
         try { Bridge.obj("resolve", t.artist, t.title, t.durationMs) }
-        catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+        catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; null }
+
+    // --- gapless: the next song is handed to the player while this one plays, so there's no pause between them ---
+    private var queuedKey = ""                  // matchKey of the song waiting behind the current one in the player
+    private var gaplessRecovered = ""           // song whose queued neighbour failed to load (retry once, then give up)
+    private val gaplessBad = mutableSetOf<String>()
+
+    private fun nextTrack(): Track? = userQueue.firstOrNull() ?: context.getOrNull(index + 1)
+
+    /** Take the waiting song out of the player (the order after this one changed, or it can't be played). */
+    private fun dropQueued() {
+        val c = controller ?: return
+        if (queuedKey.isNotEmpty() && c.mediaItemCount > 1) c.removeMediaItems(1, c.mediaItemCount)
+        queuedKey = ""
+    }
+
+    /** The songs after this one changed (queue edit, shuffle, repeat): forget the waiting song and look again. */
+    private fun upcomingChanged() {
+        dropQueued()
+        if (isPlaying && ownItemLoaded()) prefetchNext()
+    }
+
+    /** Put [t] behind the current song in the player, if it is still the right next song and the player is still on
+     *  this one. Songs only (podcasts keep their own flow), and never with repeat-one. */
+    private fun queueBehind(t: Track, uri: String, headers: Map<String, String>?) {
+        val c = controller ?: return
+        if (repeat == "one" || t.isItem || t.matchKey in gaplessBad) return
+        if (nextTrack()?.matchKey != t.matchKey || t.matchKey == current?.matchKey) return
+        if (!ownItemLoaded() || queuedKey == t.matchKey) return
+        if (c.mediaItemCount > 1) dropQueued()                 // a different song was waiting: replace it
+        headers?.let { PlaybackService.headers[uri] = it }
+        val meta = MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
+            .setArtworkUri(t.art.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }).setExtras(Bundle()).build()
+        c.addMediaItem(MediaItem.Builder().setUri(uri).setMediaId(t.matchKey).setMediaMetadata(meta).build())
+        queuedKey = t.matchKey
+        diagLog("next ready: '${t.title}'")
+    }
+
+    /** The player moved on to the waiting song by itself: do what [advance] does, without loading anything. */
+    private fun commitAutoAdvance(mediaId: String) {
+        val expected = nextTrack()
+        queuedKey = ""
+        if (expected == null || expected.matchKey != mediaId) { advance(auto = true); return }
+        failuresInARow = 0
+        if (userQueue.isNotEmpty()) { context.add(index + 1, userQueue.removeAt(0)) }
+        index += 1
+        current = expected
+        handledEnd = false; resumeDone = false
+        position = 0; duration = expected.durationMs
+        status = ""; loading = false
+        loadSponsor(expected); preloadCovers(); Library.played(expected)
+        diagLog("gapless → '${expected.title}'")
+        prefetchNext()
     }
 
     /** While a streamed song plays, find the next ones' streams in the background (the finder remembers them), so
@@ -604,10 +676,19 @@ object Player {
             return
         }
         val todo = ahead.filter { streamable(it) }
-        if (todo.isEmpty()) return
+        val local = Library.localFor(nxt)
+        if (todo.isEmpty() && local == null) return
         prefetchJob = SevbifyApp.instance.scope.launch {
+            if (local != null) {                                   // your own / downloaded song: nothing to look up
+                val uri = if (local.localUri.startsWith("content:")) local.localUri else Uri.fromFile(File(local.localUri)).toString()
+                queueBehind(nxt, uri, null)
+            }
             delay(4000)
-            for (t in todo) { resolveQuietly(t); delay(500) }
+            for (t in todo) {
+                val r = resolveQuietly(t)
+                if (t === nxt && r != null) queueBehind(t, r.getString("url"), headersOf(r))
+                delay(500)
+            }
         }
     }
 
