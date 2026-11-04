@@ -44,10 +44,16 @@ class PlaybackService : MediaLibraryService() {
         // Streamed audio is also kept in a private cache (256 MB, oldest dropped first, in the app's cache folder:
         // Android can clear it, other apps can't read it), so seeking back, replaying and going back to the
         // previous song don't download it again. Your own files (file:// and content://) never go through it.
-        val cached = CacheDataSource.Factory().setCache(audioCache(this)).setUpstreamDataSourceFactory(http)
-            .setCacheKeyFactory { spec -> cacheKeyOf(spec.uri) }
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, cached)) { spec ->
+        // Off by default (Settings → Playback → Audio cache, experimental); chosen each time a song's data is opened.
+        val cachedFactory by lazy {
+            CacheDataSource.Factory().setCache(audioCache(this)).setUpstreamDataSourceFactory(http)
+                .setCacheKeyFactory { spec -> cacheKeyOf(spec.uri) }
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        }
+        val network = androidx.media3.datasource.DataSource.Factory {
+            if (Library.settings.audioCache) cachedFactory.createDataSource() else http.createDataSource()
+        }
+        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, network)) { spec ->
             val extra = headers[spec.uri.toString()]
             if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
         }

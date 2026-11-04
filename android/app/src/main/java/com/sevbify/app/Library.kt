@@ -42,6 +42,8 @@ data class Settings(
     var skipSponsors: Boolean = true,
     var videoCaptions: Boolean = false,        // show captions in videos that have them (remembered, like YouTube)
     var adFreePodcasts: Boolean = true,        // play a podcast episode's YouTube version (no built-in ads) when there is one
+    var gapless: Boolean = false,              // experimental: hand the next song to the player early (no gap between songs)
+    var audioCache: Boolean = false,           // experimental: keep up to 256 MB of streamed audio in a private cache
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
@@ -56,6 +58,7 @@ data class Settings(
         put("song_quality", songQuality); put("book_quality", bookQuality); put("video_quality", videoQuality)
         put("auto_update_ytdlp", autoUpdateYtdlp); put("last_ytdlp_check", lastYtdlpCheck); put("lyrics", lyrics)
         put("show_playlist_origin", showPlaylistOrigin); put("skip_sponsors", skipSponsors); put("ad_free_podcasts", adFreePodcasts); put("video_captions", videoCaptions)
+        put("gapless", gapless); put("audio_cache", audioCache)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
@@ -87,6 +90,8 @@ data class Settings(
             s.skipSponsors = o.optBoolean("skip_sponsors", true)
             s.adFreePodcasts = o.optBoolean("ad_free_podcasts", true)
             s.videoCaptions = o.optBoolean("video_captions", false)
+            s.gapless = o.optBoolean("gapless", false)
+            s.audioCache = o.optBoolean("audio_cache", false)
             s.profileBackup = o.optBoolean("profile_backup", false); s.profileBackupUri = o.optString("profile_backup_uri")
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
             s.betaUpdates = o.optBoolean("beta_updates", true)

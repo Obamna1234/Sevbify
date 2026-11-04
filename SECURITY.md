@@ -48,8 +48,8 @@ Jellyfin/Nextcloud sign-in path or to podcast playback:
 - **Plain-http podcast hosts** are remembered only after the https attempt failed and the http version then
   played. This is a deliberate trade-off for old podcast hosts (public audio, no sign-in); the list can be
   cleared by clearing the app's data.
-- **Audio cache** lives in the app's private cache folder (256 MB, oldest dropped first); it holds only
-  streamed audio and is never used for your own files or server sign-ins.
+- **Audio cache** (experimental, off by default since beta.42) lives in the app's private cache folder (256 MB, oldest
+  dropped first); it holds only streamed audio and is never used for your own files or server sign-ins.
 
 ## Reporting a problem
 
