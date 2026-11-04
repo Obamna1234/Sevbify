@@ -233,6 +233,19 @@ fun SettingsPageScreen(key: String) {
                    s.adFreePodcasts) { s.adFreePodcasts = it; if (it) Library.adFreeMiss.clear(); Library.changed() }
         }
         item {
+            Toggle(tr("Gapless songs (experimental)"),
+                   "Hands the next song to the player while this one plays, so songs change with no gap. Off by default: " +
+                   "if songs ever seem stuck at 0:00 or skip ahead, leave it off.",
+                   s.gapless) { s.gapless = it; Library.changed(); Player.gaplessChanged() }
+        }
+        item {
+            Toggle(tr("Audio cache (experimental)"),
+                   "Keeps up to 256 MB of streamed songs in a private cache so seeking back and replaying don't download " +
+                   "them again. Off by default: if streamed songs seem stuck at 0:00, leave it off. Takes effect for the " +
+                   "next song.",
+                   s.audioCache) { s.audioCache = it; Library.changed() }
+        }
+        item {
             Toggle(tr("Play 30-second previews"),
                    "For songs you don't have yet, play a short preview instead of streaming the full song. " +
                    "Your own and downloaded songs always play in full. Off = full songs (default).",

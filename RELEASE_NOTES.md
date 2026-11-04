@@ -1,4 +1,12 @@
-## What's new in beta.41 (Android)
+## What's new in beta.42 (Android)
+
+Falling back after beta.40/41, where streamed songs were found but sat at 0:00 and skipped on (your genre and artist-search recordings):
+
+- **Streaming is back to how it worked in beta.39.** The two beta.40/41 changes that touch the streamed audio itself are now switches in Settings → Playback, **off by default**: *Gapless songs (experimental)* and *Audio cache (experimental)*. The other beta.40/41 speed-ups (looking songs up ahead of time, loading yt-dlp at launch, remembering found songs, remembering plain-http podcast hosts) stay on.
+- **The Playback status log now says why a song didn't start.** If a song still hasn't started 10 seconds after it was handed to the player, the log shows the player's state, how much was loaded, and whether the cache was on; the song's host is shown on the `play '<song>'` line.
+- If songs play properly, try the two switches one at a time to find which one (if either) was the problem.
+
+### Earlier, in beta.41 (Android)
 
 - **Gapless songs.** While a song plays, the next one (once it has been found, or if it's on your phone) is handed to the player in advance, so the change between songs happens without a pause or a "Finding the full song…" wait. The queue, Next/Previous, the lock screen and the Now Playing queue behave as before, and changing the queue, shuffle or repeat while a song plays simply drops the waiting song and picks it again. If the waiting song turns out not to load, it's dropped, marked, and loaded the normal way when its turn comes; the song that's playing carries on. Podcasts and audiobooks aren't affected, and repeat-one plays the same song again as before. The Playback status log shows `next ready: '<song>'` and `gapless → '<song>'`.
 

@@ -576,10 +576,18 @@ object Player {
                 val meta = MediaMetadata.Builder().setTitle(t.title).setArtist(t.artist).setAlbumTitle(t.album)
                     .setArtworkUri(t.art.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }).setExtras(Bundle()).build()
                 val item = MediaItem.Builder().setUri(uri).setMediaId(t.matchKey).setMediaMetadata(meta).build()
-                diagLog("play '${t.title}' via ${uri.substringBefore(':')} (controller=${controller != null})")
+                diagLog("play '${t.title}' via ${uri.substringBefore(':')}://${hostOf(uri)} (controller=${controller != null})")
                 controller?.run {
                     setMediaItem(item); prepare()
                     if (!videoMode) { playWhenReady = true; play() }   // being watched: the sound comes with the video
+                }
+                // If it still hasn't started a while later, say why in the Playback status log (state, how much is loaded).
+                launch {
+                    delay(10_000)
+                    val c = controller
+                    if (current === t && c != null && c.currentMediaItem?.mediaId == t.matchKey && !c.isPlaying && !videoMode)
+                        diagLog("not started after 10 s: ${stateName(c.playbackState)}, loaded ${c.bufferedPosition} ms, " +
+                                "playWhenReady=${c.playWhenReady}, cache=${if (Library.settings.audioCache) "on" else "off"}")
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e   // replaced by a newer request: not an error
@@ -618,16 +626,18 @@ object Player {
     }
 
     /** The songs after this one changed (queue edit, shuffle, repeat): forget the waiting song and look again. */
+    fun gaplessChanged() = upcomingChanged()
+
     private fun upcomingChanged() {
         dropQueued()
-        if (isPlaying && ownItemLoaded()) prefetchNext()
+        if (isPlaying && ownItemLoaded()) prefetchNext()   // (queueBehind itself checks the setting)
     }
 
     /** Put [t] behind the current song in the player, if it is still the right next song and the player is still on
      *  this one. Songs only (podcasts keep their own flow), and never with repeat-one. */
     private fun queueBehind(t: Track, uri: String, headers: Map<String, String>?) {
         val c = controller ?: return
-        if (repeat == "one" || t.isItem || t.matchKey in gaplessBad) return
+        if (!Library.settings.gapless || repeat == "one" || t.isItem || t.matchKey in gaplessBad) return
         if (nextTrack()?.matchKey != t.matchKey || t.matchKey == current?.matchKey) return
         if (!ownItemLoaded() || queuedKey == t.matchKey) return
         if (c.mediaItemCount > 1) dropQueued()                 // a different song was waiting: replace it
