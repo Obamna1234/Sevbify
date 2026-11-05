@@ -288,7 +288,84 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
     return r["url"], r["note"]
 
 
-def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=None):
+_chan_cache = {}                   # channel list address -> (time, its recent videos)
+
+
+def _title_matcher(episode_title):
+    """(score(video_title) -> 0..1, usable) for an episode title. Episode titles are often "Headline | Series:
+    Episode (Part 5)" while the video has only one of those parts: a video also counts when it has most of the
+    words of one part (3 words or more)."""
+    words = {w for w in _norm(episode_title).split() if w not in _STOP}
+    parts = [p for p in re.split(r"\s+[|\u2013\u2014]\s+|\s+-\s+", episode_title) if p.strip()]
+    part_words = [{w for w in _norm(p).split() if w not in _STOP} for p in parts] if len(parts) > 1 else []
+    part_words = [pw for pw in part_words if len(pw) >= 3]
+
+    def score(video_title):
+        got = {w for w in _norm(video_title or "").split() if w not in _STOP}
+        sc = len(words & got) / len(words) if words else 0.0
+        for pw in part_words:
+            if len(pw & got) / len(pw) >= 0.75:
+                sc = max(sc, 0.6)
+        return sc
+    return score, bool(words)
+
+
+def _find_in_channel(channel_url, episode_title, duration_ms, extract=None):
+    """Look for the episode among the show's own channel's recent videos, by title and by length. The audio and
+    the video of an episode often have different names (the feed says "Headline | Series (Part 2)", the video only
+    "Headline"), but they are the same length give or take the ads, and being on the show's own channel already
+    says it's the right show. Returns the same answer as find_youtube_episode_info, or None when nothing fits."""
+    list_url = youtube_list_url(channel_url)
+    if not list_url or not duration_ms:
+        return None
+    score, usable = _title_matcher(episode_title)
+    if not usable:
+        return None
+    if extract is None:
+        from core import downloader
+        e = downloader.engine()
+        if e.yt_dlp is None:
+            return None
+
+        def extract(u):
+            opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+                    "skip_download": True, "playlistend": 60, "socket_timeout": 20, "allowed_extractors": YOUTUBE_ONLY}
+            with e.yt_dlp.YoutubeDL(opts) as ydl:
+                return ydl.extract_info(u, download=False)
+    hit = _chan_cache.get(list_url)
+    if hit and time.time() - hit[0] < 600:
+        info = hit[1]
+    else:
+        info = extract(list_url) or {}
+        _chan_cache[list_url] = (time.time(), info)
+    cands = []
+    for entry in info.get("entries") or []:
+        if not is_youtube_video(entry.get("url") or entry.get("webpage_url") or ""):
+            continue
+        secs = entry.get("duration") or 0
+        if not secs:
+            continue
+        cands.append((score(entry.get("title")), abs(secs * 1000 - duration_ms) / duration_ms, entry))
+    if not cands:
+        return None
+    name = info.get("channel") or info.get("uploader") or ""
+
+    def answer(entry, why):
+        return {"url": entry.get("url") or entry.get("webpage_url"), "channel": name, "channel_url": channel_url,
+                "note": f"on the show's channel, {why}: {(entry.get('title') or '')[:60]}"}
+    # 1. the title says it (as before), and the length is in the same range
+    good = [c for c in cands if c[0] >= 0.6 and c[1] <= 0.35]
+    if good:
+        best = max(good, key=lambda c: (c[0], -c[1]))
+        return answer(best[2], f"title {best[0]:.0%}")
+    # 2. a video of about the same length (within 8%) that shares some words with the title, clearly the best of those
+    close = sorted([c for c in cands if c[1] <= 0.08 and c[0] >= 0.2], key=lambda c: (-c[0], c[1]))
+    if close and (len(close) == 1 or close[0][0] - close[1][0] >= 0.15):
+        return answer(close[0][2], f"length within {close[0][1]:.0%} and title {close[0][0]:.0%}")
+    return None
+
+
+def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=None, channel_url=""):
     """{"url": video link or "", "note": a short note on what was found, "channel", "channel_url"} (the channel of
     the video that was found: it's the show's own channel, which the Watch video button can use). Searches YouTube for the show and episode and accepts
     only a video whose title says the episode's words (and whose length is in the same range when both are
@@ -298,7 +375,7 @@ def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=
         from core import downloader
         e = downloader.engine()
         if e.yt_dlp is None:
-            return "", "yt-dlp isn't available"
+            return {"url": "", "note": "yt-dlp isn't available", "channel": "", "channel_url": ""}
 
         def extract(query):
             opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
@@ -306,6 +383,15 @@ def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=
                     "extractor_args": e.yt_extractor_args()}
             with e.yt_dlp.YoutubeDL(opts) as ydl:
                 return ydl.extract_info(query, download=False)
+    channel_note = ""
+    if channel_url and channel_show(channel_url):
+        try:
+            found = _find_in_channel(channel_url, episode_title, duration_ms)
+        except Exception as ex:                          # fall back to the search
+            found, channel_note = None, f"(channel list failed: {str(ex)[:40]}) "
+        if found:
+            return found
+        channel_note = channel_note or "not among the show's channel's recent videos; "
     stop = _STOP
     words = {w for w in _norm(episode_title).split() if w not in stop}
     if not words:
@@ -346,7 +432,7 @@ def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=
                 "channel": best_entry.get("channel") or best_entry.get("uploader") or "",
                 "channel_url": _channel_link(best_entry)}
     return {"url": "", "channel": "", "channel_url": "",
-            "note": (f"{seen} results over {len(queries)} search{'es' if len(queries) > 1 else ''}, best match {best_score:.0%}"
+            "note": (channel_note + f"{seen} results over {len(queries)} search{'es' if len(queries) > 1 else ''}, best match {best_score:.0%}"
                      + (f", {skipped_len} the wrong length" if skipped_len else ""))}
 
 
@@ -600,12 +686,36 @@ def _client_ladder():
     return fast + [base]
 
 
+_pref_client = 0                   # which of the client settings worked last (tried first from then on)
+
+
+def link_failed(url=""):
+    """The player was refused an episode's link: forget the kept page data and start with the next client."""
+    global _pref_client
+    with _raw_lock:
+        _raw.clear()
+    _pref_client = (_pref_client + 1) % max(len(_client_ladder()), 1)
+    return True
+
+
+def _refused(info):
+    """True when YouTube clearly refuses one of the links yt-dlp chose (the player would get an HTTP 403)."""
+    from core import streamer
+    for f in (info.get("requested_formats") or [info]):
+        if f.get("url") and not streamer.url_works(f["url"], f.get("http_headers") or info.get("http_headers") or {}):
+            return True
+    return False
+
+
 def _extract_page(url, opts):
     """yt-dlp's answer for a YouTube video page with `opts` (which format is wanted). The page's data is fetched
     once per client setting and kept for 10 minutes, so listening to an episode and then watching it (or back)
     doesn't fetch it twice; only the choice of format is redone."""
+    global _pref_client
     last = None
-    for args in _client_ladder():
+    ladder = _client_ladder()
+    start = _pref_client % len(ladder)
+    for n, args in enumerate(ladder[start:] + ladder[:start]):
         key = (url, json.dumps(args, sort_keys=True))
         extra = {"extractor_args": args} if args else {}
         try:
@@ -621,7 +731,11 @@ def _extract_page(url, opts):
                         _raw.pop(min(_raw, key=lambda k: _raw[k][0]), None)
                     _raw[key] = (time.time(), raw)
             with _ydl({**opts, **extra}) as ydl:
-                return ydl.process_ie_result(copy.deepcopy(raw), download=False)
+                info = ydl.process_ie_result(copy.deepcopy(raw), download=False)
+            if n < len(ladder) - 1 and _refused(info):          # this client's links don't play: the next one
+                raise ValueError("YouTube refused the link")
+            _pref_client = ladder.index(args)
+            return info
         except Exception as ex:                      # this client didn't work: the next one
             last = ex
             with _raw_lock:

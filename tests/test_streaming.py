@@ -123,6 +123,7 @@ def test_timings_say_where_the_time_went(fake_engine):
 
 
 def test_phone_tries_one_fast_client_first_then_the_full_list(monkeypatch):
+    monkeypatch.setattr(streamer, "url_works", lambda url, headers=None, timeout=8: True)
     class Eng:
         SONG_EXTRACTORS = ["youtube"]
         class _QuietLogger: pass
@@ -271,3 +272,47 @@ def test_preview_only_plays_from_the_song_menu_in_its_own_window(window, qapp, t
     dlg._seek()
     dlg.close()
 
+
+def test_a_link_the_server_refuses_sends_the_lookup_to_the_next_client(monkeypatch):
+    class Eng:
+        SONG_EXTRACTORS = ["youtube"]
+        class _QuietLogger: pass
+        def yt_extractor_args(self):
+            return {"youtube": {"player_client": ["default", "tv", "mweb", "ios", "android_vr"]}}
+        calls = []
+
+        class yt_dlp:
+            class YoutubeDL:
+                def __init__(self, opts): self.clients = opts["extractor_args"]["youtube"]["player_client"]
+                def __enter__(self): return self
+                def __exit__(self, *a): return False
+                def extract_info(self, page, download=False):
+                    Eng.calls.append(self.clients)
+                    return {"url": "https://cdn/" + "-".join(self.clients), "http_headers": {}, "duration": 99}
+    monkeypatch.setattr(streamer, "url_works", lambda url, headers=None, timeout=8: "android_vr" not in url)
+    streamer.clear_cache()
+    assert streamer._extract(Eng(), "https://www.youtube.com/watch?v=x")[0] == "https://cdn/tv"
+    assert Eng.calls == [["android_vr"], ["tv"]]
+    # the player was refused that link anyway: the next client is tried first next time
+    monkeypatch.setattr(downloader, "engine", lambda: Eng())
+    assert streamer.link_failed("https://cdn/tv")
+    Eng.calls.clear()
+    streamer._extract(Eng(), "https://www.youtube.com/watch?v=y")
+    assert Eng.calls[0] == ["mweb"]
+    streamer.clear_cache()
+
+
+def test_url_works_only_says_no_when_the_server_clearly_refuses(monkeypatch):
+    import urllib.error
+    import urllib.request
+
+    def refuse(req, timeout=0):
+        raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, None)
+
+    def hiccup(req, timeout=0):
+        raise OSError("no network")
+    monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    assert streamer.url_works("https://cdn/a", {}) is False
+    monkeypatch.setattr(urllib.request, "urlopen", hiccup)
+    assert streamer.url_works("https://cdn/a", {}) is True            # can't tell: let the player try
+    assert streamer.url_works("http://cdn/a", {}) is True             # only https links are checked

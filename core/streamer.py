@@ -104,6 +104,37 @@ def _attempts(e):
     return fast + [base]
 
 
+def url_works(url, headers=None, timeout=8):
+    """Does this audio link actually give out data? A YouTube link can be extracted without trouble and still be
+    refused (HTTP 403) when the player asks for it, depending on which YouTube client produced it. This asks for
+    the first two bytes. False only when the server clearly refuses; if the check itself can't be done (no
+    answer, odd reply) it says True and lets the player try."""
+    import urllib.error
+    import urllib.request
+    if not str(url).startswith("https://"):
+        return True
+    try:
+        req = urllib.request.Request(url, headers={**(headers or {}), "Range": "bytes=0-1"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            r.read(2)
+            return r.status < 400
+    except urllib.error.HTTPError as exc:
+        return exc.code not in (400, 401, 403, 404, 410)
+    except Exception:
+        return True
+
+
+def link_failed(url):
+    """The player was refused this link: forget it, and start the next lookups with the next YouTube client."""
+    global _preferred_attempt
+    with _lock:
+        for k in [k for k, v in _cache.items() if v[1].get("url") == url]:
+            _cache.pop(k, None)
+    n = len(_attempts(downloader.engine()))
+    _preferred_attempt = (_preferred_attempt + 1) % max(n, 1)
+    return True
+
+
 def _extract(e, page):
     """Direct audio link (+ the HTTP headers it needs) for a Bandcamp or YouTube page, without downloading."""
     global _preferred_attempt
@@ -123,11 +154,14 @@ def _extract(e, page):
             url = (info or {}).get("url")
             if not url:
                 raise NoFullSong("no playable audio link")
+            headers = dict(info.get("http_headers") or {})
+            if i != order[-1] and not url_works(url, headers):       # refused: this client's links don't play, try the next
+                raise NoFullSong("the link was refused")
         except Exception as exc:
             last = exc
             continue
         _preferred_attempt = i
-        return url, dict(info.get("http_headers") or {}), info.get("duration") or 0
+        return url, headers, info.get("duration") or 0
     raise last if last else NoFullSong("no playable audio link")
 
 

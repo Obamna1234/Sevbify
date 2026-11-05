@@ -1,4 +1,12 @@
-## What's new in beta.43 (Android)
+## What's new in beta.44 (Android)
+
+From your log (`ERROR_CODE_IO_BAD_HTTP_STATUS` right after "play … googlevideo.com"): YouTube was refusing the audio link, so the player gave up and moved to the next song. The quick YouTube client added in beta.39 can hand out a link that extracts fine but is refused when played, which is why online songs (and ad-free episodes) skipped while your own library played.
+
+- **Links are tested before they're used.** After a quick client gives a link, the app asks for its first two bytes; if YouTube refuses, the next client is tried (the last one is always used as it is). This applies to songs and to podcast episode audio and video.
+- **If the player is refused anyway**, the app drops that link, moves to the next YouTube client and asks for a fresh link, once (the log says `link refused: asking for a new one`).
+- **Episodes whose YouTube title differs from the feed's title are found more often.** Once a show's own channel is known (learned the first time any of its episodes matches), the episode is looked for among that channel's recent videos by title and by length: a video of the same length (within 8%) that shares some words with the title is accepted when it is clearly the best of those. Nothing is guessed when two videos fit equally.
+
+### Earlier, in beta.43 (Android)
 
 Podcast video fixes (from your Fin vs History recording, where Watch video found nothing and the Video tab was still waiting after half a minute):
 

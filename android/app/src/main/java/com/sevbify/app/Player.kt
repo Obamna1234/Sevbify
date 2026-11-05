@@ -88,6 +88,7 @@ object Player {
     private var failuresInARow = 0
     private var plainHost = ""                  // host whose https failed, waiting to see if plain http plays
     private fun hostOf(link: String): String = try { Uri.parse(link).host.orEmpty().lowercase() } catch (e: Exception) { "" }
+    private var linkRetried = ""                // song/episode whose refused YouTube link was already replaced once
     private var plainHttpFor = ""               // episode whose https:// version failed              // stops skipping when nothing in the queue can play
 
     fun connect(context: Context) {
@@ -99,7 +100,7 @@ object Player {
             controller?.addListener(object : MediaPlayer.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
-                    if (playing && ownItemLoaded()) loading = false
+                    if (playing && ownItemLoaded()) { loading = false; linkRetried = "" }
                     // The plain-http version of an episode played after its https one failed: remember the host.
                     if (playing && plainHost.isNotEmpty()) {
                         Library.plainHttpHosts.add(plainHost); Library.save(); plainHost = ""
@@ -140,6 +141,21 @@ object Player {
                         gaplessBad.add(queuedKey)
                         dropQueued()
                         c.prepare(); if (!videoMode) c.play()
+                        return
+                    }
+                    // YouTube refused the link (HTTP 403 and the like): that YouTube client's links don't play. Switch to
+                    // the next one and ask for a fresh link, once.
+                    val refused = controller?.currentMediaItem?.localConfiguration?.uri?.toString().orEmpty()
+                    if (t != null && error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS &&
+                        refused.contains("googlevideo.com") && linkRetried != t.matchKey) {
+                        linkRetried = t.matchKey
+                        diagLog("link refused: asking for a new one")
+                        loading = true
+                        SevbifyApp.instance.scope.launch {
+                            try { Bridge.call("link_failed", refused) } catch (e: Exception) { }
+                            adStreams.remove(t.itemKey)
+                            if (current === t) start()
+                        }
                         return
                     }
                     if (t != null && t.isItem && plainHttpFor != t.itemKey &&
@@ -315,7 +331,7 @@ object Player {
         SevbifyApp.instance.scope.async {
             try {
                 val t0 = System.currentTimeMillis()
-                val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
+                val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs, Library.showChannels[t.artist]?.substringBefore('\n').orEmpty())
                 diagLog("video lookup (${(System.currentTimeMillis() - t0) / 1000} s): ${r.optString("note")}")
                 val url = r.optString("url")
                 if (url.isEmpty()) {
