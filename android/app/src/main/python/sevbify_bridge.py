@@ -427,16 +427,25 @@ def youtube_video(page_url, quality="auto"):
 def youtube_episode_for(show_title, episode_title, duration_ms=0):
     """{"url": the YouTube video of a podcast episode ("" if there isn't one), "note": why/what was found}."""
     from core import podcasts
-    url, note = podcasts.find_youtube_episode_ex(show_title, episode_title, int(duration_ms or 0))
-    return {"url": url, "note": note}
+    r = podcasts.find_youtube_episode_info(show_title, episode_title, int(duration_ms or 0))
+    return {"url": r["url"], "note": r["note"], "channel": r["channel"], "channel_url": r["channel_url"]}
 
 
 @_call
-def youtube_channel_for(title, author="", episode_title=""):
-    """A podcast's own YouTube channel (its video version), or None. The episode title lets it find the channel
-    by the show's episode when no channel is named like the show."""
+def youtube_channel_for(title, author="", episode_title="", known_url="", known_name="", episode_titles_json=""):
+    """A podcast's own YouTube channel (its video version), or None. `known_url` is a channel already found for this
+    show (from one of its episodes' videos): used as it is, no search. Otherwise the episode titles let it find the
+    channel by the show's episodes when no channel is named like the show."""
     from core import podcasts
-    show = podcasts.find_youtube_channel(title, author, episode_title=episode_title)
+    if known_url:
+        known = podcasts.channel_show(known_url, known_name)
+        if known:
+            return _show(known)
+    try:
+        titles = [t for t in json.loads(episode_titles_json) if isinstance(t, str)] if episode_titles_json else []
+    except ValueError:
+        titles = []
+    show = podcasts.find_youtube_channel(title, author, episode_title=episode_title, episode_titles=titles)
     return _show(show) if show else None
 
 

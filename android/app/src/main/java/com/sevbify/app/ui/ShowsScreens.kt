@@ -239,7 +239,10 @@ fun ShowScreen(start: Show) {
                             Nav.say("Looking for ${show.title} on YouTube…")
                             scope.launch {
                                 try {
-                                    val found = Bridge.call("youtube_channel_for", show.title, show.author, episodes.firstOrNull()?.track?.title.orEmpty())
+                                    val known = Library.showChannels[show.title].orEmpty()       // learned from one of its episodes' videos
+                                    val titles = org.json.JSONArray(episodes.take(5).map { it.track.title }).toString()
+                                    val found = Bridge.call("youtube_channel_for", show.title, show.author, "",
+                                        known.substringBefore('\n'), known.substringAfter('\n', ""), titles)
                                     if (found is org.json.JSONObject) Nav.go(Screen.ShowPage(Show(found)))
                                     else Nav.say("Couldn't find ${show.title}'s own YouTube channel. If it has one, paste its link in Podcasts.")
                                 } catch (e: Exception) { Nav.say("⚠ YouTube search didn't work: ${e.message}") }

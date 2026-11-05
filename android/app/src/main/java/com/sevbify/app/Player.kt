@@ -314,14 +314,19 @@ object Player {
     private fun lookupPage(t: Track): Deferred<String> = lookups.getOrPut(t.itemKey) {
         SevbifyApp.instance.scope.async {
             try {
+                val t0 = System.currentTimeMillis()
                 val r = Bridge.obj("youtube_episode_for", t.artist, t.title, t.durationMs)
-                diagLog("video lookup: ${r.optString("note")}")
+                diagLog("video lookup (${(System.currentTimeMillis() - t0) / 1000} s): ${r.optString("note")}")
                 val url = r.optString("url")
                 if (url.isEmpty()) {
                     lastVideoNote = r.optString("note"); noVideo.add(t.itemKey)
                     Library.adFreeMiss[t.artist] = (Library.adFreeMiss[t.artist] ?: 0) + 1; Library.save()
                 } else {
                     episodeVideo[t.itemKey] = url
+                    val ch = r.optString("channel_url")
+                    if (ch.isNotEmpty() && Library.showChannels[t.artist]?.substringBefore('\n') != ch) {
+                        Library.showChannels[t.artist] = ch + "\n" + r.optString("channel"); Library.save()
+                    }
                     if (Library.adFreeMiss.remove(t.artist) != null) Library.save()
                 }
                 url
@@ -383,7 +388,10 @@ object Player {
                 watch = t.copy(pageUrl = page)
             }
             controller?.pause()
+            val t0 = System.currentTimeMillis()
             VideoPlayer.load(context, watch, Library.settings.videoQuality, at?.takeIf { it > 0 })
+            diagLog("video link (${(System.currentTimeMillis() - t0) / 1000} s)" +
+                    (if (VideoPlayer.error.isNotEmpty()) ": ${VideoPlayer.error.take(80)}" else ""))
             if (VideoPlayer.error.isNotEmpty() && auto && current?.itemKey == t.itemKey) startAudio(t)
         }
     }
@@ -738,7 +746,9 @@ object Player {
                 val page = episodePage(t, 8_000)
                 if (page.isNotEmpty()) {
                     try {
+                        val t0 = System.currentTimeMillis()
                         val s = adStreams.remove(t.itemKey) ?: Bridge.obj("youtube_stream", page, false)
+                        diagLog("ad-free audio link (${(System.currentTimeMillis() - t0) / 1000} s)")
                         Library.adFree[t.itemKey] = page; Library.save()
                         loadSponsor(t)
                         return Triple(s.getString("url"), headersOf(s), "Podcast · ad-free (YouTube version)")
