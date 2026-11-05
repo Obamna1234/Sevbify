@@ -1,4 +1,11 @@
-## What's new in beta.44 (Android)
+## What's new in beta.45 (Android)
+
+From your Bad Friends log: the stream link was refused again (a 12 s wait, then my retry fixed it), and the video then failed with `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` after 22 s.
+
+- **A refused link is caught before you wait on it.** Right before a YouTube stream goes to the player, the app asks for its first bytes the way the player does (Python's check can differ from the player's network stack). If YouTube answers 4xx, the link is replaced by a fresh one from the next client, up to twice. The log shows `link check: HTTP 200 (N ms)`.
+- **The Playback status log says more about failures**: the HTTP status code (`ERROR … (HTTP 403)`), and, when a stream can't connect or is refused, how the phone's network reaches that YouTube server (`network to …: IPv6 ok 40 ms, IPv4 no answer 3000 ms`; no addresses are shown). The log keeps the last 24 lines instead of 16. If the waits come from the connection (for example IPv6 not working on your Wi-Fi), that line will show it.
+
+### Earlier, in beta.44 (Android)
 
 From your log (`ERROR_CODE_IO_BAD_HTTP_STATUS` right after "play … googlevideo.com"): YouTube was refusing the audio link, so the player gave up and moved to the next song. The quick YouTube client added in beta.39 can hand out a link that extracts fine but is refused when played, which is why online songs (and ad-free episodes) skipped while your own library played.
 
