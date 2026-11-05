@@ -44,9 +44,37 @@ object Player {
 
     /** A short rolling log of what the player did (states, errors, why it paused) so a stuck "loads but won't
      *  play" can be read in the app without a computer. Newest at the bottom; last 16 lines kept. */
-    private fun diagLog(s: String) {
+    fun diagLog(s: String) {
         val stamp = android.text.format.DateFormat.format("HH:mm:ss", System.currentTimeMillis())
-        diag = (diag.split("\n").filter { it.isNotBlank() } + "$stamp  $s").takeLast(16).joinToString("\n")
+        diag = (diag.split("\n").filter { it.isNotBlank() } + "$stamp  $s").takeLast(24).joinToString("\n")
+    }
+
+    private var lastProbe = 0L
+    /** What the phone's network is doing towards [host] (at most once every 5 minutes), for the Playback status log. */
+    fun probeNetwork(host: String) {
+        if (host.isEmpty() || System.currentTimeMillis() - lastProbe < 300_000) return
+        lastProbe = System.currentTimeMillis()
+        SevbifyApp.instance.scope.launch { diagLog("network to ${host.take(30)}: ${NetProbe.describe(host)}") }
+    }
+
+    /** Before a YouTube stream link goes to the player: ask for its first bytes the way the player will. A refused
+     *  link (HTTP 4xx) is replaced by a fresh one from the next YouTube client (up to twice) instead of making the
+     *  player wait and fail. */
+    private suspend fun vetted(t: Track, loc: Triple<String, Map<String, String>?, String>): Triple<String, Map<String, String>?, String>? {
+        var cur = loc
+        repeat(2) {
+            val (uri, headers, _) = cur
+            if (!uri.contains("googlevideo.com")) return cur
+            val t0 = System.currentTimeMillis()
+            val code = NetProbe.check(uri, headers)
+            diagLog("link check: ${if (code < 0) "no answer" else "HTTP $code"} (${System.currentTimeMillis() - t0} ms)")
+            if (code < 0) probeNetwork(hostOf(uri))
+            if (code !in 400..499) return cur
+            try { Bridge.call("link_failed", uri) } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+            adStreams.remove(t.itemKey)
+            cur = locate(t) ?: return null
+        }
+        return cur
     }
 
     private fun stateName(s: Int) = when (s) {
@@ -130,7 +158,9 @@ object Player {
                     }
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    diagLog("ERROR ${error.errorCodeName}: ${error.message?.take(80)}")
+                    val http = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                    diagLog("ERROR ${error.errorCodeName}${if (http != null) " (HTTP $http)" else ""}: ${error.message?.take(80)}")
+                    if (error.errorCode in 2001..2004) hostOf(controller?.currentMediaItem?.localConfiguration?.uri?.toString().orEmpty()).let { probeNetwork(it) }
                     loading = false
                     val t = current
                     // The song waiting behind this one failed to load (the player reports it early): drop it, mark it
@@ -593,7 +623,7 @@ object Player {
         loading = true
         loadJob = SevbifyApp.instance.scope.launch {
             try {
-                val (uri, headers, note) = locate(t) ?: run { loading = false; return@launch }
+                val (uri, headers, note) = locate(t)?.let { vetted(t, it) } ?: run { loading = false; return@launch }
                 status = note
                 PlaybackService.headers.clear()             // only the playing song's link needs them
                 headers?.let { PlaybackService.headers[uri] = it }

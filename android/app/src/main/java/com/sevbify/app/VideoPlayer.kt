@@ -52,6 +52,9 @@ object VideoPlayer {
             }
             override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
                 error = "Couldn't play the video (${e.errorCodeName})"
+                val http = (e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                Player.diagLog("video ERROR ${e.errorCodeName}${if (http != null) " (HTTP $http)" else ""}")
+                if (e.errorCode in 2001..2004) track?.let { Player.probeNetwork(Uri.parse(lastInfo?.optString("video").orEmpty()).host.orEmpty()) }
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == MediaPlayer.STATE_ENDED) {
