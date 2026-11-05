@@ -1,4 +1,12 @@
-## What's new in beta.42 (Android)
+## What's new in beta.43 (Android)
+
+Podcast video fixes (from your Fin vs History recording, where Watch video found nothing and the Video tab was still waiting after half a minute):
+
+- **Faster episode audio and video links.** Songs got a quick YouTube client in beta.39, but podcast episodes (the ad-free version and the Video tab) were still asking YouTube the slow way. They now try the quick client first and fall back to the full list, like songs. YouTube's answer for an episode is also kept for 10 minutes and shared, so listening then tapping Video (or going back to Audio) doesn't ask YouTube twice.
+- **Watch video on a show page finds more.** When no channel is named like the show, it used to look for the channel of only the newest episode's video, which is often not on YouTube yet (your newest episode was 2 days old). It now tries up to four recent episodes, and it remembers the show's channel as soon as any episode's video is found (playing it ad-free counts), so the button then opens the channel straight away.
+- **The Playback status log shows how long each step took**: `video lookup (N s)`, `ad-free audio link (N s)`, `video link (N s)`.
+
+### Earlier, in beta.42 (Android)
 
 Falling back after beta.40/41, where streamed songs were found but sat at 0:00 and skipped on (your genre and artist-search recordings):
 

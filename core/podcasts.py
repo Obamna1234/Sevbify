@@ -10,10 +10,13 @@ Where the data comes from (nothing else is contacted):
 
 Episodes become OnlineTrack objects (source "podcast" / "youtube"), so they play in the normal player and queue.
 """
+import copy
 import email.utils
 import html
+import json
 import os
 import re
+import threading
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -196,7 +199,26 @@ def search(net, term, limit=25, country="us"):
 _STOP = {"the", "a", "an", "of", "and", "in", "to", "is", "was", "with", "for", "on", "part"}
 
 
-def find_youtube_channel(title, author="", extract=None, episode_title=""):
+def _channel_link(entry):
+    """The https://www.youtube.com/... link of a search result's channel, or "" (only YouTube's own addresses)."""
+    url = entry.get("channel_url") or entry.get("uploader_url") or ""
+    if not url and entry.get("channel_id"):
+        url = f"https://www.youtube.com/channel/{entry['channel_id']}"
+    host = (urllib.parse.urlparse(url).hostname or "").lower()
+    ok = url.startswith("https://") and (host == "youtube.com" or host.endswith(".youtube.com"))
+    return url if ok and is_web_url(url) else ""
+
+
+def channel_show(url, name=""):
+    """A YouTube channel Show from a link already known to be the show's channel (no search), or None."""
+    host = (urllib.parse.urlparse(url or "").hostname or "").lower()
+    if not (url.startswith("https://") and (host == "youtube.com" or host.endswith(".youtube.com")) and is_web_url(url)):
+        return None
+    name = name or "YouTube channel"
+    return Show(title=name, author=name, feed_url=url, kind="youtube", link=url, channel=name)
+
+
+def find_youtube_channel(title, author="", extract=None, episode_title="", episode_titles=()):
     """The show's own YouTube channel (its video version), or None. Searches YouTube for the show and only
     accepts a channel whose name is the show's name (or its host's), so an unrelated channel isn't picked.
     When no channel is named like the show (the channel is often called something else, e.g. the host), the
@@ -229,9 +251,13 @@ def find_youtube_channel(title, author="", extract=None, episode_title=""):
         if url and is_web_url(url) and (n in wanted or _norm(name) in wanted):
             v = votes.setdefault(url, [0, name, bool(entry.get("channel_is_verified"))])
             v[0] += 1
-    if not votes and episode_title:
-        words = {w for w in _norm(episode_title).split() if w not in _STOP}
-        info = extract(f"ytsearch10:{title} {episode_title}") or {} if words else {}
+    # No channel is named like the show: use the channel of a video that matches one of its episodes. The newest
+    # episode may not be on YouTube yet, so a few of the recent ones are tried, one search each.
+    for ep_title in ([t for t in ([episode_title] + list(episode_titles)) if t][:4] if not votes else []):
+        words = {w for w in _norm(ep_title).split() if w not in _STOP}
+        if not words:
+            continue
+        info = extract(f"ytsearch10:{title} {ep_title}") or {}
         for entry in info.get("entries") or []:
             if not is_youtube_video(entry.get("url") or entry.get("webpage_url") or ""):
                 continue
@@ -239,12 +265,12 @@ def find_youtube_channel(title, author="", extract=None, episode_title=""):
             if len(words & got) / len(words) < 0.6:
                 continue
             name = entry.get("channel") or entry.get("uploader") or ""
-            url = entry.get("channel_url") or entry.get("uploader_url") or ""
-            if not url and entry.get("channel_id"):
-                url = f"https://www.youtube.com/channel/{entry['channel_id']}"
-            if url and is_web_url(url):
+            url = _channel_link(entry)
+            if url:
                 v = votes.setdefault(url, [0, name, bool(entry.get("channel_is_verified"))])
                 v[0] += 1
+        if votes:
+            break
     if not votes:
         return None
     url, (_count, name, verified) = max(votes.items(), key=lambda kv: (kv[1][0], kv[1][2]))
@@ -257,7 +283,14 @@ def find_youtube_episode(show_title, episode_title, duration_ms=0, extract=None)
 
 
 def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=None):
-    """(video link or "", a short note on what was found). Searches YouTube for the show and episode and accepts
+    """(video link or "", a short note on what was found). See find_youtube_episode_info."""
+    r = find_youtube_episode_info(show_title, episode_title, duration_ms, extract)
+    return r["url"], r["note"]
+
+
+def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=None):
+    """{"url": video link or "", "note": a short note on what was found, "channel", "channel_url"} (the channel of
+    the video that was found: it's the show's own channel, which the Watch video button can use). Searches YouTube for the show and episode and accepts
     only a video whose title says the episode's words (and whose length is in the same range when both are
     known; ads in the podcast's audio make the lengths differ a little), so a different video is never picked.
     `extract` replaces yt-dlp in tests."""
@@ -276,7 +309,7 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
     stop = _STOP
     words = {w for w in _norm(episode_title).split() if w not in stop}
     if not words:
-        return "", "the episode has no usable title"
+        return {"url": "", "note": "the episode has no usable title", "channel": "", "channel_url": ""}
     # Episode titles are often "Headline | Series: Episode (Part 5)" while the video has only one of those parts:
     # a video also counts when it has most of the words of one part (3 words or more).
     parts = [p for p in re.split(r"\s+[|\u2013\u2014]\s+|\s+-\s+", episode_title) if p.strip()]
@@ -286,6 +319,7 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
     if len(parts) > 1:
         queries.append(f"{show_title} {max(parts, key=len)}")      # a shorter, plainer search
     best, best_score, best_title, skipped_len, seen = "", 0.0, "", 0, 0
+    best_entry = {}
     for query in queries:
         info = extract(f"ytsearch10:{query}") or {}
         entries = info.get("entries") or []
@@ -304,13 +338,16 @@ def find_youtube_episode_ex(show_title, episode_title, duration_ms=0, extract=No
                 skipped_len += 1                         # a clip or a different cut of the show
                 continue
             if score > best_score:
-                best, best_score, best_title = url, score, entry.get("title") or ""
+                best, best_score, best_title, best_entry = url, score, entry.get("title") or "", entry
         if best_score >= 0.6:
             break
     if best_score >= 0.6:
-        return best, f"matched {best_score:.0%}: {best_title[:60]}"
-    return "", (f"{seen} results over {len(queries)} search{'es' if len(queries) > 1 else ''}, best match {best_score:.0%}"
-                + (f", {skipped_len} the wrong length" if skipped_len else ""))
+        return {"url": best, "note": f"matched {best_score:.0%}: {best_title[:60]}",
+                "channel": best_entry.get("channel") or best_entry.get("uploader") or "",
+                "channel_url": _channel_link(best_entry)}
+    return {"url": "", "channel": "", "channel_url": "",
+            "note": (f"{seen} results over {len(queries)} search{'es' if len(queries) > 1 else ''}, best match {best_score:.0%}"
+                     + (f", {skipped_len} the wrong length" if skipped_len else ""))}
 
 
 def top_shows(net, country="us", limit=25):
@@ -544,6 +581,54 @@ def _ydl(extra):
     return e.yt_dlp.YoutubeDL(opts)
 
 
+_RAW_TTL = 600                     # a video page's data is kept this long (seconds)
+_raw = {}                          # (page, clients) -> (time, yt-dlp's data for the page before choosing a format)
+_raw_lock = threading.Lock()
+
+
+def _client_ladder():
+    """The yt-dlp YouTube client settings to try for an episode's audio or video, quickest first. On the phones
+    (no JS runtime) yt-dlp is told to ask several clients one after the other, which is slow, so the single
+    clients that give plain links go first and the full list is the fallback (the same idea as for songs). On
+    the desktop there's one attempt with yt-dlp's defaults."""
+    from core import downloader
+    base = dict(downloader.engine().yt_extractor_args() or {})
+    clients = list((base.get("youtube") or {}).get("player_client") or [])
+    if not clients:
+        return [{}]
+    fast = [{"youtube": {**base["youtube"], "player_client": [c]}} for c in ("android_vr", "tv") if c in clients]
+    return fast + [base]
+
+
+def _extract_page(url, opts):
+    """yt-dlp's answer for a YouTube video page with `opts` (which format is wanted). The page's data is fetched
+    once per client setting and kept for 10 minutes, so listening to an episode and then watching it (or back)
+    doesn't fetch it twice; only the choice of format is redone."""
+    last = None
+    for args in _client_ladder():
+        key = (url, json.dumps(args, sort_keys=True))
+        extra = {"extractor_args": args} if args else {}
+        try:
+            with _raw_lock:
+                hit = _raw.get(key)
+            if hit and time.time() - hit[0] < _RAW_TTL:
+                raw = hit[1]
+            else:
+                with _ydl({"skip_download": True, **extra}) as ydl:
+                    raw = ydl.extract_info(url, download=False, process=False)
+                with _raw_lock:
+                    if len(_raw) >= 30:
+                        _raw.pop(min(_raw, key=lambda k: _raw[k][0]), None)
+                    _raw[key] = (time.time(), raw)
+            with _ydl({**opts, **extra}) as ydl:
+                return ydl.process_ie_result(copy.deepcopy(raw), download=False)
+        except Exception as ex:                      # this client didn't work: the next one
+            last = ex
+            with _raw_lock:
+                _raw.pop(key, None)
+    raise last if last else ValueError("YouTube didn't answer.")
+
+
 VIDEO_FORMAT = "best[ext=mp4][vcodec!=none][acodec!=none][height<=720]/best[vcodec!=none][acodec!=none]"
 
 
@@ -560,8 +645,7 @@ def youtube_stream(page_url, video=False, extract=None, max_height=720):
         def extract(url):
             from core import quality
             fmt = video_format(max_height) if video else quality.STREAM_AUDIO_FORMAT
-            with _ydl({"format": fmt, "skip_download": True}) as ydl:
-                return ydl.extract_info(url, download=False)
+            return _extract_page(url, {"format": fmt, "skip_download": True})
     if not is_youtube_video(page_url):
         raise ValueError("That isn't a YouTube video link.")
     info = extract(page_url) or {}
@@ -612,9 +696,8 @@ def youtube_video_streams(page_url, max_height=720, extract=None):
                    f"b[height<={h}]/b")
             # writesubtitles/writeautomaticsub only make yt-dlp list the caption tracks in the answer; with
             # download=False nothing is written to disk.
-            with _ydl({"format": fmt, "skip_download": True, "writesubtitles": True,
-                       "writeautomaticsub": True}) as ydl:
-                return ydl.extract_info(url, download=False)
+            return _extract_page(url, {"format": fmt, "skip_download": True, "writesubtitles": True,
+                                       "writeautomaticsub": True})
     if not is_youtube_video(page_url):
         raise ValueError("That isn't a YouTube video link.")
     info = extract(page_url) or {}

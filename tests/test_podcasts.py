@@ -267,3 +267,74 @@ def test_find_youtube_episode_second_search_and_one_part_of_the_title_is_enough(
     url, note = podcasts.find_youtube_episode_ex("Fin vs History", "A | B C D E", 0,
                                                  lambda q: {"entries": [{"url": "https://www.youtube.com/watch?v=ccccccccccc", "title": "Cats"}]})
     assert url == "" and "2 searches" in note
+
+
+def test_find_youtube_channel_tries_a_few_recent_episodes_not_only_the_newest():
+    from core.podcasts import find_youtube_channel
+    asked = []
+
+    def extract(q):
+        asked.append(q)
+        if q.startswith("ytsearch15"):
+            return {"entries": []}
+        if "Brand New Episode" in q:                       # the newest isn't on YouTube yet
+            return {"entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "Cats"}]}
+        return {"entries": [{"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb", "title": "Stalin Yalta Last Days",
+                             "channel": "Fin vs History", "channel_url": "https://www.youtube.com/@finvshistory"}]}
+    show = find_youtube_channel("Show", episode_title="Brand New Episode",
+                                episode_titles=["Stalin Yalta Last Days", "Older one"], extract=extract)
+    assert show and show.feed_url == "https://www.youtube.com/@finvshistory"
+    assert len(asked) == 3                                  # the channel search, the newest, the next one (then stop)
+
+
+def test_episode_match_reports_its_channel_and_channel_show_only_takes_youtube_links():
+    from core import podcasts
+    r = podcasts.find_youtube_episode_info("Show", "The Big Heist", 0, lambda q: {"entries": [
+        {"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb", "title": "The Big Heist", "channel": "Host",
+         "channel_url": "https://www.youtube.com/@host"}]})
+    assert r["url"].endswith("bbbbbbbbbbb") and r["channel_url"] == "https://www.youtube.com/@host" and r["channel"] == "Host"
+    bad = podcasts.find_youtube_episode_info("Show", "The Big Heist", 0, lambda q: {"entries": [
+        {"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb", "title": "The Big Heist", "channel_url": "http://evil.example/x"}]})
+    assert bad["url"] and bad["channel_url"] == ""
+    assert podcasts.channel_show("https://www.youtube.com/@host", "Host").kind == "youtube"
+    assert podcasts.channel_show("https://evil.example/@host") is None
+    assert podcasts.channel_show("http://www.youtube.com/@host") is None
+
+
+def test_page_data_is_fetched_once_for_listening_and_watching(monkeypatch):
+    from core import podcasts
+    monkeypatch.setenv("SEVBIFY_PHONE", "1")
+    podcasts._raw.clear()
+    log = []
+
+    class FakeYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=False, process=True):
+            clients = self.opts["extractor_args"]["youtube"]["player_client"]
+            log.append(("fetch", clients))
+            if clients == ["android_vr"] and url.endswith("failing1111"):
+                raise ValueError("this client has nothing")
+            return {"formats": ["raw"], "url": ""}
+
+        def process_ie_result(self, info, download=False):
+            log.append(("choose", self.opts["format"]))
+            info["url"] = "https://a/" + self.opts["format"]
+            return info
+    monkeypatch.setattr(podcasts, "_ydl", lambda extra: FakeYDL(extra))
+    page = "https://www.youtube.com/watch?v=aaaaaaaaaaa"
+    a = podcasts._extract_page(page, {"format": "audio"})
+    b = podcasts._extract_page(page, {"format": "video"})
+    assert a["url"] == "https://a/audio" and b["url"] == "https://a/video"
+    assert [x for x in log if x[0] == "fetch"] == [("fetch", ["android_vr"])]        # one fetch, two format choices
+    # a client that fails: the next one is asked
+    log.clear()
+    out = podcasts._extract_page("https://www.youtube.com/watch?v=failing1111", {"format": "audio"})
+    assert out["url"] == "https://a/audio" and [x[1] for x in log if x[0] == "fetch"] == [["android_vr"], ["tv"]]
