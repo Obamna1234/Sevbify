@@ -303,7 +303,10 @@ def test_episode_match_reports_its_channel_and_channel_show_only_takes_youtube_l
 
 def test_page_data_is_fetched_once_for_listening_and_watching(monkeypatch):
     from core import podcasts
+    from core import streamer
     monkeypatch.setenv("SEVBIFY_PHONE", "1")
+    monkeypatch.setattr(streamer, "url_works", lambda url, headers=None, timeout=8: True)
+    monkeypatch.setattr(podcasts, "_pref_client", 0)
     podcasts._raw.clear()
     log = []
 
@@ -338,3 +341,67 @@ def test_page_data_is_fetched_once_for_listening_and_watching(monkeypatch):
     log.clear()
     out = podcasts._extract_page("https://www.youtube.com/watch?v=failing1111", {"format": "audio"})
     assert out["url"] == "https://a/audio" and [x[1] for x in log if x[0] == "fetch"] == [["android_vr"], ["tv"]]
+
+
+def test_a_refused_link_moves_on_to_the_next_client_and_is_remembered(monkeypatch):
+    from core import podcasts, streamer
+    monkeypatch.setenv("SEVBIFY_PHONE", "1")
+    monkeypatch.setattr(podcasts, "_pref_client", 0)
+    podcasts._raw.clear()
+    asked = []
+
+    class FakeYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=False, process=True):
+            return {"formats": []}
+
+        def process_ie_result(self, info, download=False):
+            c = self.opts["extractor_args"]["youtube"]["player_client"]
+            asked.append(c)
+            return {"url": "https://" + "-".join(c) + "/a", "http_headers": {}}
+    monkeypatch.setattr(podcasts, "_ydl", lambda extra: FakeYDL(extra))
+    monkeypatch.setattr(streamer, "url_works", lambda url, headers=None, timeout=8: "android_vr" not in url)
+    out = podcasts._extract_page("https://www.youtube.com/watch?v=aaaaaaaaaaa", {"format": "audio"})
+    assert out["url"] == "https://tv/a" and asked == [["android_vr"], ["tv"]]
+    asked.clear()
+    podcasts._extract_page("https://www.youtube.com/watch?v=bbbbbbbbbbb", {"format": "audio"})
+    assert asked == [["tv"]]                                    # tv worked, so it goes first now
+    podcasts.link_failed()                                     # the player was refused anyway: the next one after tv
+    asked.clear()
+    podcasts._extract_page("https://www.youtube.com/watch?v=ccccccccccc", {"format": "audio"})
+    assert asked and asked[0] != ["tv"]
+
+
+def test_episode_is_found_on_the_shows_channel_by_length_when_the_names_differ():
+    from core import podcasts
+    podcasts._chan_cache.clear()
+    chan = "https://www.youtube.com/@finvshistory"
+
+    def vid(i, title, secs):
+        return {"url": f"https://www.youtube.com/watch?v={i * 11}", "title": title, "duration": secs}
+    listing = {"channel": "Fin vs History", "entries": [
+        vid("a", "Genghis Khan: The Mongol Horde", 3100),
+        vid("b", "Was Chairman Mao the greatest dictator ever?", 3010),          # the feed calls it something else
+        vid("c", "The Cuban Missile Crisis", 2400),
+        vid("d", "Why Mao still divides China", 3060)]}
+    feed_title = "Is Chairman Mao The G.O.A.T of Dictators? | The Life of Chairman Mao (Part 1)"
+    r = podcasts._find_in_channel(chan, feed_title, 3050000, extract=lambda q: listing)
+    assert r and r["url"].endswith("bbbbbbbbbbb") and r["channel_url"] == chan
+    # a length with no title in common: no guess
+    assert podcasts._find_in_channel(chan, "Something Else Entirely About Cats", 2400000, extract=lambda q: listing) is None
+    # two equally plausible videos: no guess
+    twin = {"entries": [vid("e", "Mao legacy one", 3000), vid("f", "Mao legacy two", 3010)]}
+    podcasts._chan_cache.clear()
+    assert podcasts._find_in_channel(chan, "Mao rise fall legacy chairman", 3005000, extract=lambda q: twin) is None
+    # a title that matches is taken as before
+    podcasts._chan_cache.clear()
+    r = podcasts._find_in_channel(chan, "The Cuban Missile Crisis", 2450000, extract=lambda q: listing)
+    assert r and r["url"].endswith("cccccccccc" + "c")

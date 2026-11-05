@@ -245,6 +245,14 @@ def resolve(artist, title, duration_ms=0):
 
 
 @_call
+def link_failed(url):
+    """The player was refused this stream link (HTTP 403 and the like): drop it and switch YouTube client."""
+    from core import streamer, podcasts
+    podcasts.link_failed(url)
+    return streamer.link_failed(url)
+
+
+@_call
 def download_song(artist, title, duration_ms, folder, quality="best"):
     from core import streamer, downloader
     out_dir = os.path.join(folder, downloader.artist_folder(artist))
@@ -424,10 +432,10 @@ def youtube_video(page_url, quality="auto"):
 
 
 @_call
-def youtube_episode_for(show_title, episode_title, duration_ms=0):
+def youtube_episode_for(show_title, episode_title, duration_ms=0, channel_url=""):
     """{"url": the YouTube video of a podcast episode ("" if there isn't one), "note": why/what was found}."""
     from core import podcasts
-    r = podcasts.find_youtube_episode_info(show_title, episode_title, int(duration_ms or 0))
+    r = podcasts.find_youtube_episode_info(show_title, episode_title, int(duration_ms or 0), channel_url=channel_url)
     return {"url": r["url"], "note": r["note"], "channel": r["channel"], "channel_url": r["channel_url"]}
 
 
