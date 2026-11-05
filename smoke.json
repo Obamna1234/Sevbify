@@ -1,0 +1,20 @@
+{
+  "full_song" : "Bandcamp https:\/\/popplers5.bandcamp.com\/download\/",
+  "genres" : 27,
+  "local_songs" : 0,
+  "python_info" : {
+    "machine" : "arm64",
+    "platform" : "ios",
+    "python" : "3.13.18",
+    "yt_dlp" : "2026.10.26"
+  },
+  "python_start" : "ok",
+  "radio" : 10,
+  "search" : [
+    "Daft Punk - Instant Crush (feat. Julian Casablancas)",
+    "The Weeknd - Starboy",
+    "The Weeknd - I Feel It Coming",
+    "Daft Punk - Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+    "Daft Punk - Veridis Quo"
+  ]
+}
