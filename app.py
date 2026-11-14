@@ -405,6 +405,11 @@ def main():
                     details += ", yt-dlp-ejs bundled"
                 except ImportError:
                     problems.append("yt-dlp-ejs is missing from the app (YouTube needs it)")
+                try:
+                    import curl_cffi  # noqa: F401  (looks like a browser where Bandcamp asks)
+                    details += ", curl_cffi bundled"
+                except ImportError:
+                    problems.append("curl_cffi is missing from the app (Bandcamp needs it)")
                 if getattr(sys, "frozen", False) and not js:
                     problems.append("the bundled Deno (YouTube's JavaScript engine) didn't start")
             except Exception:

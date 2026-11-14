@@ -54,11 +54,24 @@ def track_info(page, opener=None):
     if not is_track_page(page):
         raise NotPlayable("not a Bandcamp track page")
     if opener is not None:
-        text = opener(page)
-    else:
+        return parse_track_page(opener(page))
+    text = ""
+    try:
+        # Looking like a real browser (curl_cffi, on the computer apps): Bandcamp shows some connections a
+        # "Client Challenge" page instead of the song.
+        from curl_cffi import requests as cr
+        r = cr.get(page, impersonate="chrome", timeout=20, headers={"Accept-Language": "en"})
+        text = r.text[:MAX_PAGE]
+    except ImportError:
+        pass
+    except Exception:
+        text = ""
+    if "data-tralbum" not in text:
         req = urllib.request.Request(page, headers={"User-Agent": UA, "Accept-Language": "en"})
         with urllib.request.urlopen(req, timeout=20) as r:
             text = r.read(MAX_PAGE).decode("utf-8", errors="replace")
+    if "data-tralbum" not in text and "challenge" in text.lower():
+        raise NotPlayable("Bandcamp asked this connection to prove it's a browser (a Client Challenge)")
     return parse_track_page(text)
 
 

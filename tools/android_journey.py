@@ -148,6 +148,14 @@ def main():
         if PKG not in focus:
             return "fail", f"Sevbify never came to the front ({focus.strip()[:200]})"
         time.sleep(8)
+        # One-time questions a person answers on first start (e.g. the Android Auto tip): "Later" / "Not now".
+        for _ in range(3):
+            texts = {n[0] for n in ui.nodes()}
+            choice = next((t for t in ("Later", "Not now", "No thanks", "OK", "Got it") if t in texts), None)
+            if not choice:
+                break
+            ui.tap(choice, tries=1)
+            time.sleep(2)
         labels = [n[0] or n[1] for n in ui.nodes() if n[0] or n[1]][:25]
         return "pass", "on screen: " + ", ".join(labels)
     run("App opens", opens)

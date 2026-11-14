@@ -241,6 +241,21 @@ def _fetch(url: str, headers: dict, data: bytes | None = None) -> tuple[str | No
     return raw, None
 
 
+def _fetch_cffi(url: str, headers: dict) -> tuple[str | None, str | None]:
+    try:
+        from curl_cffi import requests as cr
+    except ImportError:
+        return None, "curl_cffi not available"
+    try:
+        r = cr.get(url, headers=headers, impersonate="chrome", timeout=15)
+        raw = (r.text or "")[:_MAX_WEB].strip()
+    except Exception as e:
+        return None, f"network error: {e}"
+    if not raw or raw[0] not in "{[":
+        return None, _describe_block(r.status_code, raw)
+    return raw, None
+
+
 def _fetch_curl(url: str, headers: dict, data: bytes | None = None) -> tuple[str | None, str | None]:
     """Same request through the system curl (a different, standard HTTP client)."""
     exe = shutil.which("curl.exe") or shutil.which("curl")
@@ -343,6 +358,9 @@ def _bandcamp_request(q: str) -> tuple[list, str | None]:
             _fetch_curl(fuzzy_url, {"User-Agent": SIMPLE_UA, "Accept": "application/json"}),
             _norm_fuzzy,
         ),
+        # 4: looking exactly like Chrome (curl_cffi, on the computer apps): Bandcamp shows some connections a
+        #    "Client Challenge" page instead
+        lambda: (_fetch_cffi(fuzzy_url, {"Accept": "application/json"}), _norm_fuzzy),
     ]
 
     order = [_bc_pref[0]] + [i for i in range(len(strategies)) if i != _bc_pref[0]]

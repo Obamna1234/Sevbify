@@ -24,7 +24,8 @@ import traceback
 
 from PyQt6.QtWidgets import QApplication
 
-BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests")
+BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests",
+             "client challenge", "prove it's a browser")
 
 # Songs picked because they are reliably online: one Bandcamp has (Bandcamp works from cloud computers), and one
 # only on YouTube (tells us whether YouTube refuses this computer).

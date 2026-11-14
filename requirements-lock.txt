@@ -176,10 +176,11 @@ certifi==2026.10.23 \
     --hash=sha256:a9895e6e2758b371e0545e321a3a8fd1fcfd9829ada8824a936dfb16aaaf36cd \
     --hash=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1
     # via
-    #   -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    #   -r requirements.txt
+    #   curl-cffi
     #   requests
     #   yt-dlp
-cffi==2.1.1 ; implementation_name != 'cpython' \
+cffi==2.1.1 \
     --hash=sha256:046bfc24911b37851ee1b51aab8bffe713d89c68c6a057b09484ce9fd5f69b4e \
     --hash=sha256:06c72bb76605a4b0cd0aad6930b69d4baf7dd5d806cfc409b824191099700e66 \
     --hash=sha256:0beceaabe56af686895136a2de78db54ecd8e4046b236b8fd6d6cb61389e9bf2 \
@@ -280,7 +281,9 @@ cffi==2.1.1 ; implementation_name != 'cpython' \
     --hash=sha256:f8ec5e643a9a937f64e1999eb9f75d072263751912dc5cd06d3c85f8f44be7c3 \
     --hash=sha256:fb92203a88b3d3053034db775110081c49d28be6551923805e039924093761e4 \
     --hash=sha256:fcd22650c908d7b7da162bbfaab594a1227a15d1643a98c68b122ac642fa2264
-    # via brotlicffi
+    # via
+    #   brotlicffi
+    #   curl-cffi
 charset-normalizer==3.5.2 \
     --hash=sha256:01077390b03f7988f11d700a2194e69b119741a86b1a638b1db88891e3eced8e \
     --hash=sha256:01b0c0d2262a9e28e8484a278c7e1b5d650e3ac8cf2683d2967e25899f208bdf \
@@ -459,6 +462,39 @@ colorama==0.4.6 ; sys_platform == 'win32' \
     --hash=sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44 \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
     # via pytest
+curl-cffi==0.17.0 ; implementation_name == 'cpython' \
+    --hash=sha256:0d85bec9648bf7c14c3b43056ba82521740f72cd96ed7700a0e1973e7fc93f74 \
+    --hash=sha256:0e70d25d88adc66818d831805e460704088f445269eaabbf884ab05d437c2f99 \
+    --hash=sha256:2cc7d939014953223c96e78098bb24c336e7268eb6529c0d5fa9a53805a4acee \
+    --hash=sha256:2dac9c915a0ee7d7cc4285203d210816bb187c8deb5c20ee21e0613639c2a8bf \
+    --hash=sha256:31ee8500d06d6502ce1ec0b7ded1c5aa8e8f3401bbe37ccd78d6153d859d8f3c \
+    --hash=sha256:32f9508a92adaa8c9c35fd4cda786c9e697643afc2eda8dc4c3d426a910b453a \
+    --hash=sha256:3f737d386e77d4e5ac64998fac8b494b35d37e8cbda22f675b0126913e0e4d6d \
+    --hash=sha256:4c3993c7df155d622869b82a56adb018440587fd3faffeaf8d01cc016d2e1357 \
+    --hash=sha256:4f3413b62c780f2a5c7f8a0f6a1d8114f055043a273981b9732abedb5367202b \
+    --hash=sha256:51199328450e07c8ef8430a7ccce1acfb199b5cd7595e8f958e84f2faedccdac \
+    --hash=sha256:539eb6708c46433cd61745fda756f2754807f4774b31255d8ee56db0e97068fe \
+    --hash=sha256:56d622930eac5cee4cc6ebe63eaba3ecca65a2c73aa6bdf099c2ffae55ee988c \
+    --hash=sha256:5ca006230676c7c2f2e5708d02e5852a09caee49d82f1f2a469d5d6537a11baa \
+    --hash=sha256:7e126f4675d100f1ad6247a0d8e0b3ebe3fa2f4a123e2b9b78e4880b40f5bedd \
+    --hash=sha256:88cb5e34eb23eb2106711b06df68027209c72be709df239c6029345551e0acfd \
+    --hash=sha256:8a08236aac049468d83fc19699102a3d953769ccbfe2b31b63e1d26c5bb07af3 \
+    --hash=sha256:918a493717da703bc10507b811e347f4ad94132e30c6709fc1e85daf79979565 \
+    --hash=sha256:93f706c46370cf83c53ffe08cf33892e657c21a6597802f67f1559e4c642ee65 \
+    --hash=sha256:9426fa386a0f299ab043f64e59689d52e6ee2370f19238aa0bb42e6bf3620aaf \
+    --hash=sha256:a055f709029d2deaafed6a3a2a58c219d7ee2776a1d2357272d3ef230fb30c5c \
+    --hash=sha256:a93d3cd83aed4307001ca560b931317e0690ddf3c17e86c2d5b6e0722780b40c \
+    --hash=sha256:aa91d26234516ddb9eb97310d5fe1705aa6f677f101d57ffdb76d5f75439506e \
+    --hash=sha256:ad88837e627896f794ab77c5d61245f5fbc0da1e86a39043404b94bef45e98ef \
+    --hash=sha256:ae0442e45d6e0c987f84cb88bd6a99d7b91c8e2b017c18048a6c4fed63847c80 \
+    --hash=sha256:af0782d5e340b65fd76701630f0284a8f8243d77df5f2637efd09a4b009f4e24 \
+    --hash=sha256:b09f03f1aafcbbf6175610005e4e0192413148fe44c65b789a2aadfff9384a7d \
+    --hash=sha256:c11b405fa10530cec589349c1cc8d60a3a4fac20fb7be0b2713e7271a2737f57 \
+    --hash=sha256:e8cfb7eee2019fe879ab3304b33e84ba60dbcec148c34c343c49b8c67f9ddad5 \
+    --hash=sha256:f7e0817633948a8b00e65ef3662bf139cef3fb4d3847e29a720f8072c3d76a18 \
+    --hash=sha256:f8cf840646d3e57637b8caae7d0d93334dfed0bfbf6f160b36479a7d6069d547 \
+    --hash=sha256:fc33ca76371bc96df3c4e8593449a1e0e28086bf8016addb851905090069178c
+    # via yt-dlp
 idna==3.20 \
     --hash=sha256:a7db850025b95ded1eae8a46181a1a6c56c92c96f0e2b005d9ff8dc0210cab44 \
     --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
@@ -471,7 +507,7 @@ imageio-ffmpeg==0.7.0 \
     --hash=sha256:eec1f8b9bd873a2f179c994c653d5970ad560e245faf1a777e971933228b829a \
     --hash=sha256:f439dc720813fb7c10aba8c5f7681d4ca4d2aeae4f35e8347d2851b81b7b0a92 \
     --hash=sha256:fafa399433b571e8963471487cd7a7bb3ee7b532af42e6342145add6379f479b
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 iniconfig==2.3.1 \
     --hash=sha256:67f4b9c50da0dedf52af349e7749a80a9057a5031199791b906c3bb3ae878960 \
     --hash=sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7
@@ -484,7 +520,7 @@ mutagen==1.48.1 \
     --hash=sha256:4f077fe87d3fc7fba259aa63d8c026b18382ca6a42ef37c61e16f1b1b5b82fe7 \
     --hash=sha256:8f95637ab9f6f305cec6bd1294e197debe207998e3e068596563c74f86b0a173
     # via
-    #   -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    #   -r requirements.txt
     #   yt-dlp
 packaging==26.3 \
     --hash=sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79 \
@@ -581,12 +617,12 @@ pillow==13.0.0 \
     --hash=sha256:fc481f742ccda20e9ed760b8f978dff50f2a4e9bc253ac167fb0a05b0783ef52 \
     --hash=sha256:ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b \
     --hash=sha256:ffea6b2986a797c84b6d1d27d4f43e0b83c73fc16281a930891cd237cf0d08fe
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 pluggy==1.7.0 \
     --hash=sha256:7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec \
     --hash=sha256:d1eaa46ebb595891b860ab086b4d09c8588af65ebd4361b8e8f4bb8920b90ba8
     # via pytest
-pycparser==3.12 ; implementation_name != 'PyPy' and implementation_name != 'cpython' \
+pycparser==3.12 ; implementation_name != 'PyPy' \
     --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e \
     --hash=sha256:f03387877eab82ce01bbdfd0ba7252ee55a90b1c708d5129e2ce915475cf1db6
     # via cffi
@@ -664,7 +700,7 @@ pyqt6==6.11.0 \
     --hash=sha256:b6324e3501b19b4292c7a55b1f22e82d3e80e519e383ce4fe79b4a754c6f0288 \
     --hash=sha256:bd11b459c54dca068e988a42cf838303334f0d441b9d16d92ae6719fcb5ac6ba \
     --hash=sha256:f7100bc7f72b12581ec479a733f4ad11b8002668e6786e8a445ab6f4d1c743d4
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 pyqt6-qt6==6.11.2 \
     --hash=sha256:2c38ee8b797c0d7f327afef4cfbb97c73676954ef2d1d503779d62c982bf5a66 \
     --hash=sha256:4b424ed1babbef07133eb2a4174c56c848d518767bca8e759aca2c8c9c313636 \
@@ -673,7 +709,7 @@ pyqt6-qt6==6.11.2 \
     --hash=sha256:8c49432936681f325f2925f20ceef35b8fb7599e0c3e63e76d6e50397354ee1f \
     --hash=sha256:da7d747ad917f044d841ff834f17d2c50a0cc5d0e3b16479d8662544207d0567
     # via
-    #   -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    #   -r requirements.txt
     #   pyqt6
 pyqt6-sip==13.13.0 \
     --hash=sha256:0f4329bcf7c4bbfd1f34b51f9fe417f839b18ae5035b6e9de1c7718b821f45aa \
@@ -710,11 +746,11 @@ pyqt6-sip==13.13.0 \
 pytest==9.2.0 \
     --hash=sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588 \
     --hash=sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 python-vlc==3.0.21203 \
     --hash=sha256:1613451a31b692ec276296ceeae0c0ba82bfc2d094dabf9aceb70f58944a6320 \
     --hash=sha256:52d0544b276b11e58b6c0b748c3e0518f94f74b1b4cd328c83a59eacabead1ec
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 pywin32-ctypes==0.2.3 ; sys_platform == 'win32' \
     --hash=sha256:8a1513379d709975552d202d942d9837758905c8d01eb82b8bcc30918929e7b8 \
     --hash=sha256:d162dc04946d704503b2edc4d55f3dba5c1d539ead017afa00142c38b9885755
@@ -892,7 +928,7 @@ websockets==17.4 \
 yt-dlp==2026.10.26 \
     --hash=sha256:a05c5b5d8562f7e8a62f5334348b406af4930d56d3a65f8021d14af0e22339ae \
     --hash=sha256:abe5c6b94c3b2f0560500add1c42e0a97641752743a5b65588ac2007a6e23eb6
-    # via -r /tmp/claude-0/-home-claude/ab8e0ca9-f76e-5df1-9e5d-018865a9803c/scratchpad/requirements.txt
+    # via -r requirements.txt
 yt-dlp-ejs==0.8.0 \
     --hash=sha256:79300e5fca7f937a1eeede11f0456862c1b41107ce1d726871e0207424f4bdb4 \
     --hash=sha256:d5fa1639f63b5c4af8d932495f60689d5370f1a095782c944f7f62a303eb104e
