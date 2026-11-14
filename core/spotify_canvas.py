@@ -41,19 +41,53 @@ class NoCanvas(Exception):
     """This song has no Canvas (or Spotify didn't give one)."""
 
 
+ANY_TRACK = "4uLU6hMCjMI75M1A2tKUQC"      # any public track: its embed page hands out the anonymous key
+
+
+def search_id(net, artist, title, isrc="", opener=None):
+    """Spotify's ID for a song via Spotify's own search (anonymous key): by ISRC (the song's barcode, exact) when
+    known, else by title and artist, accepting only a result whose title and artist match."""
+    from core.online.models import normalise_text
+    token = _anonymous_token(net, ANY_TRACK)
+    q = f"isrc:{isrc}" if isrc else f'track:"{title}" artist:"{artist}"'
+    url = "https://api.spotify.com/v1/search?" + urllib.parse.urlencode({"q": q, "type": "track", "limit": 5})
+    req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token, "User-Agent": "Mozilla/5.0"})
+    if opener is not None:
+        body = opener(req)
+    else:
+        with net._web.open(req, timeout=15) as r:
+            body = r.read(1_000_000)
+    items = ((json.loads(body) or {}).get("tracks") or {}).get("items") or []
+    for it in items:
+        if isrc:
+            return it.get("id") or ""
+        names = normalise_text(" ".join(a.get("name", "") for a in it.get("artists") or []))
+        if (normalise_text(it.get("name", ""), strip_versions=False) == normalise_text(title, strip_versions=False)
+                and normalise_text(artist) in names):
+            return it.get("id") or ""
+    return ""
+
+
+def _isrc(net, deezer_page):
+    m = re.search(r"deezer\.com/(?:[a-z]{2}/)?track/(\d+)", deezer_page or "")
+    if not m:
+        return ""
+    try:
+        return (net.get_json(f"https://api.deezer.com/track/{m.group(1)}", ttl=30 * 86400) or {}).get("isrc") or ""
+    except Exception:
+        return ""
+
+
 def track_id(net, artist, title, page_url="", deezer_page=""):
-    """Spotify's 22-character ID for a song, or ""."""
+    """Spotify's 22-character ID for a song, or "": from its Spotify link, else Spotify's search (by the ISRC
+    Deezer knows, else by title and artist). (song.link now wants a key, so it isn't used.)"""
     m = ID_RE.search(page_url or "")
     if m:
         return m.group(1)
-    if not deezer_page:
+    try:
+        return search_id(net, artist, title, _isrc(net, deezer_page)) or ""
+    except Exception:
         return ""
-    from core import share
-    found = share.links(net, artist, title, page_url=deezer_page)
-    if not found["exact"]["spotify"]:
-        return ""
-    m = ID_RE.search(found["spotify"])
-    return m.group(1) if m else ""
 
 
 def _anonymous_token(net, tid):
@@ -141,8 +175,8 @@ def find(net, data_dir, artist, title, page_url="", deezer_lookup=None):
         return None
     tid = ID_RE.search(page_url or "")
     tid = tid.group(1) if tid else ""
-    if not tid and deezer_lookup is not None:
-        tid = track_id(net, artist, title, deezer_page=deezer_lookup() or "")
+    if not tid:
+        tid = track_id(net, artist, title, deezer_page=(deezer_lookup() or "") if deezer_lookup else "")
     if not tid:
         _remember_miss(data_dir, key)
         return None

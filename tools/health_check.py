@@ -162,6 +162,14 @@ def ytdlp_current():
 
 check("Deezer search", deezer)
 check("Spotify playlist import (no account)", spotify_import)
+def spotify_search():
+    from core import spotify_canvas as sc
+    tid = sc.search_id(net, "The Weeknd", "Blinding Lights")
+    assert len(tid) == 22, tid
+    return tid
+
+
+check("Spotify search (no account)", spotify_search)
 check("Spotify Canvas (no account)", spotify_canvas)
 check("Bandcamp search + stream link", bandcamp)
 check("Bandcamp download", bandcamp_download)

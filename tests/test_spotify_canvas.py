@@ -65,11 +65,17 @@ def test_find_downloads_once_and_remembers_songs_without_one(sc, tmp_path, monke
     assert sc.find(net, str(tmp_path), "Band", "Song", other) is None and not asked     # remembered for a week
 
 
-def test_songs_without_a_spotify_link_use_song_link(sc, tmp_path, monkeypatch):
-    from core import share
-    monkeypatch.setattr(share, "links", lambda net, a, t, page_url="": {
-        "spotify": f"https://open.spotify.com/track/{TID}", "exact": {"spotify": True}})
-    assert sc.track_id(None, "A", "B", deezer_page="https://www.deezer.com/track/1") == TID
-    monkeypatch.setattr(share, "links", lambda net, a, t, page_url="": {
-        "spotify": "https://open.spotify.com/search/A%20B", "exact": {"spotify": False}})
-    assert sc.track_id(None, "A", "B", deezer_page="https://www.deezer.com/track/1") == ""
+def test_songs_without_a_spotify_link_are_found_by_spotify_search(sc, monkeypatch):
+    import json as _json
+    monkeypatch.setattr(sc, "_anonymous_token", lambda net, tid: "KEY")
+    asked = []
+
+    def opener(req):
+        asked.append(req.full_url)
+        return _json.dumps({"tracks": {"items": [
+            {"id": "X" * 22, "name": "Neon Towers (Remix)", "artists": [{"name": "Cassetter"}]},
+            {"id": TID, "name": "Neon Towers", "artists": [{"name": "Cassetter"}, {"name": "Guest"}]}]}}).encode()
+    assert sc.search_id(None, "Cassetter", "Neon Towers", opener=opener) == TID      # the remix isn't taken
+    assert sc.search_id(None, "A", "B", isrc="USUM71234567", opener=opener) == "X" * 22
+    assert "isrc%3AUSUM71234567" in asked[-1]
+    assert sc.search_id(None, "Someone Else", "Neon Towers", opener=opener) == ""
