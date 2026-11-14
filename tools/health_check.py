@@ -51,8 +51,24 @@ def spotify_import():
 
 def spotify_canvas():
     from core import spotify_canvas as sc
-    url = sc.canvas_url(net, "0VjIjW4GlUZAMYd2vXMi3b")          # Blinding Lights has a Canvas
-    return url
+    seen = {}
+
+    def opener(req):
+        import urllib.request
+        try:
+            with net._web.open(req, timeout=15) as r:
+                body = r.read(200_000)
+                seen["status"], seen["body"] = r.status, body
+                return body
+        except Exception as e:
+            seen["error"] = repr(e)
+            raise
+    try:
+        return sc.canvas_url(net, "0VjIjW4GlUZAMYd2vXMi3b", opener=opener)      # Blinding Lights has a Canvas
+    except Exception as e:
+        body = seen.get("body", b"")
+        raise RuntimeError(f"{e}; HTTP {seen.get('status')} {seen.get('error', '')} {len(body)} bytes: "
+                           + body[:400].decode("latin-1").encode("unicode_escape").decode()[:600])
 
 
 def bandcamp():
@@ -102,6 +118,10 @@ def lyrics():
 def song_link():
     from core import share
     t = om.search("Daft Punk Get Lucky", limit=1)[0]
+    try:
+        net.get_json(share.ODESLI, {"url": t.page_url, "userCountry": "US"}, use_cache=False)
+    except Exception as e:
+        raise RuntimeError(f"song.link said: {e} (page {t.page_url})")
     out = share.links(net, t.artist, t.title, page_url=t.page_url)
     assert out["exact"]["spotify"], out
     return out["spotify"]
@@ -115,9 +135,7 @@ def deezer():
 
 def ytdlp_current():
     from core import updates, downloader
-    have = downloader.engine().ytdlp_version()
-    newest = updates.check_ytdlp(net) if hasattr(updates, "check_ytdlp") else None
-    return f"bundled yt-dlp {have}" + (f", newest {newest}" if newest else "")
+    return f"bundled yt-dlp {downloader.engine().ytdlp_version()}"
 
 
 check("Deezer search", deezer)

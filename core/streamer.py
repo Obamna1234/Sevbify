@@ -138,6 +138,12 @@ def link_failed(url):
 def _extract(e, page):
     """Direct audio link (+ the HTTP headers it needs) for a Bandcamp or YouTube page, without downloading."""
     global _preferred_attempt
+    from core import bandcamp
+    if bandcamp.is_track_page(page):
+        try:
+            return bandcamp.stream(page)          # Bandcamp's own player link (yt-dlp's reader needs curl_cffi now)
+        except Exception:
+            pass                                  # page changed: try yt-dlp below
     if e.yt_dlp is None:
         raise NoFullSong("yt-dlp is not installed")
     attempts = _attempts(e)
@@ -321,6 +327,12 @@ def download_original_audio(page, out_without_ext, progress=None, quality="best"
     """Save a Bandcamp / YouTube page's audio as it comes (m4a, webm/opus or mp3), with no conversion, so it
     works where there's no ffmpeg (the Android app). Returns the saved file's path."""
     import os
+    from core import bandcamp
+    if bandcamp.is_track_page(page):
+        try:
+            return bandcamp.download(page, out_without_ext + ".mp3") and out_without_ext + ".mp3"
+        except Exception:
+            pass                                  # page changed: try yt-dlp below
     e = downloader.engine()
     if e.yt_dlp is None:
         raise NoFullSong("yt-dlp is not installed")

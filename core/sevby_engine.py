@@ -1686,13 +1686,48 @@ def _fmt_len(sec) -> str:
         return "?:??"
 
 
+def _download_bandcamp_direct(bc_url: str, out_dir: str, safe: str, query: str, log) -> tuple[bool, str]:
+    """Bandcamp's own 128 kbps MP3 (the link its web player uses), tagged with title, artist and cover."""
+    from core import bandcamp
+    if STOP_EVENT.is_set():
+        return False, "stopped"
+    dest = os.path.join(out_dir, safe + ".mp3")
+    try:
+        info = bandcamp.download(bc_url, dest)
+    except Exception as e:
+        return False, f"Bandcamp page: {e}"
+    try:
+        from mutagen.easyid3 import EasyID3
+        from mutagen.id3 import ID3NoHeaderError
+        try:
+            tags = EasyID3(dest)
+        except ID3NoHeaderError:
+            tags = EasyID3()
+        artist, title = _split_query(query)
+        tags["title"] = info.get("title") or title
+        tags["artist"] = info.get("artist") or artist or ""
+        if info.get("album"):
+            tags["album"] = info["album"]
+        tags.save(dest)
+        if info.get("cover"):
+            img = _fetch_image(info["cover"])
+            if img:
+                _embed_cover(dest, img)
+    except Exception as e:
+        log(f"  (tags: {e})")
+    return True, ""
+
+
 def download_bandcamp_mp3(bc_url: str, query: str, out_dir: str, log) -> bool:
     """Download a Bandcamp track page as MP3. Returns True on success."""
     safe = sanitize_filename(query)
     if _already_exists(out_dir, safe):
         log(f"  SKIP (exists): {safe}")
         return True
-    ok, err = _download(bc_url, out_dir, safe, allow_cookies=False, log=log)
+    ok, err = _download_bandcamp_direct(bc_url, out_dir, safe, query, log)
+    if not ok and err != "stopped":
+        ok, err2 = _download(bc_url, out_dir, safe, allow_cookies=False, log=log)
+        err = err if ok else f"{err}; yt-dlp: {err2}"
     if ok:
         log(f"  OK (Bandcamp) \u2192 {safe}.mp3" + ("  [Bandcamp stream, 128 kbps MP3]" if QUALITY["best"] else ""))
     elif err == "stopped":
