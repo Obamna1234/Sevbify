@@ -48,6 +48,16 @@ def _watch_for_stray_windows(app):
 
 
 @pytest.fixture(autouse=True)
+def no_ad_free_lookups(monkeypatch):
+    """Tests never search YouTube for an episode's ad-free version (tests that check it put their own in)."""
+    from core import podcasts
+
+    def none(*a, **k):
+        raise LookupError("no YouTube version (tests)")
+    monkeypatch.setattr(podcasts, "ad_free_stream", none)
+
+
+@pytest.fixture(autouse=True)
 def no_stray_windows():
     STRAY_WINDOWS.clear()
     yield

@@ -753,6 +753,23 @@ def video_format(max_height=720):
             "best[vcodec!=none][acodec!=none]")
 
 
+_AD_FREE = {}          # (show, episode) -> the episode's YouTube page ("" = none), for this run of the app
+
+
+def ad_free_stream(show_title, episode_title, duration_ms=0, channel_url=""):
+    """(link, headers, page) for an episode's YouTube version: the same episode without the ads podcast networks
+    stitch into the feed's audio. Raises LookupError when the show has no YouTube version of it."""
+    key = (show_title.casefold(), episode_title.casefold())
+    page = _AD_FREE.get(key)
+    if page is None:
+        info = find_youtube_episode_info(show_title, episode_title, int(duration_ms or 0), channel_url=channel_url)
+        page = _AD_FREE[key] = info.get("url") or ""
+    if not page:
+        raise LookupError("no YouTube version of this episode")
+    url, headers = youtube_stream(page)
+    return url, headers, page
+
+
 def youtube_stream(page_url, video=False, extract=None, max_height=720):
     """(direct link, HTTP headers) for an episode's audio, or for its video with sound (video=True)."""
     if extract is None:

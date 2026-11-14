@@ -207,8 +207,14 @@ final class Player: ObservableObject {
     // --- getting a song to play -----------------------------------------------------------------------------
     private func activate() { try? AVAudioSession.sharedInstance().setActive(true) }
 
+    /// A streamed song the player was refused (e.g. YouTube refused that link) is looked up once more with a fresh
+    /// link before it's skipped.
+    private var retriedKey = ""
+    private var streamedURL = ""
+
     private func startCurrent() {
         guard let t = current else { return }
+        if retriedKey != t.matchKey + ":retry" { retriedKey = "" }
         generation += 1
         let gen = generation
         player.pause()
@@ -229,6 +235,16 @@ final class Player: ObservableObject {
                     Task { @MainActor in
                         guard let self, gen == self.generation else { return }
                         if st == .failed {
+                            if !t.isItem, !self.streamedURL.isEmpty, self.retriedKey.isEmpty {
+                                self.retriedKey = t.matchKey + ":retry"
+                                let failedURL = self.streamedURL
+                                self.status = "That link didn't play, trying another…"
+                                Task {
+                                    _ = try? await Bridge.call("link_failed", [failedURL])
+                                    await MainActor.run { self.startCurrent() }
+                                }
+                                return
+                            }
                             self.loading = false
                             self.status = "Couldn't play \(t.title): \(item.error?.localizedDescription ?? "unknown error")"
                             self.advance(auto: true, failed: true)
@@ -263,6 +279,7 @@ final class Player: ObservableObject {
     /// (what to play, is it only a preview)
     private func resolve(_ t: Track) async throws -> (AVURLAsset, Bool) {
         let lib = Library.shared
+        streamedURL = ""
         if let local = lib.localFor(t), let url = lib.url(for: local), FileManager.default.fileExists(atPath: url.path) {
             return (AVURLAsset(url: url), false)
         }
@@ -277,6 +294,7 @@ final class Player: ObservableObject {
         // Always the full song: a 30-second clip only plays from the song menu's Preview, never in its place.
         do {
             let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs])
+            streamedURL = (o["url"] as? String) ?? ""
             return (try asset(o), false)
         } catch {
             #if DEBUG

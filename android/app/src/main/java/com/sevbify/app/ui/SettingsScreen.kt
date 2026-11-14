@@ -227,7 +227,7 @@ fun SettingsPageScreen(key: String) {
         }
         item {
             Toggle(tr("Ad-free podcasts"), "Plays a podcast episode from its YouTube version when there is one, because the " +
-                   "audio in the podcast's own feed has ads built in. Sponsor reads in it are skipped (the switch above), " +
+                   "audio in the podcast's own feed has ads stitched in by podcast networks. The hosts' own sponsor reads stay, " +
                    "downloads are ad-free too, and Audio ↔ Video keeps your place. Episodes with no YouTube version play " +
                    "from the feed as before. Needs the notice about full songs to be accepted.",
                    s.adFreePodcasts) { s.adFreePodcasts = it; if (it) Library.adFreeMiss.clear(); Library.changed() }

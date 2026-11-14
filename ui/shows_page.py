@@ -352,6 +352,8 @@ class ShowPage(QWidget):
     follow_clicked = pyqtSignal()
     download_all_clicked = pyqtSignal()
     sort_changed = pyqtSignal(str)          # "newest" / "oldest"
+    filter_changed = pyqtSignal(str)        # "all" / "unplayed" / "in_progress"
+    search_changed = pyqtSignal(str)        # "Find in this show"
     video_clicked = pyqtSignal()            # "Watch video": the show's video version, played inside Sevbify
 
     def __init__(self, parent=None):
@@ -367,7 +369,8 @@ class ShowPage(QWidget):
         self.rows = []
 
     def build(self, kind, title, author, description, followed, rows, top_colour="#3a3a3a", can_download_all=False,
-              follow_text=("Follow", "Following"), message="", sort=None, count_text="", video_button=False):
+              follow_text=("Follow", "Following"), message="", sort=None, count_text="", video_button=False,
+              filter_mode="all", query=""):
         content = QWidget()
         content.setObjectName("showPage")
         content.setStyleSheet("#showPage { background: transparent; }")
@@ -441,20 +444,6 @@ class ShowPage(QWidget):
             vid.clicked.connect(self.video_clicked.emit)
             actions.addWidget(vid)
         actions.addStretch()
-        if sort is not None:
-            from PyQt6.QtWidgets import QComboBox
-            box = QComboBox()
-            box.addItems(["Newest first", "Oldest first"])
-            box.setCurrentIndex(0 if sort == "newest" else 1)
-            box.setToolTip("Sort episodes by release date")
-            box.setCursor(Qt.CursorShape.PointingHandCursor)
-            box.setStyleSheet(f"QComboBox {{ background: transparent; color: {theme.SUBDUED}; border: none;"
-                              f" font-size: 14px; padding: 4px 8px; }} QComboBox:hover {{ color: {theme.TEXT}; }}"
-                              f" QComboBox QAbstractItemView {{ background: #282828; color: white;"
-                              f" selection-background-color: #3e3e3e; }}")
-            box.currentIndexChanged.connect(lambda i: self.sort_changed.emit("newest" if i == 0 else "oldest"))
-            self.sort_box = box
-            actions.addWidget(box)
         hv.addLayout(actions)
         if count_text:
             hv.addWidget(muted(count_text))
@@ -463,6 +452,9 @@ class ShowPage(QWidget):
             d.setMaximumWidth(900)
             hv.addWidget(d)
         v.addWidget(header)
+        self.search_box = None
+        if sort is not None:
+            v.addWidget(self._episode_bar(sort, filter_mode, query))
         body = QVBoxLayout()
         body.setContentsMargins(12, 8, 12, 0)
         body.setSpacing(0)
@@ -480,6 +472,71 @@ class ShowPage(QWidget):
         v.addLayout(body)
         v.addStretch()
         theme.replace_scroll_widget(self.scroll, content)
+
+    FILTERS = (("all", "All Episodes"), ("unplayed", "Unplayed"), ("in_progress", "In Progress"))
+    SORTS = (("newest", "Newest to Oldest"), ("oldest", "Oldest to Newest"))
+
+    def _episode_bar(self, sort, filter_mode, query):
+        """Like Spotify's: "All Episodes ▾" (filter) on the left; a search and "Newest to Oldest ▾" on the right."""
+        from PyQt6.QtWidgets import QLineEdit, QMenu
+        bar = QWidget()
+        bar.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(bar)
+        h.setContentsMargins(24, 12, 24, 4)
+        h.setSpacing(12)
+        menu_style = ("QMenu { background: #282828; color: white; border: none; border-radius: 4px; padding: 4px; }"
+                      " QMenu::item { padding: 8px 28px 8px 12px; border-radius: 2px; font-size: 14px; }"
+                      " QMenu::item:selected { background: #3e3e3e; }"
+                      " QMenu::item:disabled { color: #b3b3b3; font-size: 12px; font-weight: 700; }")
+
+        def dropdown(label, title, options, current, signal, bold):
+            b = QPushButton(f"{dict(options)[current]}  ▾")
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(f"QPushButton {{ background: transparent; border: none; color: {theme.TEXT};"
+                            f" font-size: {16 if bold else 14}px; font-weight: {700 if bold else 400}; padding: 4px; }}"
+                            f" QPushButton:hover {{ color: white; text-decoration: none; }}")
+            b.setToolTip(title)
+            m = QMenu(b)
+            m.setStyleSheet(menu_style)
+            head = m.addAction(title)
+            head.setEnabled(False)
+            for key, text in options:
+                act = m.addAction(("✓  " if key == current else "     ") + text)
+                act.triggered.connect(lambda _=False, k=key: signal.emit(k))
+            b.clicked.connect(lambda: m.exec(b.mapToGlobal(b.rect().bottomLeft())))
+            setattr(self, label, b)
+            return b
+
+        h.addWidget(dropdown("filter_btn", "Filter by", self.FILTERS, filter_mode, self.filter_changed, True))
+        h.addStretch()
+        find = QLineEdit(query)
+        find.setPlaceholderText("Find in this show")
+        find.setClearButtonEnabled(True)
+        find.setFixedWidth(220)
+        find.setStyleSheet(f"QLineEdit {{ background: rgba(255,255,255,0.1); color: {theme.TEXT}; border: none;"
+                           f" border-radius: 4px; padding: 6px 8px; font-size: 14px; }}")
+        find.textChanged.connect(self.search_changed.emit)
+        search_btn = QPushButton()
+        search_btn.setIcon(icons.search(theme.SUBDUED, 18))
+        search_btn.setIconSize(QSize(18, 18))
+        search_btn.setFixedSize(32, 32)
+        search_btn.setToolTip("Search in this show")
+        search_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        search_btn.setStyleSheet("QPushButton { border: none; background: transparent; color: #b3b3b3;"
+                                 " font-size: 18px; border-radius: 16px; } QPushButton:hover { color: white; }")
+
+        def open_find():
+            find.setVisible(True)
+            search_btn.setVisible(False)
+            find.setFocus()
+        search_btn.clicked.connect(open_find)
+        h.addWidget(search_btn)
+        h.addWidget(find)
+        search_btn.setVisible(not query)       # only once they're in the bar (else they flash up as windows)
+        find.setVisible(bool(query))
+        h.addWidget(dropdown("sort_btn", "Sort by", self.SORTS, sort, self.sort_changed, False))
+        self.search_box = find
+        return bar
 
     def set_cover(self, pixmap):
         if self.cover_label is not None:

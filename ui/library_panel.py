@@ -377,12 +377,20 @@ class LibraryPanel(QFrame):
         self.chips_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         v.addWidget(self.chips_scroll)
         # Spotify's ‹ › buttons at the ends of the chip row when not every chip fits.
-        self.chips_next = self._icon_btn(icons.chevron("right", theme.TEXT, 16), "More filters", 30)
-        self.chips_prev = self._icon_btn(icons.chevron("left", theme.TEXT, 16), "Back", 30)
+        # Like Spotify's: a white arrow on a dark round button, with the chips fading out underneath, so the arrow
+        # stands apart from the grey chips.
+        self.chips_next = self._icon_btn(icons.chevron("right", "#ffffff", 16), "More filters", 30)
+        self.chips_prev = self._icon_btn(icons.chevron("left", "#ffffff", 16), "Back", 30)
+        self.chips_fade_next, self.chips_fade_prev = QWidget(self.chips_scroll), QWidget(self.chips_scroll)
+        for fade, (x1, x2) in ((self.chips_fade_next, (0, 1)), (self.chips_fade_prev, (1, 0))):
+            fade.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            fade.setStyleSheet(f"background: qlineargradient(x1:{x1}, y1:0, x2:{x2}, y2:0, stop:0 rgba(18,18,18,0),"
+                               f" stop:0.55 {theme.PANEL}, stop:1 {theme.PANEL});")
+            fade.hide()
         for btn, step in ((self.chips_next, 1), (self.chips_prev, -1)):
             btn.setParent(self.chips_scroll)
-            btn.setStyleSheet(f"QPushButton {{ background: {theme.HOVER}; border: none; border-radius: 15px; }}"
-                              f" QPushButton:hover {{ background: {theme.SELECTED}; }}")
+            btn.setStyleSheet(f"QPushButton {{ background: #1f1f1f; border: none; border-radius: 15px; }}"
+                              f" QPushButton:hover {{ background: #2a2a2a; }}")
             btn.clicked.connect(lambda _=False, st=step: self._scroll_chips(st))
             btn.hide()
         # Bound methods, not lambdas: Qt drops them when the panel goes away, so a scroll bar that still reports a
@@ -568,10 +576,15 @@ class LibraryPanel(QFrame):
         h = self.chips_scroll.height()
         self.chips_next.move(self.chips_scroll.width() - 30, (h - 30) // 2 + 2)
         self.chips_prev.move(0, (h - 30) // 2 + 2)
-        self.chips_next.setVisible(bar.maximum() > 0 and bar.value() < bar.maximum())
-        self.chips_prev.setVisible(bar.maximum() > 0 and bar.value() > 0)
-        self.chips_next.raise_()
-        self.chips_prev.raise_()
+        more, back = bar.maximum() > 0 and bar.value() < bar.maximum(), bar.maximum() > 0 and bar.value() > 0
+        self.chips_fade_next.setGeometry(self.chips_scroll.width() - 64, 0, 64, h)
+        self.chips_fade_prev.setGeometry(0, 0, 64, h)
+        self.chips_fade_next.setVisible(more)
+        self.chips_fade_prev.setVisible(back)
+        self.chips_next.setVisible(more)
+        self.chips_prev.setVisible(back)
+        for w in (self.chips_fade_next, self.chips_fade_prev, self.chips_next, self.chips_prev):
+            w.raise_()
 
     def set_items(self, playlists, n_songs, n_saved, playing_source="", albums=None, artists=None, folders=None,
                   shows=None):

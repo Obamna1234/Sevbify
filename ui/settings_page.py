@@ -269,6 +269,10 @@ class SettingsPage(QWidget):
                      "Jumps over ad reads, \"like and subscribe\" reminders and self-promotion that viewers marked on "
                      "SponsorBlock. Private: the episode isn't named, only a 4-character code shared by many videos is "
                      "sent. YouTube's own ads never play in Sevbify.", getattr(u, "skip_sponsors", True))
+        self._toggle("ad_free_podcasts", "Ad-free podcasts",
+                     "Plays an episode's YouTube version when the show posts one: no ads stitched in by podcast "
+                     "networks. The hosts' own sponsor reads stay, like on the radio. Episodes with no YouTube version "
+                     "play from the feed as usual.", getattr(u, "ad_free_podcasts", True))
         self._toggle("autoplay", "Autoplay",
                      "When your music ends, keep playing similar songs (song radio from the last one).", u.autoplay)
         self._combo("fade_seconds", "Fade between songs",

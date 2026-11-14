@@ -192,3 +192,16 @@ def test_tooltips_show_titles_as_written(qapp):
     lbl.setToolTip("Queue")
     assert lbl.toolTip() == "Queue"
     assert ui.as_plain("a & b") == "<qt>a &amp; b</qt>"
+
+
+def test_open_in_links_search_for_exactly_this_song():
+    """Odd characters in names never change which song is searched for (AC/DC split the Spotify link in two)."""
+    import urllib.parse
+    from core.online.models import OnlineTrack
+    for artist, title in [("AC/DC", "T.N.T."), ("Sigur Rós", "Hoppípolla"), ("Guns N' Roses", "#1 Crush?"),
+                          ("Simon & Garfunkel", "50% / 100%"), ("Earmake", "I'm the Law")]:
+        links = OnlineTrack(title, artist).links()
+        want = f"{artist} {title}"
+        assert urllib.parse.unquote(links["Spotify"].split("/search/", 1)[1]) == want
+        for name, key in (("YouTube", "search_query"), ("YouTube Music", "q"), ("Apple Music", "term"), ("Bandcamp", "q")):
+            assert urllib.parse.parse_qs(urllib.parse.urlparse(links[name]).query)[key] == [want]

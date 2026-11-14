@@ -4447,14 +4447,20 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._set_lyrics_available(True)            # can't tell offline: the page explains
             return
         self._set_lyrics_available(True)                # until we know
+        if not getattr(self.user_data, "lyrics_enabled", True):
+            return
         album = song.album if song.album and song.album != "Unknown Album" else ""
         duration = getattr(track, "duration_ms", 0) or int(getattr(song, "duration", 0) or 0)
 
         def done(lyr):
             if self.current_song is song:
                 self._set_lyrics_available(lyr is not None and not (lyr.instrumental and not lyr.plain.strip()))
-        self.online_call(L.find, self.net, song.artist, song.title, album, duration, on_done=done,
-                         on_error=lambda _e: None)
+
+        def ask():                                      # a moment later: the song itself is found first
+            if self.current_song is song and not getattr(self, "_shut_down", False):
+                self.online_call(L.find, self.net, song.artist, song.title, album, duration, on_done=done,
+                                 on_error=lambda _e: None)
+        QTimer.singleShot(2000, ask)
 
     def toggle_lyrics(self):
         if not getattr(self, "_lyrics_available", True) and self.stack.currentWidget() is not self.lyrics_page:
@@ -5102,6 +5108,13 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.add_music_folder(folder)
         return folder
 
+    def music_download_folder(self):
+        """Songs go in "Music" inside the download folder, one folder per artist, next to "Podcasts" and
+        "Audiobooks" (songs downloaded before stay where they are and still play)."""
+        folder = os.path.join(self.download_folder(), "Music")
+        os.makedirs(folder, exist_ok=True)
+        return folder
+
     DOWNLOAD_NOTICE = (
         "To play full songs you don't have yet and to download them, Sevbify looks for each song on "
         "Bandcamp first, then on YouTube. Streams play straight away; downloads are saved as MP3s in:\n"
@@ -5144,7 +5157,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not tracks:
             self.show_status("Those songs are already on your computer.", kind="info", timeout_ms=3000)
             return 0
-        folder = self.download_folder()
+        folder = self.music_download_folder()
         if not self._accept_online_notice():
             return 0
         added = self.downloads.request(tracks, folder, self.user_data.download_source)
@@ -5270,7 +5283,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             menu.addAction(f"▶  Resume {d.stopped_count()} stopped").triggered.connect(d.resume)
         if d.failed_count():
             menu.addAction(f"↻  Retry {d.failed_count()} failed").triggered.connect(
-                lambda: d.retry_failed(self.download_folder(), self.user_data.download_source))
+                lambda: d.retry_failed(self.music_download_folder(), self.user_data.download_source))
         items = d.items()
         if items:
             menu.addSeparator()

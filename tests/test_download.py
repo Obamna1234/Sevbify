@@ -300,7 +300,7 @@ def test_download_fills_the_playlist_slot(window, audio_dir, qapp):
     assert window.download_songs(pl.songs) == 1                 # local songs are ignored
     assert wait_until(qapp, lambda: not getattr(pl.songs[1], "is_remote", False), 15)
     assert pl.songs[1].file_path.endswith("Night City (Official Spelling).wav")
-    assert os.path.dirname(pl.songs[1].file_path) == str(audio_dir / "Sevbify downloads" / "Vogel")   # artist folder
+    assert os.path.dirname(pl.songs[1].file_path) == str(audio_dir / "Sevbify downloads" / "Music" / "Vogel")   # Music/artist
     assert len(pl.songs) == 3                                   # still in the same place
     assert wait_until(qapp, lambda: not window.pl_download_btn.isEnabled()
                       and "every song" in window.pl_download_btn.toolTip())          # green: all downloaded

@@ -5,7 +5,7 @@ does its online work through MainWindow.online_call (in the background)."""
 import os
 import time
 
-from PyQt6.QtCore import Qt, QLocale
+from PyQt6.QtCore import Qt, QLocale, QTimer
 from PyQt6.QtGui import QPixmap
 
 from core import podcasts, audiobooks
@@ -69,6 +69,11 @@ class ShowsMixin:
         self.show_page.follow_clicked.connect(self._toggle_follow)
         self.show_page.download_all_clicked.connect(self._download_whole_show)
         self.show_page.sort_changed.connect(self._sort_show)
+        self.show_page.filter_changed.connect(self._filter_show)
+        self.show_page.search_changed.connect(self._search_show)
+        self._show_search_timer = QTimer(self)
+        self._show_search_timer.setSingleShot(True)
+        self._show_search_timer.timeout.connect(self._render_show_keep_search)
         self.genre_page = GenrePage()
         self.show_page.video_clicked.connect(self.open_video_version)
         self.video_page = VideoPage()
@@ -301,7 +306,15 @@ class ShowsMixin:
             newest = ctx.get("sort", "newest") == "newest"
             pairs.sort(key=lambda p: (p[1].published <= 0, -p[1].published if newest else p[1].published))
             ctx["items"], ctx["episodes"] = [p[0] for p in pairs], [p[1] for p in pairs]
+            mode, query = ctx.get("filter", "all"), (ctx.get("query") or "").strip().casefold()
             for song, ep in pairs:
+                key = item_key(song)
+                if mode == "unplayed" and (key in self.user_data.finished or key in self.user_data.resume):
+                    continue
+                if mode == "in_progress" and key not in self.user_data.resume:
+                    continue
+                if query and query not in song.title.casefold() and query not in (ep.description or "").casefold():
+                    continue
                 meta = ep.date_text
                 rows.append(self._episode_row(song, song.title, ep.description, meta_prefix=meta,
                                               playing_key=playing_key))
@@ -313,7 +326,10 @@ class ShowsMixin:
         if loading:
             message = "Loading…"
         elif not rows and not message:
-            message = "No episodes found." if kind != "book" else "No chapters found."
+            if kind != "book" and ctx["episodes"] and (ctx.get("query") or ctx.get("filter", "all") != "all"):
+                message = "No episodes match."
+            else:
+                message = "No episodes found." if kind != "book" else "No chapters found."
         count = ""
         if kind != "book" and ctx["episodes"]:
             n_dl = sum(1 for sng in ctx["items"] if self._is_downloaded(sng))
@@ -321,8 +337,9 @@ class ShowsMixin:
         self.show_page.build(label, obj.title, author, description, followed, rows,
                              top_colour="#2d4a5a" if kind != "book" else "#5a3d2d",
                              can_download_all=kind == "book" and bool(rows), follow_text=follow_text, message=message,
-                             sort=ctx.get("sort", "newest") if kind != "book" and len(rows) > 1 else None,
-                             count_text=count, video_button=kind != "book" and obj.kind != "youtube")
+                             sort=ctx.get("sort", "newest") if kind != "book" and len(ctx["episodes"]) > 1 else None,
+                             count_text=count, video_button=kind != "book" and obj.kind != "youtube",
+                             filter_mode=ctx.get("filter", "all"), query=ctx.get("query", ""))
         self._with_image(image, self.show_page.set_cover)
         if kind == "book":
             return
@@ -354,6 +371,24 @@ class ShowsMixin:
         if self._show_ctx is not None:
             self._show_ctx["sort"] = order
             self._render_show()
+
+    def _filter_show(self, mode):
+        if self._show_ctx is not None:
+            self._show_ctx["filter"] = mode
+            self._render_show()
+
+    def _search_show(self, text):
+        if self._show_ctx is not None:
+            self._show_ctx["query"] = text
+            self._show_search_timer.start(250)          # wait until typing pauses
+
+    def _render_show_keep_search(self):
+        self._render_show()
+        box = self.show_page.search_box
+        if box is not None:                             # the page was rebuilt: keep typing where you were
+            box.setVisible(True)
+            box.setFocus()
+            box.setCursorPosition(len(box.text()))
 
     def _is_downloaded(self, song):
         path = self.user_data.offline.get(item_key(song))
@@ -512,6 +547,24 @@ class ShowsMixin:
                     self._track_handled = True
                     self._handle_failed_track(f"YouTube didn't give the audio ({err})")
             self.online_call(podcasts.youtube_stream, song.track.page_url, on_done=done, on_error=failed)
+            return
+        if song.track.source == "podcast" and getattr(self.user_data, "ad_free_podcasts", True):
+            # The episode's YouTube version has no ads stitched in; the feed is the fallback.
+            self._set_now_playing_text(song.title, song.artist, "Finding the ad-free version…")
+            self.player.stop()
+            self._track_handled = True
+
+            def free(res, s=song):
+                if self.current_song is s:
+                    self._set_now_playing_text(s.title, s.artist, "Podcast · ad-free (YouTube version)")
+                    self._play_media(res[0], res[1])
+
+            def feed(_err, s=song):
+                if self.current_song is s:
+                    self._set_now_playing_text(s.title, s.artist, kind)
+                    self._play_media(s.track.stream_url)
+            self.online_call(podcasts.ad_free_stream, song.track.artist, song.title, song.track.duration_ms,
+                             on_done=free, on_error=feed)
             return
         self._set_now_playing_text(song.title, song.artist, kind)
         self._play_media(song.track.stream_url)

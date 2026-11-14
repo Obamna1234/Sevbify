@@ -294,10 +294,10 @@ object Player {
     private var sponsor: Pair<String, List<LongArray>> = "" to emptyList()
     private var skipped = mutableSetOf<Long>()
 
-    /** The YouTube page whose sponsor segments apply: the episode's own (a YouTube show), or the YouTube version a
-     *  podcast episode is played/downloaded from (ad-free). "" if none. */
+    /** The YouTube page whose sponsor segments apply: only a YouTube show's own episodes. A podcast's ad-free
+     *  YouTube version keeps the hosts' own sponsor reads (only the ads networks stitch into feeds are gone). */
     private fun sponsorPageFor(t: Track): String =
-        if (t.source == "youtube") t.pageUrl else Library.adFree[t.itemKey].orEmpty()
+        if (t.source == "youtube") t.pageUrl else ""
 
     private fun loadSponsor(t: Track) {
         sponsor = t.itemKey to emptyList(); skipped.clear()

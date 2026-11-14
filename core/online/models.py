@@ -43,7 +43,7 @@ class OnlineTrack:
 
     # --- "Open in…" links (search pages; work without any account) -------
     def links(self):
-        q = urllib.parse.quote(self.query)
+        q = urllib.parse.quote(self.query, safe="")       # "AC/DC" must not become two parts of the address
         q_plus = urllib.parse.quote_plus(self.query)
         links = {
             "Spotify": f"https://open.spotify.com/search/{q}",

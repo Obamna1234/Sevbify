@@ -57,7 +57,8 @@ def test_podcasts_page_search_open_follow_and_play(win, qapp):
     assert any(e["kind"] == "podcast" and e["title"] == "Fin vs History"
                for e in win.library_panel.entries())                       # in Your Library
     win.show_page.rows[0].play_btn.click()                                  # newest episode
-    assert win.played[-1] == "https://cdn.example.com/ep2.m4a?x=1"
+    # No YouTube version of it (the tests have none): the feed's audio plays.
+    assert wait_until(qapp, lambda: win.played and win.played[-1] == "https://cdn.example.com/ep2.m4a?x=1")
     assert win.pq.source_name == "Fin vs History" and len(win.pq.items) == 2
 
 
@@ -222,3 +223,44 @@ def test_show_page_offers_the_video_version(win, qapp, monkeypatch):
                          items=[], episodes=[])
     win.open_video_version()
     assert wait_until(qapp, lambda: opened == [found])
+
+
+def test_ad_free_version_plays_when_the_show_posts_one(win, qapp, monkeypatch):
+    """Ad-free podcasts: the episode's YouTube version (no ads stitched in by podcast networks) plays instead of the
+    feed's audio; switched off, the feed plays."""
+    from core import podcasts
+    asked = []
+    monkeypatch.setattr(podcasts, "ad_free_stream", lambda show, ep, ms=0, channel_url="": asked.append((show, ep))
+                        or ("https://rr1.googlevideo.com/audio", {"User-Agent": "x"}, "https://www.youtube.com/watch?v=abc"))
+    win.open_show(podcasts.Show("Fin vs History", feed_url="https://feeds.example.com/fvh"))
+    assert wait_until(qapp, lambda: len(win._show_ctx["items"]) == 2)
+    win.play_item(win._show_ctx["items"][0])
+    assert wait_until(qapp, lambda: win.played and win.played[-1] == "https://rr1.googlevideo.com/audio")
+    assert asked and "ad-free" in win.song_info.text() + win.artist_info.text()
+    win.user_data.ad_free_podcasts = False
+    win.play_item(win._show_ctx["items"][1])
+    assert wait_until(qapp, lambda: win.played[-1].startswith("https://cdn.example.com/"))
+
+
+def test_episodes_filter_search_and_sort_like_spotify(win, qapp):
+    from core import podcasts
+    win.open_show(podcasts.Show("Fin vs History", feed_url="https://feeds.example.com/fvh"))
+    assert wait_until(qapp, lambda: len(win.show_page.rows) == 2)
+    page = win.show_page
+    assert page.filter_btn.text().startswith("All Episodes") and page.sort_btn.text().startswith("Newest to Oldest")
+    first, second = win._show_ctx["items"]
+    win._remember_position(second, 600_000)                    # one episode half-heard
+    page.filter_changed.emit("in_progress")
+    assert len(win.show_page.rows) == 1 and win.show_page.filter_btn.text().startswith("In Progress")
+    win.show_page.filter_changed.emit("unplayed")
+    assert len(win.show_page.rows) == 1
+    win.show_page.filter_changed.emit("all")
+    win.show_page.search_changed.emit(first.title[:6])
+    assert wait_until(qapp, lambda: len(win.show_page.rows) == 1)
+    assert not win.show_page.search_box.isHidden() and win.show_page.search_box.text() == first.title[:6]
+    win.show_page.search_changed.emit("zzzz nothing")
+    assert wait_until(qapp, lambda: len(win.show_page.rows) == 0)
+    win.show_page.search_changed.emit("")
+    assert wait_until(qapp, lambda: len(win.show_page.rows) == 2)
+    win.show_page.sort_changed.emit("oldest")
+    assert win.show_page.sort_btn.text().startswith("Oldest to Newest") and win._show_ctx["items"][0] is second

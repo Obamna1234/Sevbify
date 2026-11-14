@@ -117,6 +117,7 @@ class UserData:
     video_quality: str = "auto"                   # Settings: video podcasts "auto" | "360" | "480" | "720" | "1080"
     show_playlist_origin: bool = False            # Settings: coloured border = where a playlist came from
     skip_sponsors: bool = True                    # Settings: SponsorBlock for YouTube episodes (hash prefix only)
+    ad_free_podcasts: bool = True                 # Settings: play a podcast episode's YouTube version (no inserted ads)
     lyrics_enabled: bool = True                   # Settings: Lyrics button (your .lrc files, or LRCLIB online)
     audio_device: str = ""                        # Connect: VLC output device id ("" = Windows' default)
     playlist_files: bool = True                   # Settings: keep .m3u8 playlist files next to downloads
@@ -166,7 +167,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
-    "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
+    "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders", "language", "save_space")
 
@@ -256,6 +257,7 @@ class Storage:
                 "lyrics_enabled": bool(data.lyrics_enabled),
                 "show_playlist_origin": bool(data.show_playlist_origin),
                 "skip_sponsors": bool(data.skip_sponsors),
+                "ad_free_podcasts": bool(data.ad_free_podcasts),
                 "audio_device": data.audio_device,
                 "playlist_files": bool(data.playlist_files),
                 "folders": list(data.folders),
@@ -343,6 +345,7 @@ class Storage:
         data.lyrics_enabled = bool(settings.get("lyrics_enabled", True))
         data.show_playlist_origin = bool(settings.get("show_playlist_origin", False))
         data.skip_sponsors = bool(settings.get("skip_sponsors", True))
+        data.ad_free_podcasts = bool(settings.get("ad_free_podcasts", True))
         data.audio_device = str(settings.get("audio_device") or "")
         data.playlist_files = bool(settings.get("playlist_files", True))
         data.folders = [str(f) for f in settings.get("folders", []) or [] if str(f).strip()]
