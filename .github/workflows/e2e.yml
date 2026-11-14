@@ -1,0 +1,228 @@
+name: End-to-end
+
+# After every green "Build & test" on main (or by hand): takes the apps that build just made and uses them like a
+# person would, on several systems: search, stream songs, pause/seek, make a playlist, download a song, follow
+# and play a podcast, open Settings, close the app and check everything is still there after a restart.
+# Every step is pass / FAIL / blocked here (a website refused GitHub's computers, e.g. YouTube's "not a bot"
+# check) / skipped, with a screenshot. The results are on the run's summary page and in the artifacts.
+# Windows 10 and 11 themselves aren't available on GitHub: Windows Server 2022 and 2025 are built on them.
+
+on:
+  workflow_run:
+    workflows: ["Build & test"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build & test run to check (empty = the newest green one on main)"
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: true
+
+jobs:
+  pick:
+    name: Which build
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.r.outputs.run_id }}
+      artifacts: ${{ steps.r.outputs.artifacts }}
+    steps:
+      - id: r
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          FROM_RUN: ${{ github.event.workflow_run.id }}
+          ASKED: ${{ github.event.inputs.run_id }}
+        run: |
+          ID="${ASKED:-$FROM_RUN}"
+          if [ -z "$ID" ]; then
+            ID=$(gh api "repos/$REPO/actions/workflows/build.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].id')
+          fi
+          echo "run_id=$ID" >> "$GITHUB_OUTPUT"
+          A=$(gh api "repos/$REPO/actions/runs/$ID/artifacts?per_page=100" --jq '[.artifacts[]|select(.expired|not)|.name]|join(",")')
+          echo "artifacts=$A" >> "$GITHUB_OUTPUT"
+          echo "Checking build run $ID (artifacts: $A)"
+
+  desktop:
+    name: ${{ matrix.name }}
+    needs: pick
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "Windows 10 (Server 2022)", os: windows-2022, artifact: Sevbify-Windows }
+          - { name: "Windows 11 (Server 2025)", os: windows-2025, artifact: Sevbify-Windows }
+          - { name: "Linux (Ubuntu 22.04)", os: ubuntu-22.04, artifact: Sevbify-Linux }
+          - { name: "Linux (Ubuntu 24.04)", os: ubuntu-24.04, artifact: Sevbify-Linux }
+          - { name: "macOS", os: macos-latest, artifact: Sevbify-macOS }
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Was this app built in that run?
+        id: has
+        env:
+          LIST: ${{ needs.pick.outputs.artifacts }}
+          WANT: ${{ matrix.artifact }}
+        run: |
+          case ",$LIST," in *",$WANT,"*) echo "yes=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "yes=false" >> "$GITHUB_OUTPUT"
+               echo "### ${{ matrix.name }}: not built in this run (macOS is built on release builds and [apple] commits)" >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: steps.has.outputs.yes == 'true'
+        with:
+          name: ${{ matrix.artifact }}
+          run-id: ${{ needs.pick.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: pkg
+      - name: Unpack
+        if: steps.has.outputs.yes == 'true'
+        run: |
+          cd pkg
+          case "${{ runner.os }}" in
+            Windows) unzip -q Sevbify-Windows.zip; echo "APP=$(cygpath -w "$PWD/Sevbify/Sevbify.exe")" >> "$GITHUB_ENV" ;;
+            macOS)   ditto -x -k Sevbify-macOS.zip .; echo "APP=$PWD/Sevbify.app/Contents/MacOS/Sevbify" >> "$GITHUB_ENV" ;;
+            Linux)   tar xzf Sevbify-Linux.tar.gz; echo "APP=$PWD/Sevbify/Sevbify" >> "$GITHUB_ENV"
+                     sudo apt-get update -q >/dev/null
+                     sudo apt-get install -y -q vlc libegl1 libxkbcommon0 libfontconfig1 libdbus-1-3 >/dev/null ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/data" "$GITHUB_WORKSPACE/report"
+          echo "SEVBIFY_DATA_DIR=$RUNNER_TEMP/data" >> "$GITHUB_ENV"
+      - name: Use the app (first run)
+        if: steps.has.outputs.yes == 'true'
+        timeout-minutes: 42
+        run: |
+          set +e
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            pwsh -Command "\$p = Start-Process -FilePath \"$APP\" -ArgumentList '--journey','$GITHUB_WORKSPACE\\report' -PassThru -Wait; exit \$p.ExitCode"
+          else
+            "$APP" --journey "$GITHUB_WORKSPACE/report"
+          fi
+          echo "exit code $?"
+      - name: Close and open it again
+        if: steps.has.outputs.yes == 'true'
+        timeout-minutes: 8
+        run: |
+          set +e
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            pwsh -Command "\$p = Start-Process -FilePath \"$APP\" -ArgumentList '--journey-again','$GITHUB_WORKSPACE\\report' -PassThru -Wait; exit \$p.ExitCode"
+          else
+            "$APP" --journey-again "$GITHUB_WORKSPACE/report"
+          fi
+          echo "exit code $?"
+      - name: Results
+        if: steps.has.outputs.yes == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, os
+          out = os.path.join(os.environ["GITHUB_WORKSPACE"], "report")
+          name = "${{ matrix.name }}"
+          icons = {"pass": "✅ pass", "fail": "❌ FAIL", "blocked": "🚫 blocked here", "skipped": "⏭ skipped"}
+          rows, failed, info = [], 0, {}
+          for part in ("journey", "again"):
+              try:
+                  d = json.load(open(os.path.join(out, part + ".json"), encoding="utf-8"))
+              except (OSError, ValueError):
+                  rows.append(f"| {'First run' if part == 'journey' else 'Restart'} | ❌ FAIL | the app didn't finish (crashed or hung) |")
+                  failed += 1
+                  continue
+              info = info or d.get("info", {})
+              for s in d["steps"]:
+                  failed += s["status"] == "fail"
+                  rows.append(f"| {s['step']} | {icons.get(s['status'], s['status'])} | "
+                              + s["detail"].replace("|", "/").replace("\n", " ")[:300] + " |")
+              for t in d.get("dialogs", []):
+                  rows.append(f"| A box popped up by itself | ⚠ note | {t.replace('|', '/')} |")
+          if os.path.exists(os.path.join(out, "errors.txt")):
+              rows.append("| Unexpected errors | ❌ FAIL | see errors.txt in the artifact |")
+              failed += 1
+          text = f"### {name}\n\n| Step | Result | Details |\n|---|---|---|\n" + "\n".join(rows) + \
+                 f"\n\n{info.get('system', '')}\n"
+          open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write(text)
+          print(text)
+          open(os.path.join(out, "failed.txt"), "w").write(str(failed))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && steps.has.outputs.yes == 'true'
+        with:
+          name: e2e-${{ matrix.os }}
+          path: |
+            report/*.png
+            report/*.json
+            report/*.md
+            report/*.txt
+          retention-days: 14
+      - name: Pass or fail
+        if: steps.has.outputs.yes == 'true'
+        run: |
+          N=$(cat report/failed.txt 2>/dev/null || echo 1)
+          if [ "$N" != "0" ]; then echo "::error title=${{ matrix.name }}::$N step(s) failed. See the summary."; exit 1; fi
+
+  android:
+    name: Android (emulator)
+    needs: pick
+    if: contains(needs.pick.outputs.artifacts, 'Sevbify-Android')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Sevbify-Android
+          run-id: ${{ needs.pick.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Enable KVM (fast emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Use the app on an emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb wait-for-device; sleep 30
+            adb install -r -g "$(ls Sevbify-Android*.apk | head -1)"
+            adb shell pm grant com.obamna1234.sevbify android.permission.POST_NOTIFICATIONS || true
+            adb logcat -G 16M || true
+            python3 tools/android_journey.py android-journey || true
+      - name: Results
+        if: always()
+        run: |
+          cat android-journey/journey.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null \
+            || echo "### Android: the check didn't finish" >> "$GITHUB_STEP_SUMMARY"
+          cat android-journey/journey.md 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: e2e-android
+          path: android-journey
+          retention-days: 14
+      - name: Pass or fail
+        run: |
+          python3 -c "
+          import json, sys
+          s = json.load(open('android-journey/journey.json'))['steps']
+          bad = [x['step'] for x in s if x['status'] == 'fail']
+          print('failed:', bad); sys.exit(1 if bad else 0)"

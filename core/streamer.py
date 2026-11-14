@@ -205,13 +205,15 @@ def _find(line, key, duration_ms, source, extract):
     e = downloader.engine()
     extract = extract or (lambda page: _extract(e, page))
     found = {}
+    search_errors = {}                  # why a search came back empty (kept for the message, e.g. "not a bot")
 
     def bandcamp():
         t = time.time()
         try:
             bc = e.search_bandcamp(line)
-        except Exception:
+        except Exception as exc:
             bc = {}
+            search_errors["Bandcamp"] = str(exc)[:300]
         found["bc"] = bc if (bc or {}).get("found") and bc.get("url") else None
         timings["bandcamp"] = round(time.time() - t, 1)
 
@@ -219,8 +221,9 @@ def _find(line, key, duration_ms, source, extract):
         t = time.time()
         try:
             found["yt"] = _pick_youtube(e, line, int((duration_ms or 0) / 1000))
-        except Exception:
+        except Exception as exc:
             found["yt"] = None
+            search_errors["YouTube"] = str(exc)[:300]
         timings["youtube_search"] = round(time.time() - t, 1)
 
     def candidates():
@@ -277,7 +280,10 @@ def _find(line, key, duration_ms, source, extract):
             _pages[key] = (name, page)
         _save_pages()
         return result
-    raise NoFullSong(str(last) if last else "not found on Bandcamp or YouTube")
+    if last:
+        raise NoFullSong(str(last))
+    why = "; ".join(f"{k} search failed: {v}" for k, v in search_errors.items())
+    raise NoFullSong("not found on Bandcamp or YouTube" + (f" ({why})" if why else ""))
 
 
 def youtube_page(artist, title, duration_ms=0, search=True):

@@ -316,3 +316,30 @@ def test_url_works_only_says_no_when_the_server_clearly_refuses(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", hiccup)
     assert streamer.url_works("https://cdn/a", {}) is True            # can't tell: let the player try
     assert streamer.url_works("http://cdn/a", {}) is True             # only https links are checked
+
+
+def test_not_found_says_why_the_searches_failed(monkeypatch):
+    """"Not found" keeps the reason a search failed (e.g. YouTube's bot check), for Playback status and the
+    end-to-end test."""
+    from core import streamer, downloader
+    e = downloader.engine()
+    monkeypatch.setattr(e, "search_bandcamp", lambda line: (_ for _ in ()).throw(OSError("Bandcamp is down")))
+    monkeypatch.setattr(streamer, "_pick_youtube", lambda *a: (_ for _ in ()).throw(
+        RuntimeError("Sign in to confirm you're not a bot")))
+    streamer.clear_cache()
+    import pytest
+    with pytest.raises(streamer.NoFullSong) as err:
+        streamer.find_full_song("Nobody", "Nothing Song Xyz")
+    assert "not a bot" in str(err.value) and "Bandcamp is down" in str(err.value)
+
+
+def test_journey_report_table(tmp_path):
+    import json
+    from ui.journey import write_markdown
+    (tmp_path / "journey.json").write_text(json.dumps({"info": {"system": "Test 1"}, "steps": [
+        {"step": "Stream a song (YouTube)", "status": "blocked", "detail": "not a bot", "seconds": 3},
+        {"step": "Download a song", "status": "fail", "detail": "no file | here", "seconds": 9}],
+        "dialogs": ["Update available"]}))
+    md = write_markdown(str(tmp_path), "T")
+    assert "🚫 blocked here" in md and "❌ FAIL" in md and "no file \\| here" in md
+    assert "Restart check | ❌ FAIL" in md and "Update available" in md

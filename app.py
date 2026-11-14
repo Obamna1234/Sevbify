@@ -22,6 +22,10 @@ from PyQt6.QtCore import QTimer
 # (or non-zero on any error) without showing pop-ups. Used by the automatic
 # Windows build to check the packaged .exe really works.
 SMOKE_TEST = "--smoke-test" in sys.argv
+# "--journey <folder>" / "--journey-again <folder>": the automatic end-to-end check (ui/journey.py). Uses a
+# separate data folder (SEVBIFY_DATA_DIR) set by the test, never yours.
+JOURNEY = next((a for a in ("--journey", "--journey-again") if a in sys.argv), "")
+JOURNEY_DIR = sys.argv[sys.argv.index(JOURNEY) + 1] if JOURNEY and sys.argv.index(JOURNEY) + 1 < len(sys.argv) else ""
 
 
 if sys.platform.startswith("linux"):
@@ -221,6 +225,13 @@ def install_error_guard():
         if SMOKE_TEST:
             _smoke_log("UNEXPECTED ERROR:\n" + details)
             os._exit(3)
+        if JOURNEY:
+            try:
+                with open(os.path.join(JOURNEY_DIR, "errors.txt"), "a", encoding="utf-8") as f:
+                    f.write(details + "\n")
+            except OSError:
+                pass
+            return
         if time.time() - last_shown[0] > 10:  # don't flood the user with pop-ups
             last_shown[0] = time.time()
             from PyQt6.QtWidgets import QApplication
@@ -296,7 +307,8 @@ def main():
     #    crashing with a traceback.
     try:
         from ui.main_window import MainWindow
-        window = MainWindow()
+        # Test computers have no sound card: the end-to-end check plays through VLC's silent output.
+        window = MainWindow(vlc_args=("--aout=adummy",) if JOURNEY else ())
     except Exception as e:
         _log_stderr(traceback.format_exc())
         text = str(e) or e.__class__.__name__
@@ -367,6 +379,21 @@ def main():
 
         window.library_loaded.connect(loaded)
         QTimer.singleShot(60000, timed_out)
+
+    if JOURNEY:
+        def journey():
+            from ui.journey import Journey, write_markdown
+            j = Journey(window, JOURNEY_DIR)
+            try:
+                code = j.run() if JOURNEY == "--journey" else j.run_again()
+            except Exception:
+                j.record("Journey itself", "fail", traceback.format_exc(), shot="")
+                code = j.finish("journey" if JOURNEY == "--journey" else "again") or 1
+            write_markdown(JOURNEY_DIR, f"Sevbify end-to-end ({sys.platform})")
+            window.close()
+            app.exit(code)
+        QTimer.singleShot(1500, journey)
+        QTimer.singleShot(40 * 60 * 1000, lambda: os._exit(9))       # never hang the test computer
 
     # 3. Run the application event loop
     code = app.exec()

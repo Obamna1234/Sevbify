@@ -1,0 +1,343 @@
+"""End-to-end check of the real, packaged app: what a person does in their first ten minutes.
+
+Run by the automatic tests ("End-to-end" workflow) as  Sevbify --journey <report folder>  and then, after the app
+has closed,  Sevbify --journey-again <report folder>  (checks what you did is still there after a restart).
+
+It works the app through its own controls (typing in the search box, the same play/download/follow calls the
+buttons make), waits for real results from the internet, takes a screenshot after every step, and writes
+journey.json + journey.md. Every step ends as exactly one of:
+
+  pass     it really happened (e.g. the song's position moved on for several seconds)
+  fail     it didn't, and nothing outside Sevbify explains it
+  blocked  a website refused this test computer (YouTube's "confirm you're not a bot" check refuses cloud
+           computers); this says nothing either way about how it works on a home connection
+  skipped  an earlier step it needs failed
+
+Nothing is marked "pass" on a guess. Test computers have no speakers, so sound goes to VLC's silent output: the
+check is that VLC decodes the stream and the position moves, which is what goes wrong when "songs don't play".
+"""
+import json
+import os
+import sys
+import time
+import traceback
+
+from PyQt6.QtWidgets import QApplication
+
+BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests")
+
+# Songs picked because they are reliably online: one Bandcamp has (Bandcamp works from cloud computers), and one
+# only on YouTube (tells us whether YouTube refuses this computer).
+BANDCAMP_SONG = ("Perturbator", "Future Club")
+YOUTUBE_SONG = ("Kevin MacLeod", "Monkeys Spinning Monkeys")
+PODCAST_SEARCH = "NPR News Now"
+
+
+class Journey:
+    def __init__(self, window, out_dir):
+        self.w = window
+        self.app = QApplication.instance()
+        self.out = out_dir
+        os.makedirs(out_dir, exist_ok=True)
+        self.steps = []
+        self.started = time.time()
+        self.dialogs = []
+        # A box that pops up on its own (an update offer, a warning) would wait forever for a click here: it is
+        # written down (a person would have seen it) and closed.
+        from PyQt6.QtCore import QTimer
+        self._dialog_timer = QTimer()
+        self._dialog_timer.timeout.connect(self._close_dialogs)
+        self._dialog_timer.start(1000)
+
+    def _close_dialogs(self):
+        box = self.app.activeModalWidget()
+        if box is None:
+            return
+        text = " ".join(filter(None, [box.windowTitle()] + [getattr(box, "text", lambda: "")()]))[:400]
+        self.dialogs.append(text)
+        print(f"[journey] dialog popped up and was closed: {text}", flush=True)
+        box.reject() if hasattr(box, "reject") else box.close()
+
+    # ------------------------------------------------------------------ helpers
+    def wait(self, cond, seconds):
+        end = time.time() + seconds
+        while time.time() < end:
+            self.app.processEvents()
+            try:
+                if cond():
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.05)
+        self.app.processEvents()
+        try:
+            return bool(cond())
+        except Exception:
+            return False
+
+    def shot(self, name):
+        try:
+            self.app.processEvents()
+            path = os.path.join(self.out, f"{len(self.steps) + 1:02d}-{name}.png")
+            self.w.grab().save(path)
+            return os.path.basename(path)
+        except Exception:
+            return ""
+
+    def record(self, name, status, detail, shot=None, seconds=None):
+        self.steps.append({"step": name, "status": status, "detail": str(detail)[:1500],
+                           "seconds": round(seconds, 1) if seconds is not None else None,
+                           "screenshot": shot if shot is not None else self.shot(
+                               "".join(c if c.isalnum() else "-" for c in name.lower()).strip("-"))})
+        print(f"[journey] {status.upper():8} {name}: {str(detail)[:300]}", flush=True)
+
+    def run_step(self, name, fn, needs=None):
+        if needs and any(self._status(n) not in ("pass",) for n in needs):
+            self.record(name, "skipped", "needs: " + ", ".join(needs), shot="")
+            return
+        t0 = time.time()
+        try:
+            status, detail = fn()
+        except Exception:
+            status, detail = "fail", "crashed:\n" + traceback.format_exc()
+        self.record(name, status, detail, seconds=time.time() - t0)
+
+    def _status(self, name):
+        return next((s["status"] for s in self.steps if s["step"] == name), "missing")
+
+    def position_moves(self, seconds=6):
+        """True when VLC really plays: playing state and the position moving forward."""
+        w = self.w
+        if not self.wait(lambda: w._reached_playing, 90):
+            return False, "never started playing (90 s)"
+        a = w.player.get_time()
+        self.wait(lambda: False, seconds)
+        b = w.player.get_time()
+        if b - a < (seconds - 2) * 1000:
+            return False, f"started, but the position only moved {b - a} ms in {seconds} s"
+        return True, f"position moved {b - a} ms in {seconds} s"
+
+    def blocked_reason(self, text):
+        t = str(text).lower()
+        return any(word in t for word in BOT_WORDS)
+
+    # ------------------------------------------------------------------ steps
+    def step_opens(self):
+        ok = self.wait(lambda: self.w.isVisible(), 20)
+        return ("pass" if ok else "fail"), f"window open, {len(self.w.songs)} songs in the library"
+
+    def step_search(self):
+        w = self.w
+        w.show_search()
+        w.search_input.setText(" ".join(reversed(BANDCAMP_SONG)) + " " + BANDCAMP_SONG[0])
+        ok = self.wait(lambda: w.web_table.isVisible() and w.web_table.songs_in_view(), 45)
+        if not ok:
+            return "fail", "no web results after 45 s; status says: " + w.search_web_status.text()
+        songs = w.web_table.songs_in_view()
+        return "pass", f"{len(songs)} results, first: {songs[0].artist} - {songs[0].title}"
+
+    def _find_song(self, artist, title):
+        from core import streamer
+        res, err = {}, []
+        self.w.online_call(streamer.find_full_song, artist, title, 0, self.w.user_data.download_source,
+                           on_done=res.update, on_error=err.append)
+        self.wait(lambda: res or err, 180)
+        return res, (err[0] if err else None)
+
+    def _play_found(self, artist, title):
+        """Look the song up the way playback does, then play it from the search results and check it plays."""
+        w = self.w
+        res, err = self._find_song(artist, title)
+        if err is not None:
+            if self.blocked_reason(err):
+                return "blocked", f"refused by the website: {err}"
+            return "fail", f"song not found: {err}"
+        from core.online.models import OnlineTrack
+        from core.online.remote_song import RemoteSong
+        hits = [s for s in w.web_table.songs_in_view() if title.lower() in s.title.lower()] if w.web_table.isVisible() else []
+        song = hits[0] if hits else RemoteSong(OnlineTrack(title, artist, source="deezer"))
+        w.play_song(song, queue=[song], source="Journey")
+        ok, how = self.position_moves()
+        timings = res.get("timings")
+        detail = f"source: {res.get('source')}; {how}" + (f"; lookup timings: {timings}" if timings else "")
+        return ("pass" if ok else "fail"), detail
+
+    def step_stream_bandcamp(self):
+        return self._play_found(*BANDCAMP_SONG)
+
+    def step_stream_youtube(self):
+        return self._play_found(*YOUTUBE_SONG)
+
+    def step_pause_resume_skip(self):
+        w = self.w
+        w.play_pause_song()
+        paused_at = w.player.get_time()
+        self.wait(lambda: False, 2)
+        still = abs(w.player.get_time() - paused_at) < 500
+        w.play_pause_song()
+        resumed = self.wait(lambda: w.player.get_time() > paused_at + 1000, 10)
+        if not (still and resumed):
+            return "fail", f"pause held: {still}, resumed: {resumed}"
+        w.player.set_time(60_000)
+        moved = self.wait(lambda: w.player.get_time() >= 59_000, 10)
+        return ("pass" if moved else "fail"), f"pause held, resumed, seek to 1:00 {'worked' if moved else 'did not move'}"
+
+    def step_download(self):
+        w = self.w
+        from core.online.models import OnlineTrack
+        from core.online.remote_song import RemoteSong
+        song = RemoteSong(OnlineTrack(BANDCAMP_SONG[1], BANDCAMP_SONG[0], source="deezer"))
+        folder = w.download_folder()
+        added = w.download_songs([song])
+        if not added:
+            return "fail", "the download didn't start"
+        done = self.wait(lambda: not w.downloads.is_busy(), 300)
+        files = [os.path.join(r, f) for r, _d, fs in os.walk(folder) for f in fs
+                 if f.lower().endswith((".mp3", ".m4a", ".flac", ".opus", ".ogg"))]
+        if not done:
+            notes = "; ".join(f"{t}: {state} {note}" for _k, state, t, _a, note in w.downloads.items())
+            return "fail", f"still downloading after 5 minutes ({w.downloads.summary()}; {notes})"
+        if not files:
+            summary = "; ".join(f"{t}: {state} {note}" for _k, state, t, _a, note in w.downloads.items()) or "no notes"
+            if self.blocked_reason(summary):
+                return "blocked", f"refused by the website: {summary}"
+            return "fail", f"finished but no song file in {folder}: {summary}"
+        size = os.path.getsize(files[0])
+        if size < 500_000:
+            return "fail", f"{os.path.basename(files[0])} is only {size} bytes"
+        return "pass", f"{os.path.basename(files[0])} ({size // 1024} KB) in {folder}"
+
+    def step_podcast(self):
+        w = self.w
+        from core import podcasts
+        found = []
+        w.online_call(podcasts.search, w.net, PODCAST_SEARCH, 10, "us", on_done=found.extend,
+                      on_error=lambda e: found.append(e))
+        if not self.wait(lambda: found, 45) or isinstance(found[0], Exception) or not found:
+            return "fail", f"podcast search gave nothing: {found[:1]}"
+        show = found[0]
+        w.open_show(show, follow=True)
+        ok = self.wait(lambda: w._show_ctx and w._show_ctx["items"], 60)
+        if not ok:
+            return "fail", f"{show.title}: no episodes loaded"
+        ep = w._show_ctx["items"][0]
+        w.play_song(ep, queue=w._show_ctx["items"][:3], source=show.title)
+        played, how = self.position_moves()
+        followed = w.is_followed(w._show_ctx["obj"].key)
+        return ("pass" if played and followed else "fail"), \
+            f"{show.title}: {len(w._show_ctx['items'])} episodes, followed: {followed}, latest episode: {how}"
+
+    def step_settings(self):
+        w = self.w
+        w.open_settings()
+        ok = self.wait(lambda: w.stack.currentWidget() is getattr(w, "settings_page", None), 5)
+        return ("pass" if ok else "fail"), "settings page shown" if ok else "settings page didn't open"
+
+    def step_playlist(self):
+        w = self.w
+        before = len(w.playlists)
+        pl = w.create_playlist("Journey playlist", [w.current_song] if w.current_song is not None else ())
+        if pl is None or len(w.playlists) != before + 1:
+            return "fail", "no playlist was made"
+        w.save_now()
+        return "pass", f"playlist “{pl.name}” with {len(pl.songs)} song(s)"
+
+    def run(self):
+        w = self.w
+        w.user_data.download_notice_accepted = True    # the one-time "I understand" box (a person clicks Yes)
+        w.user_data.download_folder = os.path.join(self.out, "downloads")
+        self.run_step("App opens", self.step_opens)
+        self.run_step("Search the web", self.step_search, needs=["App opens"])
+        self.run_step("Stream a song (Bandcamp)", self.step_stream_bandcamp, needs=["App opens"])
+        self.run_step("Stream a song (YouTube)", self.step_stream_youtube, needs=["App opens"])
+        playing = next((s for s in ("Stream a song (YouTube)", "Stream a song (Bandcamp)") if self._status(s) == "pass"), None)
+        self.run_step("Pause, resume and seek", self.step_pause_resume_skip, needs=[playing or "Stream a song (Bandcamp)"])
+        self.run_step("Make a playlist", self.step_playlist, needs=["App opens"])
+        self.run_step("Download a song", self.step_download, needs=["App opens"])
+        self.run_step("Find, follow and play a podcast", self.step_podcast, needs=["App opens"])
+        self.run_step("Open Settings", self.step_settings, needs=["App opens"])
+        w.save_now()
+        return self.finish("journey")
+
+    # ------------------------------------------------------------------ after a restart
+    def run_again(self):
+        w = self.w
+        before = self._load("journey")
+        self.run_step("App opens again", self.step_opens)
+
+        def kept():
+            names = [p.name for p in w.playlists]
+            shows = [d.get("title") for d in w.user_data.shows]
+            problems = []
+            if any(s["step"] == "Make a playlist" and s["status"] == "pass" for s in before) and "Journey playlist" not in names:
+                problems.append(f"playlist gone (have {names})")
+            if any(s["step"] == "Find, follow and play a podcast" and s["status"] == "pass" for s in before) and not shows:
+                problems.append("followed podcast gone")
+            downloaded = any(s["step"] == "Download a song" and s["status"] == "pass" for s in before)
+            if downloaded and not self.wait(lambda: any(not getattr(s, "is_remote", False) and
+                                                       BANDCAMP_SONG[1].lower() in s.title.lower() for s in w.songs), 60):
+                problems.append("downloaded song isn't in Your Library")
+            if problems:
+                return "fail", "; ".join(problems)
+            return "pass", f"playlists {names}, podcasts {shows}, {len(w.songs)} songs in the library"
+        self.run_step("Everything is still there after a restart", kept, needs=["App opens again"])
+        local = [s for s in w.songs if not getattr(s, "is_remote", False)]
+
+        def play_local():
+            if not local:
+                return "skipped", "no downloaded song to play"
+            w.play_song(local[0], queue=local, source="Your Library")
+            ok, how = self.position_moves()
+            return ("pass" if ok else "fail"), f"{local[0].title}: {how}"
+        self.run_step("Play the downloaded song", play_local, needs=["App opens again"])
+        return self.finish("again")
+
+    # ------------------------------------------------------------------ report
+    def _load(self, name):
+        try:
+            with open(os.path.join(self.out, name + ".json"), encoding="utf-8") as f:
+                return json.load(f)["steps"]
+        except (OSError, ValueError, KeyError):
+            return []
+
+    def finish(self, name):
+        import platform
+        info = {"system": f"{platform.system()} {platform.release()} ({platform.version()})", "python": sys.version.split()[0],
+                "frozen": bool(getattr(sys, "frozen", False)), "seconds": round(time.time() - self.started)}
+        try:
+            from core import downloader
+            info["yt_dlp"] = downloader.engine().ytdlp_version()
+        except Exception:
+            pass
+        self._dialog_timer.stop()
+        with open(os.path.join(self.out, name + ".json"), "w", encoding="utf-8") as f:
+            json.dump({"info": info, "steps": self.steps, "dialogs": self.dialogs}, f, indent=1)
+        failed = [s for s in self.steps if s["status"] == "fail"]
+        return 1 if failed else 0
+
+
+def write_markdown(out_dir, title):
+    """journey.md: both runs as one table (also shown on the workflow's summary page)."""
+    icons = {"pass": "✅ pass", "fail": "❌ FAIL", "blocked": "🚫 blocked here", "skipped": "⏭ skipped"}
+    lines, info = [f"### {title}", "", "| Step | Result | Details |", "|---|---|---|"], {}
+    for name in ("journey", "again"):
+        try:
+            with open(os.path.join(out_dir, name + ".json"), encoding="utf-8") as f:
+                d = json.load(f)
+        except (OSError, ValueError):
+            if name == "again":
+                lines.append("| Restart check | ❌ FAIL | the app didn't run a second time |")
+            continue
+        info = info or d["info"]
+        for s in d["steps"]:
+            detail = s["detail"].replace("|", "\\|").replace("\n", " ")[:400]
+            secs = f" ({s['seconds']} s)" if s.get("seconds") else ""
+            lines.append(f"| {s['step']}{secs} | {icons.get(s['status'], s['status'])} | {detail} |")
+        for text in d.get("dialogs", []):
+            lines.append(f"| A box popped up by itself | ⚠ note | {text.replace('|', '/')} |")
+    if info:
+        lines += ["", f"{info.get('system')} · yt-dlp {info.get('yt_dlp', '?')}"]
+    text = "\n".join(lines) + "\n"
+    with open(os.path.join(out_dir, "journey.md"), "w", encoding="utf-8") as f:
+        f.write(text)
+    return text
