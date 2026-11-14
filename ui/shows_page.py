@@ -204,11 +204,11 @@ class EpisodeRow(QFrame):
         h = QHBoxLayout(self)
         h.setContentsMargins(16, 16, 16, 16)
         h.setSpacing(20)
-        self.cover = QLabel()
+        self.cover = QLabel(self)            # a parent from the start: a loose label flashed up as its own window
         self.cover.setFixedSize(96, 96)
         self.cover.setStyleSheet(f"background: {theme.ELEVATED}; border-radius: 6px;")
-        self.cover.setVisible(show_cover)
         h.addWidget(self.cover, 0, Qt.AlignmentFlag.AlignTop)
+        self.cover.setVisible(show_cover)
         v = QVBoxLayout()
         v.setSpacing(4)
         t = ElidedLabel(title, 2)

@@ -271,6 +271,7 @@ def _find(line, key, duration_ms, source, extract):
             url, headers, seconds = extract(page)
         except Exception as exc:              # e.g. a Bandcamp track that isn't streamable: try YouTube
             last = exc
+            search_errors[name + " link"] = str(exc)[:300]
             continue
         timings["extract"] = round(time.time() - t, 1); timings["total"] = round(time.time() - t0, 1)
         result = {"url": url, "headers": headers, "page": page, "source": name,
@@ -280,7 +281,7 @@ def _find(line, key, duration_ms, source, extract):
             _pages[key] = (name, page)
         _save_pages()
         return result
-    if last:
+    if last and len(search_errors) <= 1:
         raise NoFullSong(str(last))
     why = "; ".join(f"{k} search failed: {v}" for k, v in search_errors.items())
     raise NoFullSong("not found on Bandcamp or YouTube" + (f" ({why})" if why else ""))

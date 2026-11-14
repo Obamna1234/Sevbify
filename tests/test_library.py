@@ -42,7 +42,16 @@ def test_missing_track_kept_in_playlist(open_window, audio_dir, data_dir):
     assert keep.songs[0].exists and not keep.songs[1].exists
     w2.show_playlist(keep)
     assert "1 missing" in w2.pl_meta.text()
-    assert "(file missing)" in w2.pl_table.item(1, 1).text()
+    row = w2.pl_table.item(1, 1)
+    assert row.text().endswith("⬇") and "moved or deleted" in row.toolTip()      # playable online, not greyed
+    # Downloading it again: the new copy takes its old place in the playlist.
+    queued = []
+    w2.downloads.request = lambda tracks, folder, source: queued.extend(tracks) or len(tracks)
+    w2.user_data.download_notice_accepted = True
+    assert w2.download_again([keep.songs[1]]) == 0          # "Unknown Artist": nothing to look for online
+    gone = keep.songs[1]
+    gone.artist, gone.title = "Some Band", "Second Song"
+    assert w2.download_again([gone]) == 1 and queued[0].title == "Second Song"
 
 
 def test_corrupt_save_file_is_kept_and_defaults_loaded(open_window, audio_dir, data_dir):

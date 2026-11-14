@@ -343,3 +343,24 @@ def test_journey_report_table(tmp_path):
     md = write_markdown(str(tmp_path), "T")
     assert "🚫 blocked here" in md and "❌ FAIL" in md and "no file \\| here" in md
     assert "Restart check | ❌ FAIL" in md and "Update available" in md
+
+
+def test_a_link_vlc_cant_open_is_tried_again_then_saved_first(window, qapp, tmp_path, monkeypatch):
+    """Jet Pack on Windows: the link was found but VLC couldn't open it. Sevbify asks for a fresh link once, then
+    saves the audio to a temporary file and plays that, before giving up."""
+    good = tmp_path / "saved.wav"
+    make_wav(good, 3.0)
+    full_streaming(window)
+    links = iter([str(tmp_path / "broken1.mp3"), str(tmp_path / "broken2.mp3")])
+    for name in ("broken1.mp3", "broken2.mp3"):
+        (tmp_path / name).write_bytes(b"not audio at all" * 100)
+    failed_links = []
+    monkeypatch.setattr(streamer, "find_full_song", lambda *a: {"url": next(links), "headers": {}, "source": "YouTube",
+                                                                "page": "https://www.youtube.com/watch?v=x"})
+    monkeypatch.setattr(streamer, "link_failed", failed_links.append)
+    monkeypatch.setattr(streamer, "download_original_audio", lambda page, out, *a, **k: str(good))
+    song = remote("Jet Pack", "Cassetter")
+    window.play_song(song, queue=[song], source="Test")
+    assert wait_until(qapp, lambda: window._reached_playing, 20)
+    assert failed_links == [str(tmp_path / "broken1.mp3")]
+    assert window.player.get_media().get_mrl().endswith("saved.wav")

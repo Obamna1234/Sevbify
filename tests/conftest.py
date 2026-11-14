@@ -26,9 +26,38 @@ from PyQt6.QtWidgets import QApplication  # noqa: E402
 VLC_TEST_ARGS = ("--aout=adummy", "--no-video", "--quiet")
 
 
+STRAY_WINDOWS = []
+
+
+def _watch_for_stray_windows(app):
+    """A label or button shown before it has a parent pops up as its own little window for a moment (the
+    flickering box when opening a podcast). Every test fails if that happens."""
+    from PyQt6.QtCore import QObject, QEvent, Qt
+    from PyQt6.QtWidgets import QAbstractButton, QDialog, QFrame, QLabel
+
+    class Spy(QObject):
+        def eventFilter(self, obj, event):
+            if event.type() == QEvent.Type.Show and isinstance(obj, (QLabel, QAbstractButton, QFrame)) \
+                    and not isinstance(obj, QDialog) and obj.isWindow() \
+                    and obj.windowType() == Qt.WindowType.Window:
+                STRAY_WINDOWS.append(f"{type(obj).__name__} {obj.width()}x{obj.height()} "
+                                     f"{getattr(obj, 'text', lambda: '')()!r}")
+            return False
+    app._stray_spy = Spy()
+    app.installEventFilter(app._stray_spy)
+
+
+@pytest.fixture(autouse=True)
+def no_stray_windows():
+    STRAY_WINDOWS.clear()
+    yield
+    assert not STRAY_WINDOWS, "widgets flashed up as their own windows: " + "; ".join(STRAY_WINDOWS[:5])
+
+
 @pytest.fixture(scope="session")
 def qapp():
     app = QApplication.instance() or QApplication([])
+    _watch_for_stray_windows(app)
     yield app
     # Let background (online) tasks finish before Python shuts down;
     # Windows crashes if a worker thread outlives the interpreter.

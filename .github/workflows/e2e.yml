@@ -155,6 +155,7 @@ jobs:
           open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write(text)
           print(text)
           open(os.path.join(out, "failed.txt"), "w").write(str(failed))
+          open(os.path.join(out, "journey.md"), "w", encoding="utf-8").write(text)
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always() && steps.has.outputs.yes == 'true'
@@ -165,6 +166,7 @@ jobs:
             report/*.json
             report/*.md
             report/*.txt
+            !report/downloads/**
           retention-days: 14
       - name: Pass or fail
         if: steps.has.outputs.yes == 'true'
@@ -203,7 +205,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             adb wait-for-device; sleep 30
-            adb install -r -g "$(ls Sevbify-Android*.apk | head -1)"
+            adb install -r -g "$(ls Sevbify-Android*.apk | head -1)" || { sleep 20; adb install -r -g "$(ls Sevbify-Android*.apk | head -1)"; }
             adb shell pm grant com.obamna1234.sevbify android.permission.POST_NOTIFICATIONS || true
             adb logcat -G 16M || true
             python3 tools/android_journey.py android-journey || true
@@ -226,3 +228,31 @@ jobs:
           s = json.load(open('android-journey/journey.json'))['steps']
           bad = [x['step'] for x in s if x['status'] == 'fail']
           print('failed:', bad); sys.exit(1 if bad else 0)"
+
+  publish:
+    # Saves every report and screenshot to the e2e-reports branch (one folder per system), so they can be looked at
+    # without downloading artifacts. Only this small job can write, and it runs no third-party code.
+    name: Save reports
+    needs: [pick, desktop, android]
+    if: always() && needs.pick.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: e2e-*
+          path: /tmp/r
+      - name: Push
+        env:
+          TOKEN: ${{ github.token }}
+          RUN_ID: ${{ needs.pick.outputs.run_id }}
+        run: |
+          cd /tmp/r
+          { echo "# End-to-end reports"; echo; echo "Build run $RUN_ID, checked $(date -u '+%Y-%m-%d %H:%M UTC')"; echo
+            for f in */journey.md; do echo "## ${f%%/*}"; cat "$f"; echo; done; } > README.md
+          git init -q -b e2e-reports
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "End-to-end reports for build $RUN_ID"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:e2e-reports || echo "::error title=e2e-reports::push failed"

@@ -48,6 +48,21 @@ class Journey:
         self._dialog_timer = QTimer()
         self._dialog_timer.timeout.connect(self._close_dialogs)
         self._dialog_timer.start(1000)
+        # Labels or buttons that flash up as their own little windows (the flicker when opening a podcast).
+        from PyQt6.QtCore import QObject, QEvent, Qt
+        from PyQt6.QtWidgets import QAbstractButton, QDialog, QFrame, QLabel
+        self.strays = []
+        strays = self.strays
+
+        class Spy(QObject):
+            def eventFilter(self, obj, event):
+                if event.type() == QEvent.Type.Show and isinstance(obj, (QLabel, QAbstractButton, QFrame)) \
+                        and not isinstance(obj, QDialog) and obj.isWindow() \
+                        and obj.windowType() == Qt.WindowType.Window:
+                    strays.append(f"{type(obj).__name__} {obj.width()}x{obj.height()}")
+                return False
+        self._spy = Spy()
+        self.app.installEventFilter(self._spy)
 
     def _close_dialogs(self):
         box = self.app.activeModalWidget()
@@ -198,10 +213,25 @@ class Journey:
             notes = "; ".join(f"{t}: {state} {note}" for _k, state, t, _a, note in w.downloads.items())
             return "fail", f"still downloading after 5 minutes ({w.downloads.summary()}; {notes})"
         if not files:
+            # Why: run the same download again by itself and keep its log (the app shows only a short note).
+            lines = []
+            try:
+                from core import downloader
+                e = downloader.engine()
+                import tempfile
+                bc = e.search_bandcamp(f"{BANDCAMP_SONG[0]} - {BANDCAMP_SONG[1]}")
+                lines.append(f"Bandcamp search: {bc}")
+                if bc.get("url"):
+                    e.download_bandcamp_mp3(bc["url"], f"{BANDCAMP_SONG[0]} - {BANDCAMP_SONG[1]}", tempfile.mkdtemp(),
+                                            lines.append)
+            except Exception as exc:
+                lines.append(f"diagnosis broke: {exc!r}")
+            with open(os.path.join(self.out, "download-log.txt"), "w", encoding="utf-8") as f:
+                f.write("\n".join(map(str, lines)))
             summary = "; ".join(f"{t}: {state} {note}" for _k, state, t, _a, note in w.downloads.items()) or "no notes"
             if self.blocked_reason(summary):
                 return "blocked", f"refused by the website: {summary}"
-            return "fail", f"finished but no song file in {folder}: {summary}"
+            return "fail", f"finished but no song file: {summary} | log: " + " / ".join(map(str, lines))[-900:]
         size = os.path.getsize(files[0])
         if size < 500_000:
             return "fail", f"{os.path.basename(files[0])} is only {size} bytes"
@@ -310,6 +340,9 @@ class Journey:
         except Exception:
             pass
         self._dialog_timer.stop()
+        self.steps.append({"step": "No windows flashing up", "status": "fail" if self.strays else "pass",
+                           "detail": (f"{len(self.strays)} flashed up, e.g. " + ", ".join(self.strays[:5]))
+                           if self.strays else "none", "seconds": None, "screenshot": ""})
         with open(os.path.join(self.out, name + ".json"), "w", encoding="utf-8") as f:
             json.dump({"info": info, "steps": self.steps, "dialogs": self.dialogs}, f, indent=1)
         failed = [s for s in self.steps if s["status"] == "fail"]

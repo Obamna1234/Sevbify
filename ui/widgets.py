@@ -1,7 +1,7 @@
 """Small reusable widgets in Spotify's style."""
 from PyQt6.QtWidgets import QAbstractButton, QSizePolicy
 from PyQt6.QtGui import QPainter, QColor
-from PyQt6.QtCore import Qt, QSize, QRectF, QPointF, pyqtSignal
+from PyQt6.QtCore import Qt, QSize, QRectF, QPointF, QObject, pyqtSignal
 
 from . import theme
 
@@ -198,3 +198,64 @@ class ZoomPreview(QAbstractButton):
         p.setPen(QColor(theme.TEXT if on else theme.SUBDUED))
         p.drawText(QRectF(0, self.height() - 22, self.width(), 20), Qt.AlignmentFlag.AlignCenter, self.label)
         p.end()
+
+
+class HoverHint(QObject):
+    """Spotify-style labels for the player bar's buttons: a small dark label just above the button, shown quickly
+    (a quarter of a second) instead of Qt's slower tooltip by the mouse pointer. The text is the button's tooltip,
+    so it can change (Mute / Unmute) like before. Install once per button with HoverHint.attach(button)."""
+    _label = None
+    _instances = []
+
+    def __init__(self, button):
+        super().__init__(button)
+        from PyQt6.QtCore import QTimer
+        self.button = button
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(250)
+        self.timer.timeout.connect(self._show)
+        button.installEventFilter(self)
+
+    @classmethod
+    def attach(cls, button):
+        cls._instances.append(cls(button))
+        return button
+
+    @classmethod
+    def _bubble(cls):
+        from PyQt6.QtWidgets import QLabel
+        if cls._label is None:
+            lab = QLabel()
+            lab.setWindowFlags(Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint)
+            lab.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+            lab.setStyleSheet("QLabel { background: #282828; color: white; padding: 5px 9px; border-radius: 4px;"
+                              " font-size: 13px; font-weight: 600; }")
+            cls._label = lab
+        return cls._label
+
+    def _show(self):
+        b = self.button
+        text = b.toolTip()
+        if not text or not b.isVisible() or not b.underMouse():
+            return
+        lab = self._bubble()
+        lab.setText(text)
+        lab.adjustSize()
+        top = b.mapToGlobal(b.rect().topLeft())
+        lab.move(top.x() + (b.width() - lab.width()) // 2, top.y() - lab.height() - 6)
+        lab.show()
+        lab.raise_()
+
+    def eventFilter(self, obj, event):
+        from PyQt6.QtCore import QEvent
+        t = event.type()
+        if t == QEvent.Type.ToolTip:
+            return True                      # our own label instead of Qt's tooltip
+        if t == QEvent.Type.Enter:
+            self.timer.start()
+        elif t in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress, QEvent.Type.Hide):
+            self.timer.stop()
+            if HoverHint._label is not None:
+                HoverHint._label.hide()
+        return False

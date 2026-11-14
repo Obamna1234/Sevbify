@@ -201,6 +201,7 @@ class TrackTable(QTableWidget):
 
         self._current_key = None
         self.mark_pending = False      # playlists: show "⬇" on songs not downloaded yet
+        self.online = self._window_online   # songs not on this computer are only greyed out when offline
         # Set by the main window: key -> (state, note) from the download manager, so rows can show
         # "Queued", "Downloading…" or "Download failed".
         self.download_state = None
@@ -278,10 +279,12 @@ class TrackTable(QTableWidget):
                     item.setToolTip(tip)
                 dur.setText((format_time(song.duration) if song.duration else "--:--") + ("  · 30s" if song.is_preview else ""))
             elif not song.exists:
-                title.setText(f"{song.title}  (file missing)")
+                # Moved or deleted: still playable online, and ready to download again (not greyed out).
+                title.setText(f"{song.title}   ⬇")
                 for item in (num, title, artist, album, dur):
-                    item.setForeground(QBrush(DIM))
-                    item.setToolTip(f"File not found:\n{song.file_path}")
+                    item.setToolTip("The downloaded file was moved or deleted, so this plays online.\n"
+                                    "Right-click → Download again to keep it on this computer.\n"
+                                    f"Was: {song.file_path}")
         if self._sortable:
             self.setSortingEnabled(True)
         self._hover_row = -1
@@ -302,6 +305,11 @@ class TrackTable(QTableWidget):
             if song is not None:
                 self.item(row, 1).setIcon(_thumb(song.album_cover_path))
 
+    def _window_online(self):
+        w = self.window()
+        net = getattr(w, "net", None)
+        return bool(getattr(w, "online_enabled", True)) and getattr(net, "online", None) is not False
+
     def song_at(self, row):
         item = self.item(row, 1)
         return item.data(SONG_ROLE) if item else None
@@ -316,11 +324,12 @@ class TrackTable(QTableWidget):
     def _apply_highlight(self):
         for row in range(self.rowCount()):
             song = self.song_at(row)
-            if song is None or (not song.exists and not getattr(song, "is_remote", False)):
+            if song is None:
                 continue
             current = song.key == self._current_key
-            if getattr(song, "is_remote", False) and self.mark_pending and not current:
-                # Not downloaded yet: greyed out so it's obvious, online or offline.
+            pending = getattr(song, "is_remote", False) or not song.exists
+            if pending and not self.online() and not current:
+                # Not on this computer and you're offline: can't play now, so greyed out.
                 for col in range(5):
                     self.item(row, col).setForeground(QBrush(DIM))
                 continue

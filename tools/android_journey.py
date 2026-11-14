@@ -129,13 +129,27 @@ def stream(query, must_contain):
 
 def main():
     ui.clear_anr()
-    ui.sh(f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
-    time.sleep(20)                         # the first start unpacks Python
-    ui.clear_anr()
+    installed = PKG in ui.sh("pm list packages")
 
     def opens():
-        focus = ui.sh("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'")
-        return ("pass" if PKG in focus else "fail"), focus.strip()[:300]
+        if not installed:
+            return "fail", "Sevbify isn't installed on the emulator (the install step failed)"
+        focus = ""
+        for attempt in range(3):
+            ui.sh(f"am start -W -n {PKG}/com.sevbify.app.MainActivity")
+            for _ in range(30):                # the first start unpacks Python
+                time.sleep(2)
+                ui.clear_anr()
+                focus = ui.sh("dumpsys window | grep mCurrentFocus")
+                if PKG in focus:
+                    break
+            if PKG in focus:
+                break
+        if PKG not in focus:
+            return "fail", f"Sevbify never came to the front ({focus.strip()[:200]})"
+        time.sleep(8)
+        labels = [n[0] or n[1] for n in ui.nodes() if n[0] or n[1]][:25]
+        return "pass", "on screen: " + ", ".join(labels)
     run("App opens", opens)
     run("Stream a song (Bandcamp)", lambda: stream("perturbator future club", "Future Club"), needs=["App opens"])
     run("Stream a song (YouTube)", lambda: stream("kevin macleod monkeys spinning monkeys", "Monkeys"),

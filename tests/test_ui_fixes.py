@@ -377,3 +377,19 @@ def test_seek_by_and_go_to_artist(window, qapp):
     # Online: the artist's own page (popular songs, releases); offline: a search for them
     assert (window.stack.currentWidget() is window.genre_page and window.genre_page.title == "Mega Drive") or \
         (window.stack.currentWidget() is window.search_page and window.search_input.text() == "Mega Drive")
+
+
+def test_player_bar_buttons_have_spotify_labels_and_lyrics_can_be_unavailable(window, qapp):
+    from ui.widgets import HoverHint
+    names = {b.toolTip() for b in window.player_bar.findChildren(type(window.queue_btn))}
+    for want in ("Lyrics", "Now playing view", "Queue", "Connect to a device", "Open Miniplayer", "Enter Full screen"):
+        assert want in names
+    assert any(h.button is window.queue_btn for h in HoverHint._instances)
+    window._set_lyrics_available(False)
+    from PyQt6.QtCore import Qt
+    assert window.lyrics_btn.cursor().shape() == Qt.CursorShape.ForbiddenCursor
+    before = window.stack.currentWidget()
+    window.toggle_lyrics()                                  # does nothing: no lyrics for this song
+    assert window.stack.currentWidget() is before
+    window._set_lyrics_available(True)
+    assert window.lyrics_btn.toolTip() == "Lyrics"

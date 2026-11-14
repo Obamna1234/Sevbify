@@ -919,6 +919,8 @@ class MainWindow(ShowsMixin, QMainWindow):
                 menu.addAction("⬇  Save for later").triggered.connect(lambda: self.save_for_later(song))
         elif song.exists:
             menu.addAction("📂  Show in folder").triggered.connect(lambda: reveal_in_file_manager(song.file_path))
+        elif has_artist:
+            menu.addAction("⬇  Download again").triggered.connect(lambda: self.download_again([song]))
         if saved_genre is not None and saved_index is not None:
             menu.addAction("✕  Remove from To download").triggered.connect(
                 lambda: self.remove_saved(saved_genre, saved_index))
@@ -929,7 +931,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         menu.addSeparator()
         play = menu.addAction("▶  Play")
-        play.setEnabled(song.exists or is_remote)
+        play.setEnabled(song.exists or is_remote or (self.online_enabled and has_artist))
         play.triggered.connect(lambda: self.play_song(song, queue=queue, source=source))
         if is_remote or has_artist:
             pv = menu.addAction("▷  Preview (30 s)")
@@ -994,6 +996,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         pending = [s for s in songs if getattr(s, "is_remote", False)]
         if pending:
             menu.addAction(f"⬇  Download {len(pending)}").triggered.connect(lambda: self.download_songs(pending))
+        gone = [s for s in songs if not getattr(s, "is_remote", False) and not s.exists]
+        if gone:
+            menu.addAction(f"⬇  Download {len(gone)} again (file missing)").triggered.connect(
+                lambda: self.download_again(gone))
         if playlist is not None and rows:
             menu.addAction(f"✕  Remove {n} from this playlist").triggered.connect(
                 lambda: self.remove_rows_from_playlist(playlist, rows))
@@ -1346,8 +1352,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         rh.addStretch()
         self.lyrics_btn = self._icon_button("Lyrics", self.toggle_lyrics)
         self.lyrics_btn.setIcon(icons.lyrics(icons.GREY))
-        self.lyrics_btn.setVisible(bool(getattr(self.user_data, "lyrics_enabled", True)))
         rh.addWidget(self.lyrics_btn)
+        self.lyrics_btn.setVisible(bool(getattr(self.user_data, "lyrics_enabled", True)))
         self.nowplaying_btn = self._icon_button("Now playing view", lambda: self.toggle_right_panel("nowplaying"))
         rh.addWidget(self.nowplaying_btn)
         self.queue_btn = self._icon_button("Queue", lambda: self.toggle_right_panel("queue"))
@@ -1368,12 +1374,16 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.mini_btn = self._icon_button("Open Miniplayer", self.open_mini_player)
         self.mini_btn.setIcon(icons.mini_player(theme.SUBDUED, 18))
         rh.addWidget(self.mini_btn)
-        self.fullscreen_btn = self._icon_button("Full screen (F11)", self.open_full_screen)
+        self.fullscreen_btn = self._icon_button("Enter Full screen", self.open_full_screen)
         self.fullscreen_btn.setIcon(icons.fullscreen(theme.SUBDUED, 18))
         rh.addWidget(self.fullscreen_btn)
         self.mini_player = None
         self.full_screen_view = None
         row.addWidget(right, 3)
+        # Spotify-style labels above the player bar's buttons (Lyrics, Queue, Connect to a device, Mute, ...).
+        from .widgets import HoverHint
+        for b in self.player_bar.findChildren(QPushButton):
+            HoverHint.attach(b)
 
         self._update_mode_buttons()
         self._set_play_icon(False)
@@ -1707,6 +1717,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         elif state == vlc.State.Error or (state == vlc.State.Ended and not self._reached_playing):
             # VLC reports some unreadable files as "Ended" without ever playing.
             self._track_handled = True
+            if self._retry_stream():
+                return
             self._handle_failed_track("could not be played (unsupported or corrupt file)")
         elif state in (vlc.State.Opening, vlc.State.Buffering, vlc.State.NothingSpecial):
             self._open_elapsed_ms += self.timer.interval()
@@ -4143,6 +4155,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         if song is None:
             return
         self.current_song = song
+        self._check_lyrics(song)
         if not self.private_session:
             self.pq.record_played(song)
         self._notify_track(song)
@@ -4184,9 +4197,15 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._stream_full_song(song)
                 return
         elif not song.exists:
+            # The downloaded file was moved or deleted: play the song online instead (like a song you haven't
+            # downloaded yet), and it's ready to download again.
+            if self.online_enabled and song.artist and song.artist != "Unknown Artist" and self._accept_online_notice():
+                self._stream_full_song(song)
+                return
             self.player.stop()
             self._track_handled = True
-            self._handle_failed_track("file not found (moved or deleted?)")
+            self._handle_failed_track("file not found (moved or deleted?)" +
+                                      ("" if self.online_enabled else "; turn on Online features to play it online"))
             return
 
         if is_remote and song.track.source in ("jellyfin", "webdav"):
@@ -4257,6 +4276,9 @@ class MainWindow(ShowsMixin, QMainWindow):
             if res.get("duration_ms") and not song.duration:
                 song.duration = res["duration_ms"]
             self._set_now_playing_text(song.title, song.artist, f"Full song · {res['source']} · not downloaded")
+            self._streaming = {"song": song, "url": res["url"], "page": res.get("page", ""),
+                               "tries": getattr(self, "_streaming", {}).get("tries", 0)
+                               if getattr(self, "_streaming", {}).get("song") is song else 0}
             self._play_media(res["url"], res.get("headers"))
 
         def failed(err):
@@ -4267,6 +4289,44 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
                          self.user_data.download_source, on_done=done, on_error=failed)
+
+    def _retry_stream(self):
+        """A streamed song VLC couldn't open (e.g. YouTube refused that link): look it up again once with a fresh
+        link; if that fails too, save the audio to a temporary file first and play that. True if retrying."""
+        st = getattr(self, "_streaming", None) or {}
+        song = st.get("song")
+        if song is None or song is not self.current_song or getattr(self, "_shut_down", False):
+            return False
+        st["tries"] = st.get("tries", 0) + 1
+        if st["tries"] == 1:
+            streamer.link_failed(st["url"])
+            self._set_now_playing_text(song.title, song.artist, "That link didn't play, trying another…")
+            self._stream_full_song(song)
+            return True
+        if st["tries"] == 2 and st.get("page"):
+            self._set_now_playing_text(song.title, song.artist, "Getting the song another way (a few seconds)…")
+            folder = os.path.join(self.storage.data_dir, "cache", "stream")
+            os.makedirs(folder, exist_ok=True)
+            for old in os.listdir(folder):                    # only the song playing now is kept
+                try:
+                    os.remove(os.path.join(folder, old))
+                except OSError:
+                    pass
+            token = object()
+            self._stream_token = token
+
+            def ready(path):
+                if getattr(self, "_stream_token", None) is token and self.current_song is song and path:
+                    self._set_now_playing_text(song.title, song.artist, "Full song · not downloaded")
+                    self._play_media(path)
+
+            def failed(_err):
+                if getattr(self, "_stream_token", None) is token and self.current_song is song:
+                    self._handle_failed_track("could not be played (the website refused the song)")
+            self.online_call(streamer.download_original_audio, st["page"], os.path.join(folder, "now"),
+                             on_done=ready, on_error=failed)
+            return True
+        return False
 
     def preview_song(self, song):
         """Song menu → Preview: the 30-second clip in a small window with a seek bar (main playback pauses)."""
@@ -4356,7 +4416,49 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._start_current()
 
     # --- Lyrics (like Spotify's lyrics view) --------------------------------------------------------------
+    def _set_lyrics_available(self, available):
+        """Like Spotify: with no lyrics for the song, the Lyrics button is dimmed and shows a "not allowed" pointer."""
+        self._lyrics_available = available
+        b = self.lyrics_btn
+        if available:
+            b.setToolTip("Lyrics")
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            if self.stack.currentWidget() is not self.lyrics_page:
+                b.setIcon(icons.lyrics(icons.GREY))
+        else:
+            b.setToolTip("Lyrics aren't available for this song")
+            b.setCursor(Qt.CursorShape.ForbiddenCursor)
+            b.setIcon(icons.lyrics(QColor(255, 255, 255, 60)))
+
+    def _check_lyrics(self, song):
+        """Find out in the background whether the new song has lyrics (the answer is cached)."""
+        if not hasattr(self, "lyrics_btn"):
+            return
+        from core import lyrics as L
+        path = "" if getattr(song, "is_remote", False) else getattr(song, "file_path", "")
+        if path and L.from_file(path):
+            self._set_lyrics_available(True)
+            return
+        track = getattr(song, "track", None)
+        if getattr(track, "source", "") in ("podcast", "audiobook", "youtube"):
+            self._set_lyrics_available(False)           # episodes and chapters have no lyrics
+            return
+        if not self.online_enabled:
+            self._set_lyrics_available(True)            # can't tell offline: the page explains
+            return
+        self._set_lyrics_available(True)                # until we know
+        album = song.album if song.album and song.album != "Unknown Album" else ""
+        duration = getattr(track, "duration_ms", 0) or int(getattr(song, "duration", 0) or 0)
+
+        def done(lyr):
+            if self.current_song is song:
+                self._set_lyrics_available(lyr is not None and not (lyr.instrumental and not lyr.plain.strip()))
+        self.online_call(L.find, self.net, song.artist, song.title, album, duration, on_done=done,
+                         on_error=lambda _e: None)
+
     def toggle_lyrics(self):
+        if not getattr(self, "_lyrics_available", True) and self.stack.currentWidget() is not self.lyrics_page:
+            return                                       # no lyrics for this song (the button says so)
         if self.stack.currentWidget() is self.lyrics_page:
             self.go_back()
             return
@@ -4869,7 +4971,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         def local_for(song):
             nonlocal too_new
             if not getattr(song, "is_remote", False):
-                return None
+                if song.exists or not song.artist or song.artist == "Unknown Artist":
+                    return None
+                # A song whose file was moved or deleted: the copy you downloaded again (or moved) takes its place.
+                m = find_local_match(OnlineTrack(song.title, song.artist, album=song.album,
+                                                 duration_ms=int(song.duration or 0)), self.songs, index)
+                return m if m is not None and m.exists and m.key != song.key else None
             saved = self._downloaded_paths.get(song.track.key)
             if saved:
                 # Downloaded by Sevbify: the file is complete, and its name/tags may use the official
@@ -5021,6 +5128,15 @@ class MainWindow(ShowsMixin, QMainWindow):
         from . import dialogs
         chosen = dialogs.choose_downloads(self, title, unique)
         return self.download_songs(chosen) if chosen else 0
+
+    def download_again(self, songs):
+        """Songs whose downloaded file was moved or deleted: download them again (they fill their old place)."""
+        from core.online.remote_song import RemoteSong
+        again = [RemoteSong(OnlineTrack(s.title, s.artist, album="" if s.album == "Unknown Album" else s.album,
+                                        duration_ms=int(s.duration or 0)))
+                 for s in songs if not getattr(s, "is_remote", False) and not s.exists
+                 and s.artist and s.artist != "Unknown Artist"]
+        return self.download_songs(again) if again else 0
 
     def download_songs(self, songs):
         """Queue the not-downloaded songs among `songs` for download. Returns how many were queued."""
@@ -5915,7 +6031,7 @@ class MainWindow(ShowsMixin, QMainWindow):
     def _set_nav(self, kind, arg=None):
         self.top_bar.set_home_active(kind == "home")
         if hasattr(self, "lyrics_btn"):
-            self.lyrics_btn.setIcon(icons.lyrics(icons.GREEN if kind == "lyrics" else icons.GREY, dot=kind == "lyrics"))
+            self.lyrics_btn.setIcon(icons.lyrics(icons.GREEN if kind == "lyrics" else (icons.GREY if getattr(self, "_lyrics_available", True) else QColor(255, 255, 255, 60)), dot=kind == "lyrics"))
         if self.library_panel.expanded:
             self.library_panel.set_expanded(False)            # opening something leaves the expanded library
         active = arg if kind == "playlist" else ((kind, arg) if kind in ("album", "artist", "show") else kind)
