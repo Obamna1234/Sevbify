@@ -79,6 +79,21 @@ def spotify_canvas():
             print(f"::notice title=Canvas variant {name}::HTTP {r.status} {len(b)} bytes {b[:200]!r}")
         except Exception as e:
             print(f"::notice title=Canvas variant {name}::{e!r}")
+    ids = ["0VjIjW4GlUZAMYd2vXMi3b", "0yLdNVWF3Srea0uzk55zFn", "4Dvkj6JhhA12EX05fT7y2e", "7MXVkk9YMctZqd1Srtv4MB",
+           "0V3wPSX9ygBnCm8psDIegu"]
+    body = b""
+    for i in ids:
+        uri = f"spotify:track:{i}".encode()
+        ent = b"\x0a" + bytes([len(uri)]) + uri
+        body += b"\x0a" + bytes([len(ent)]) + ent
+    req = urllib.request.Request(sc.CANVAS_API, data=body, method="POST", headers={
+        "Authorization": "Bearer " + token, "Content-Type": "application/x-protobuf", "Accept": "application/protobuf"})
+    try:
+        with net._web.open(req, timeout=15) as r:
+            b = r.read(20000)
+        print(f"::notice title=Canvas 5 hits::HTTP {r.status} {len(b)} bytes {b[:300]!r}")
+    except Exception as e:
+        print(f"::notice title=Canvas 5 hits::{e!r}")
     import json, base64
     try:
         payload = token.split(".")[1] if token.count(".") == 2 else ""
