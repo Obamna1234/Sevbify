@@ -29,7 +29,8 @@ concurrency:
 jobs:
   pick:
     name: Which build
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Also after a build where a check failed: the apps it built are still worth trying out.
+    if: github.event_name == 'workflow_dispatch' || contains(fromJSON('["success","failure"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
     outputs:
       run_id: ${{ steps.r.outputs.run_id }}

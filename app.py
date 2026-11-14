@@ -11,6 +11,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Portable mode ("Sevbify data" folder next to the app): must be decided before anything reads the data folder.
+from core import portable as _portable
+_portable.apply_at_start()
+
 # The ready-made app carries its own copy of VLC's playback engine; use it before anything loads VLC.
 from core.vlc_setup import use_bundled_vlc
 BUNDLED_VLC = use_bundled_vlc()
@@ -216,6 +220,11 @@ def install_error_guard():
     def hook(exc_type, exc, tb):
         details = "".join(traceback.format_exception(exc_type, exc, tb))
         _log_stderr(details)
+        try:
+            from core.activity_log import log as alog
+            alog("crash", details)
+        except Exception:
+            pass
         try:
             os.makedirs(os.path.dirname(log_path), mode=0o700, exist_ok=True)
             with open(os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600), "a", encoding="utf-8") as f:

@@ -24,8 +24,14 @@ for i, (title, artist) in enumerate(songs, 1):
             os.remove(wav)
 print(os.listdir("music"))
 PY
-adb shell mkdir -p "/sdcard/Music/Test"
-adb push music/. /sdcard/Music/Test/
+for k in $(seq 1 30); do
+  adb shell "mkdir -p /sdcard/Music/Test && touch /sdcard/Music/Test/.probe" 2>/dev/null && break
+  echo "storage not writable yet ($k)"; sleep 4
+done
+adb shell rm -f /sdcard/Music/Test/.probe
+for f in music/*; do
+  for k in 1 2 3 4 5; do adb push "$f" /sdcard/Music/Test/ && break; sleep 5; done
+done
 adb shell content call --uri content://media/ --method scan_volume --arg external_primary 2>&1 | head -3
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Music/Test 2>&1 | head -2
 adb shell ls -la /sdcard/Music/Test > $OUT/pushed_songs.txt 2>&1

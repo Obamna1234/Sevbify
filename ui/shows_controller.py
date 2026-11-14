@@ -6,6 +6,7 @@ import os
 import time
 
 from PyQt6.QtCore import Qt, QLocale, QTimer
+from core.activity_log import log as alog
 from PyQt6.QtGui import QPixmap
 
 from core import podcasts, audiobooks
@@ -555,11 +556,13 @@ class ShowsMixin:
             self._track_handled = True
 
             def free(res, s=song):
+                alog("podcast", f"\"{s.title}\": ad-free YouTube version found")
                 if self.current_song is s:
                     self._set_now_playing_text(s.title, s.artist, "Podcast · ad-free (YouTube version)")
                     self._play_media(res[0], res[1])
 
             def feed(_err, s=song):
+                alog("podcast", f"\"{s.title}\": no ad-free version ({_err}), playing the feed")
                 if self.current_song is s:
                     self._set_now_playing_text(s.title, s.artist, kind)
                     self._play_media(s.track.stream_url)

@@ -42,6 +42,7 @@ from .settings_page import SettingsPage
 from .shows_controller import ShowsMixin, item_key
 from .download_manager import DownloadManager
 from core import downloader, streamer, playlist_files
+from core.activity_log import log as alog
 from core.platform_fixes import reveal_in_file_manager
 
 # How long (ms) a track may sit in "opening/buffering" before we give up on it.
@@ -315,6 +316,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         # --- Saved user data ---------------------------------------------
         self.storage = Storage(data_dir)
+        from core import activity_log as _alog
+        _alog.start(self.storage.data_dir)
         self.user_data = self.storage.load()
         from core import i18n
         i18n.set_language(self.user_data.language)       # before any screen is built
@@ -1167,6 +1170,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         act(h, "Open Sevbify's data folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.storage.data_dir)))
         log = os.path.join(self.storage.data_dir, "error.log")
         act(h, "Show error log", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log)), enabled=os.path.exists(log))
+        from core import activity_log as _al
+        act(h, "Show activity log", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(_al.path())))
+        act(h, "Save a problem report…", self.save_problem_report)
         t = h.addMenu("Troubleshooting")
         t.setStyleSheet(MENU_STYLE)
         act(t, "Rescan your music", self.rescan_library, "Ctrl+Shift+R")
@@ -1588,6 +1594,7 @@ class MainWindow(ShowsMixin, QMainWindow):
     # ------------------------------------------------------------------
     def show_status(self, message: str, timeout_ms: int = 6000, kind: str = "error"):
         print(message)
+        alog("status", message)
         color = "#f15e6c" if kind == "error" else "#1db954"
         self.status_label.setStyleSheet(f"color: {color}; font-size: 11px;")
         self.status_label.setText(message)
@@ -1671,6 +1678,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         if state in (vlc.State.Playing, vlc.State.Paused):
             if not self._reached_playing:
                 self._reached_playing = True
+                alog("player", f"playing \"{getattr(self.current_song, 'title', '')}\" "
+                               f"(length {self.player.get_length() // 1000} s)")
                 self._apply_volume()  # VLC can reset volume when audio output starts
             self._open_elapsed_ms = 0
             self._seen_length = max(self._seen_length, self.player.get_length())
@@ -1717,6 +1726,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         elif state == vlc.State.Error or (state == vlc.State.Ended and not self._reached_playing):
             # VLC reports some unreadable files as "Ended" without ever playing.
             self._track_handled = True
+            alog("error", f"VLC couldn't play \"{getattr(self.current_song, 'title', '')}\" (state {state})")
             if self._retry_stream():
                 return
             self._handle_failed_track("could not be played (unsupported or corrupt file)")
@@ -4155,6 +4165,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         if song is None:
             return
         self.current_song = song
+        alog("play", f"\"{song.title}\" - {song.artist} ("
+                     + (f"{song.track.source}, not downloaded" if getattr(song, "is_remote", False) else
+                        "your file" if song.exists else "file missing") + f", from {self.pq.source_name or '?'})")
         self._check_lyrics(song)
         if not self.private_session:
             self.pq.record_played(song)
@@ -4236,6 +4249,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _play_media(self, location, headers=None):
         """Hand a file path or web link to VLC and start playing it."""
+        alog("player", f"opening {location if '://' in str(location) else '[file] ' + os.path.basename(str(location))}")
         try:
             self.player.stop()
             media = self.vlc_instance.media_new(location)
@@ -4271,6 +4285,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 and not getattr(self, "_shut_down", False)
 
         def done(res):
+            alog("stream", f"\"{song.title}\" found on {res.get('source')} {res.get('timings') or ''}")
             if not still_wanted():
                 return
             if res.get("duration_ms") and not song.duration:
@@ -4282,6 +4297,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._play_media(res["url"], res.get("headers"))
 
         def failed(err):
+            alog("stream", f"\"{song.title}\" not found: {err}")
             if not still_wanted():
                 return
             self._track_handled = True                # skip it; never swap in the 30-second clip
@@ -4298,6 +4314,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         if song is None or song is not self.current_song or getattr(self, "_shut_down", False):
             return False
         st["tries"] = st.get("tries", 0) + 1
+        alog("retry", f"\"{song.title}\": attempt {st['tries'] + 1} ("
+                      + ("fresh link" if st["tries"] == 1 else "save to a temporary file first") + ")")
         if st["tries"] == 1:
             streamer.link_failed(st["url"])
             self._set_now_playing_text(song.title, song.artist, "That link didn't play, trying another…")
@@ -4376,6 +4394,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _handle_failed_track(self, reason: str):
         song = self.current_song
+        alog("skip", f"\"{getattr(song, 'title', '')}\": {reason}")
         name = song.title if song else "Track"
         self.is_playing = False
         self._set_play_icon(False)
@@ -4743,7 +4762,32 @@ class MainWindow(ShowsMixin, QMainWindow):
                   if song is not None and self.user_data.canvas_enabled
                   else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
+        if canvas is None and song is not None:
+            self._fetch_spotify_canvas(song)
         self._refresh_artist_card()
+
+    def _fetch_spotify_canvas(self, song):
+        """No video of your own for this song: Spotify's Canvas, when it has one (no account; see core/spotify_canvas)."""
+        track = getattr(song, "track", None)
+        if (not self.user_data.canvas_enabled or not getattr(self.user_data, "spotify_canvas", True)
+                or not self.online_enabled or not song.artist or song.artist == "Unknown Artist"
+                or getattr(track, "source", "") in ("podcast", "audiobook", "youtube", "jellyfin", "webdav")):
+            return
+        from core import spotify_canvas
+        page = getattr(track, "page_url", "") or ""
+        deezer_page = page if "deezer.com" in page else ""
+
+        def deezer_lookup():
+            if deezer_page:
+                return deezer_page
+            found = self.online.deezer.find_track(song.artist, song.title)
+            return getattr(found, "page_url", "") if found is not None else ""
+
+        def done(path):
+            if path and self.current_song is song and self.user_data.canvas_enabled:
+                self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=path, playing=self.is_playing)
+        self.online_call(spotify_canvas.find, self.net, self.storage.data_dir, song.artist, song.title, page,
+                         deezer_lookup, on_done=done, on_error=lambda _e: None)
 
     def _refresh_artist_card(self):
         """Fill 'About the artist' for the current song (online, cached per artist)."""
@@ -4955,6 +4999,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         def failed(err):
             self._update_online_indicator()
+            alog("online", f"{getattr(fn, '__qualname__', fn)} failed: {err}")
             if not isinstance(err, OfflineError):
                 print(f"Online error: {err}\n{getattr(err, '__traceback_text__', '')}")
             if on_error:
@@ -5579,7 +5624,9 @@ class MainWindow(ShowsMixin, QMainWindow):
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),
-                    can_start_at_login=can_start_at_login(), can_make_shortcuts=shortcuts.can_create())
+                    can_start_at_login=can_start_at_login(), can_make_shortcuts=shortcuts.can_create(),
+                    portable=__import__("core.portable", fromlist=["x"]).is_portable(self.storage.data_dir),
+                    data_folder=self.storage.data_dir)
         self.settings_page.build(self.user_data, info)
         self.stack.setCurrentWidget(self.settings_page)
         self._set_nav("settings")
@@ -5762,14 +5809,55 @@ class MainWindow(ShowsMixin, QMainWindow):
         ok, msg = shortcuts.create_windows_shortcuts()
         self.show_status(msg, kind="info" if ok else "error", timeout_ms=6000)
 
+    def save_problem_report(self, path=None):
+        """Help → Save a problem report…: the activity log + error log in one file, to send when something's wrong."""
+        from core import activity_log as _al
+        if path is None:
+            start = os.path.join(os.path.expanduser("~"), "Desktop" if os.path.isdir(
+                os.path.join(os.path.expanduser("~"), "Desktop")) else "", f"Sevbify report {time.strftime('%Y-%m-%d %H%M')}.txt")
+            path, _ = QFileDialog.getSaveFileName(self, "Save a problem report", start, "Text (*.txt)")
+            if not path:
+                return None
+        _al.report(path)
+        self.show_status(f"Saved {os.path.basename(path)}. Send that file along with what went wrong.",
+                         kind="info", timeout_ms=8000)
+        return path
+
+    def set_portable(self, on):
+        """Settings → "Keep my data next to the app": copy your data there (or back), used from the next start."""
+        from core import portable
+        from core.storage import default_data_dir
+        here = self.storage.data_dir
+        if bool(on) == portable.is_portable(here):
+            return True
+        self.save_now()
+        try:
+            if on:
+                where = portable.enable(here)
+            else:
+                os.environ.pop("SEVBIFY_DATA_DIR", None)
+                where = portable.disable(here, default_data_dir())
+        except OSError as e:
+            QMessageBox.warning(self, "Sevbify", "Couldn't copy your data there:\n" + str(e) +
+                                ("\n\nIf Sevbify is in Program Files, move its folder somewhere you can write to "
+                                 "(e.g. Documents or a USB stick) first." if on else ""))
+            return False
+        QMessageBox.information(self, "Sevbify", f"Your data was copied to:\n{where}\n\nRestart Sevbify to use it. "
+                                "The old copy was left where it was; you can delete it once everything looks right.")
+        return True
+
     def apply_settings(self, values):
         """Apply and save changed settings. `values` may hold any subset of the settings."""
         u = self.user_data
+        if "portable" in values:
+            self.set_portable(bool(values.pop("portable")))
+            if not values:
+                return
         was_online = u.online_enabled
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
-                  "language", "save_space")
+                  "language", "save_space", "ad_free_podcasts", "spotify_canvas")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

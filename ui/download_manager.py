@@ -68,8 +68,10 @@ class _Worker(QThread):
                     out = {"status": "fail", "note": str(e)}
                 self.song_finished.emit(key, out)
                 continue
+            from core.activity_log import log as alog
             res = downloader.run_download(
                 [line], folder, source, process=self.m.process,
+                log=lambda m: alog("download", m.strip()) if m and m.strip() else None,
                 on_step=lambda t: setattr(self.m, "step_text", t),
                 on_result=lambda _i, _n, _s, r: out.update(r), quality=self.m.quality)
             if res["stopped"]:
@@ -297,6 +299,8 @@ class DownloadManager(QObject):
             self._current = ""
         info = self._states.get(key, {"title": "", "artist": ""})
         status = res.get("status")
+        from core.activity_log import log as alog
+        alog("download", f"\"{info.get('title')}\" - {info.get('artist')}: {status} {res.get('note') or ''}")
         b = self._batch
         b["done"] += 1
         if status in ("ok", "skip", "dup"):

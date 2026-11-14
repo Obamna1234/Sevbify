@@ -55,6 +55,8 @@ def no_ad_free_lookups(monkeypatch):
     def none(*a, **k):
         raise LookupError("no YouTube version (tests)")
     monkeypatch.setattr(podcasts, "ad_free_stream", none)
+    from core import spotify_canvas
+    monkeypatch.setattr(spotify_canvas, "find", lambda *a, **k: None)     # no Spotify Canvas lookups in tests
 
 
 @pytest.fixture(autouse=True)

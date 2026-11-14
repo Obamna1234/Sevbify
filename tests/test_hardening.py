@@ -205,3 +205,42 @@ def test_open_in_links_search_for_exactly_this_song():
         assert urllib.parse.unquote(links["Spotify"].split("/search/", 1)[1]) == want
         for name, key in (("YouTube", "search_query"), ("YouTube Music", "q"), ("Apple Music", "term"), ("Bandcamp", "q")):
             assert urllib.parse.parse_qs(urllib.parse.urlparse(links[name]).query)[key] == [want]
+
+
+def test_portable_mode_copies_data_next_to_the_app(tmp_path, monkeypatch):
+    from core import portable
+    app_dir = tmp_path / "USB" / "Sevbify"
+    app_dir.mkdir(parents=True)
+    monkeypatch.setattr(portable, "app_folder", lambda: str(app_dir))
+    normal = tmp_path / "AppData" / "Sevbify"
+    normal.mkdir(parents=True)
+    (normal / "library.json").write_text('{"x": 1}')
+    (normal / "cache").mkdir()
+    monkeypatch.delenv("SEVBIFY_DATA_DIR", raising=False)
+    assert not portable.apply_at_start()
+    where = portable.enable(str(normal))
+    assert (app_dir / "Sevbify data" / "library.json").read_text() == '{"x": 1}'
+    assert (normal / "library.json").exists()                    # the old copy stays until you delete it
+    assert portable.apply_at_start() and os.environ["SEVBIFY_DATA_DIR"] == where
+    assert portable.is_portable(where)
+    monkeypatch.delenv("SEVBIFY_DATA_DIR", raising=False)
+    (app_dir / "Sevbify data" / "library.json").write_text('{"x": 2}')
+    portable.disable(where, str(normal))
+    assert (normal / "library.json").read_text() == '{"x": 2}' and not portable.apply_at_start()
+
+
+def test_activity_log_is_local_short_and_rotates(tmp_path, monkeypatch):
+    from core import activity_log as al
+    monkeypatch.setattr(al, "MAX_BYTES", 2000)
+    al.start(str(tmp_path))
+    al.log("stream", "found https://rr3---sn-abc.googlevideo.com/videoplayback?sig=SECRET&x=1 ok")
+    al.log("server", "opening https://ann:app-pass@cloud.example.com/remote.php/dav/x.flac")
+    text = open(al.path(), encoding="utf-8").read()
+    assert "[googlevideo.com link]" in text and "SECRET" not in text and "app-pass" not in text
+    for i in range(200):
+        al.log("play", f"song {i}")
+    assert os.path.exists(al.path() + ".1") and os.path.getsize(al.path()) < 4000
+    out = al.report(str(tmp_path / "report.txt"))
+    assert "song 199" in open(out, encoding="utf-8").read()
+    if os.name == "posix":
+        assert os.stat(al.path()).st_mode & 0o077 == 0

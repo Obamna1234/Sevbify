@@ -291,6 +291,10 @@ class SettingsPage(QWidget):
         self._toggle("notify_track", "Show desktop notifications when the song changes", "", u.notify_track)
         self._toggle("canvas_enabled", "Canvas", "Short looping videos in the Now Playing view, when a song has one "
                      "(also: a song's ••• menu → Hide Canvas / Show Canvas).", u.canvas_enabled)
+        self._toggle("spotify_canvas", "Canvas from Spotify",
+                     "Shows the looping video Spotify has for a song, without any account (your own videos come "
+                     "first). Spotify only learns which song it is, like opening its page in a browser.",
+                     getattr(u, "spotify_canvas", True))
         self._zoom(u.zoom)
 
         self._section("Startup and window behaviour")
@@ -309,6 +313,10 @@ class SettingsPage(QWidget):
                                                 self.clear_cache_requested.emit,
                                                 "Cover art, artist info and search results kept for speed and for "
                                                 "offline use. They download again when needed.")
+        self._toggle("portable", "Keep my data next to the app (portable)",
+                     "Your playlists, settings and caches live in a \"Sevbify data\" folder next to Sevbify instead of "
+                     "your user folder, e.g. to carry Sevbify on a USB stick. Your data is copied across and used from "
+                     "the next start. Now in: " + info.get("data_folder", ""), info.get("portable", False))
 
         self._section("Proxy settings")
         self._combo("proxy_mode", "Proxy type", "Applies after a restart.",
