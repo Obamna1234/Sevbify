@@ -18,19 +18,24 @@ SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
 
 STYLE = f"""
 QLabel {{ color: {theme.TEXT}; background: transparent; }}
-QLabel#h1 {{ font-size: 32px; font-weight: 800; }}
-QLabel#h2 {{ font-size: 16px; font-weight: 700; padding-top: 22px; padding-bottom: 2px; }}
-QLabel#name {{ font-size: 14px; color: {theme.TEXT}; }}
-QLabel#desc {{ color: #a7a7a7; font-size: 13px; }}
-QLineEdit {{ background: #2a2a2a; color: white; border: 1px solid #3e3e3e; border-radius: 4px; padding: 6px 8px;
-    font-size: 13px; }}
-QLineEdit:focus {{ border-color: {theme.TEXT}; }}
-QComboBox {{ background: #2a2a2a; color: white; border: none; border-radius: 4px; padding: 6px 10px; font-size: 13px;
-    min-width: 160px; }}
-QComboBox QAbstractItemView {{ background: #282828; color: white; selection-background-color: #3e3e3e; }}
-QPushButton {{ color: white; background: transparent; border: 1px solid #727272; border-radius: 16px; padding: 6px 16px;
-    font-weight: 700; font-size: 13px; }}
+QLabel#h1 {{ font-size: 32px; font-weight: 700; color: white; padding-bottom: 8px; }}
+QLabel#h2 {{ font-size: 16px; font-weight: 700; color: white; padding-top: 26px; padding-bottom: 4px; }}
+QLabel#name {{ font-size: 14px; color: #b3b3b3; }}
+QLabel#desc {{ color: #a7a7a7; font-size: 12px; }}
+QLineEdit {{ background: #2a2a2a; color: white; border: 1px solid transparent; border-radius: 4px; padding: 7px 10px;
+    font-size: 14px; }}
+QLineEdit:hover {{ border-color: #535353; }}
+QLineEdit:focus {{ border-color: white; }}
+QComboBox {{ background: #2a2a2a; color: white; border: 1px solid transparent; border-radius: 4px; padding: 7px 12px;
+    font-size: 14px; min-width: 170px; }}
+QComboBox:hover {{ border-color: #535353; }}
+QComboBox::drop-down {{ border: none; width: 26px; }}
+QComboBox QAbstractItemView {{ background: #282828; color: white; border: none; padding: 4px; outline: none;
+    selection-background-color: #3e3e3e; font-size: 14px; }}
+QPushButton {{ color: white; background: transparent; border: 1px solid #727272; border-radius: 16px; padding: 0 16px;
+    min-height: 30px; font-weight: 700; font-size: 14px; }}
 QPushButton:hover {{ border-color: white; }}
+QPushButton:pressed {{ border-color: #b3b3b3; color: #b3b3b3; }}
 QRadioButton {{ color: {theme.SUBDUED}; font-size: 12px; spacing: 4px; }}
 QRadioButton:checked {{ color: {theme.TEXT}; }}
 QSlider::groove:vertical {{ background: #4d4d4d; width: 4px; border-radius: 2px; }}
@@ -57,6 +62,7 @@ class SettingsPage(QWidget):
     server_refresh_requested = pyqtSignal(str)      # server id
     server_remove_requested = pyqtSignal(str)       # server id
     reset_requested = pyqtSignal(str)          # "appearance" or "all"
+    eq_preview = pyqtSignal(list)              # the equaliser while a dot is dragged: heard at once, saved on release
 
     def __init__(self, eq_presets=None, parent=None):
         super().__init__(parent)
@@ -85,10 +91,10 @@ class SettingsPage(QWidget):
         centre = QHBoxLayout(body)
         centre.setContentsMargins(24, 24, 24, 40)
         column = QWidget()
-        column.setMaximumWidth(720)
+        column.setMaximumWidth(860)                 # a centred column, like Spotify's settings
         v = QVBoxLayout(column)
         v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(6)
+        v.setSpacing(10)
         centre.addStretch()
         centre.addWidget(column, 100)
         centre.addStretch()
@@ -489,6 +495,7 @@ class SettingsPage(QWidget):
         self.eq_curve = EqualizerCurve(u.eq_bands, BAND_LABELS)
         self.eq_curve.setEnabled(bool(u.eq_enabled))
         self.eq_curve.released.connect(self._eq_curve_released)
+        self.eq_curve.changed.connect(lambda bands: self.eq_preview.emit([float(b) for b in bands]))
         pv.addWidget(self.eq_curve)
         self.controls["eq_panel"] = panel
         self._v.addWidget(panel)

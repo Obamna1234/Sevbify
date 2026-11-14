@@ -257,6 +257,55 @@ class Journey:
         return ("pass" if played and followed else "fail"), \
             f"{show.title}: {len(w._show_ctx['items'])} episodes, followed: {followed}, latest episode: {how}"
 
+    def step_episode_tools(self):
+        """Podcast page: All Episodes / Unplayed / In Progress, Find in this show, Newest/Oldest."""
+        w = self.w
+        ctx = w._show_ctx
+        if not ctx or not ctx.get("items"):
+            return "fail", "no podcast open"
+        total = len(w.show_page.rows)
+        w.show_page.filter_changed.emit("in_progress")
+        in_progress = len(w.show_page.rows)
+        w.show_page.filter_changed.emit("all")
+        word = ctx["items"][0].title.split()[0]
+        w.show_page.search_changed.emit(word)
+        self.wait(lambda: False, 1)
+        found = len(w.show_page.rows)
+        w.show_page.search_changed.emit("")
+        self.wait(lambda: False, 1)
+        w.show_page.sort_changed.emit("oldest")
+        oldest_first = w.show_page.sort_btn.text().startswith("Oldest")
+        w.show_page.sort_changed.emit("newest")
+        ok = total > 0 and in_progress <= 1 and 1 <= found <= total and oldest_first
+        return ("pass" if ok else "fail"), (f"{total} episodes; in progress: {in_progress}; '{word}' finds {found}; "
+                                           f"oldest-first sort: {oldest_first}")
+
+    def step_canvas(self):
+        """Spotify Canvas without an account, for a song known to have one."""
+        from core import spotify_canvas
+        res, err = [], []
+        self.w.online_call(spotify_canvas.find, self.w.net, self.w.storage.data_dir, "The Weeknd", "Blinding Lights",
+                           "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b", None,
+                           on_done=res.append, on_error=err.append)
+        self.wait(lambda: res or err, 60)
+        if res and res[0] and os.path.getsize(res[0]) > 10_000:
+            return "pass", f"video saved ({os.path.getsize(res[0]) // 1024} KB)"
+        why = str(err[0]) if err else "Spotify gave no video"
+        try:
+            spotify_canvas.canvas_url(self.w.net, "0VjIjW4GlUZAMYd2vXMi3b")
+        except Exception as e:
+            why += f" ({e})"
+        return "fail", why
+
+    def step_activity_log(self):
+        from core import activity_log
+        try:
+            text = open(activity_log.path(), encoding="utf-8").read()
+        except OSError as e:
+            return "fail", f"no activity log: {e}"
+        ok = "play " in text and "start " in text and "googlevideo.com/videoplayback?" not in text
+        return ("pass" if ok else "fail"), f"{len(text.splitlines())} lines, links shortened: {'?' not in text}"
+
     def step_settings(self):
         w = self.w
         w.open_settings()
@@ -285,7 +334,11 @@ class Journey:
         self.run_step("Make a playlist", self.step_playlist, needs=["App opens"])
         self.run_step("Download a song", self.step_download, needs=["App opens"])
         self.run_step("Find, follow and play a podcast", self.step_podcast, needs=["App opens"])
+        self.run_step("Podcast filter, search and sort", self.step_episode_tools,
+                      needs=["Find, follow and play a podcast"])
+        self.run_step("Spotify Canvas (looping video)", self.step_canvas, needs=["App opens"])
         self.run_step("Open Settings", self.step_settings, needs=["App opens"])
+        self.run_step("Activity log is written", self.step_activity_log, needs=["App opens"])
         w.save_now()
         return self.finish("journey")
 

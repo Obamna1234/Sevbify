@@ -517,6 +517,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core.audio_settings import presets as eq_presets
         self.settings_page = SettingsPage(eq_presets(vlc))
         self.settings_page.changed.connect(self.apply_settings)
+        self.settings_page.eq_preview.connect(self._preview_equalizer)
         self.settings_page.add_folder_requested.connect(lambda: (self._choose_music_folder(), self.open_settings()))
         self.settings_page.remove_folder_requested.connect(lambda f: (self.remove_music_folder(f), self.open_settings()))
         self.settings_page.restart_requested.connect(self.restart_app)
@@ -5946,6 +5947,16 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.save_now()
 
     # --- playback settings ------------------------------------------------------------------------------
+    def _preview_equalizer(self, bands):
+        """While you drag a dot: hear it straight away (like Spotify), saved when you let go."""
+        from core.audio_settings import make_equalizer
+        try:
+            self._eq = make_equalizer(vlc, bands)
+            for p in self._all_players():
+                p.set_equalizer(self._eq)
+        except Exception as e:
+            print(f"Equalizer error: {e}")
+
     def _apply_equalizer(self):
         from core.audio_settings import make_equalizer
         try:

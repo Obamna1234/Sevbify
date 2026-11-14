@@ -142,6 +142,54 @@ def _smoke_playback():
         return False, traceback.format_exc()
 
 
+def _smoke_equalizer():
+    """The equaliser really changes the sound with the VLC inside the app: a low tone is played with the bass turned
+    down and with it flat, and the audio VLC hands out (after its filters) must be much quieter the first time.
+    Returns (ok, details)."""
+    import ctypes, math, struct, tempfile, wave
+    try:
+        import vlc
+        from core.audio_settings import make_equalizer
+        wav = os.path.join(tempfile.mkdtemp(), "bass.wav")
+        with wave.open(wav, "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(44100)
+            w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * 60 * i / 44100)))
+                                   for i in range(44100 * 3)))
+
+        def loudness(bands):
+            inst = vlc.Instance("--no-video", "--quiet")
+            p = inst.media_player_new()
+            total = [0.0, 0]
+
+            @vlc.CallbackDecorators.AudioPlayCb
+            def play(_data, samples, count, _pts):
+                buf = ctypes.cast(samples, ctypes.POINTER(ctypes.c_int16 * (count * 2))).contents
+                for v in buf[::50]:
+                    total[0] += v * v
+                    total[1] += 1
+            p.audio_set_callbacks(play, None, None, None, None, None)
+            p.audio_set_format("S16N", 44100, 2)
+            eq = make_equalizer(vlc, bands)
+            p.set_equalizer(eq)
+            p.set_media(inst.media_new(wav))
+            p.play()
+            end = time.time() + 6
+            while time.time() < end and total[1] < 20000:
+                time.sleep(0.05)
+            p.stop(); p.release(); inst.release()
+            return (total[0] / max(1, total[1])) ** 0.5, total[1]
+
+        flat, n1 = loudness([0.0] * 10)
+        low, n2 = loudness([-12.0, -12.0, -6.0] + [0.0] * 7)
+        if n1 < 1000 or n2 < 1000:
+            return False, f"no audio came out to measure ({n1}, {n2} samples)"
+        if not low < flat * 0.5:
+            return False, f"turning the bass down made no real difference (loudness {low:.0f} vs {flat:.0f} flat)"
+        return True, f"bass -12 dB: loudness {low:.0f} vs {flat:.0f} flat"
+    except Exception:
+        return False, traceback.format_exc()
+
+
 def _vlc_log_for(vlc, path):
     """Try `path` again with VLC's own log switched on and return the important lines (for diagnosis)."""
     import tempfile
@@ -363,6 +411,12 @@ def main():
                 problems, details = ["download engine failed to load:\n" + traceback.format_exc()], ""
             # Playback must work with the VLC engine inside the app (no separately installed VLC).
             ok_play, play_details = _smoke_playback()
+            ok_eq, eq_details = _smoke_equalizer()
+            _smoke_log(("OK" if ok_eq else "FAILED") + ": equaliser check: " + eq_details)
+            if not ok_eq:
+                window.close()
+                app.exit(8)
+                return
             ok_video, video_details = _smoke_canvas(window)
             window.close()
             if not ok_video:
