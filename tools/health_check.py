@@ -24,7 +24,7 @@ failed, results = [], []
 BOT = ("not a bot", "confirm you", "sign in to confirm", "429")
 
 
-def check(name, fn, blocked_ok=False):
+def check(name, fn, blocked_ok=False, info_only=False):
     t0 = time.time()
     try:
         detail = fn()
@@ -32,6 +32,10 @@ def check(name, fn, blocked_ok=False):
         print(f"::notice title=OK: {name}::{detail} ({time.time() - t0:.1f} s)")
     except Exception as e:
         text = f"{type(e).__name__}: {e}"
+        if info_only:
+            results.append((name, "info", text))
+            print(f"::notice title=Not available (information only): {name}::{text[:300]}")
+            return
         if blocked_ok and any(w in text.lower() for w in BOT):
             results.append((name, "blocked", text))
             print(f"::notice title=Blocked here: {name}::{text[:300]}")
@@ -184,14 +188,15 @@ def spotify_search():
     return tid
 
 
-check("Spotify search (no account)", spotify_search)
-check("Spotify Canvas (no account)", spotify_canvas)
+# Not used by the app (Spotify keeps these for signed-in accounts); watched in case that changes.
+check("Spotify search (no account)", spotify_search, info_only=True)
+check("Spotify Canvas (no account)", spotify_canvas, info_only=True)
 check("Bandcamp search + stream link", bandcamp)
 check("Bandcamp download", bandcamp_download)
 check("YouTube full song", youtube, blocked_ok=True)
 check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)
-check("song.link (Share)", song_link)
+check("song.link (Share; now wants a key, Share uses search links)", song_link, info_only=True)
 check("yt-dlp", ytdlp_current)
 
 summary = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -199,7 +204,7 @@ if summary:
     with open(summary, "a", encoding="utf-8") as f:
         f.write("### Sevbify health check\n\n| Service | Result | Details |\n|---|---|---|\n")
         for name, status, detail in results:
-            icon = {"ok": "✅", "blocked": "🚫 blocked here", "FAILED": "❌ FAILED"}[status]
+            icon = {"ok": "✅", "blocked": "🚫 blocked here", "FAILED": "❌ FAILED", "info": "ℹ not available"}[status]
             f.write(f"| {name} | {icon} | {str(detail).replace('|', '/')[:300]} |\n")
 print(f"{len(results) - len(failed)}/{len(results)} fine; failed: {failed or 'none'}")
 sys.exit(1 if failed else 0)

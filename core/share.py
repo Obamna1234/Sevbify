@@ -44,15 +44,6 @@ def links(net, artist, title, page_url="", youtube_url=""):
                 out["songlink"] = data["pageUrl"]
         except (OfflineError, ServiceError, ValueError, AttributeError):
             pass                       # service retired / busy / offline: the search links still work
-    if net is not None and not exact["spotify"] and artist and title:
-        # song.link now wants a key: Spotify's own search (no account) finds the exact song instead.
-        try:
-            from core import spotify_canvas
-            tid = spotify_canvas.track_id(net, artist, title, deezer_page=page_url)
-            if tid:
-                out["spotify"], exact["spotify"] = f"https://open.spotify.com/track/{tid}", True
-        except Exception:
-            pass
     out["exact"] = exact
     return out
 

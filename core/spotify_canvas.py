@@ -1,5 +1,11 @@
 """Spotify's Canvas (the short looping videos behind some songs), fetched without any account.
 
+STATUS (15 Nov 2026): NOT USED BY THE APP. Tested from GitHub's computers: Spotify answers an anonymous key with
+an empty list for every song (even ones that certainly have a Canvas), and its search refuses anonymous keys
+("429 Too Many Requests"). Canvas is only given to signed-in accounts, and Sevbify never signs in to Spotify (it
+could get your account banned). The daily health check keeps trying it (as information only), so if Spotify ever
+gives it to everyone again, this module is ready to be switched back on.
+
 How (all in the background, only while online, only when Settings → Canvas and Settings → "Canvas from Spotify"
 are on):
 1. Spotify's track ID: from the song's Spotify link when it was imported from Spotify, otherwise song.link is asked

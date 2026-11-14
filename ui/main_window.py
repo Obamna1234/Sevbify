@@ -4763,8 +4763,8 @@ class MainWindow(ShowsMixin, QMainWindow):
                   if song is not None and self.user_data.canvas_enabled
                   else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
-        if canvas is None and song is not None:
-            self._fetch_spotify_canvas(song)
+        # (Spotify's own Canvas videos aren't fetched: Spotify only gives them to signed-in accounts - checked
+        # daily by the health check, see core/spotify_canvas.py.)
         self._refresh_artist_card()
 
     def _fetch_spotify_canvas(self, song):

@@ -135,7 +135,7 @@ class UserData:
     np_on_play: bool = True   # Settings: open the Now playing panel when you play
     notify_track: bool = False   # Settings: desktop notification when the song changes
     canvas_enabled: bool = True   # Settings: Canvas loop videos
-    spotify_canvas: bool = True   # Settings: fetch a song's Canvas from Spotify (no account) when you have none
+    spotify_canvas: bool = False  # Spotify's Canvas needs a signed-in account (not used; see core/spotify_canvas.py)
     zoom: int = 100   # Settings: zoom level in % (applies after restart)
     startup: str = 'no'   # Settings: open after login (Windows)
     close_to_tray: bool = False   # Settings: close button minimises to the tray
@@ -394,7 +394,7 @@ class Storage:
             pass
         try:
             data.canvas_enabled = bool(settings.get('canvas_enabled', True))
-            data.spotify_canvas = bool(settings.get('spotify_canvas', True))
+            data.spotify_canvas = False
         except (TypeError, ValueError):
             pass
         try:

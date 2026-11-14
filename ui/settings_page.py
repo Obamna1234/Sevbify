@@ -297,10 +297,6 @@ class SettingsPage(QWidget):
         self._toggle("notify_track", "Show desktop notifications when the song changes", "", u.notify_track)
         self._toggle("canvas_enabled", "Canvas", "Short looping videos in the Now Playing view, when a song has one "
                      "(also: a song's ••• menu → Hide Canvas / Show Canvas).", u.canvas_enabled)
-        self._toggle("spotify_canvas", "Canvas from Spotify",
-                     "Shows the looping video Spotify has for a song, without any account (your own videos come "
-                     "first). Spotify only learns which song it is, like opening its page in a browser.",
-                     getattr(u, "spotify_canvas", True))
         self._zoom(u.zoom)
 
         self._section("Startup and window behaviour")

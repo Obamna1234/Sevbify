@@ -336,7 +336,6 @@ class Journey:
         self.run_step("Find, follow and play a podcast", self.step_podcast, needs=["App opens"])
         self.run_step("Podcast filter, search and sort", self.step_episode_tools,
                       needs=["Find, follow and play a podcast"])
-        self.run_step("Spotify Canvas (looping video)", self.step_canvas, needs=["App opens"])
         self.run_step("Open Settings", self.step_settings, needs=["App opens"])
         self.run_step("Activity log is written", self.step_activity_log, needs=["App opens"])
         w.save_now()
