@@ -63,8 +63,30 @@ def spotify_canvas():
         except Exception as e:
             seen["error"] = repr(e)
             raise
+    # Variants tried while finding out what Spotify needs (printed, not failing on their own).
+    import urllib.request
+    tid = "0VjIjW4GlUZAMYd2vXMi3b"
+    token = sc._anonymous_token(net, tid)
+    for name, extra in (("web-player headers", {"app-platform": "WebPlayer", "Origin": "https://open.spotify.com",
+                                                "Referer": "https://open.spotify.com/", "Accept-Language": "en"}),
+                        ("android headers", {"User-Agent": "Spotify/9.0.0 Android/34 (Pixel 7)", "app-platform": "Android"})):
+        req = urllib.request.Request(sc.CANVAS_API, data=sc._request_body(tid), method="POST", headers={
+            "Authorization": "Bearer " + token, "Content-Type": "application/x-protobuf",
+            "Accept": "application/protobuf", **extra})
+        try:
+            with net._web.open(req, timeout=15) as r:
+                b = r.read(5000)
+            print(f"::notice title=Canvas variant {name}::HTTP {r.status} {len(b)} bytes {b[:200]!r}")
+        except Exception as e:
+            print(f"::notice title=Canvas variant {name}::{e!r}")
+    import json, base64
     try:
-        return sc.canvas_url(net, "0VjIjW4GlUZAMYd2vXMi3b", opener=opener)      # Blinding Lights has a Canvas
+        payload = token.split(".")[1] if token.count(".") == 2 else ""
+        print(f"::notice title=Token kind::{len(token)} chars, jwt={bool(payload)}")
+    except Exception:
+        pass
+    try:
+        return sc.canvas_url(net, tid, opener=opener)      # Blinding Lights has a Canvas
     except Exception as e:
         body = seen.get("body", b"")
         raise RuntimeError(f"{e}; HTTP {seen.get('status')} {seen.get('error', '')} {len(body)} bytes: "
