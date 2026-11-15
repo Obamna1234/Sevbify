@@ -20,7 +20,7 @@ import android_screens as ui   # noqa: E402  (adb helpers: tap by text, screensh
 
 PKG = ui.PKG
 BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests",
-             "client challenge", "prove it's a browser")
+             "client challenge", "prove it's a browser", "blocking this connection")
 steps = []
 
 
