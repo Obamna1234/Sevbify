@@ -109,12 +109,12 @@ def back_to_home():
 
 
 def playback_log():
-    """The app's own Settings → Playback status log (what the release build says about why a song didn't play)."""
+    """The app's own "Playback status" (Settings → About and updates): why the release build says a song didn't play."""
     back_to_home()
-    ui.open_settings("Playback")
+    ui.open_settings("About and updates")
     time.sleep(2)
     seen = []
-    for _ in range(15):                # "Playback status" is at the bottom of the page, above its Copy button
+    for _ in range(15):                # "Playback status" is near the bottom of the page, above its Copy button
         found = ui.nodes()
         for n in found:
             if n[0] and n[0] not in seen:
@@ -125,7 +125,7 @@ def playback_log():
         time.sleep(1)
     back_to_home()
     if "Playback status" not in seen:
-        return "(couldn't reach Playback status at the bottom of Settings → Playback)"
+        return "(couldn't reach Playback status in Settings → About and updates)"
     after = seen[seen.index("Playback status") + 1:]
     return " / ".join(t for t in after if t != "Copy" and not t.startswith("What the player last did"))[:1500]
 
