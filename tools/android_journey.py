@@ -113,17 +113,29 @@ def playback_log():
     back_to_home()
     ui.open_settings("Playback")
     time.sleep(2)
-    text = " / ".join(n[0] for n in ui.nodes() if n[0])
+    seen = []
+    for _ in range(6):                 # the status log is at the bottom of the page
+        for n in ui.nodes():
+            if n[0] and n[0] not in seen:
+                seen.append(n[0])
+        ui.swipe_up()
+        time.sleep(1)
     back_to_home()
-    return text
+    log = [t for t in seen if "not found" in t or "ERROR" in t or ":" in t[:12]]
+    return " / ".join(log or seen[-6:])
 
 
 def search(text):
     back_to_home()
     ui.tap("Search")
+    clear = next((n for n in ui.nodes() if "Clear" in (n[0], n[1])), None)
     ui.tap("Clear", tries=1)
     if not ui.tap("What do you want to listen to?", tries=3):
-        # After "Clear" the box is already focused (keyboard up) and Android may not report its hint text.
+        # After "Clear" Android may not report the empty box's hint text: tap the box itself (left of the ✕).
+        if clear is None:
+            return False
+        ui.sh(f"input tap 540 {clear[3]}")
+        time.sleep(1)
         if "mInputShown=true" not in ui.sh("dumpsys input_method | grep mInputShown"):
             return False
     ui.sh("input text " + text.replace(" ", "%s"))
