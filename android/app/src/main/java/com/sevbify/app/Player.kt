@@ -840,6 +840,8 @@ object Player {
             diagLog("found '${t.title}': ${r.optJSONObject("timings")?.toString() ?: "?"} (seconds)")
             return Triple(r.getString("url"), headersOf(r), "Full song · ${r.optString("source")} · not downloaded")
         } catch (e: CoreError) {
+            // The reason (e.g. the website refused this connection) goes in Settings → Playback's status log.
+            diagLog("full song not found: ${e.message?.take(300)}")
             throw CoreError("full song not found")
         }
     }

@@ -19,7 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import android_screens as ui   # noqa: E402  (adb helpers: tap by text, screenshots, ...)
 
 PKG = ui.PKG
-BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests")
+BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429", "too many requests",
+             "client challenge", "prove it's a browser")
 steps = []
 
 
@@ -95,11 +96,36 @@ def run(name, fn, needs=()):
     record(name, status, detail)
 
 
+def back_to_home():
+    """Leave whatever is open (keyboard, search, a show page) the way a person would: Back, then the Home tab."""
+    for _ in range(4):
+        texts = {n[0] for n in ui.nodes()} | {n[1] for n in ui.nodes()}
+        if "Home" in texts and "mInputShown=true" not in ui.sh("dumpsys input_method | grep mInputShown") \
+                and not ({"Recent searches", "What do you want to listen to?"} & texts):
+            break
+        ui.sh("input keyevent 4")
+        time.sleep(1.5)
+    return ui.tap("Home", tries=2)
+
+
+def playback_log():
+    """The app's own Settings → Playback status log (what the release build says about why a song didn't play)."""
+    back_to_home()
+    ui.open_settings("Playback")
+    time.sleep(2)
+    text = " / ".join(n[0] for n in ui.nodes() if n[0])
+    back_to_home()
+    return text
+
+
 def search(text):
+    back_to_home()
     ui.tap("Search")
     ui.tap("Clear", tries=1)
     if not ui.tap("What do you want to listen to?", tries=3):
-        return False
+        # After "Clear" the box is already focused (keyboard up) and Android may not report its hint text.
+        if "mInputShown=true" not in ui.sh("dumpsys input_method | grep mInputShown"):
+            return False
     ui.sh("input text " + text.replace(" ", "%s"))
     time.sleep(8)
     return True
@@ -122,9 +148,10 @@ def stream(query, must_contain):
     ok, how = plays()
     if ok:
         return "pass", how
-    if blocked_in_log():
-        return "blocked", "the website refused this cloud computer (“confirm you're not a bot”); " + how
-    return "fail", how + " | app log: " + " / ".join(app_log(8))
+    log = playback_log()
+    if blocked_in_log() or any(w in log.lower() for w in BOT_WORDS):
+        return "blocked", "the website refused this cloud computer; " + how + " | " + log[-700:]
+    return "fail", how + " | Playback log: " + log[-900:]
 
 
 def main():
@@ -183,7 +210,7 @@ def main():
     run("Pause and resume", pause_resume, needs=[playing])
 
     def podcast():
-        ui.tap("Home")
+        back_to_home()
         if not ui.tap("Podcasts", tries=3):
             return "fail", "no Podcasts button on Home"
         time.sleep(6)
@@ -203,6 +230,7 @@ def main():
     run("Play a podcast episode", podcast, needs=["App opens"])
 
     def settings():
+        back_to_home()
         ui.open_settings("Playback")
         texts = " ".join(n[0] for n in ui.nodes())
         return ("pass" if "Playback" in texts else "fail"), "Settings → Playback shown" if "Playback" in texts \
