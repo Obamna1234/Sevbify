@@ -21,7 +21,7 @@ from core.online.providers import OnlineMusic  # noqa: E402
 net = NetClient(tempfile.mkdtemp())
 om = OnlineMusic(net)
 failed, results = [], []
-BOT = ("not a bot", "confirm you", "sign in to confirm", "429")
+BOT = ("not a bot", "confirm you", "sign in to confirm", "429", "client challenge", "prove it's a browser")
 
 
 def check(name, fn, blocked_ok=False, info_only=False):
@@ -191,8 +191,8 @@ def spotify_search():
 # Not used by the app (Spotify keeps these for signed-in accounts); watched in case that changes.
 check("Spotify search (no account)", spotify_search, info_only=True)
 check("Spotify Canvas (no account)", spotify_canvas, info_only=True)
-check("Bandcamp search + stream link", bandcamp)
-check("Bandcamp download", bandcamp_download)
+check("Bandcamp search + stream link", bandcamp, blocked_ok=True)
+check("Bandcamp download", bandcamp_download, blocked_ok=True)
 check("YouTube full song", youtube, blocked_ok=True)
 check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)

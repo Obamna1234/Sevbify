@@ -26,7 +26,7 @@ from core.paths import (  # noqa: F401  (re-exported for older code/tests)
     PROJECT_ROOT, PLACEHOLDER_IMAGE, AUDIO_FOLDER, ALBUM_CACHE, ASSETS_FOLDER, normalise_path
 )
 from core.models import (  # noqa: F401
-    Song, Playlist, SUPPORTED_EXTENSIONS, sanitize_filename, format_time, format_total
+    Song, Playlist, SUPPORTED_EXTENSIONS, sanitize_filename, format_time, format_total, remember_details
 )
 from core import paths as core_paths
 from core.library import scan_folders
@@ -684,9 +684,12 @@ class MainWindow(ShowsMixin, QMainWindow):
                     pl.add_song(RemoteSong(OnlineTrack.from_dict(entry["pending"])))
                     continue
                 key = normalise_path(entry)
-                # Missing files are kept (shown greyed out) so nothing is lost
-                # if a drive is disconnected or a file was renamed.
-                pl.add_song(by_key.get(key) or Song(entry))
+                # Missing files are kept so nothing is lost if a drive is disconnected or a file was renamed; what
+                # the song was comes from the details saved with the playlist (the file can't be read any more).
+                song = by_key.get(key) or Song(entry)
+                if not song.exists:
+                    remember_details(song, self.user_data.song_info.get(entry))
+                pl.add_song(song)
             pl.generate_cover()
             self.playlists.append(pl)
 
@@ -735,6 +738,17 @@ class MainWindow(ShowsMixin, QMainWindow):
                 for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
+            info = {}
+            for p in self.playlists:
+                for s in p.songs:
+                    if getattr(s, "is_remote", False) or not s.file_path:
+                        continue
+                    if s.exists:
+                        info[s.file_path] = {"title": s.title, "artist": s.artist, "album": s.album,
+                                             "ms": int(s.duration or 0)}
+                    elif s.file_path in self.user_data.song_info:
+                        info[s.file_path] = self.user_data.song_info[s.file_path]
+            self.user_data.song_info = info
         try:
             self.storage.save(self.user_data)
         except Exception as e:

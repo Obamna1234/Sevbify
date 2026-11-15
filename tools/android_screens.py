@@ -60,11 +60,15 @@ def nodes():
 def clear_anr(found=None):
     """The emulator is slow on GitHub's machines; Android may show "System UI isn't responding". Wait it out."""
     found = found if found is not None else nodes()
-    if any("isn't responding" in nd[0] for nd in found):
+    box = next((nd[0] for nd in found if "isn't responding" in nd[0]), None)
+    if box:
+        # Another app (on GitHub's emulator, usually Pixel Launcher in the background) keeps freezing: close it,
+        # it isn't what's being tested. Sevbify itself gets "Wait", so a slow start isn't counted as a crash.
+        button = "Wait" if "Sevbify" in box else "Close app"
         for nd in found:
-            if nd[0] == "Wait":
+            if nd[0] == button:
                 sh(f"input tap {nd[2]} {nd[3]}")
-                note("dismissed an 'isn't responding' box")
+                note(f"answered '{button}' to: {box}")
                 time.sleep(2)
                 return True
     return False

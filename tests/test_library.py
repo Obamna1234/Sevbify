@@ -31,6 +31,13 @@ def test_playlists_and_volume_survive_restart(open_window, audio_dir, data_dir):
 
 
 def test_missing_track_kept_in_playlist(open_window, audio_dir, data_dir):
+    from mutagen.wave import WAVE
+    from mutagen.id3 import TIT2, TPE1
+    tagged = WAVE(str(audio_dir / "02 - second.wav"))
+    tagged.add_tags()
+    tagged.tags.add(TIT2(encoding=3, text="Second Song"))
+    tagged.tags.add(TPE1(encoding=3, text="Some Band"))
+    tagged.save()
     w = open_window(audio_folder=str(audio_dir), data_dir=str(data_dir))
     w.create_playlist("Keep", [w.songs[0], w.songs[1]])
     w.close()
@@ -48,10 +55,19 @@ def test_missing_track_kept_in_playlist(open_window, audio_dir, data_dir):
     queued = []
     w2.downloads.request = lambda tracks, folder, source: queued.extend(tracks) or len(tracks)
     w2.user_data.download_notice_accepted = True
-    assert w2.download_again([keep.songs[1]]) == 0          # "Unknown Artist": nothing to look for online
     gone = keep.songs[1]
-    gone.artist, gone.title = "Some Band", "Second Song"
-    assert w2.download_again([gone]) == 1 and queued[0].title == "Second Song"
+    # The file is gone, but what it was is remembered (it used to come back as "Unknown Artist", which made
+    # "Download again" and playing it online do nothing).
+    assert (gone.artist, gone.title) == ("Some Band", "Second Song")
+    assert w2.download_again([gone]) == 1 and queued[0].title == "Second Song" and queued[0].artist == "Some Band"
+
+
+def test_missing_file_details_from_its_name(tmp_path):
+    from core.models import Song, remember_details
+    s = remember_details(Song(str(tmp_path / "Perturbator - Future Club.mp3")), None)
+    assert (s.artist, s.title) == ("Perturbator", "Future Club")
+    s = remember_details(Song(str(tmp_path / "02 - second.wav")), None)
+    assert (s.artist, s.title) == ("Unknown Artist", "02 - second")
 
 
 def test_corrupt_save_file_is_kept_and_defaults_loaded(open_window, audio_dir, data_dir):

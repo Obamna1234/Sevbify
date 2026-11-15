@@ -32,6 +32,27 @@ BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429",
 BANDCAMP_SONG = ("Perturbator", "Future Club")
 YOUTUBE_SONG = ("Kevin MacLeod", "Monkeys Spinning Monkeys")
 PODCAST_SEARCH = "NPR News Now"
+OWN_SONG = ("Perturbator", "Future Club")      # a song file of "your own" (a tone, tagged like this song)
+
+
+def _make_tagged_wav(path, artist_title, seconds=20):
+    import math
+    import struct
+    import wave
+    rate = 22050
+    with wave.open(path, "wb") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(rate)
+        f.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * i / rate)))
+                               for i in range(rate * seconds)))
+    from mutagen.wave import WAVE
+    from mutagen.id3 import TIT2, TPE1
+    tagged = WAVE(path)
+    tagged.add_tags()
+    tagged.tags.add(TPE1(encoding=3, text=artist_title[0]))
+    tagged.tags.add(TIT2(encoding=3, text=artist_title[1]))
+    tagged.save()
 
 
 class Journey:
@@ -230,8 +251,9 @@ class Journey:
             with open(os.path.join(self.out, "download-log.txt"), "w", encoding="utf-8") as f:
                 f.write("\n".join(map(str, lines)))
             summary = "; ".join(f"{t}: {state} {note}" for _k, state, t, _a, note in w.downloads.items()) or "no notes"
-            if self.blocked_reason(summary):
-                return "blocked", f"refused by the website: {summary}"
+            if self.blocked_reason(summary + " " + " ".join(map(str, lines))):
+                return "blocked", (f"refused by the website (Bandcamp asked this test computer to prove it's a browser; "
+                                   f"home connections aren't asked): " + " / ".join(map(str, lines))[-400:])
             return "fail", f"finished but no song file: {summary} | log: " + " / ".join(map(str, lines))[-900:]
         size = os.path.getsize(files[0])
         if size < 500_000:
@@ -281,22 +303,62 @@ class Journey:
         return ("pass" if ok else "fail"), (f"{total} episodes; in progress: {in_progress}; '{word}' finds {found}; "
                                            f"oldest-first sort: {oldest_first}")
 
-    def step_canvas(self):
-        """Spotify Canvas without an account, for a song known to have one."""
-        from core import spotify_canvas
-        res, err = [], []
-        self.w.online_call(spotify_canvas.find, self.w.net, self.w.storage.data_dir, "The Weeknd", "Blinding Lights",
-                           "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b", None,
-                           on_done=res.append, on_error=err.append)
-        self.wait(lambda: res or err, 60)
-        if res and res[0] and os.path.getsize(res[0]) > 10_000:
-            return "pass", f"video saved ({os.path.getsize(res[0]) // 1024} KB)"
-        why = str(err[0]) if err else "Spotify gave no video"
-        try:
-            spotify_canvas.canvas_url(self.w.net, "0VjIjW4GlUZAMYd2vXMi3b")
-        except Exception as e:
-            why += f" ({e})"
-        return "fail", why
+    def step_episode_download(self):
+        """Download the shortest of the latest episodes; it must land in Downloads/Podcasts as a real audio file."""
+        w = self.w
+        ctx = w._show_ctx
+        if not ctx or not ctx.get("items"):
+            return "fail", "no podcast open"
+        from ui.shows_controller import item_key
+        ep = min(ctx["items"][:4], key=lambda e: e.track.duration_ms or 10 ** 9)
+        key = item_key(ep)
+        if not w.download_items([ep]):
+            return "fail", "the download didn't start"
+        ok = self.wait(lambda: key in w.user_data.offline, 240)
+        path = w.user_data.offline.get(key)
+        if not ok or not isinstance(path, str) or not os.path.isfile(path):
+            return "fail", f"no file after 4 minutes (status: {w.status_label.text() if hasattr(w, 'status_label') else '?'})"
+        size = os.path.getsize(path)
+        in_podcasts = os.path.normcase(os.path.join(w.download_folder(), "Podcasts")) in os.path.normcase(path)
+        w.save_now()
+        ok = size > 100_000 and in_podcasts
+        return ("pass" if ok else "fail"), (f"“{ep.title}” saved as {os.path.basename(path)} ({size // 1024} KB), "
+                                           f"in the Podcasts folder: {in_podcasts}")
+
+    def step_own_music(self):
+        """Add a music folder with a song in it (tagged like a downloaded song), put it in a playlist and play it."""
+        w = self.w
+        folder = os.path.join(self.out, "my music")
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "my song.wav")
+        _make_tagged_wav(path, OWN_SONG, seconds=20)
+        if not w.add_music_folder(folder):
+            return "fail", "the folder wasn't added"
+        if not self.wait(lambda: any(s.file_path and os.path.normcase(s.file_path) == os.path.normcase(path)
+                                     for s in w.songs), 60):
+            return "fail", f"the song never showed up in Your Library ({len(w.songs)} songs)"
+        song = next(s for s in w.songs if os.path.normcase(s.file_path) == os.path.normcase(path))
+        if (song.artist, song.title) != OWN_SONG:
+            return "fail", f"tags read as {song.artist} - {song.title}"
+        w.create_playlist("Journey mine", [song])
+        w.play_song(song, queue=[song], source="Your Library")
+        played, how = self.position_moves(5)
+        w.player.stop()
+        w.save_now()
+        return ("pass" if played else "fail"), f"{song.artist} - {song.title}: {how}"
+
+    def delete_own_song(self):
+        """Between the two runs: the song file is deleted, the way a person tidying their folders would."""
+        path = os.path.join(self.out, "my music", "my song.wav")
+        for _ in range(20):            # Windows: VLC may hold the file for a moment after stopping
+            try:
+                os.remove(path)
+                return True
+            except FileNotFoundError:
+                return True
+            except OSError:
+                self.wait(lambda: False, 0.5)
+        return False
 
     def step_activity_log(self):
         from core import activity_log
@@ -337,15 +399,21 @@ class Journey:
         self.run_step("Find, follow and play a podcast", self.step_podcast, needs=["App opens"])
         self.run_step("Podcast filter, search and sort", self.step_episode_tools,
                       needs=["Find, follow and play a podcast"])
+        self.run_step("Download a podcast episode", self.step_episode_download,
+                      needs=["Find, follow and play a podcast"])
+        self.run_step("Your own music plays", self.step_own_music, needs=["App opens"])
         self.run_step("Open Settings", self.step_settings, needs=["App opens"])
         self.run_step("Activity log is written", self.step_activity_log, needs=["App opens"])
         w.save_now()
+        if self._status("Your own music plays") == "pass" and not self.delete_own_song():
+            self.record("Delete the song file for the next run", "fail", "the file couldn't be deleted")
         return self.finish("journey")
 
     # ------------------------------------------------------------------ after a restart
     def run_again(self):
         w = self.w
         before = self._load("journey")
+        w.user_data.download_notice_accepted = True
         self.run_step("App opens again", self.step_opens)
 
         def kept():
@@ -373,6 +441,46 @@ class Journey:
             ok, how = self.position_moves()
             return ("pass" if ok else "fail"), f"{local[0].title}: {how}"
         self.run_step("Play the downloaded song", play_local, needs=["App opens again"])
+
+        def episode_offline():
+            if not any(s["step"] == "Download a podcast episode" and s["status"] == "pass" for s in before):
+                return "skipped", "no episode was downloaded"
+            from core.online.models import OnlineTrack
+            from core.online.remote_song import RemoteSong
+            key, path = next(iter(w.user_data.offline.items()), (None, None))
+            info = w.user_data.offline_info.get(key) or {}
+            if not path or not os.path.isfile(path) or not info.get("track"):
+                return "fail", f"the downloaded episode is gone after the restart ({key}: {path})"
+            ep = RemoteSong(OnlineTrack.from_dict(info["track"]))
+            w.play_song(ep, queue=[ep], source="Downloaded")
+            ok, how = self.position_moves()
+            media = w.player.get_media()
+            mrl = media.get_mrl() if media is not None else ""
+            local = mrl.startswith("file:")
+            return ("pass" if ok and local else "fail"), \
+                f"“{ep.title}”: {how}; played from {'the downloaded file' if local else 'the internet: ' + mrl[:80]}"
+        self.run_step("Play the downloaded episode", episode_offline, needs=["App opens again"])
+
+        def deleted_song():
+            if not any(s["step"] == "Your own music plays" and s["status"] == "pass" for s in before):
+                return "skipped", "no song was added before the restart"
+            pl = next((p for p in w.playlists if p.name == "Journey mine"), None)
+            if pl is None or not pl.songs:
+                return "fail", "the playlist with the deleted song is gone"
+            gone = pl.songs[0]
+            if gone.exists:
+                return "fail", "the file wasn't deleted between the runs"
+            if (gone.artist, gone.title) != OWN_SONG:
+                return "fail", f"the deleted song came back as “{gone.artist} - {gone.title}”, so it can't be found online"
+            w.show_playlist(pl)
+            row = w.pl_table.item(0, 1)
+            shown = row.text() if row is not None else ""
+            queued = w.download_again([gone])
+            ok = shown.endswith("⬇") and queued == 1
+            return ("pass" if ok else "fail"), (f"shown as “{shown}” ({'missing' if not gone.exists else 'present'}), "
+                                               f"remembered as {gone.artist} - {gone.title}, Download again queued {queued}")
+        self.run_step("A deleted song is remembered and can be downloaded again", deleted_song,
+                      needs=["App opens again"])
         return self.finish("again")
 
     # ------------------------------------------------------------------ report

@@ -70,6 +70,25 @@ def format_total(ms: int) -> str:
     return f"{mins} min {secs} sec"
 
 
+def remember_details(song, info):
+    """Fill a missing file's Song with what it was: saved details first, else "Artist - Title" in the file name
+    (how Sevbify names downloads). Leaves "Unknown Artist" when neither says."""
+    if song.exists:
+        return song
+    if isinstance(info, dict) and info.get("title"):
+        song.title = str(info["title"])
+        song.artist = str(info.get("artist") or song.artist)
+        song.album = str(info.get("album") or song.album)
+        song.duration = int(info.get("ms") or 0)
+        return song
+    name = re.sub(r"^\d+\s*[-.]\s*", "", os.path.splitext(os.path.basename(song.file_path))[0])
+    if " - " in name and song.artist == "Unknown Artist":
+        artist, title = name.split(" - ", 1)
+        if artist.strip() and title.strip():
+            song.artist, song.title = artist.strip(), title.strip()
+    return song
+
+
 class Song:
     """A local audio file and its metadata.
 

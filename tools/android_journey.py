@@ -128,6 +128,8 @@ def stream(query, must_contain):
 
 
 def main():
+    # Don't let other apps' "isn't responding" boxes cover the screen (Android's own setting for this).
+    ui.sh("settings put global hide_error_dialogs 1")
     ui.clear_anr()
     installed = PKG in ui.sh("pm list packages")
 
@@ -149,8 +151,11 @@ def main():
             return "fail", f"Sevbify never came to the front ({focus.strip()[:200]})"
         time.sleep(8)
         # One-time questions a person answers on first start (e.g. the Android Auto tip): "Later" / "Not now".
-        for _ in range(3):
-            texts = {n[0] for n in ui.nodes()}
+        for _ in range(6):
+            found = ui.nodes()
+            if ui.clear_anr(found):
+                continue
+            texts = {n[0] for n in found}
             choice = next((t for t in ("Later", "Not now", "No thanks", "OK", "Got it") if t in texts), None)
             if not choice:
                 break
