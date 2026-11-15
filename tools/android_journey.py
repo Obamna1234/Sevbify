@@ -114,15 +114,20 @@ def playback_log():
     ui.open_settings("Playback")
     time.sleep(2)
     seen = []
-    for _ in range(6):                 # the status log is at the bottom of the page
-        for n in ui.nodes():
+    for _ in range(15):                # "Playback status" is at the bottom of the page, above its Copy button
+        found = ui.nodes()
+        for n in found:
             if n[0] and n[0] not in seen:
                 seen.append(n[0])
+        if "Copy" in {n[0] for n in found} and "Playback status" in seen:
+            break
         ui.swipe_up()
         time.sleep(1)
     back_to_home()
-    log = [t for t in seen if "not found" in t or "ERROR" in t or ":" in t[:12]]
-    return " / ".join(log or seen[-6:])
+    if "Playback status" not in seen:
+        return "(couldn't reach Playback status at the bottom of Settings → Playback)"
+    after = seen[seen.index("Playback status") + 1:]
+    return " / ".join(t for t in after if t != "Copy" and not t.startswith("What the player last did"))[:1500]
 
 
 def search(text):
