@@ -453,8 +453,14 @@ class Storage:
         data.offline_info = {str(k): v for k, v in info.items() if isinstance(v, dict) and isinstance(v.get("track"), dict)} \
             if isinstance(info, dict) else {}
         si = raw.get("song_info", {}) or {}
-        data.song_info = {from_stored_path(str(k)): {f: v[f] for f in ("title", "artist", "album", "ms") if f in v}
-                          for k, v in si.items() if isinstance(v, dict)} if isinstance(si, dict) else {}
+        data.song_info = {}
+        for k, v in (si.items() if isinstance(si, dict) else ()):
+            if not isinstance(v, dict) or not isinstance(v.get("title"), str):
+                continue
+            entry = {f: v[f] for f in ("title", "artist", "album") if isinstance(v.get(f), str)}
+            if isinstance(v.get("ms"), int) and not isinstance(v.get("ms"), bool) and v["ms"] >= 0:
+                entry["ms"] = v["ms"]
+            data.song_info[from_stored_path(str(k))] = entry
         sfl = raw.get("save_for_later", {}) or {}
         data.save_for_later = {str(k): list(v) for k, v in sfl.items() if isinstance(v, list)} if isinstance(sfl, dict) else {}
 

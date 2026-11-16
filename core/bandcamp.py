@@ -21,6 +21,11 @@ class NotPlayable(Exception):
     """Bandcamp doesn't let this track be played in full (or the page changed)."""
 
 
+def urlsplit_host(url):
+    from urllib.parse import urlsplit
+    return (urlsplit(url).hostname or "").lower()
+
+
 def is_track_page(url):
     return bool(PAGE_RE.match(url or ""))
 
@@ -43,6 +48,10 @@ def parse_track_page(page_html):
         url = "https:" + url
     if not url.startswith("https://"):
         raise NotPlayable("Bandcamp doesn't stream this track in full")
+    from urllib.parse import urlsplit
+    host = (urlsplit(url).hostname or "").lower()
+    if not (host == "bcbits.com" or host.endswith(".bcbits.com")):     # Bandcamp's own file servers only
+        raise NotPlayable("Bandcamp's player pointed somewhere unexpected")
     current = data.get("current") or {}
     art = data.get("art_id")
     return {"url": url, "duration": float(t.get("duration") or 0), "title": t.get("title") or current.get("title", ""),
@@ -60,8 +69,14 @@ def track_info(page, opener=None):
         # Looking like a real browser (curl_cffi, on the computer apps): Bandcamp shows some connections a
         # "Client Challenge" page instead of the song.
         from curl_cffi import requests as cr
-        r = cr.get(page, impersonate="chrome", timeout=20, headers={"Accept-Language": "en"})
-        text = r.text[:MAX_PAGE]
+        r = cr.get(page, impersonate="chrome", timeout=20, headers={"Accept-Language": "en"}, stream=True)
+        body = b""
+        for chunk in r.iter_content():
+            body += chunk
+            if len(body) > MAX_PAGE:
+                break
+        r.close()
+        text = body[:MAX_PAGE].decode("utf-8", errors="replace")
     except ImportError:
         pass
     except Exception:
@@ -88,15 +103,23 @@ def download(page, dest_mp3, opener=None, max_bytes=60_000_000):
     tmp = dest_mp3 + ".part"
     req = urllib.request.Request(info["url"], headers={"User-Agent": UA})
     got = 0
-    with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
-        while True:
-            block = r.read(65536)
-            if not block:
-                break
-            got += len(block)
-            if got > max_bytes:
-                raise NotPlayable("the file was far bigger than a song")
-            f.write(block)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
+            final = (urlsplit_host(r.geturl()))
+            if not (final == "bcbits.com" or final.endswith(".bcbits.com")):
+                raise NotPlayable("Bandcamp's file link went somewhere unexpected")
+            while True:
+                block = r.read(65536)
+                if not block:
+                    break
+                got += len(block)
+                if got > max_bytes:
+                    raise NotPlayable("the file was far bigger than a song")
+                f.write(block)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
     if got < 50_000:
         os.remove(tmp)
         raise NotPlayable("Bandcamp sent too little audio")

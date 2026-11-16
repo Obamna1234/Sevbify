@@ -244,3 +244,53 @@ def test_activity_log_is_local_short_and_rotates(tmp_path, monkeypatch):
     assert "song 199" in open(out, encoding="utf-8").read()
     if os.name == "posix":
         assert os.stat(al.path()).st_mode & 0o077 == 0
+
+
+def test_activity_log_private_session_and_report(tmp_path, monkeypatch):
+    from core import activity_log as al
+    al.start(str(tmp_path))
+    al.log("server", "opening https://bob:pw@dav.example.com/x.flac and rtsp://cam.example.net/live")
+    al.set_private(True)
+    try:
+        al.log("play", '"Secret Song" - Some Artist (your file)')
+        al.log("stream", "Secret Song found")
+    finally:
+        al.set_private(False)
+    text = open(al.path(), encoding="utf-8").read()
+    assert "bob" not in text and "pw" not in text.replace("Private", "") and "[example.com link]" in text
+    assert "[example.net link]" in text and "Secret Song" not in text and "Private Session" in text
+    monkeypatch.setattr(os.path, "expanduser", lambda p: "/home/realname" if p == "~" else p)
+    al.log("crash", "File /home/realname/app/x.py line 3")
+    out = al.report(str(tmp_path / "report.txt"))
+    body = open(out, encoding="utf-8").read()
+    assert "/home/realname" not in body and "~/app/x.py" in body
+    if os.name == "posix":
+        assert os.stat(out).st_mode & 0o077 == 0
+
+
+def test_bad_song_details_in_the_save_file_are_ignored(tmp_path):
+    from core import storage
+    data = storage.UserData()
+    data.song_info = {str(tmp_path / "a.mp3"): {"title": "A", "artist": "B", "ms": 5}}
+    st = storage.Storage(str(tmp_path))
+    st.save(data)
+    import json
+    from pathlib import Path
+    f = Path(st.path)
+    raw = json.loads(f.read_text(encoding="utf-8"))
+    raw["song_info"] = {"x.mp3": {"title": "T", "ms": "abc", "artist": ["no"]}, "y.mp3": [1], "z.mp3": {"ms": 3}}
+    f.write_text(json.dumps(raw), encoding="utf-8")
+    back = st.load()
+    assert list(back.song_info.values()) == [{"title": "T"}]
+
+
+def test_journey_mode_ignored_on_a_real_install():
+    import subprocess
+    import sys as _s
+    code = ("import sys; sys.argv=['app.py','--journey','/tmp/x']; import os; os.environ.pop('SEVBIFY_E2E', None);"
+            "import importlib.util as u; src=open('app.py',encoding='utf-8').read();"
+            "start=src.index('JOURNEY = next'); m='JOURNEY, JOURNEY_DIR = \"\", \"\"'; end=src.index(m)+len(m);"
+            "from core import portable as _portable; exec(src[start:end]); print(repr(JOURNEY))")
+    out = subprocess.run([_s.executable, "-c", code], capture_output=True, text=True,
+                         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    assert out.stdout.strip() == "''", out.stderr

@@ -28,7 +28,9 @@ def portable_dir():
 
 def apply_at_start():
     """Called first thing by app.py: use the portable folder when it exists."""
-    if not os.environ.get("SEVBIFY_DATA_DIR") and os.path.isdir(portable_dir()):
+    d = portable_dir()
+    owned = not hasattr(os, "getuid") or (not os.path.islink(d) and os.path.isdir(d) and os.stat(d).st_uid == os.getuid())
+    if not os.environ.get("SEVBIFY_DATA_DIR") and os.path.isdir(d) and owned:
         os.environ["SEVBIFY_DATA_DIR"] = portable_dir()
         return True
     return False
@@ -42,8 +44,10 @@ def _copy(src, dst):
     os.makedirs(dst, exist_ok=True)
     for name in os.listdir(src):
         s, d = os.path.join(src, name), os.path.join(dst, name)
+        if os.path.islink(s):
+            continue                # never copy what a shortcut points at
         if os.path.isdir(s):
-            shutil.copytree(s, d, dirs_exist_ok=True)
+            shutil.copytree(s, d, dirs_exist_ok=True, symlinks=True)
         else:
             shutil.copy2(s, d)
 

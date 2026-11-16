@@ -4784,7 +4784,7 @@ class MainWindow(ShowsMixin, QMainWindow):
     def _fetch_spotify_canvas(self, song):
         """No video of your own for this song: Spotify's Canvas, when it has one (no account; see core/spotify_canvas)."""
         track = getattr(song, "track", None)
-        if (not self.user_data.canvas_enabled or not getattr(self.user_data, "spotify_canvas", True)
+        if (not self.user_data.canvas_enabled or not getattr(self.user_data, "spotify_canvas", False)
                 or not self.online_enabled or not song.artist or song.artist == "Unknown Artist"
                 or getattr(track, "source", "") in ("podcast", "audiobook", "youtube", "jellyfin", "webdav")):
             return
@@ -5921,6 +5921,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             # "Recents" order isn't changed by what you play. It ends when Sevbify closes or after 6 hours.
             # Sevbify has no account, so nothing about your listening is sent anywhere either way.
             self.private_session = bool(values["private_session"])
+            from core import activity_log
+            activity_log.set_private(self.private_session)
             self.top_bar.set_private(self.private_session)
             if not hasattr(self, "_private_timer"):
                 self._private_timer = QTimer(self)

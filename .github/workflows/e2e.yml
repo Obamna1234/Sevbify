@@ -103,6 +103,7 @@ jobs:
           esac
           mkdir -p "$RUNNER_TEMP/data" "$GITHUB_WORKSPACE/report"
           echo "SEVBIFY_DATA_DIR=$RUNNER_TEMP/data" >> "$GITHUB_ENV"
+          echo "SEVBIFY_E2E=1" >> "$GITHUB_ENV"
       - name: Use the app (first run)
         if: steps.has.outputs.yes == 'true'
         timeout-minutes: 42

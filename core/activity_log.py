@@ -20,7 +20,14 @@ KEEP = 2
 _lock = threading.Lock()
 _path = [""]
 
-_URL = re.compile(r"(https?|file)://[^\s\"')]+", re.I)
+_URL = re.compile(r"([a-z][a-z0-9+.-]*)://[^\s\"')]+", re.I)
+_private = [False]
+# While Private Session is on, these say what was played/searched, so only the kind of event is kept.
+PRIVATE_KINDS = {"play", "stream", "retry", "skip", "status", "player", "podcast", "download", "online", "error"}
+
+
+def set_private(on):
+    _private[0] = bool(on)
 
 
 def start(data_dir):
@@ -43,7 +50,11 @@ def _short(text):
     def site(m):
         if m.group(1).lower() == "file":
             return "[file]"
-        host = re.sub(r"^https?://([^/:?#@]*@)?", "", m.group(0)).split("/")[0].split(":")[0].split("?")[0]
+        from urllib.parse import urlsplit
+        try:
+            host = urlsplit(m.group(0)).hostname or ""
+        except ValueError:
+            host = ""
         parts = host.split(".")
         return f"[{'.'.join(parts[-2:]) if len(parts) >= 2 else host} link]"
     return _URL.sub(site, str(text))
@@ -52,6 +63,8 @@ def _short(text):
 def log(kind, text):
     if not _path[0]:
         return
+    if _private[0] and kind in PRIVATE_KINDS:
+        text = "(Private Session: details not kept)"
     line = f"{time.strftime('%Y-%m-%d %H:%M:%S')}  {kind:<9} {_short(text)}".replace("\n", " | ")[:2000] + "\n"
     with _lock:
         try:
@@ -72,11 +85,16 @@ def report(dest):
     base = _path[0]
     folder = os.path.dirname(base)
     parts = [f"{base}.{i}" for i in range(KEEP, 0, -1)] + [base, os.path.join(folder, "error.log")]
-    with open(dest, "w", encoding="utf-8") as out:
+    home = os.path.expanduser("~")
+    def tidy(text):
+        text = _short(text)
+        return text.replace(home, "~") if home and home not in ("/", "~") else text
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as out:
         for p in parts:
             if os.path.exists(p):
                 out.write(f"===== {os.path.basename(p)} =====\n")
                 with open(p, encoding="utf-8", errors="replace") as f:
-                    out.write(_short(f.read()))
+                    out.write(tidy(f.read()))
                 out.write("\n")
     return dest

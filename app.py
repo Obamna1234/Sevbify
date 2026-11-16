@@ -30,6 +30,11 @@ SMOKE_TEST = "--smoke-test" in sys.argv
 # separate data folder (SEVBIFY_DATA_DIR) set by the test, never yours.
 JOURNEY = next((a for a in ("--journey", "--journey-again") if a in sys.argv), "")
 JOURNEY_DIR = sys.argv[sys.argv.index(JOURNEY) + 1] if JOURNEY and sys.argv.index(JOURNEY) + 1 < len(sys.argv) else ""
+# Only on the test computers: they set SEVBIFY_E2E=1 and a separate data folder. Typed by hand on a real
+# install, the flag is ignored, so it can never change someone's own library or close the app on them.
+if JOURNEY and not (os.environ.get("SEVBIFY_E2E") == "1" and JOURNEY_DIR and os.environ.get("SEVBIFY_DATA_DIR")
+                    and not _portable.is_portable(os.environ["SEVBIFY_DATA_DIR"])):
+    JOURNEY, JOURNEY_DIR = "", ""
 
 
 if sys.platform.startswith("linux"):

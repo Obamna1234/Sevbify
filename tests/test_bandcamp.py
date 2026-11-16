@@ -38,3 +38,12 @@ def test_streaming_uses_bandcamp_directly(monkeypatch):
     monkeypatch.setattr(bandcamp, "stream", lambda page, opener=None: ("https://t4.bcbits.com/s", {"User-Agent": "x"}, 200))
     url, headers, secs = streamer._extract(downloader.engine(), PAGE)
     assert url == "https://t4.bcbits.com/s" and secs == 200
+
+
+def test_mp3_link_must_be_bandcamps_own_file_server():
+    import json, html
+    from core import bandcamp
+    data = {"trackinfo": [{"file": {"mp3-128": "https://192.168.1.1/x.mp3"}, "duration": 3, "title": "t"}]}
+    page = f'<div data-tralbum="{html.escape(json.dumps(data))}"></div>'
+    with pytest.raises(bandcamp.NotPlayable):
+        bandcamp.parse_track_page(page)
