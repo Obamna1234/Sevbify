@@ -103,16 +103,21 @@ def is_soundcloud_track(url):
         and len(parts) == 2 and parts[1] not in ("sets", "albums", "tracks", "reposts", "likes")
 
 
+def _sc_search(e, query, n):
+    """SoundCloud's search through yt-dlp: {"entries": [...]} (tests replace this: no real network)."""
+    if e.yt_dlp is None:
+        return {}
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud", "soundcloud:.*"]}
+    with e.yt_dlp.YoutubeDL(opts) as ydl:
+        return ydl.extract_info(f"scsearch{int(n)}:{query}", download=False) or {}
+
+
 def _pick_soundcloud(e, line, duration_s):
     """SoundCloud: lots of music that's on neither Bandcamp nor YouTube (or not in the catalogue at all). Same
     rule as YouTube: the title must have most of the song title's words; and the length must be close when it is
     known, so a 30-second preview, a DJ mix or a different version isn't picked."""
-    if e.yt_dlp is None:
-        return None
-    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud", "soundcloud:.*"]}
-    with e.yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(f"scsearch8:{line}", download=False) or {}
+    info = _sc_search(e, line, 8)
     artist, title = e._split_query(line)
     want = set(e._words(title or line))
     who = set(e._words(artist or ""))
@@ -126,6 +131,8 @@ def _pick_soundcloud(e, line, duration_s):
         uploader = set(e._words(entry.get("uploader") or ""))
         if want and len(want & got) / len(want) < 0.6:
             continue
+        if who and not who & (got | uploader):
+            continue                                   # someone else's song with a similar name
         secs = entry.get("duration") or 0
         if duration_s and secs and abs(secs - duration_s) > max(12, 0.12 * duration_s):
             continue
@@ -396,13 +403,7 @@ def remembered_page(artist, title, source_name):
 def search_soundcloud(query, limit=10):
     """Songs on SoundCloud for a search (for the "On SoundCloud" part of Search): [OnlineTrack]."""
     from core.online.models import OnlineTrack
-    e = downloader.engine()
-    if e.yt_dlp is None:
-        return []
-    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud", "soundcloud:.*"]}
-    with e.yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(f"scsearch{int(limit)}:{query}", download=False) or {}
+    info = _sc_search(downloader.engine(), query, limit)
     out = []
     for entry in info.get("entries") or []:
         url = entry.get("webpage_url") or entry.get("url") or ""   # the search gives api links in "url"

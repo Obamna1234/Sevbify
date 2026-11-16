@@ -57,6 +57,8 @@ def no_ad_free_lookups(monkeypatch):
     monkeypatch.setattr(podcasts, "ad_free_stream", none)
     from core import spotify_canvas
     monkeypatch.setattr(spotify_canvas, "find", lambda *a, **k: None)     # no Spotify Canvas lookups in tests
+    from core import streamer
+    monkeypatch.setattr(streamer, "_sc_search", lambda *a, **k: {})      # no real SoundCloud searches in tests
 
 
 @pytest.fixture(autouse=True)
