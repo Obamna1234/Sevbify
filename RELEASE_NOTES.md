@@ -15,7 +15,7 @@ From your Windows test of beta.46:
 - Right-clicking the Top result opens its menu (it used to play it); the wrong podcast episode is no longer picked; **Connect to a device** lists your outputs before anything has played; the **Download** window looks like Spotify's lists.
 - **Android:** the clock and notification icons are always readable and the bottom bar is dark. Bandcamp, SoundCloud and the podcast fix apply on the phones too.
 
-Tested automatically on Windows, macOS, Ubuntu and an Android emulator; real songs now play and download on those test computers. Please check on your own connection: songs starting quickly, Bandcamp and SoundCloud, and Connect to a device.
+Tested automatically on Windows 10 and 11, macOS, Ubuntu 22.04 and 24.04 and an Android emulator: real songs now play (and download) on all of them for the first time, through SoundCloud, because Bandcamp's website and YouTube still refuse those cloud computers. Please check on your own connection: songs starting quickly, Bandcamp and SoundCloud, and Connect to a device.
 
 ### Earlier, in beta.46 (Windows, macOS, Linux, plus phone fixes)
 
