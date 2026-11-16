@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog, QSizePolicy
 )
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut, QDesktopServices
-from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher
+from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher, QRectF
 
 from .top_bar import TopBar
 from .library_panel import LibraryPanel, rounded, with_ring, origin_colour
@@ -2373,6 +2373,10 @@ class MainWindow(ShowsMixin, QMainWindow):
             shelf("Continue listening", self._continue_cards(("podcast", "youtube", "audiobook")))
             shelf("Your shows and audiobooks", self._show_cards(self.followed_shows()) + self._book_cards(self.saved_books()))
 
+        if chip in ("all", "music"):
+            shelf("Made for you", self._made_for_you_cards())
+            shelf(self._country_title(), self._country_cards())
+
         recent = [s for s in list(self.pq.recent)[:20] if not getattr(s, "is_remote", False)]
         rc = []
         for song in recent:
@@ -2412,6 +2416,163 @@ class MainWindow(ShowsMixin, QMainWindow):
         v.addStretch()
         theme.replace_scroll_widget(self.home_scroll, content)
         self._relayout_home()
+
+    # --- Made for you: Discover Weekly, Daily Mixes, Release Radar (core/discovery.py, made on this computer) ---
+    MFY_COLOURS = {"Discover Weekly": ("#3d1fa0", "#1a8f7a"), "Release Radar": ("#1a5a8f", "#c03a5a"),
+                   "Daily Mix": ("#8a5a1a", "#1a1a1a")}
+
+    def _mfy_cover(self, title, subtitle_art=None, n=0):
+        """Spotify-like cover: a colour gradient (or the artist's picture) with the playlist's name on it."""
+        from PyQt6.QtGui import QImage, QLinearGradient, QFont
+        folder = os.path.join(self.storage.data_dir, "covers")
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "mfy_" + "".join(c for c in title.lower() if c.isalnum()) + ".png")
+        img = QImage(400, 400, QImage.Format.Format_ARGB32)
+        p = QPainter(img)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        a, b = self.MFY_COLOURS.get(title, ("#2a2a2a", "#121212"))
+        if title.startswith("Daily"):
+            hues = ["#c0392b", "#2e86c1", "#28a745", "#8e44ad"]
+            a, b = hues[(n - 1) % 4], "#121212"
+        g = QLinearGradient(0, 0, 400, 400)
+        g.setColorAt(0, QColor(a))
+        g.setColorAt(1, QColor(b))
+        p.fillRect(0, 0, 400, 400, g)
+        if subtitle_art is not None and not subtitle_art.isNull():
+            p.setOpacity(0.55)
+            p.drawPixmap(0, 0, subtitle_art.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                                   Qt.TransformationMode.SmoothTransformation))
+            p.setOpacity(1.0)
+        f = QFont(self.font())
+        f.setPixelSize(44)
+        f.setBold(True)
+        p.setFont(f)
+        p.setPen(QColor("#ffffff"))
+        p.drawText(QRectF(24, 230, 352, 150), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom
+                   | Qt.TextFlag.TextWordWrap, title)
+        p.end()
+        img.save(path, "PNG")
+        return path
+
+    def _made_for_you_cards(self):
+        """Cards for the Made for you playlists (made in the background, then Home is refreshed once)."""
+        from core import discovery
+        if not self.online_enabled or len(self.user_data.listens) < 5:
+            return []
+        data = getattr(self, "_mfy", None)
+        key = (discovery.week_seed(), discovery.day_seed(), discovery.radar_seed(), len(self.user_data.listens) // 50)
+        if data is None or data.get("key") != key:
+            if not getattr(self, "_mfy_busy", False):
+                self._mfy_busy = True
+                listens = [list(x) for x in self.user_data.listens]
+                known = {(discovery._norm(s.artist), discovery._norm(s.title)) for s in self.songs}
+
+                def work():
+                    out = {"key": key, "lists": []}
+                    try:
+                        dw = discovery.discover_weekly(self.online, listens, known)
+                        if dw:
+                            out["lists"].append(("Discover Weekly", "Your weekly mixtape of fresh music", dw))
+                    except Exception:
+                        pass
+                    try:
+                        rr = discovery.release_radar(self.online, listens)
+                        if rr:
+                            out["lists"].append(("Release Radar", "New music from artists you listen to", rr))
+                    except Exception:
+                        pass
+                    try:
+                        for m in discovery.daily_mixes(self.online, listens):
+                            out["lists"].append((m["title"], m["subtitle"], m["tracks"]))
+                    except Exception:
+                        pass
+                    return out
+
+                def done(out):
+                    self._mfy_busy = False
+                    self._mfy = out
+                    if self.stack.currentWidget() is self.home_page:
+                        self.refresh_home()
+
+                def failed(_e):
+                    self._mfy_busy = False
+                self.online_call(work, on_done=done, on_error=failed, lane="songs")
+            if data is None:
+                return []
+        cards = []
+        for i, (title, subtitle, tracks) in enumerate(data.get("lists") or []):
+            n = int(title.rsplit(" ", 1)[-1]) if title.startswith("Daily Mix") else 0
+            cover = self._mfy_cover(title, n=n)
+            c = Card(cover_thumb(cover, 160), title, subtitle)
+            c.clicked.connect(lambda t=title, s=subtitle, tr=tracks, cv=cover: self._open_made_for_you(t, s, tr, cv))
+            c.play_clicked.connect(lambda t=title, tr=tracks: self._play_made_for_you(t, tr))
+            cards.append(c)
+        return cards
+
+    def _country_title(self):
+        from PyQt6.QtCore import QLocale
+        name = QLocale.territoryToString(QLocale().territory()) if hasattr(QLocale, "territoryToString") else ""
+        return f"Top songs in {name}" if name else "Top songs"
+
+    def _country_cards(self):
+        """Most played songs in your country (Apple's public charts; only the country code is sent)."""
+        if not self.online_enabled:
+            return []
+        data = getattr(self, "_country_top", None)
+        if data is None or time.time() - data[0] > 12 * 3600:
+            if not getattr(self, "_country_busy", False):
+                self._country_busy = True
+                from core.online.providers import country_top_songs
+                from .shows_controller import country_code
+
+                def done(tracks):
+                    self._country_busy = False
+                    self._country_top = (time.time(), tracks)
+                    if tracks and self.stack.currentWidget() is self.home_page:
+                        self.refresh_home()
+
+                def failed(_e):
+                    self._country_busy = False
+                    self._country_top = (time.time(), [])
+                def work():
+                    tracks = country_top_songs(self.net, country_code(), 50)
+                    for t in tracks[:20]:                     # covers first, so the shelf shows them at once
+                        try:
+                            self.net.get_image(t.cover_url)
+                        except Exception:
+                            pass
+                    return tracks
+                self.online_call(work, on_done=done, on_error=failed)
+            if data is None:
+                return []
+        songs = self.radio_items(self._allowed(data[1]))
+        for song in songs:
+            if getattr(song, "is_remote", False) and song.track.cover_url:
+                song.album_cover_path = self.net.cached_image(song.track.cover_url) or song.album_cover_path
+        title = self._country_title()
+        cards = []
+        for song in songs[:20]:
+            c = Card(cover_thumb(song.album_cover_path, 160), song.title, song.artist)
+            c.clicked.connect(lambda s=song: self.play_song(s, queue=songs, source=title))
+            c.play_clicked.connect(lambda s=song: self.play_song(s, queue=songs, source=title))
+            c.context_requested.connect(lambda pos, s=song: self._show_song_menu(s, pos, queue=songs, source=title))
+            cards.append(c)
+        return cards
+
+    def _open_made_for_you(self, title, subtitle, tracks, cover):
+        songs = self.radio_items(self._allowed(tracks))
+        self.collection_table.mark_pending = True
+        self.collection_table.download_state = self.downloads.state
+        self._show_collection("Made for you", title, songs, cover, f"{subtitle}  •  {len(songs)} songs",
+                              ("madeforyou", title),
+                              extra_buttons=(("Save to Your Library",
+                                              lambda: self.save_songs_as_playlist(title, songs), False),))
+        self.fetch_covers(songs, limit=len(songs))
+
+    def _play_made_for_you(self, title, tracks):
+        songs = self.radio_items(self._allowed(tracks))
+        if songs:
+            self.play_song(songs[0], queue=songs, source=title)
 
     def _relayout_home(self):
         """Fit as many card columns as the width allows. Shelves show one row;
@@ -4664,6 +4825,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._check_lyrics(song)
         if not self.private_session:
             self.pq.record_played(song)
+            if getattr(song, "track", None) is None or song.track.source not in ("podcast", "audiobook", "youtube"):
+                from core import discovery
+                discovery.record(self.user_data.listens, song.artist, song.title)
         self._notify_track(song)
         self._queue_changed()
         self._update_now_playing(song)
@@ -6178,7 +6342,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             local = find_local_match(t, self.songs, index)
             if local is not None:
                 out.append(local)
-            elif t.stream_url or t.preview_url or (t.source == "soundcloud" and t.page_url):
+            elif t.stream_url or t.preview_url or (t.source in ("soundcloud", "apple") and (t.page_url or t.title)):
                 out.append(RemoteSong(t))
             # else: nothing we're allowed to play here, so leave it out
         return out

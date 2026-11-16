@@ -928,10 +928,19 @@ class ShowsMixin:
             songs = self.radio_items(data["tracks"])[:10]
             if songs:
                 sections.append(("Popular songs", self._songs_block(songs, f"{genre['name']}: popular songs"), 0))
-            pl_cards = [self._card(p["title"], f"{p.get('nb_tracks') or ''} songs".strip(),
+            def pl_cards(items):
+                return [self._card(p["title"], f"{p.get('nb_tracks') or ''} songs".strip(),
                                    p.get("picture_xl") or p.get("picture_big") or "",
-                                   lambda p=p: self.open_web_playlist(p)) for p in data["playlists"]]
-            sections.append((f"{genre['name']} playlists", pl_cards, 1))
+                                   lambda p=p: self.open_web_playlist(p)) for p in items]
+            more = data.get("more") or {}
+            g = genre["name"]
+            sections.append((f"Featured {g} playlists", pl_cards(data["playlists"] + more.get("featured", [])), 1))
+            if more.get("popular"):
+                sections.append((f"Popular {g} playlists", pl_cards(more["popular"]), 1))
+            if more.get("local"):
+                sections.append((f"{g} in {data.get('country_name') or 'your country'}", pl_cards(more["local"]), 1))
+            if more.get("moods"):
+                sections.append((f"{g} moods and moments", pl_cards(more["moods"]), 1))
             sections.append(("New releases", [self._album_card(a) for a in data.get("releases", [])], 1))
             sections.append(("Popular albums", [self._album_card(a) for a in data["albums"]], 1))
             sections.append(("Popular artists", [self._card(a["name"], "Artist", a.get("picture_xl") or a.get("picture_big")
@@ -939,7 +948,20 @@ class ShowsMixin:
                                                             round_art=True) for a in data["artists"]], 1))
             self.genre_page.set_sections(sections, note="Popular right now, from Deezer's charts for this genre "
                                                         "(they change every day).")
-        self.online_call(self.online.deezer.genre_overview, genre["id"], on_done=done,
+        from PyQt6.QtCore import QLocale
+        country = QLocale.territoryToString(QLocale().territory()) if hasattr(QLocale, "territoryToString") else ""
+
+        def overview():
+            # Deezer's charts for the genre, plus many more playlists (Spotify's genre pages are long). The country
+            # comes from this computer's region setting, only to add "<genre> in <country>"; nothing else is sent.
+            data = self.online.deezer.genre_overview(genre["id"])
+            try:
+                data["more"] = self.online.deezer.genre_playlists(genre["name"], country)
+            except Exception:
+                data["more"] = {}
+            data["country_name"] = country
+            return data
+        self.online_call(overview, on_done=done,
                          on_error=lambda e: self._genre_page_token == token and
                          self.genre_page.show_message(f"Couldn't load {genre['name']}: {e}"))
 

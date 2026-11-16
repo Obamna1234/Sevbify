@@ -81,6 +81,32 @@ class Deezer:
             out["releases"] = []
         return out
 
+    def genre_playlists(self, genre_name, country_name="", limit=50):
+        """Many more playlists for a genre page, like Spotify's long genre pages: {"featured", "popular", "local",
+        "moods"} (Deezer's playlist search; "local" = playlists about your country, from the computer's region
+        setting only — nothing else about you is sent)."""
+        def find(q, n=limit):
+            try:
+                data = self._get("/search/playlist", {"q": q, "limit": n}, ttl=12 * 3600)
+            except Exception:
+                return []
+            return [p for p in data.get("data", []) if p.get("title") and (p.get("nb_tracks") or 0) >= 10]
+        found = find(genre_name)
+        seen = set()
+
+        def fresh(items):
+            out = []
+            for p in items:
+                if p.get("id") not in seen:
+                    seen.add(p.get("id"))
+                    out.append(p)
+            return out
+        featured = fresh([p for p in found if (p.get("user") or {}).get("name", "").casefold().startswith("deezer")])[:12]
+        popular = fresh(sorted(found, key=lambda p: -(p.get("nb_tracks") or 0)))[:12]
+        moods = fresh(find(f"{genre_name} chill") + find(f"{genre_name} party"))[:12]
+        local = fresh(find(f"{genre_name} {country_name}", 20))[:12] if country_name else []
+        return {"featured": featured, "popular": popular, "moods": moods, "local": local}
+
     def playlist_tracks(self, playlist_id, limit=100):
         data = self._get(f"/playlist/{playlist_id}/tracks", {"limit": limit}, ttl=6 * 3600)
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
@@ -489,3 +515,22 @@ def _fill(track, found):
     track.duration_ms = track.duration_ms or found.duration_ms
     track.genre = track.genre or found.genre
     return track
+
+
+def country_top_songs(net, country="us", limit=50):
+    """The most played songs in your country (Apple's public charts, no account). Only the two-letter country
+    code from this computer's region setting is sent. [OnlineTrack]."""
+    from .models import OnlineTrack
+    cc = (country or "us").lower()
+    if not re.fullmatch(r"[a-z]{2}", cc):
+        cc = "us"
+    data = net.get_json(f"https://rss.applemarketingtools.com/api/v2/{cc}/music/most-played/{int(limit)}/songs.json",
+                        ttl=12 * 3600)
+    out = []
+    for r in ((data or {}).get("feed") or {}).get("results") or []:
+        if r.get("name") and r.get("artistName"):
+            art = (r.get("artworkUrl100") or "").replace("100x100", "400x400")
+            out.append(OnlineTrack(title=r["name"], artist=r["artistName"], source="apple",
+                                   cover_url=art if art.startswith("https://") else "",
+                                   preview_url="", page_url=r.get("url") or ""))
+    return out

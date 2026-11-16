@@ -151,6 +151,9 @@ class UserData:
     update_asked: str = ""     # the newest version Sevbify already offered to install (asked once per version)
     disabled_folders: List[str] = field(default_factory=list)   # music folders switched off in Settings
     recent: List[str] = field(default_factory=list)       # recently played file paths
+    # What you listened to ([artist, title, unix time], newest last, at most 5000), for the Made for you
+    # playlists (core/discovery.py). Only on this computer; nothing is recorded during a Private session.
+    listens: List[list] = field(default_factory=list)
     recent_searches: List[str] = field(default_factory=list)  # Search ▸ Recent searches (newest first, max 30)
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     shows: List[dict] = field(default_factory=list)       # followed podcasts / YouTube channels (Show dicts)
@@ -306,6 +309,7 @@ class Storage:
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
+            "listens": [list(x) for x in data.listens[-5000:]],
             "recent_searches": list(data.recent_searches[:30]),
             "save_for_later": data.save_for_later,
             "shows": data.shows,
@@ -448,6 +452,9 @@ class Storage:
         except (TypeError, ValueError):
             pass
         data.recent = [from_stored_path(str(t)) for t in raw.get("recent", []) or [] if isinstance(t, str)]
+        data.listens = [[str(x[0])[:200], str(x[1])[:300], int(x[2])] for x in (raw.get("listens") or [])[-5000:]
+                        if isinstance(x, list) and len(x) == 3 and isinstance(x[0], str) and isinstance(x[1], str)
+                        and isinstance(x[2], int) and not isinstance(x[2], bool)]
         data.recent_searches = [str(q)[:200] for q in raw.get("recent_searches", []) or [] if str(q).strip()][:30]
         data.shows = [d for d in raw.get("shows", []) or [] if isinstance(d, dict) and (d.get("feed_url") or d.get("apple_id"))]
         data.books = [d for d in raw.get("books", []) or [] if isinstance(d, dict) and d.get("identifier")]

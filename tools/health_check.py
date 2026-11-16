@@ -152,6 +152,20 @@ def soundcloud_albums():
     return f"{len(albums)} albums; {albums[0]['title']}: {len(tracks)} songs"
 
 
+def country_charts():
+    from core.online.providers import country_top_songs
+    au = country_top_songs(net, "au", 10)
+    assert au, "no songs"
+    return f"{len(au)} songs, first: {au[0].artist} - {au[0].title}"
+
+
+def genre_playlists():
+    more = om.deezer.genre_playlists("Jazz", "Australia")
+    n = sum(len(v) for v in more.values())
+    assert n >= 20, more
+    return {k: len(v) for k, v in more.items()}
+
+
 def bandcamp_download():
     from core import downloader
     e = downloader.engine()
@@ -209,6 +223,8 @@ def ytdlp_current():
 
 
 check("Deezer search", deezer)
+check("Top songs in your country (Apple charts)", country_charts)
+check("Genre pages: more playlists (Deezer)", genre_playlists)
 check("Spotify playlist import (no account)", spotify_import)
 def spotify_search():
     from core import spotify_canvas as sc
