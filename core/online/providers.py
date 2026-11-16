@@ -109,6 +109,19 @@ class Deezer:
         data = self._get("/search", {"q": query, "limit": limit}, ttl=6 * 3600)
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]
 
+    def fresh_preview(self, artist, title, deezer_id=""):
+        """A preview link that still works. Deezer's preview links stop working after a while (they carry an
+        expiry time), and a song saved in a playlist or a cached search keeps its old one: so the 30-second
+        Preview always asks again (cached for 10 minutes at most)."""
+        if deezer_id and str(deezer_id).isdigit():
+            d = self._get(f"/track/{deezer_id}", ttl=600)
+            if d.get("preview"):
+                return d["preview"]
+        q = f'artist:"{artist}" track:"{title}"'
+        items = self._get("/search", {"q": q, "limit": 3}, ttl=600).get("data", []) or \
+            self._get("/search", {"q": f"{artist} {title}", "limit": 3}, ttl=600).get("data", [])
+        return next((d.get("preview") for d in items if d.get("preview")), "")
+
     def find_track(self, artist, title):
         found = self.find_tracks(artist, title)
         return found[0] if found else None

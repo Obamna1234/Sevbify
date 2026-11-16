@@ -263,9 +263,11 @@ def test_preview_only_plays_from_the_song_menu_in_its_own_window(window, qapp, t
     menu = window.build_song_menu(song)
     labels = [a.text() for a in menu.actions()]
     assert any("Preview (30 s)" in t for t in labels)
-    window.preview_song(song)
+    window._preview_window = None
+    window.preview_song(song)                       # asks for a fresh link first (offline here: the saved one)
+    assert wait_until(qapp, lambda: window._preview_window is not None)
     dlg = window._preview_window
-    assert dlg is not None and dlg.isVisible()
+    assert dlg.isVisible()
     assert wait_until(qapp, lambda: dlg.player.get_time() > 0 or dlg.player.is_playing())
     assert window.current_song is not song                    # the main player never gets the clip
     dlg.slider.setValue(1500)

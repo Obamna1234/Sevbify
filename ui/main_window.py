@@ -4902,9 +4902,13 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def preview_song(self, song):
         """Song menu → Preview: the 30-second clip in a small window with a seek bar (main playback pauses)."""
-        url = song.track.preview_url if getattr(song, "is_remote", False) else ""
+        track = getattr(song, "track", None)
+        # A saved song's preview link has usually expired (Deezer's links carry an expiry time): ask again online.
+        url = "" if self.online_enabled else (track.preview_url if track is not None else "")
 
         def show(u):
+            if getattr(self, "_shut_down", False):
+                return
             if not u:
                 self.show_status("No preview for this song", kind="info", timeout_ms=4000)
                 return
@@ -4917,7 +4921,8 @@ class MainWindow(ShowsMixin, QMainWindow):
                     old.close()
                 except RuntimeError:
                     pass
-            self._preview_window = PreviewDialog(self, self.vlc_instance, u, song.title, song.artist)
+            self._preview_window = PreviewDialog(self, self.vlc_instance, u, song.title, song.artist,
+                                                 cover=load_pixmap(song.album_cover_path))
             self._preview_window.show()
 
         if url:
@@ -4926,10 +4931,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not self.online_enabled:
             return
 
-        def found(t):
-            show(t.preview_url if t is not None else "")
-        self.online_call(self.online.deezer.find_track, song.artist, song.title,
-                         on_done=found, on_error=lambda _e: show(""))
+        did = track.source_id if track is not None and track.source == "deezer" else ""
+        saved = track.preview_url if track is not None else ""       # used if the fresh lookup fails
+        self.online_call(self.online.deezer.fresh_preview, song.artist, song.title, did,
+                         on_done=lambda u: show(u or saved), on_error=lambda _e: show(saved))
 
     def _accept_online_notice(self):
         """Show the one-time notice about downloading/streaming from Bandcamp and YouTube. True if accepted."""
