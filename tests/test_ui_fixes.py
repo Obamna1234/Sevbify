@@ -599,3 +599,26 @@ def test_help_faq_opens_and_searches(window):
     shown = [box for head, group in d.faq_items for box, hay in group if not box.isHidden()]
     assert len(shown) == 1
     d.deleteLater()
+
+
+def test_a_video_floats_inside_sevbify_when_you_leave_its_page(window, qapp):
+    """Like the phone app: leaving a playing video podcast keeps it going in a small window inside Sevbify
+    (drag, resize, expand, close); going back to the video page makes it full size again."""
+    from ui import video_page
+    if not video_page.HAVE_VIDEO:
+        return
+    window.show()
+    window._video_song = window.songs[0]                       # as if an episode's video were playing
+    window.stack.setCurrentWidget(window.video_page)
+    window.show_home()
+    qapp.processEvents()
+    ov = window.video_page.overlay
+    assert ov is not None and ov.isVisible() and window._video_song is not None
+    assert ov.parent() is window.center_panel
+    ov.set_progress(0.5)
+    assert ov.progress.width() == ov.width() // 2
+    window.stack.setCurrentWidget(window.video_page)
+    qapp.processEvents()
+    assert not ov.isVisible()
+    window.video_page.stop()
+    window._video_song = None

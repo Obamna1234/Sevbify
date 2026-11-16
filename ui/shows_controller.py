@@ -90,9 +90,15 @@ class ShowsMixin:
         self.stack.currentChanged.connect(self._page_changed)
 
     def _page_changed(self, _index):
-        # Leaving the video: stop it, remember where it was.
-        if self.stack.currentWidget() is not self.video_page and self._video_song is not None \
-                and not self.video_page.popped_out:            # the mini player keeps it playing elsewhere
+        # Leaving the video while it plays: it floats in a small window inside Sevbify (like the phone app and
+        # YouTube) and keeps playing; back on the video page it goes full size again. Only when it can't float
+        # is it stopped (its place remembered).
+        if self.stack.currentWidget() is self.video_page:
+            self.video_page.float_in()
+            return
+        if self._video_song is not None and not self.video_page.popped_out:
+            if self.video_page.float_out(self.center_panel):
+                return
             self._remember_position(self._video_song, self.video_page.position())
             self.video_page.stop()
             self._video_song = None

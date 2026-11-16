@@ -208,9 +208,12 @@ def test_video_mini_player_keeps_playing_while_browsing(win, qapp, monkeypatch):
     assert win._video_song is song and win.video_page.popped_out
     win.video_page.pop_in()                                   # "Back to Sevbify"
     assert wait_until(qapp, lambda: win.stack.currentWidget() is win.video_page) and not win.video_page.popped_out
-    win.show_home()                                           # leaving the full page normally still stops it
+    win.show_home()                       # leaving the full page now floats it inside Sevbify (like the phone)
     qapp.processEvents()
-    assert win._video_song is None
+    assert win._video_song is song and win.video_page.floating
+    win.video_page.overlay.close_requested.emit()             # ✕ on the floating video: back to listening
+    qapp.processEvents()
+    assert not win.video_page.floating
 
 
 def test_show_page_offers_the_video_version(win, qapp, monkeypatch):

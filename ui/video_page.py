@@ -1,7 +1,7 @@
 """Watching a video podcast episode (YouTube) inside Sevbify, with sound, using Qt's video player.
 Music playback (VLC) is paused while a video plays; "Listen as audio only" hands the episode back to the normal
 player at the same point."""
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from PyQt6.QtCore import Qt, QSize, QUrl, pyqtSignal
 
 from . import icons, theme
@@ -69,6 +69,113 @@ class VideoMiniPlayer(QWidget):
         self.closed.emit()
 
 
+class VideoOverlay(QFrame):
+    """The video floating inside Sevbify while you browse (like the phone app and YouTube): bottom-right of the
+    page area, drag it anywhere, drag its corner to resize. Hovering shows play/pause, expand (back to the full
+    video) and close (keep listening as audio); a thin line along the bottom shows how far you are."""
+    expand_requested = pyqtSignal()
+    close_requested = pyqtSignal()
+
+    def __init__(self, page, host):
+        super().__init__(host)
+        self.page, self.host = page, host
+        self.setObjectName("videoOverlay")
+        self.setStyleSheet("#videoOverlay { background: black; border-radius: 8px; border: 1px solid #2a2a2a; }")
+        self.setMouseTracking(True)
+        self.resize(400, 225)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.video = QVideoWidget(self)
+        self.video.setStyleSheet("background: black;")
+        self.video.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        v.addWidget(self.video)
+        self.controls = QWidget(self)
+        cl = QHBoxLayout(self.controls)
+        cl.setContentsMargins(8, 8, 8, 8)
+        btn_style = ("QPushButton { background: rgba(0,0,0,0.6); border: none; border-radius: 16px; }"
+                     " QPushButton:hover { background: rgba(40,40,40,0.9); }")
+
+        def button(icon, tip, slot):
+            b = QPushButton(self.controls)
+            b.setIcon(icon)
+            b.setIconSize(QSize(14, 14))
+            b.setFixedSize(32, 32)
+            b.setToolTip(tip)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(btn_style)
+            b.clicked.connect(slot)
+            return b
+        self.play_btn = button(icons.pause("#ffffff", 14), "Pause", page.toggle)
+        cl.addWidget(self.play_btn)
+        cl.addStretch()
+        cl.addWidget(button(icons.expand("#ffffff", 14), "Back to the video", self.expand_requested.emit))
+        cl.addWidget(button(icons.close("#ffffff", 14), "Close video (keep listening)", self.close_requested.emit))
+        self.controls.hide()
+        self.progress = QFrame(self)
+        self.progress.setStyleSheet("background: #ffffff;")
+        self.grip = QFrame(self)
+        self.grip.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        self.grip.setStyleSheet("background: transparent;")
+        self._drag = None
+        self._resize_from = None
+
+    def place(self):
+        """Bottom-right of the page area (unless it was moved)."""
+        if getattr(self, "_moved", False):
+            return
+        h = self.host
+        self.move(max(0, h.width() - self.width() - 16), max(0, h.height() - self.height() - 16))
+
+    def resizeEvent(self, e):
+        self.controls.setGeometry(0, 0, self.width(), 48)
+        self.grip.setGeometry(self.width() - 16, self.height() - 16, 16, 16)
+        self.set_progress(getattr(self, "_fraction", 0.0))
+        super().resizeEvent(e)
+
+    def set_progress(self, fraction):
+        self._fraction = max(0.0, min(1.0, fraction))
+        self.progress.setGeometry(0, self.height() - 3, int(self.width() * self._fraction), 3)
+
+    def update_play_icon(self, playing):
+        self.play_btn.setIcon(icons.pause("#ffffff", 14) if playing else icons.play("#ffffff", 14))
+        self.play_btn.setToolTip("Pause" if playing else "Play")
+
+    def enterEvent(self, e):
+        self.controls.show()
+        self.controls.raise_()
+
+    def leaveEvent(self, e):
+        self.controls.hide()
+
+    def mousePressEvent(self, e):
+        if e.button() != Qt.MouseButton.LeftButton:
+            return
+        if self.grip.geometry().contains(e.position().toPoint()):
+            self._resize_from = (e.globalPosition().toPoint(), self.size())
+        else:
+            self._drag = e.globalPosition().toPoint() - self.pos()
+
+    def mouseMoveEvent(self, e):
+        if self._resize_from is not None:
+            start, size = self._resize_from
+            d = e.globalPosition().toPoint() - start
+            w = max(240, min(self.host.width() - 16, size.width() + d.x()))
+            self.resize(w, int(w * 9 / 16))
+            self._moved = True
+        elif self._drag is not None:
+            p = e.globalPosition().toPoint() - self._drag
+            p.setX(max(0, min(self.host.width() - self.width(), p.x())))
+            p.setY(max(0, min(self.host.height() - self.height(), p.y())))
+            self.move(p)
+            self._moved = True
+
+    def mouseReleaseEvent(self, e):
+        self._drag = self._resize_from = None
+
+    def mouseDoubleClickEvent(self, e):
+        self.expand_requested.emit()
+
+
 class VideoPage(QWidget):
     audio_only_requested = pyqtSignal(int)        # position in ms
     error = pyqtSignal(str)
@@ -117,6 +224,7 @@ class VideoPage(QWidget):
         self.length.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
         row.addWidget(self.length)
         self.mini = None
+        self.overlay = None
         mini_btn = QPushButton("Mini player")
         mini_btn.setToolTip("Keep watching in a small window that stays on top")
         mini_btn.setStyleSheet(theme.PILL)
@@ -150,6 +258,37 @@ class VideoPage(QWidget):
             self.player.stop()
             self.player.setSource(QUrl())
         self._close_mini()
+        self.float_in(None)
+
+    @property
+    def floating(self):
+        return self.overlay is not None and not self.overlay.isHidden()
+
+    def float_out(self, host):
+        """Leaving the video page while it plays: the video floats in a small window inside Sevbify."""
+        if self.player is None or self.popped_out:
+            return False
+        if self.overlay is None or self.overlay.host is not host:
+            self.overlay = VideoOverlay(self, host)
+            self.overlay.expand_requested.connect(self._overlay_expand)
+            self.overlay.close_requested.connect(self._audio_only)
+        self.player.setVideoOutput(self.overlay.video)
+        self.overlay.update_play_icon(self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState)
+        self.overlay.place()
+        self.overlay.show()
+        self.overlay.raise_()
+        return True
+
+    def float_in(self, _host=None):
+        """Back on the video page (or stopped): the floating video goes away."""
+        if self.overlay is not None and not self.overlay.isHidden():
+            self.overlay.hide()
+            if self.player is not None:
+                self.player.setVideoOutput(self.video)
+
+    def _overlay_expand(self):
+        self.float_in()
+        self.show_requested.emit()
 
     @property
     def popped_out(self):
@@ -209,12 +348,17 @@ class VideoPage(QWidget):
             self.seek.setValue(ms)
         self.time.setText(_fmt(ms))
         self.length.setText(_fmt(self.player.duration()))
+        if self.overlay is not None and not self.overlay.isHidden():
+            d = self.player.duration()
+            self.overlay.set_progress(ms / d if d else 0)
 
     def _update_play_icon(self):
         playing = self.player is not None and self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
         self.play_btn.setIcon(icons.pause("#000000", 16) if playing else icons.play("#000000", 16))
         if self.mini is not None:
             self.mini.update_play_icon(playing)
+        if self.overlay is not None:
+            self.overlay.update_play_icon(playing)
 
     def _audio_only(self):
         pos = self.position()
