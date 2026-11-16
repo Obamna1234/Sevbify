@@ -401,7 +401,13 @@ class Journey:
         self.run_step("Stream a song (Bandcamp)", self.step_stream_bandcamp, needs=["App opens"])
         self.run_step("Stream a song (YouTube)", self.step_stream_youtube, needs=["App opens"])
         playing = next((s for s in ("Stream a song (YouTube)", "Stream a song (Bandcamp)") if self._status(s) == "pass"), None)
-        self.run_step("Pause, resume and seek", self.step_pause_resume_skip, needs=[playing or "Stream a song (Bandcamp)"])
+        if playing is None and self.w._reached_playing and self.w.current_song is not None:
+            # The site steps were refused here, but a song is playing (from another site): pause / seek can be
+            # tested on that one.
+            self.run_step("Pause, resume and seek", self.step_pause_resume_skip)
+        else:
+            self.run_step("Pause, resume and seek", self.step_pause_resume_skip,
+                          needs=[playing or "Stream a song (Bandcamp)"])
         self.run_step("Make a playlist", self.step_playlist, needs=["App opens"])
         self.run_step("Download a song", self.step_download, needs=["App opens"])
         self.run_step("Find, follow and play a podcast", self.step_podcast, needs=["App opens"])
