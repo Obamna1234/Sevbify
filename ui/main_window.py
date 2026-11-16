@@ -415,6 +415,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
         self.top_bar.menu_clicked.connect(self._show_app_menu)
         self.top_bar.online_toggled.connect(lambda: self.set_online(not self.online_enabled))
+        from . import track_table as _tt
+        _tt.is_saved, _tt.save_clicked_handler = self.is_saved, self._saved_mark_clicked
         self.top_bar.private_toggled.connect(lambda: self.apply_settings({"private_session": not self.private_session}))
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
@@ -617,6 +619,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _on_scan_finished(self, songs, problems):
         self.songs = songs
+        self._saved_keys = None
         by_key = {s.key: s for s in songs}
         first_load = not self.library_ready
 
@@ -793,6 +796,56 @@ class MainWindow(ShowsMixin, QMainWindow):
         p.end()
         img.save(path, "PNG")
         return path
+
+    def is_saved(self, song):
+        """Spotify's green tick: the song is in Liked Songs or any of your playlists (the same song found online
+        counts as the one in your playlist, and the other way round)."""
+        keys = getattr(self, "_saved_keys", None)
+        if keys is None:
+            from core.online.models import match_key
+            keys = set()
+            for pl in self.playlists:
+                for s in pl.songs:
+                    keys.add(s.key)
+                    if s.artist and s.title:
+                        keys.add(match_key(s.artist, s.title))
+            self._saved_keys = keys
+        if song is None:
+            return False
+        if song.key in keys:
+            return True
+        from core.online.models import match_key
+        return bool(song.artist and song.title) and match_key(song.artist, song.title) in keys
+
+    def _saved_mark_clicked(self, song, saved, pos):
+        """The tick / + next to a song's length, like Spotify: + saves it to Liked Songs; the tick opens the
+        'Saved in' choices (Liked Songs and your playlists)."""
+        if not saved:
+            self.toggle_like(song)
+            return
+        menu = self._new_menu()
+        title = menu.addAction("Saved in")
+        title.setEnabled(False)
+        menu.addSeparator()
+        liked = self.liked_playlist()
+        lk = menu.addAction(("♥  " if self.is_liked(song) else "♡  ") + "Liked Songs")
+        lk.triggered.connect(lambda: self.toggle_like(song))
+        for pl in self.playlists:
+            if pl is liked:
+                continue
+            inside = any(s.key == song.key for s in pl.songs)
+            act = menu.addAction(("✓  " if inside else "＋  ") + pl.name)
+            if inside:
+                act.triggered.connect(lambda _=False, p=pl: self.remove_song_from(p, song))
+            else:
+                act.triggered.connect(lambda _=False, p=pl: self.add_to_playlist(p, [song]))
+        menu.exec(pos)
+
+    def remove_song_from(self, playlist, song):
+        playlist.songs[:] = [s for s in playlist.songs if s.key != song.key]
+        playlist.generate_cover()
+        self._playlists_changed(playlist)
+        self.show_status(f"Removed from {playlist.name}", kind="info", timeout_ms=3000)
 
     def is_liked(self, song):
         pl = self.liked_playlist()
@@ -1050,6 +1103,9 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._playlists_changed(playlist)
 
     def _playlists_changed(self, playlist=None):
+        self._saved_keys = None                      # the green ticks are worked out again
+        for t in self.findChildren(TrackTable):
+            t.viewport().update()
         self._ensure_playlist_covers([playlist] if playlist is not None else self.playlists)
         self.save_now()
         self._schedule_playlist_files()

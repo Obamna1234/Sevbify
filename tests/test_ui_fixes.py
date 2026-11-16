@@ -477,3 +477,28 @@ def test_a_copied_folder_takes_over_songs_whose_files_are_gone(window, tmp_path)
     finally:
         m.Song.__init__ = orig
     assert len(pl.songs) == 1 and pl.songs[0].exists and str(b) in pl.songs[0].file_path
+
+
+def test_green_tick_for_songs_in_your_playlists_and_plus_saves_to_liked(window, qapp, monkeypatch):
+    """Spotify's green tick next to a song's length when it's in Liked Songs or any playlist; clicking the + on an
+    unsaved song saves it to Liked Songs."""
+    from ui import track_table as tt
+    a, b = window.songs[0], window.songs[1]
+    window.create_playlist("Road", [a])
+    assert tt.is_saved(a) and not tt.is_saved(b)
+    t = window.library_table
+    t.set_songs(window.songs)
+    window.show()
+    window.show_library()
+    qapp.processEvents()
+    row_b = next(r for r in range(t.rowCount()) if t.song_at(r) is b)
+    cell = t.visualRect(t.model().index(row_b, t.columnCount() - 1))
+    mark = tt._save_mark_rect(cell).center().toPoint()
+    from PyQt6.QtTest import QTest
+    QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=mark)
+    assert window.is_liked(b) and tt.is_saved(b)
+    shown = []
+    monkeypatch.setattr(window, "_new_menu", lambda: shown.append(1) or __import__("PyQt6.QtWidgets", fromlist=["QMenu"]).QMenu(window))
+    monkeypatch.setattr(__import__("PyQt6.QtWidgets", fromlist=["QMenu"]).QMenu, "exec", lambda self, *a: None)
+    QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=mark)   # the tick: "Saved in" choices
+    assert shown and window.is_liked(b)

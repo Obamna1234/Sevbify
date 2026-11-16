@@ -24,6 +24,17 @@ GREEN = QColor("#1db954")
 WHITE = QColor("#ffffff")
 GREY = QColor("#b3b3b3")
 DIM = QColor("#6a6a6a")
+SAVED_GREEN = QColor("#1ed760")
+
+# Spotify's green tick: set by the main window to "is this song in Liked Songs or one of your playlists?"
+is_saved = None
+save_clicked_handler = None    # set by the main window: (song, saved, global pos) when the tick / + is clicked
+SAVE_MARK = 16                 # size of the tick / + circle, drawn just left of the song's length
+
+
+def _save_mark_rect(cell):
+    """Where the tick (or + on hover) sits in the length column."""
+    return QRectF(cell.x() + 10, cell.y() + (cell.height() - SAVE_MARK) / 2, SAVE_MARK, SAVE_MARK)
 
 ROW_HOVER = QColor("#2a2a2a")
 ROW_SELECTED = QColor("#5a5a5a")
@@ -97,11 +108,47 @@ class RowDelegate(QStyledItemDelegate):
         if col == 1 and t.two_line_titles:
             self._paint_title(painter, option, index)
             return
+        if col == t.columnCount() - 1 and t.show_saved and is_saved is not None:
+            song = t.song_at(row)
+            if song is not None:
+                saved = is_saved(song)
+                if saved or hovered:
+                    self._paint_save_mark(painter, _save_mark_rect(option.rect), saved)
         opt = option.__class__(option)
         opt.state &= ~QStyle.StateFlag.State_Selected
         opt.state &= ~QStyle.StateFlag.State_MouseOver
         opt.state &= ~QStyle.StateFlag.State_HasFocus
         super().paint(painter, opt, index)
+
+    @staticmethod
+    def _paint_save_mark(painter, r, saved):
+        """Spotify: a green circle with a black tick when the song is saved; on hover, a grey circled +."""
+        from PyQt6.QtCore import QPointF
+        from PyQt6.QtGui import QPen
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if saved:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(SAVED_GREEN)
+            painter.drawEllipse(r)
+            pen = QPen(QColor("#000000"), 1.8)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            w = r.width()
+            from PyQt6.QtGui import QPolygonF
+            painter.drawPolyline(QPolygonF([QPointF(r.x() + w * 0.28, r.y() + w * 0.52),
+                                            QPointF(r.x() + w * 0.44, r.y() + w * 0.68),
+                                            QPointF(r.x() + w * 0.73, r.y() + w * 0.36)]))
+        else:
+            pen = QPen(GREY, 1.4)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(r.adjusted(0.7, 0.7, -0.7, -0.7))
+            c = r.center()
+            painter.drawLine(QPointF(c.x() - 3.5, c.y()), QPointF(c.x() + 3.5, c.y()))
+            painter.drawLine(QPointF(c.x(), c.y() - 3.5), QPointF(c.x(), c.y() + 3.5))
+        painter.restore()
 
     def _paint_title(self, painter, option, index):
         t = self.table
@@ -154,6 +201,7 @@ class TrackTable(QTableWidget):
     rows_moved = pyqtSignal(int, int)                  # drag to reorder (playlists): from row, to row
     files_dropped = pyqtSignal(list, int)              # files/folders dropped from Explorer: paths, at row
     delete_requested = pyqtSignal(list)                # Delete key on selected rows (playlists remove them)
+    save_clicked = pyqtSignal(object, bool, object)    # song, already saved?, global QPoint (the tick / +)
 
     COLUMNS = ["#", "Title", "Artist", "Album", ""]
 
@@ -177,6 +225,7 @@ class TrackTable(QTableWidget):
         self.setWordWrap(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.two_line_titles = False      # Spotify's Title column: artist under the title (Artist column hidden)
+        self.show_saved = True            # Spotify's green tick for songs in Liked Songs / your playlists
         self.setItemDelegate(RowDelegate(self))
 
         header = self.horizontalHeader()
@@ -190,7 +239,7 @@ class TrackTable(QTableWidget):
         self.setColumnWidth(0, 48)
         self.setColumnWidth(2, 200)
         self.setColumnWidth(3, 220)
-        self.setColumnWidth(4, 96)
+        self.setColumnWidth(4, 110)
 
         self._sortable = sortable
         self.setSortingEnabled(False)
@@ -259,6 +308,7 @@ class TrackTable(QTableWidget):
             album.setData(SORT_ROLE, song.album.casefold())
             dur = _SortableItem(format_time(song.duration) if song.duration else "--:--")
             dur.setData(SORT_ROLE, song.duration)
+            dur.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)   # room for the tick
             for col, item in enumerate((num, title, artist, album, dur)):
                 self.setItem(row, col, item)
             if getattr(song, "is_remote", False):
@@ -381,6 +431,17 @@ class TrackTable(QTableWidget):
         mods = e.modifiers()
         if e.button() == Qt.MouseButton.RightButton and self.selectionModel().isRowSelected(row, self.rootIndex()):
             return                                     # right-click inside a selection keeps the selection
+        last = self.columnCount() - 1
+        if e.button() == Qt.MouseButton.LeftButton and self.show_saved and is_saved is not None \
+                and self.columnAt(pos.x()) == last:
+            cell = self.visualRect(self.model().index(row, last))
+            song = self.song_at(row)
+            if song is not None and _save_mark_rect(cell).adjusted(-4, -4, 4, 4).contains(pos.x(), pos.y()):
+                saved, at = bool(is_saved(song)), self.viewport().mapToGlobal(pos)
+                self.save_clicked.emit(song, saved, at)
+                if save_clicked_handler is not None:
+                    save_clicked_handler(song, saved, at)
+                return
         if e.button() == Qt.MouseButton.LeftButton and self.columnAt(pos.x()) == 0 and not (
                 mods & (Qt.KeyboardModifier.ShiftModifier | Qt.KeyboardModifier.ControlModifier)):
             song = self.song_at(row)
