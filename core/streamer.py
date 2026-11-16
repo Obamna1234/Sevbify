@@ -118,7 +118,7 @@ def _pick_soundcloud(e, line, duration_s):
     who = set(e._words(artist or ""))
     best, best_score = None, 0.0
     for entry in info.get("entries") or []:
-        url = entry.get("url") or entry.get("webpage_url") or ""
+        url = entry.get("webpage_url") or entry.get("url") or ""   # the search gives api links in "url"
         if not is_soundcloud_track(url):
             continue
         name = entry.get("title") or ""
@@ -405,7 +405,7 @@ def search_soundcloud(query, limit=10):
         info = ydl.extract_info(f"scsearch{int(limit)}:{query}", download=False) or {}
     out = []
     for entry in info.get("entries") or []:
-        url = entry.get("url") or entry.get("webpage_url") or ""
+        url = entry.get("webpage_url") or entry.get("url") or ""   # the search gives api links in "url"
         if not is_soundcloud_track(url) or not entry.get("title"):
             continue
         secs = entry.get("duration") or 0

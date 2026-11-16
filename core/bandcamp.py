@@ -81,8 +81,14 @@ def parse_mobile_details(data):
     t = tracks[0]
     url = ((t.get("streaming_url") or {}).get("mp3-128") or "")
     host = urlsplit_host(url)
-    if not url.startswith("https://") or not (host == "bcbits.com" or host.endswith(".bcbits.com")):
-        raise NotPlayable("this Bandcamp track can't be streamed")
+    if url.startswith("http://") and (host == "bcbits.com" or host.endswith(".bcbits.com")
+                                      or host in ("bandcamp.com", "popplers5.bandcamp.com")):
+        url = "https://" + url[len("http://"):]
+    ok = url.startswith("https://") and (host == "bcbits.com" or host.endswith(".bcbits.com")
+                                         or (host == "bandcamp.com" and "/stream_redirect" in url))
+    if not ok:
+        raise NotPlayable("this Bandcamp track can't be streamed"
+                          + (f" (its link is on {host or 'nothing'})" if url else " (no link)"))
     return {"url": url, "duration": float(t.get("duration") or 0), "title": t.get("title") or "",
             "artist": t.get("band_name") or (data.get("band") or {}).get("name") or ""}
 
