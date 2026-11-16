@@ -311,6 +311,7 @@ def test_url_works_only_says_no_when_the_server_clearly_refuses(monkeypatch):
 
     def hiccup(req, timeout=0):
         raise OSError("no network")
+    monkeypatch.setattr(downloader, "_engine", None)          # without yt-dlp: a plain request
     monkeypatch.setattr(urllib.request, "urlopen", refuse)
     assert streamer.url_works("https://cdn/a", {}) is False
     monkeypatch.setattr(urllib.request, "urlopen", hiccup)
@@ -396,3 +397,29 @@ def test_soundcloud_is_the_third_place_to_look_and_previews_are_refused(monkeypa
         "https://soundcloud.com/a/sets/b") and not streamer.is_soundcloud_track("http://soundcloud.com/a/b")
     assert streamer._page_ok("SoundCloud", "https://soundcloud.com/a/b")
     assert not streamer._page_ok("SoundCloud", "https://soundcloud.com.evil.example/a/b")
+
+
+def test_url_works_asks_the_way_downloads_do(monkeypatch):
+    """With yt-dlp loaded the check goes through yt-dlp's own networking (what YouTube accepts)."""
+    e = downloader.engine()
+    seen = []
+
+    class Refused(Exception):
+        status = 403
+
+    class FakeYDL:
+        def __init__(self, opts): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def urlopen(self, req):
+            seen.append(req.headers.get("Range"))
+            if "bad" in req.url:
+                raise Refused()
+            import io
+            r = io.BytesIO(b"ok")
+            r.status = 206
+            return r
+    monkeypatch.setattr(e.yt_dlp, "YoutubeDL", FakeYDL)
+    assert streamer.url_works("https://rr1.googlevideo.com/good", {}) is True
+    assert streamer.url_works("https://rr1.googlevideo.com/bad", {}) is False
+    assert seen == ["bytes=0-1", "bytes=0-1"]

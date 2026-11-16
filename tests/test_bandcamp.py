@@ -77,3 +77,21 @@ def test_app_api_is_used_first_so_the_client_challenge_page_is_avoided(monkeypat
         bandcamp.parse_mobile_details({"tracks": [{"streaming_url": {"mp3-128": "https://evil.example/a.mp3"}}]})
     bandcamp.remember_ids("https://evil.example/track/x", 1, 2)          # only real track pages are remembered
     assert "https://evil.example/track/x" not in bandcamp._ids
+
+
+def test_ids_are_looked_up_when_the_page_was_found_another_way(monkeypatch):
+    """beta.47 log: the page was remembered / guessed (no ids), so the app API was skipped and the web page's
+    Client Challenge stopped the song. The ids now come from Bandcamp's search."""
+    from core import bandcamp, downloader
+    e = downloader.engine()
+    page = "https://abyssichate.bandcamp.com/track/the-silent-shrine"
+    bandcamp._ids.pop(page, None)
+    asked = []
+
+    def search(q):
+        asked.append(q)
+        return [{"type": "t", "url": "https://other.bandcamp.com/track/the-silent-shrine", "band_id": 9, "id": 9},
+                {"type": "t", "url": page + "?from=search", "band_id": "77", "id": "88"}], None
+    monkeypatch.setattr(e, "_bandcamp_request", search)
+    assert bandcamp._ids_from_search(page) == (77, 88)
+    assert asked == ["abyssichate the silent shrine"]

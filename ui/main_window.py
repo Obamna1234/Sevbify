@@ -2884,12 +2884,15 @@ class MainWindow(ShowsMixin, QMainWindow):
             items = [s for s in self.radio_items(self._allowed(tracks)) if s.key not in known]
             if not items:
                 return
-            self.sc_table.set_songs(items)
-            self.sc_table.set_current(self.current_song)
-            self._fit_table(self.sc_table, 10)
-            chip = getattr(self, "search_chip", "all")
-            self.sc_header.setVisible(chip in ("all", "songs"))
-            self.sc_table.setVisible(chip in ("all", "songs"))
+            # Like Spotify, one list of songs: what's found elsewhere joins the end of "More songs" (where each
+            # song comes from is a detail; Playback status / the song's menu say it).
+            songs = [s for s in self.web_table.songs_in_view() if s is not None] + items
+            self.web_table.set_songs(songs)
+            self.web_table.set_current(self.current_song)
+            self._fit_table(self.web_table, 60)
+            self.web_table.setVisible(True)
+            self._update_top_result()
+            self._apply_search_chip()
             self.fetch_covers(items, limit=len(items))
         self.online_call(streamer.search_soundcloud, query, 10, on_done=done, on_error=lambda _e: None, lane="songs")
 
@@ -4664,9 +4667,16 @@ class MainWindow(ShowsMixin, QMainWindow):
                 song.duration = res["duration_ms"]
             self._set_now_playing_text(song.title, song.artist, f"Full song · {res['source']} · not downloaded")
             self._streaming = {"song": song, "url": res["url"], "page": res.get("page", ""),
+                               "headers": res.get("headers") or {},
                                "tries": getattr(self, "_streaming", {}).get("tries", 0)
                                if getattr(self, "_streaming", {}).get("song") is song else 0}
-            self._play_media(res["url"], res.get("headers"))
+            # YouTube links go through Sevbify's own relay, which fetches them the way downloads do (YouTube
+            # refused the player's own requests on a home connection; the download of the same link worked).
+            from core import stream_relay
+            via = stream_relay.local_address(res["url"], res.get("headers")) \
+                if "googlevideo.com" in res["url"] else ""
+            self._streaming["relayed"] = bool(via)
+            self._play_media(via or res["url"], None if via else res.get("headers"))
 
         def failed(err):
             alog("stream", f"\"{song.title}\" not found: {err}")
@@ -4769,6 +4779,14 @@ class MainWindow(ShowsMixin, QMainWindow):
         st["tries"] = st.get("tries", 0) + 1
         alog("retry", f"\"{song.title}\": attempt {st['tries'] + 1} ("
                       + ("fresh link" if st["tries"] == 1 else "save to a temporary file first") + ")")
+        if st["tries"] == 1 and not st.get("relayed") and st.get("url"):
+            from core import stream_relay
+            via = stream_relay.local_address(st["url"], st.get("headers"))
+            if via:                                     # the same link, fetched the way downloads do
+                st["relayed"] = True
+                self._set_now_playing_text(song.title, song.artist, "Trying another way…")
+                self._play_media(via)
+                return True
         if st["tries"] == 1:
             streamer.link_failed(st["url"])
             self._set_now_playing_text(song.title, song.artist, "That link didn't play, trying another…")
@@ -6159,7 +6177,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._app_update_text = text
             if manual or r["newer"]:
                 self.settings_page.set_update_status(app=text)
-        self.online_call(updates.check_app, self.net, on_done=got_app,
+        # "Check for updates" asks GitHub again (the daily check may use the answer from the last 6 hours).
+        self.online_call(lambda: updates.check_app(self.net, fresh=manual), on_done=got_app,
                          on_error=lambda e: manual and self.settings_page.set_update_status(app=f"Couldn't check ({e})."))
 
         def got_ytdlp(r):

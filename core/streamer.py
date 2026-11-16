@@ -9,6 +9,7 @@ Streaming YouTube audio this way skips YouTube's own player (and its ads), which
 of service, like downloading does. Sevbify shows this once, the first time, and the user decides.
 """
 import json
+import re
 import os
 import threading
 import time
@@ -174,6 +175,20 @@ def url_works(url, headers=None, timeout=8):
     import urllib.request
     if not str(url).startswith("https://"):
         return True
+    e = downloader.engine() if downloader._engine is not None else None
+    if e is not None and getattr(e, "yt_dlp", None) is not None:
+        # Ask the way yt-dlp's downloads do (YouTube refused plain Python requests for links that downloaded
+        # fine, so the check said "refused" for every YouTube client and the lookup took 15 s).
+        try:
+            from yt_dlp.networking import Request
+            with e.yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "logger": e._QuietLogger(),
+                                     "socket_timeout": timeout}) as ydl:
+                with ydl.urlopen(Request(url, headers={**(headers or {}), "Range": "bytes=0-1"})) as r:
+                    r.read(2)
+                    return (getattr(r, "status", 200) or 200) < 400
+        except Exception as exc:
+            code = getattr(exc, "status", None) or getattr(getattr(exc, "response", None), "status", None)
+            return not (isinstance(code, int) and code in (400, 401, 403, 404, 410))
     try:
         req = urllib.request.Request(url, headers={**(headers or {}), "Range": "bytes=0-1"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -244,7 +259,8 @@ def _extract(e, page):
                 raise NoFullSong("the link was refused")
         except Exception as exc:
             last = exc
-            _note(f"YouTube link {_client_name(attempts[i])}: {str(exc)[:160]}")
+            site = "Bandcamp" if "bandcamp.com" in page else "SoundCloud" if "soundcloud.com" in page else "YouTube"
+            _note(f"{site} link {_client_name(attempts[i])}: {str(exc)[:160]}")
             continue
         _preferred_attempt = i
         return url, headers, info.get("duration") or 0
@@ -424,8 +440,11 @@ def search_soundcloud(query, limit=10):
         if 0 < secs <= 35:
             continue                                   # a preview or a jingle
         title, artist = entry["title"], entry.get("uploader") or ""
-        if " - " in title and not artist:
-            artist, title = title.split(" - ", 1)
+        # Uploads are often named "Artist - Title" (or "Artist : Title") by someone else: the uploader isn't the
+        # artist then (beta.47: "Abyssic Hate : Bloodletting" by "Rob_rob_" went to Rob_rob_'s page).
+        m = re.match(r"^\s*(.{1,60}?)\s+[-–—:|]\s+(.+)$", title)
+        if m:
+            artist, title = m.group(1), m.group(2)
         thumbs = entry.get("thumbnails") or []
         cover = (thumbs[-1].get("url") if thumbs and isinstance(thumbs[-1], dict) else "") or entry.get("thumbnail") or ""
         out.append(OnlineTrack(title=title.strip(), artist=artist.strip() or "SoundCloud", duration_ms=int(secs * 1000),

@@ -73,6 +73,28 @@ def remember_ids(page, band_id, track_id):
         _ids[page.split("?")[0].rstrip("/")] = (band_id, track_id)
 
 
+def _ids_from_search(page):
+    """The band and track ids for a track page, from Bandcamp's search (its app API needs them). Used when the
+    page was found another way (remembered from before, or guessed) and Bandcamp's web page is refusing us."""
+    try:
+        u = urllib.parse.urlsplit(page)
+        band = (u.hostname or "").split(".")[0]
+        slug = u.path.rstrip("/").split("/")[-1]
+        from core import downloader
+        e = downloader.engine()
+        words = re.sub(r"-\d+$", "", slug).replace("-", " ")
+        for query in (f"{band.replace('-', ' ')} {words}", words):
+            results, _err = e._bandcamp_request(query)
+            for r in results or []:
+                url = (e.fix_bc_url(r.get("url") or "") or "").split("?")[0].rstrip("/")
+                if r.get("type") == "t" and url == page and r.get("band_id") and r.get("id"):
+                    remember_ids(page, r["band_id"], r["id"])
+                    return _ids.get(page)
+    except Exception:
+        return None
+    return None
+
+
 def parse_mobile_details(data):
     """Bandcamp's app API reply → the same info as a track page. The MP3 must be on Bandcamp's own file servers."""
     tracks = (data or {}).get("tracks") or []
@@ -96,7 +118,8 @@ def parse_mobile_details(data):
 def _mobile_info(page):
     """Like NewPipe and Bandcamp's own phone app: the track's details from the app API, which doesn't show the
     "Client Challenge" page that the website shows some connections (seen on a home connection on Windows)."""
-    ids = _ids.get(page.split("?")[0].rstrip("/"))
+    key = page.split("?")[0].rstrip("/")
+    ids = _ids.get(key) or _ids_from_search(key)
     if not ids:
         return None
     import json

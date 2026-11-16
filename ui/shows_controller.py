@@ -1013,10 +1013,26 @@ class ShowsMixin:
         token = self._genre_page_token = ("artist", name, time.time())
         deezer = self.online.deezer
 
+        def same(x, y):
+            import re
+            return re.findall(r"\w+", (x or "").casefold()) == re.findall(r"\w+", (y or "").casefold())
+
+        def elsewhere():
+            """Songs by this artist on SoundCloud (uploads named "Artist - Title" count): for artists the
+            catalogue doesn't have (e.g. taken down), like Spotify's page would show them."""
+            from core import streamer
+            try:
+                found = streamer.search_soundcloud(name, 20)
+            except Exception:
+                return []
+            return [t for t in found if same(t.artist, name)]
+
         def fetch():
             a = deezer.find_artist(name)
+            if a and not same(a.get("name"), name):
+                a = None                     # a different artist with a similar name ("Abyssic" for "Abyssic Hate")
             if not a:
-                return {"tracks": [], "releases": {"albums": [], "singles": [], "compilations": []}}
+                return {"tracks": elsewhere(), "releases": {"albums": [], "singles": [], "compilations": []}}
             releases = deezer.artist_albums(a.get("id"))
             for group in releases.values():
                 for album in group:

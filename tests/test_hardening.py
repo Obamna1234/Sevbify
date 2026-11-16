@@ -311,5 +311,5 @@ def test_soundcloud_search_results_never_take_over_a_song_until_played(window, m
     monkeypatch.setattr(window, "online_call", lambda fn, *a, on_done=None, **k: on_done(fn(*a)))
     window.search_input.setText("one more time")
     window._search_soundcloud("one more time")
-    assert window.sc_table.rowCount() == 1
+    assert any(x.title == "One More Time" for x in window.web_table.songs_in_view())   # joins "More songs"
     assert streamer.remembered_page("Daft Punk", "One More Time", "SoundCloud") == ""
