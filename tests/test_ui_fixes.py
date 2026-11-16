@@ -622,3 +622,21 @@ def test_a_video_floats_inside_sevbify_when_you_leave_its_page(window, qapp):
     assert not ov.isVisible()
     window.video_page.stop()
     window._video_song = None
+
+
+def test_scroll_through_previews_of_a_playlist(window, qapp):
+    """Spotify's preview feed: one song at a time with its cover, a short preview playing, Next / wheel / keys
+    to move, like / add / Play song, Esc to leave. Your own files preview from a third of the way in."""
+    pl = window.create_playlist("Feed", list(window.songs))
+    window.show()
+    window.show_playlist(pl)
+    window.pl_feed_btn.click()
+    feed = window._preview_feed
+    assert feed is not None and feed.isVisible() and feed.title.text() == window.songs[0].title
+    assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing(), 5)
+    feed.go(1)
+    assert feed.index == 1 and feed.title.text() == window.songs[1].title
+    feed.toggle_like()
+    assert window.is_liked(window.songs[1])
+    feed.play_full_song()                                       # closes the feed, plays the full song
+    assert window._preview_feed is None and window.current_song is window.songs[1]

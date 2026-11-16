@@ -4383,6 +4383,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         actions.addWidget(self.pl_preview_btn)
         self.pl_shuffle_btn = round_btn(icons.shuffle(theme.SUBDUED, 28), "Shuffle play", self._shuffle_open_playlist)
         actions.addWidget(self.pl_shuffle_btn)
+        # Spotify's newer button: scroll through previews of the playlist's songs, one at a time.
+        self.pl_feed_btn = round_btn(icons.preview_feed(theme.SUBDUED, 26),
+                                     "Scroll through previews of tracks from this playlist",
+                                     lambda: self.open_preview_feed(self.open_playlist.songs if self.open_playlist else [],
+                                                                    self.open_playlist.name if self.open_playlist else ""))
+        actions.addWidget(self.pl_feed_btn)
         self.pl_download_btn = round_btn(icons.download(theme.SUBDUED, 30), "Download",
                                          lambda: self.open_playlist and self.download_with_choice(
                                              self.open_playlist.songs, self.open_playlist.name))
@@ -4932,6 +4938,24 @@ class MainWindow(ShowsMixin, QMainWindow):
                              on_done=ready, on_error=failed)
             return True
         return False
+
+    def open_preview_feed(self, songs, source_name, start=0):
+        """Spotify's "Scroll through previews": one song at a time, big cover, a short preview playing."""
+        songs = [x for x in songs if x is not None]
+        if not songs:
+            return None
+        if self.player.get_state() == vlc.State.Playing:
+            self.play_pause_song()
+        old = getattr(self, "_preview_feed", None)
+        if old is not None:
+            try:
+                old.close_feed()
+            except RuntimeError:
+                pass
+        from .preview_feed import PreviewFeed
+        self._preview_feed = PreviewFeed(self, songs, source_name)
+        self._preview_feed.open(start)
+        return self._preview_feed
 
     def preview_song(self, song):
         """Song menu → Preview: the 30-second clip in a small window with a seek bar (main playback pauses)."""

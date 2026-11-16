@@ -445,3 +445,24 @@ def test_soundcloud_albums_are_the_artists_own_each_once(monkeypatch):
     assert [a["title"] for a in albums] == ["Suicidal Emotions", "Cleansing of an Ancient Mind"]
     assert albums[0]["cover"] == "https://i1.sndcdn.com/artworks-abc-t500x500.jpg" and albums[0]["year"] == "1994"
     assert albums[1]["kind"] == "EP" and albums[1]["cover"] == ""
+
+
+def test_soundcloud_album_songs_come_in_order_with_their_pages(monkeypatch):
+    from core import streamer
+
+    def api(path, query, ident="x"):
+        if path == "resolve":
+            return {"tracks": [{"id": 1, "title": "Abyssic Hate - Bloodletting", "permalink_url": "https://soundcloud.com/rob/bloodletting",
+                                "duration": 280000},
+                               {"id": 2}, {"id": 3}]}                       # later songs: ids only
+        assert path == "tracks" and query["ids"] == "2,3"
+        return [{"id": 3, "title": "Attack", "permalink_url": "https://soundcloud.com/rob/attack", "duration": 1000},
+                {"id": 2, "title": "Mirror", "permalink_url": "https://soundcloud.com/rob/mirror"}]
+    monkeypatch.setattr(streamer, "_sc_api", api)
+    album = {"title": "Suicidal Emotions", "url": "https://soundcloud.com/rob/sets/se", "artist": "Abyssic Hate",
+             "cover": "https://i1.sndcdn.com/a-t500x500.jpg"}
+    tracks = streamer.soundcloud_album_tracks(album)
+    assert [t.title for t in tracks] == ["Bloodletting", "Mirror", "Attack"]
+    assert all(t.artist == "Abyssic Hate" and t.source == "soundcloud" for t in tracks)
+    assert tracks[0].cover_url == album["cover"] and tracks[0].duration_ms == 280000
+    assert streamer.soundcloud_album_tracks({"url": "https://soundcloud.com/rob/likes", "artist": "x"}) == []

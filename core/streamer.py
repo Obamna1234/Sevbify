@@ -509,25 +509,31 @@ def soundcloud_album_tracks(album):
     from core.online.models import OnlineTrack
     if not is_soundcloud_set(album.get("url")):
         return []
-    e = downloader.engine()
-    if e.yt_dlp is None:
-        return []
-    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
-            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud:set", "soundcloud"]}
-    with e.yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(album["url"], download=False) or {}
+    # The album as SoundCloud's API gives it ("resolve"); after the first few, songs come only as ids, which are
+    # then asked for together. (yt-dlp's quick listing gives api links without the songs' pages.)
+    data = _sc_api("resolve", {"url": album["url"]}) or {}
+    items = [t for t in (data.get("tracks") or []) if isinstance(t, dict)]
+    missing = [str(t.get("id")) for t in items if not t.get("permalink_url") and t.get("id")]
+    if missing:
+        full = {}
+        for k in range(0, len(missing), 50):
+            got = _sc_api("tracks", {"ids": ",".join(missing[k:k + 50])}) or []
+            for t in got if isinstance(got, list) else []:
+                full[str(t.get("id"))] = t
+        items = [full.get(str(t.get("id")), t) if not t.get("permalink_url") else t for t in items]
     out = []
-    for entry in info.get("entries") or []:
-        url = entry.get("webpage_url") or entry.get("url") or ""
-        title = entry.get("title") or entry.get("track") or ""
-        if not title:
+    for t in items:
+        url = t.get("permalink_url") or ""
+        title = t.get("title") or ""
+        if not title or not is_soundcloud_track(url):
             continue
         m = re.match(r"^\s*(.{1,60}?)\s+[-–—:|]\s+(.+)$", title)
         if m and re.findall(r"\w+", m.group(1).casefold()) == re.findall(r"\w+", album["artist"].casefold()):
             title = m.group(2)
+        cover = _artwork(t.get("artwork_url")) or album.get("cover", "")
         out.append(OnlineTrack(title=title.strip(), artist=album["artist"], album=album["title"],
-                               duration_ms=int((entry.get("duration") or 0) * 1000), cover_url=album.get("cover", ""),
-                               source="soundcloud", page_url=url if is_soundcloud_track(url) else ""))
+                               duration_ms=int(t.get("duration") or 0), cover_url=cover,
+                               source="soundcloud", page_url=url))
     return [t for t in out if t.page_url]
 
 

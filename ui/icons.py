@@ -672,3 +672,17 @@ def lock(color=GREY, size=16, closed=True):
     p.drawPath(path)
     p.end()
     return QIcon(pm)
+
+
+def preview_feed(color=GREY, size=24):
+    """Spotify's "scroll through previews" button: stacked cards with a play triangle."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.07))
+    p.drawRoundedRect(QRectF(s * 0.22, s * 0.1, s * 0.56, s * 0.72), s * 0.06, s * 0.06)
+    p.drawLine(QPointF(s * 0.3, s * 0.9), QPointF(s * 0.7, s * 0.9))
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(color))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.43, s * 0.32), QPointF(s * 0.43, s * 0.6), QPointF(s * 0.62, s * 0.46)]))
+    p.end()
+    return QIcon(pm)
