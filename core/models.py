@@ -194,6 +194,7 @@ class Playlist:
         self.created = created or time.time()   # for "Recently added" sorting
         self.last_played = last_played          # for "Recents" sorting (played or opened)
         self.origin = ""                        # "" made in Sevbify, or imported: spotify / apple / youtube / file
+        self.description = ""                   # Edit details → Description (shown under the name)
 
     def add_song(self, song: Song):
         self.songs.append(song)

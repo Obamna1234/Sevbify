@@ -527,3 +527,75 @@ def test_right_panel_can_be_dragged_wider_and_remembers_it(window, qapp):
     window.set_right_panel("")
     qapp.processEvents()
     assert not h.isVisible()
+
+
+def test_playlist_description_is_edited_shown_and_kept(window, tmp_path):
+    pl = window.create_playlist("Road", [window.songs[0]])
+    window._auto_answer_dialogs = {"name": "Road Trip", "description": "x" * 400}
+    window.edit_playlist_details(pl)
+    window._auto_answer_dialogs = None
+    assert pl.name == "Road Trip" and pl.description == "x" * 300          # 300 characters at most
+    window.show_playlist(pl)
+    assert window.pl_desc.isVisibleTo(window) and window.pl_desc.text()
+    window.save_now()
+    from core.storage import Storage
+    stored = Storage(window.storage.data_dir).load()
+    assert next(p for p in stored.playlists if p.name == "Road Trip").description == "x" * 300
+
+
+def test_mouse_wheel_glides_instead_of_jumping(window, qapp):
+    from PyQt6.QtCore import QPoint, QPointF
+    from PyQt6.QtGui import QWheelEvent
+    from ui import smooth_scroll
+    from ui.track_table import TrackTable
+    window.show()
+    t = TrackTable(parent=window.center_panel)                  # inside the window (not its own window)
+    t.set_songs(window.songs * 40)
+    t.setGeometry(0, 0, 600, 300)
+    t.show()
+    qapp.processEvents()
+    bar = t.verticalScrollBar()
+    assert bar.maximum() > 300
+    ev = QWheelEvent(QPointF(50, 50), QPointF(t.viewport().mapToGlobal(QPoint(50, 50))), QPoint(0, 0), QPoint(0, -120),
+                     Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False)
+    QApplication = __import__("PyQt6.QtWidgets", fromlist=["QApplication"]).QApplication
+    QApplication.sendEvent(t.viewport(), ev)
+    qapp.processEvents()
+    assert bar.value() < smooth_scroll.STEP                     # it hasn't jumped there at once...
+    assert wait_until(qapp, lambda: bar.value() == smooth_scroll.STEP, 2)   # ...it glides there
+    t.hide()
+    t.deleteLater()
+
+
+def test_locate_songs_in_a_folder_fills_an_imported_playlist(window, qapp, tmp_path):
+    """Alternative/Indie Chill: songs imported from Spotify that you already have in a folder play from there
+    (Playlist ••• → Locate songs in a folder…) instead of being downloaded again."""
+    from core.online.models import OnlineTrack
+    from core.online.remote_song import RemoteSong
+    from mutagen.wave import WAVE
+    folder = tmp_path / "Indie"
+    folder.mkdir()
+    make_wav(folder / "x.wav", 0.3)
+    f = WAVE(str(folder / "x.wav"))
+    f.add_tags()
+    from mutagen.id3 import TIT2, TPE1
+    f.tags.add(TIT2(encoding=3, text="Breathe the Fire"))
+    f.tags.add(TPE1(encoding=3, text="The Soft Moon"))
+    f.save()
+    pl = window.create_playlist("Alt", [RemoteSong(OnlineTrack("Breathe the Fire", "The Soft Moon", preview_url="https://x/p")),
+                                        RemoteSong(OnlineTrack("Other", "Someone", preview_url="https://x/q"))])
+    window.locate_playlist_songs(pl, str(folder))
+    assert wait_until(qapp, lambda: not getattr(pl.songs[0], "is_remote", False), 10)
+    assert pl.songs[0].exists and getattr(pl.songs[1], "is_remote", False)
+    assert "Found 1 song" in window.status_label.text()
+
+
+def test_help_faq_opens_and_searches(window):
+    from ui import help_faq
+    window._auto_answer_dialogs = True
+    d = help_faq.show(window)
+    window._auto_answer_dialogs = None
+    d.faq_filter("vpn")
+    shown = [box for head, group in d.faq_items for box, hay in group if not box.isHidden()]
+    assert len(shown) == 1
+    d.deleteLater()

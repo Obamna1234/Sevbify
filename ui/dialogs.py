@@ -64,8 +64,9 @@ def confirm(parent, title, text, ok_text="Delete"):
     ok = QPushButton(ok_text)
     ok.setCursor(Qt.CursorShape.PointingHandCursor)
     ok.setDefault(True)
-    ok.setStyleSheet(f"QPushButton {{ color: #000000; background: {theme.GREEN}; border: none; border-radius: 22px;"
-                     f" font-size: 15px; font-weight: 700; padding: 11px 30px; }}"
+    ok.setFixedHeight(48)                       # a full pill, like Spotify's (Qt drops a radius over half the height)
+    ok.setStyleSheet(f"QPushButton {{ color: #000000; background: #1ed760; border: none; border-radius: 24px;"
+                     f" font-size: 15px; font-weight: 700; padding: 0 32px; }}"
                      f" QPushButton:hover {{ background: #3be477; }}")
     cancel.clicked.connect(d.reject)
     ok.clicked.connect(d.accept)
@@ -79,28 +80,70 @@ def confirm(parent, title, text, ok_text="Delete"):
 
 
 class _CoverButton(QPushButton):
+    """The cover in Edit details. On hover, like Spotify: the picture darkens and shows a pencil and
+    "Choose photo"."""
+
     def __init__(self, pixmap):
         super().__init__()
         self.setFixedSize(180, 180)
-        self.setIconSize(QSize(180, 180))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip("Choose photo")
-        self.setStyleSheet("QPushButton { background: #3e3e3e; border: none; border-radius: 4px; }"
-                           " QPushButton:hover { background: #4a4a4a; }")
-        if pixmap is not None and not pixmap.isNull():
-            from PyQt6.QtGui import QIcon
-            self.setIcon(QIcon(pixmap.scaled(180, 180, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                                             Qt.TransformationMode.SmoothTransformation)))
+        self._pm = pixmap if pixmap is not None and not pixmap.isNull() else None
+        self._hover = False
+        self.setStyleSheet("QPushButton { background: transparent; border: none; }")
+
+    def enterEvent(self, e):
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, e):
+        self._hover = False
+        self.update()
+
+    def paintEvent(self, e):
+        from PyQt6.QtGui import QPainter, QPainterPath, QFont
+        from PyQt6.QtCore import QRectF
+        from . import icons
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 4, 4)
+        p.setClipPath(path)
+        if self._pm is not None:
+            p.drawPixmap(self.rect(), self._pm.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                                      Qt.TransformationMode.SmoothTransformation))
+        else:
+            p.fillRect(self.rect(), QColor("#282828"))
+        if self._hover or self._pm is None:
+            if self._pm is not None:
+                p.fillRect(self.rect(), QColor(0, 0, 0, 150))
+            icons.pencil("#ffffff", 44).paint(p, 68, 50, 44, 44)
+            f = QFont(self.font())
+            f.setPixelSize(15)
+            f.setBold(True)
+            p.setFont(f)
+            p.setPen(QColor("#ffffff"))
+            p.drawText(QRectF(0, 104, 180, 24), Qt.AlignmentFlag.AlignCenter, "Choose photo")
+        p.end()
 
 
-def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_label="Name"):
-    """Spotify's "Edit details": a cover you can click to change, and the name. Returns
-    (name, "choose-cover" | None) or None when cancelled."""
+FIELD_STYLE = ("QLineEdit, QPlainTextEdit { background: #3e3e3e; color: white; border: 1px solid transparent;"
+               " border-radius: 4px; padding: 8px 10px; font-size: 14px;"
+               " selection-background-color: #2e77d0; selection-color: white; }"
+               " QLineEdit:focus, QPlainTextEdit:focus { border: 1px solid #535353; background: #333333; }")
+DESCRIPTION_MAX = 300
+
+
+def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_label="Name", description=None):
+    """Spotify's "Edit details": a cover you can click to change ("Choose photo"), the name, and (for playlists)
+    an optional description of up to 300 characters. Returns (name, "choose-cover" | None, description) or None
+    when cancelled. `description` None = no description box (folders)."""
+    from PyQt6.QtWidgets import QPlainTextEdit
     d = _Card(parent, light=False)
     d.setMinimumWidth(560)
     head = QHBoxLayout()
     h = QLabel(title)
-    h.setStyleSheet("font-size: 22px; font-weight: 800;")
+    h.setStyleSheet("font-size: 24px; font-weight: 800;")
     head.addWidget(h)
     head.addStretch()
     x = QPushButton("✕")
@@ -123,15 +166,40 @@ def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_l
         cover.clicked.connect(pick)
         row.addWidget(cover, 0, Qt.AlignmentFlag.AlignTop)
     col = QVBoxLayout()
+    col.setSpacing(6)
     lbl = QLabel(name_label)
-    lbl.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px; font-weight: 700;")
+    lbl.setStyleSheet("color: #ffffff; font-size: 11px; font-weight: 700;")
     edit = QLineEdit(name)
-    edit.setStyleSheet("QLineEdit { background: #3e3e3e; color: white; border: 1px solid transparent;"
-                       " border-radius: 4px; padding: 10px; font-size: 14px; }"
-                       " QLineEdit:focus { border: 1px solid #535353; background: #333333; }")
+    edit.setStyleSheet(FIELD_STYLE)
+    edit.setMaxLength(100)
     edit.selectAll()
     col.addWidget(lbl)
     col.addWidget(edit)
+    desc_box = None
+    if description is not None:
+        dl = QLabel("Description")
+        dl.setStyleSheet("color: #ffffff; font-size: 11px; font-weight: 700;")
+        desc_box = QPlainTextEdit(description)
+        desc_box.setPlaceholderText("Add an optional description")
+        desc_box.setStyleSheet(FIELD_STYLE)
+        desc_box.setFixedHeight(110 if can_change_cover else 90)
+        count = QLabel()
+        count.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 11px;")
+        count.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        def limit():
+            text = desc_box.toPlainText()
+            if len(text) > DESCRIPTION_MAX:
+                cur = desc_box.textCursor()
+                desc_box.setPlainText(text[:DESCRIPTION_MAX])
+                cur.setPosition(DESCRIPTION_MAX)
+                desc_box.setTextCursor(cur)
+            count.setText(f"{len(desc_box.toPlainText())}/{DESCRIPTION_MAX}")
+        desc_box.textChanged.connect(limit)
+        limit()
+        col.addWidget(dl)
+        col.addWidget(desc_box)
+        col.addWidget(count)
     col.addStretch()
     row.addLayout(col, 1)
     d.body.addLayout(row)
@@ -140,20 +208,27 @@ def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_l
     save = QPushButton("Save")
     save.setDefault(True)
     save.setCursor(Qt.CursorShape.PointingHandCursor)
-    save.setStyleSheet("QPushButton { color: black; background: white; border: none; border-radius: 22px;"
-                       " font-size: 15px; font-weight: 700; padding: 11px 32px; }"
+    save.setFixedHeight(48)
+    save.setStyleSheet("QPushButton { color: black; background: white; border: none; border-radius: 24px;"
+                       " font-size: 15px; font-weight: 700; padding: 0 32px; }"
                        " QPushButton:hover { background: #f0f0f0; }")
     save.clicked.connect(d.accept)
     edit.returnPressed.connect(d.accept)
     btn_row.addWidget(save)
     d.body.addLayout(btn_row)
-    note = QLabel("Your music files are never renamed or changed.")
-    note.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 11px;")
+    note = QLabel("By choosing a photo you confirm you're allowed to use it. Your music files are never renamed or "
+                  "changed.")
+    note.setWordWrap(True)
+    note.setStyleSheet("color: #ffffff; font-size: 11px; font-weight: 600;")
     d.body.addWidget(note)
     edit.setFocus()
+    d.name_edit, d.description_edit = edit, desc_box
+    auto = getattr(parent, "_auto_answer_dialogs", None)
+    if auto is not None and isinstance(auto, dict):                      # tests: {"name": ..., "description": ...}
+        return auto.get("name", name), auto.get("cover"), auto.get("description", description)
     if d.exec() != QDialog.DialogCode.Accepted:
         return None
-    return edit.text().strip(), choice["cover"]
+    return edit.text().strip(), choice["cover"], (desc_box.toPlainText().strip() if desc_box is not None else None)
 
 
 def choose_downloads(parent, title, songs):

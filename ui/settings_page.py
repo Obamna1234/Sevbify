@@ -19,7 +19,8 @@ SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
 STYLE = f"""
 QLabel {{ color: {theme.TEXT}; background: transparent; }}
 QLabel#h1 {{ font-size: 32px; font-weight: 700; color: white; padding-bottom: 8px; }}
-QLabel#h2 {{ font-size: 16px; font-weight: 700; color: white; padding-top: 26px; padding-bottom: 4px; }}
+QLabel#h2 {{ font-size: 16px; font-weight: 700; color: white; padding-top: 26px; padding-bottom: 4px;
+    margin-left: -4px; }}
 QLabel#name {{ font-size: 14px; color: #b3b3b3; }}
 QLabel#desc {{ color: #a7a7a7; font-size: 12px; }}
 QLineEdit {{ background: #2a2a2a; color: white; border: 1px solid transparent; border-radius: 4px; padding: 7px 10px;
@@ -92,6 +93,11 @@ class SettingsPage(QWidget):
         centre.setContentsMargins(24, 24, 24, 40)
         column = QWidget()
         column.setMaximumWidth(860)                 # a centred column, like Spotify's settings
+        # The column never grows wider than the page (a long folder path or version line used to push the
+        # switches and boxes off the right-hand edge in a narrow window); text wraps instead.
+        from PyQt6.QtWidgets import QSizePolicy
+        column.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        column.setMinimumWidth(0)
         v = QVBoxLayout(column)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(10)

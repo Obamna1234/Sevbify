@@ -266,6 +266,7 @@ class TrackTable(QTableWidget):
         self.verticalHeader().setDefaultSectionSize(48)
         self.setIconSize(QSize(36, 36))
         self.setWordWrap(False)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)     # smooth, not row by row
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.two_line_titles = False      # Spotify's Title column: artist under the title (Artist column hidden)
         self.show_saved = True            # Spotify's green tick for songs in Liked Songs / your playlists

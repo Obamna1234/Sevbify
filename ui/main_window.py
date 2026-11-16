@@ -417,6 +417,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_bar.online_toggled.connect(lambda: self.set_online(not self.online_enabled))
         from . import track_table as _tt
         _tt.is_saved, _tt.save_clicked_handler = self.is_saved, self._saved_mark_clicked
+        from . import smooth_scroll
+        smooth_scroll.install()                      # Spotify-like gliding mouse-wheel scrolling everywhere
         self.top_bar.private_toggled.connect(lambda: self.apply_settings({"private_session": not self.private_session}))
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
@@ -682,6 +684,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             pl = Playlist(stored.name, stored.folder, stored.created, stored.last_played)
             pl.custom_cover = stored.cover
             pl.origin = getattr(stored, "origin", "")
+            pl.description = getattr(stored, "description", "")
             for entry in stored.tracks:
                 if isinstance(entry, dict):
                     # A song added from Radio/Search that isn't downloaded yet.
@@ -738,7 +741,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
                                         else s.file_path for s in p.songs], p.folder, p.created, p.last_played,
-                               p.custom_cover, getattr(p, "origin", ""))
+                               p.custom_cover, getattr(p, "origin", ""), getattr(p, "description", ""))
                 for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
@@ -992,19 +995,56 @@ class MainWindow(ShowsMixin, QMainWindow):
             return None
         return artist, title
 
+    def locate_playlist_songs(self, playlist, folder=None):
+        """Playlist ••• → Locate songs in a folder…: songs you already have somewhere (a playlist imported from
+        Spotify, or files that moved to another drive) are matched by artist and title (or file name) to the
+        music files in a folder you pick, so they play from there instead of being downloaded again."""
+        if folder is None:
+            folder = QFileDialog.getExistingDirectory(self, f"Where are the songs of “{playlist.name}”?",
+                                                      os.path.expanduser("~"))
+        if not folder:
+            return
+        self.show_status(f"Looking for the songs of {playlist.name} in {os.path.basename(folder) or folder}…",
+                         kind="info", timeout_ms=15000)
+
+        def scan():
+            found, _problems = scan_folders([folder], recursive=True)
+            return found
+
+        def done(found):
+            fixed = self._relink_missing(found, [playlist])            # files that moved
+            index = build_match_index(found)
+            filled = 0
+            for i, s in enumerate(list(playlist.songs)):                # songs never downloaded (imports)
+                if getattr(s, "is_remote", False):
+                    local = find_local_match(s.track, found, index)
+                    if local is not None and all(x.key != local.key for x in playlist.songs):
+                        playlist.songs[i] = local
+                        filled += 1
+            n = fixed + filled
+            if n:
+                playlist.generate_cover()
+                self._playlists_changed(playlist)
+            left = sum(1 for x in playlist.songs if getattr(x, "is_remote", False) or not x.exists)
+            self.show_status(f"Found {n} song{'s' if n != 1 else ''} of {playlist.name} in that folder"
+                             + (f" · {left} still not on this computer" if left else " · all songs are here now"),
+                             kind="info", timeout_ms=8000)
+        run_async(self, scan, on_done=done, on_error=lambda e: self.show_status(f"⚠ Couldn't read that folder: {e}"))
+
     def _relink_missing(self, candidates, playlists=None):
         """A song in a playlist whose file is gone (moved, deleted, or the folder was copied somewhere else) is
         pointed at a file you have now with the same artist and title, so it plays from your own copy instead of
         asking to be downloaded again. If the playlist already has that file, the missing copy is dropped (it's
         the same song twice). Returns how many entries were fixed."""
-        found = {}
+        found, by_name = {}, {}
         for c in candidates:
             if getattr(c, "is_remote", False) or not getattr(c, "exists", False):
                 continue
             k = self._same_song_key(c)
             if k is not None:
                 found.setdefault(k, c)
-        if not found:
+            by_name.setdefault(os.path.splitext(os.path.basename(c.file_path))[0].casefold(), c)
+        if not found and not by_name:
             return 0
         fixed = 0
         for pl in (self.playlists if playlists is None else playlists):
@@ -1012,7 +1052,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             out, changed = [], False
             for s in pl.songs:
                 if not getattr(s, "is_remote", False) and not s.exists:
-                    match = found.get(self._same_song_key(s))
+                    match = found.get(self._same_song_key(s)) or \
+                        by_name.get(os.path.splitext(os.path.basename(s.file_path))[0].casefold())
                     if match is not None and not (s.duration and match.duration
                                                   and abs(s.duration - match.duration) > 10000):
                         changed = True
@@ -1437,7 +1478,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._add_sleep_timer_menu(pb)
 
         h = sub("Help")
-        act(h, "About Sevbify", self.show_about, "F1")
+        act(h, "Help and questions (FAQ)", lambda: __import__("ui.help_faq", fromlist=["x"]).show(self), "F1")
+        act(h, "About Sevbify", self.show_about)
         act(h, "Open Sevbify's data folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.storage.data_dir)))
         log = os.path.join(self.storage.data_dir, "error.log")
         act(h, "Show error log", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log)), enabled=os.path.exists(log))
@@ -2242,15 +2284,30 @@ class MainWindow(ShowsMixin, QMainWindow):
             return
 
         if not self.songs:
-            folders = "\n".join(self.user_data.music_folders) or "(none)"
-            v.addWidget(self._muted_label(
-                "No music found yet.\n\nAdd .mp3, .wav, .flac, .ogg or .m4a files to one of your music folders, "
-                f"or open Your Songs in Your Library and add a folder.\n\nMusic folders:\n{folders}"))
-            add = QPushButton("＋  Add a music folder")              # straight to the folder picker
+            # Laid out like Spotify's Settings ("Show songs from"): a bold heading, grey help text, then the
+            # folders in white.
+            head = QLabel("No music found yet")
+            head.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 700;")
+            v.addWidget(head)
+            v.addWidget(self._muted_label("Add .mp3, .wav, .flac, .ogg or .m4a files to one of your music folders, "
+                                          "or add a folder below."))
+            v.addSpacing(8)
+            sub = QLabel("Show songs from")
+            sub.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: 700;")
+            v.addWidget(sub)
+            for f in self.user_data.music_folders or []:
+                row = QLabel(f)
+                row.setStyleSheet("color: #ffffff; font-size: 14px;")
+                v.addWidget(row)
+            if not self.user_data.music_folders:
+                v.addWidget(self._muted_label("No folders yet."))
+            add = QPushButton("Add a music folder")                  # straight to the folder picker
             add.setObjectName("addMusicFolder")
-            add.setStyleSheet(GREEN_BUTTON.replace("QPushButton", "QPushButton#addMusicFolder")
-                              + " QPushButton#addMusicFolder { border-radius: 18px; padding: 8px 20px; font-weight: 700; }")
-            add.setFixedHeight(36)
+            # Spotify's outlined pill (its Settings → "Add a source"): grey outline, white bold text.
+            add.setStyleSheet("QPushButton#addMusicFolder { color: #ffffff; background: transparent; border: 1px solid"
+                              " #7c7c7c; border-radius: 16px; padding: 0 16px; font-size: 14px; font-weight: 700; }"
+                              " QPushButton#addMusicFolder:hover { border-color: #ffffff; }")
+            add.setFixedHeight(32)
             add.setCursor(Qt.CursorShape.PointingHandCursor)
             add.clicked.connect(self._choose_music_folder)
             v.addSpacing(12)
@@ -3838,6 +3895,12 @@ class MainWindow(ShowsMixin, QMainWindow):
                             else "⬇  Downloaded")
         dl.setEnabled(bool(pending))
         dl.triggered.connect(lambda: self.download_with_choice(playlist.songs, playlist.name))
+        waiting = sum(1 for x in playlist.songs if getattr(x, "is_remote", False) or not x.exists)
+        loc = menu.addAction("📂  Locate songs in a folder…")
+        loc.setToolTip("You already have these songs somewhere: point Sevbify at the folder instead of downloading "
+                       "them again.")
+        loc.setEnabled(waiting > 0)
+        loc.triggered.connect(lambda: self.locate_playlist_songs(playlist))
         menu.addSeparator()
         menu.addAction("♫  Create playlist").triggered.connect(lambda: self.new_playlist())
         menu.addAction("＋  Create folder").triggered.connect(lambda: self.create_folder())
@@ -3897,12 +3960,16 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def edit_playlist_details(self, playlist):
         from . import dialogs
-        res = dialogs.edit_details(self, "Edit details", playlist.name, load_pixmap(playlist.cover_path))
+        res = dialogs.edit_details(self, "Edit details", playlist.name, load_pixmap(playlist.cover_path),
+                                   description=getattr(playlist, "description", ""))
         if res is None:
             return
-        name, cover = res
+        name, cover, description = res
         if name and name != playlist.name:
             self.rename_playlist(playlist, name)
+        if description is not None and description != getattr(playlist, "description", ""):
+            playlist.description = description[:300]
+            self._playlists_changed(playlist)
         if cover:
             self.choose_playlist_cover(playlist)
 
@@ -4231,6 +4298,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.pl_title.setMinimumWidth(0)
         self.pl_title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         info.addWidget(self.pl_title)
+        # The description (Edit details), under the name like Spotify's; clicking it opens Edit details.
+        self.pl_desc = QLabel()
+        self.pl_desc.setStyleSheet("color: rgba(255,255,255,0.7); font-size: 14px; background: transparent;")
+        self.pl_desc.setMinimumWidth(0)
+        self.pl_desc.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.pl_desc.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pl_desc.setToolTip("Edit details")
+        self.pl_desc.mousePressEvent = lambda e: (self.open_playlist is not None
+                                                  and self.edit_playlist_details(self.open_playlist))
+        self.pl_desc.hide()
+        info.addWidget(self.pl_desc)
         self.pl_meta = QLabel()
         self.pl_meta.setStyleSheet("color: rgba(255,255,255,0.75); font-size: 14px; font-weight: 600; background: transparent;")
         info.addWidget(self.pl_meta)
@@ -4394,6 +4472,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         if missing:
             meta += f" · {missing} missing"
         self.pl_meta.setText(meta)
+        desc = (getattr(pl, "description", "") or "").replace("\n", " ")
+        self.pl_desc.setVisible(bool(desc))
+        self.pl_desc.setText(self.pl_desc.fontMetrics().elidedText(desc, Qt.TextElideMode.ElideRight,
+                                                                   max(200, self.pl_desc.width() or 700)))
+        self.pl_desc.setToolTip(desc if len(desc) > 60 else "Edit details")
         self._update_playlist_download_button()
         self._show_playlist_songs()
         self.fetch_covers([s for s in pl.songs if getattr(s, "is_remote", False)])
@@ -5470,7 +5553,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         from .player_views import FullScreenView
         if self.full_screen_view is None:
             self.full_screen_view = FullScreenView(self)
-        self.full_screen_view.showFullScreen()
+        # Full screen on the monitor Sevbify is on, and only that one (it spread onto the next monitor).
+        fs = self.full_screen_view
+        screen = self.screen()
+        if screen is not None:
+            fs.winId()                                   # make sure it has a native window to place
+            if fs.windowHandle() is not None:
+                fs.windowHandle().setScreen(screen)
+            fs.setGeometry(screen.geometry())
+        fs.showFullScreen()
+        if screen is not None:
+            fs.setGeometry(screen.geometry())
         self.full_screen_view.raise_()
         self.full_screen_view.activateWindow()
 

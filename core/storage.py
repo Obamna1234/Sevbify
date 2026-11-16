@@ -93,6 +93,7 @@ class StoredPlaylist:
     last_played: float = 0.0
     cover: str = ""              # custom cover picture
     origin: str = ""             # where it came from: "" made in Sevbify | "spotify" | "apple" | "deezer" | "jamendo" | "file"
+    description: str = ""        # Edit details → Description (up to 300 characters, shown under the name)
 
 
 @dataclass
@@ -300,7 +301,8 @@ class Storage:
                  **({"created": round(p.created, 3)} if p.created else {}),
                  **({"last_played": round(p.last_played, 3)} if p.last_played else {}),
                  **({"cover": to_stored_path(p.cover)} if p.cover else {}),
-                 **({"origin": p.origin} if getattr(p, "origin", "") else {})}
+                 **({"origin": p.origin} if getattr(p, "origin", "") else {}),
+                 **({"description": p.description[:300]} if getattr(p, "description", "") else {})}
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
@@ -489,7 +491,8 @@ class Storage:
                                             num("created"), num("last_played"),
                                             from_stored_path(str(cover)) if cover else "",
                                             origin if (origin in ("spotify", "apple", "deezer", "jamendo", "youtube", "file", "link", "liked")
-                                                      or re.fullmatch(r"server:[0-9a-f]{12}", origin)) else ""))
+                                                      or re.fullmatch(r"server:[0-9a-f]{12}", origin)) else "",
+                                            str(item.get("description") or "")[:300] if isinstance(item.get("description"), str) else ""))
         data.playlists = playlists
         return data
 
