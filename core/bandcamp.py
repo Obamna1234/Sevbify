@@ -85,7 +85,7 @@ def parse_mobile_details(data):
                                       or host in ("bandcamp.com", "popplers5.bandcamp.com")):
         url = "https://" + url[len("http://"):]
     ok = url.startswith("https://") and (host == "bcbits.com" or host.endswith(".bcbits.com")
-                                         or (host == "bandcamp.com" and "/stream_redirect" in url))
+                                         or (host == "bandcamp.com" and urllib.parse.urlsplit(url).path.startswith("/stream_redirect")))
     if not ok:
         raise NotPlayable("this Bandcamp track can't be streamed"
                           + (f" (its link is on {host or 'nothing'})" if url else " (no link)"))

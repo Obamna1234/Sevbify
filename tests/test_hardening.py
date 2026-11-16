@@ -180,7 +180,11 @@ def test_profiles_leave_out_songs_from_your_own_server():
 
 def test_song_lookups_only_use_bandcamp_youtube_and_soundcloud():
     from core import sevby_engine
-    assert sevby_engine.SONG_EXTRACTORS == ["Bandcamp", "youtube", "youtube:.*", "soundcloud", "soundcloud:.*"]
+    assert sevby_engine.SONG_EXTRACTORS == ["Bandcamp", "youtube", "youtube:.*", "soundcloud"]
+    from core import streamer
+    assert not streamer._page_ok("SoundCloud", "https://soundcloud.com/someuser")          # a profile
+    assert not streamer._page_ok("SoundCloud", "https://soundcloud.com/someuser/sets/all")
+    assert streamer._page_ok("SoundCloud", "https://soundcloud.com/someuser/a-song")
 
 
 def test_tooltips_show_titles_as_written(qapp):
@@ -294,3 +298,18 @@ def test_journey_mode_ignored_on_a_real_install():
     out = subprocess.run([_s.executable, "-c", code], capture_output=True, text=True,
                          cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     assert out.stdout.strip() == "''", out.stderr
+
+
+def test_soundcloud_search_results_never_take_over_a_song_until_played(window, monkeypatch):
+    """Security review: a stranger's SoundCloud upload named like a famous song must not replace where that song
+    plays from just because it showed up in a search."""
+    from core import streamer, downloader
+    from core.online.models import OnlineTrack
+    window.user_data.download_source = downloader.SOURCE_BOTH
+    fake = OnlineTrack("One More Time", "Daft Punk", source="soundcloud", page_url="https://soundcloud.com/x/one-more-time")
+    monkeypatch.setattr(streamer, "search_soundcloud", lambda q, n=10: [fake])
+    monkeypatch.setattr(window, "online_call", lambda fn, *a, on_done=None, **k: on_done(fn(*a)))
+    window.search_input.setText("one more time")
+    window._search_soundcloud("one more time")
+    assert window.sc_table.rowCount() == 1
+    assert streamer.remembered_page("Daft Punk", "One More Time", "SoundCloud") == ""

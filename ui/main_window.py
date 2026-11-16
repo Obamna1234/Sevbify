@@ -1075,7 +1075,12 @@ class MainWindow(ShowsMixin, QMainWindow):
             names = os.listdir(folder)
         except OSError:
             return ""
-        pics = [n for n in names if n.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
+        def small(n):
+            try:
+                return os.path.getsize(os.path.join(folder, n)) <= 20_000_000
+            except OSError:
+                return False
+        pics = [n for n in names if n.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and small(n)]
         for want in self.FOLDER_COVER_NAMES:
             for n in sorted(pics, key=str.casefold):
                 if os.path.splitext(n)[0].lower().startswith(want):
@@ -2874,8 +2879,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             if self.search_input.text().strip() != query:
                 return
             known = {s.key for s in self.web_table.songs_in_view() + self.search_table.songs_in_view() if s}
-            for t in tracks:
-                streamer.remember_page(t.artist, t.title, "SoundCloud", t.page_url)
+            # (A result's page is only remembered when you play it: a stranger's upload with a famous song's
+            # name must never take over that song.)
             items = [s for s in self.radio_items(self._allowed(tracks)) if s.key not in known]
             if not items:
                 return
@@ -6405,6 +6410,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             # "Recents" order isn't changed by what you play. It ends when Sevbify closes or after 6 hours.
             # Sevbify has no account, so nothing about your listening is sent anywhere either way.
             self.private_session = bool(values["private_session"])
+            streamer.private = self.private_session          # found pages aren't written to disk meanwhile
             from core import activity_log
             activity_log.set_private(self.private_session)
             self.top_bar.set_private(self.private_session)

@@ -1239,7 +1239,7 @@ _MAX_WEB = 60 * 1024 * 1024        # most a page, JSON answer or picture may be 
 _MAX_BIN = 200 * 1024 * 1024       # the yt-dlp program
 # Songs only ever come from Bandcamp or YouTube: yt-dlp's other readers (its "generic" one opens any address it
 # is given, and follows redirects) are switched off, so a search result can't send it into your home network.
-SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*", "soundcloud", "soundcloud:.*"]
+SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*", "soundcloud"]   # SoundCloud: single tracks only
 
 
 def yt_extractor_args():

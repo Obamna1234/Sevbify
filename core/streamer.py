@@ -37,6 +37,8 @@ def _page_ok(name, page):
     except ValueError:
         return False
     host = (u.hostname or "").lower()
+    if name == "SoundCloud" and not is_soundcloud_track(page):
+        return False                               # one track only, never a profile or a set
     return u.scheme == "https" and any(host == h or host.endswith("." + h) for h in _PAGE_HOSTS)
 
 
@@ -58,8 +60,11 @@ def set_page_store(path):
                 _pages[(row[0], row[1])] = (row[2], row[3])
 
 
+private = False                  # Private session: nothing new is written to the page store
+
+
 def _save_pages():
-    if not _store_path:
+    if not _store_path or private:
         return
     with _lock:
         rows = [[k[0], k[1], v[0], v[1]] for k, v in list(_pages.items())[-_MAX_PAGES:]]
