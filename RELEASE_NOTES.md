@@ -1,4 +1,25 @@
-## What's new in beta.45 (Android)
+## What's new in beta.46 (Windows, macOS, Linux, plus phone fixes)
+
+From your Windows testing list:
+
+- **Songs from a Spotify import or radio look playable** (no longer greyed out unless you're offline), like on Android.
+- **A deleted or moved song keeps its name** and shows "⬇": it plays online and can be downloaded again (right-click → Download again). It used to come back as "Unknown Artist", so neither worked.
+- **Hover labels on the player buttons**, like Spotify's.
+- **Lyrics unavailable** is shown the way Spotify does it (dimmed button, "not allowed" pointer).
+- **Downloads are sorted** into Music, Podcasts and Audiobooks folders.
+- **Portable mode** (Settings): keep your data in a "Sevbify data" folder next to the app instead of AppData.
+- **Podcasts:** no more flashing windows and stuck "Loading…" when opening a show; Spotify-style All Episodes / Unplayed / In Progress filter, search in a show and Newest/Oldest sort; ad-free episodes that keep the hosts' own sponsor reads (Settings → Ad-free podcasts).
+- **Settings page restyled** like Spotify's (fonts, colours, rounded buttons); the equaliser now changes the sound live while you drag it.
+- **Library chips** have white arrows that stand out.
+- **Bandcamp works again** (Bandcamp changed what it needs), and a refused stream is retried with a fresh link, then saved and played from a file.
+- **Activity log** (Help → Show activity log) and **Help → Save a problem report…** to send me when something goes wrong. Links are shortened to their site, nothing is sent anywhere, and nothing about songs is kept during a Private Session.
+- **Android:** Settings → About and updates → Playback status now says *why* a full song wasn't found. **iPhone:** a refused stream is retried once with a fresh link.
+
+Spotify Canvas (looping song videos) isn't included: Spotify only gives them to signed-in accounts, and linking your account risks a ban.
+
+Tested automatically on Windows 10 and 11, macOS, Ubuntu 22.04 and 24.04, and an Android emulator. Bandcamp and YouTube refuse those test computers, so please check song streaming and downloading on your own connection.
+
+### Earlier, in beta.45 (Android)
 
 From your Bad Friends log: the stream link was refused again (a 12 s wait, then my retry fixed it), and the video then failed with `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` after 22 s.
 
