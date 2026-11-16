@@ -23,12 +23,14 @@ _inflight = {}                   # song -> a lookup already running (a second as
 _lock = threading.Lock()
 _store_path = ""                 # where the found pages are kept between runs (set by the phone app)
 _MAX_PAGES = 1500
-_PAGE_HOSTS = ("youtube.com", "youtu.be", "bandcamp.com")
+_PAGE_HOSTS = ("youtube.com", "youtu.be", "bandcamp.com", "soundcloud.com")
+SOURCE_NAMES = ("Bandcamp", "YouTube", "SoundCloud")
 
 
 def _page_ok(name, page):
-    """A remembered page is only trusted when it is an https page on YouTube or Bandcamp (the file is on disk)."""
-    if name not in ("Bandcamp", "YouTube") or not isinstance(page, str):
+    """A remembered page is only trusted when it is an https page on YouTube, Bandcamp or SoundCloud (the file is
+    on disk)."""
+    if name not in SOURCE_NAMES or not isinstance(page, str):
         return False
     try:
         u = urllib.parse.urlparse(page)
@@ -89,6 +91,50 @@ def _pick_youtube(e, line, duration_s):
     return url if url.startswith("http") else f"https://www.youtube.com/watch?v={entry.get('id')}"
 
 
+DESKTOP_FALLBACK_CLIENTS = ("tv", "web_safari", "mweb", "android_vr")
+def is_soundcloud_track(url):
+    try:
+        u = urllib.parse.urlparse(url)
+    except ValueError:
+        return False
+    host = (u.hostname or "").lower()
+    parts = [x for x in u.path.split("/") if x]
+    return u.scheme == "https" and host in ("soundcloud.com", "www.soundcloud.com", "m.soundcloud.com") \
+        and len(parts) == 2 and parts[1] not in ("sets", "albums", "tracks", "reposts", "likes")
+
+
+def _pick_soundcloud(e, line, duration_s):
+    """SoundCloud: lots of music that's on neither Bandcamp nor YouTube (or not in the catalogue at all). Same
+    rule as YouTube: the title must have most of the song title's words; and the length must be close when it is
+    known, so a 30-second preview, a DJ mix or a different version isn't picked."""
+    if e.yt_dlp is None:
+        return None
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud", "soundcloud:.*"]}
+    with e.yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f"scsearch8:{line}", download=False) or {}
+    artist, title = e._split_query(line)
+    want = set(e._words(title or line))
+    who = set(e._words(artist or ""))
+    best, best_score = None, 0.0
+    for entry in info.get("entries") or []:
+        url = entry.get("url") or entry.get("webpage_url") or ""
+        if not is_soundcloud_track(url):
+            continue
+        name = entry.get("title") or ""
+        got = set(e._words(name))
+        uploader = set(e._words(entry.get("uploader") or ""))
+        if want and len(want & got) / len(want) < 0.6:
+            continue
+        secs = entry.get("duration") or 0
+        if duration_s and secs and abs(secs - duration_s) > max(12, 0.12 * duration_s):
+            continue
+        score = (len(want & got) / max(1, len(want))) + (0.5 if who and (who & (got | uploader)) else 0)
+        if score > best_score:
+            best, best_score = url, score
+    return best
+
+
 _preferred_attempt = 0           # which of the attempts below worked last time (tried first from then on)
 
 
@@ -99,7 +145,10 @@ def _attempts(e):
     base = dict(e.yt_extractor_args() or {})
     clients = list((base.get("youtube") or {}).get("player_client") or [])
     if not clients:
-        return [base]
+        # Desktop: yt-dlp's own choice first. Its link is checked before the player gets it; if YouTube refuses
+        # it (seen on Windows: every first try ended at once and the song had to be saved to a file first), the
+        # next client is asked instead of retrying the same kind of link.
+        return [base] + [{"youtube": {"player_client": [c]}} for c in DESKTOP_FALLBACK_CLIENTS]
     fast = [{"youtube": {**base["youtube"], "player_client": [c]}} for c in ("android_vr", "tv", "mweb") if c in clients]
     return fast + [base]
 
@@ -122,6 +171,18 @@ def url_works(url, headers=None, timeout=8):
         return exc.code not in (400, 401, 403, 404, 410)
     except Exception:
         return True
+
+
+def _client_name(attempt):
+    return "/".join((attempt.get("youtube") or {}).get("player_client") or ["default"])
+
+
+def _note(text):
+    try:
+        from core import activity_log
+        activity_log.log("stream", text)
+    except Exception:
+        pass
 
 
 def link_failed(url):
@@ -160,11 +221,15 @@ def _extract(e, page):
             url = (info or {}).get("url")
             if not url:
                 raise NoFullSong("no playable audio link")
+            if is_soundcloud_track(page) and ("preview" in str(info.get("format_id", "")).lower()
+                                             or 0 < (info.get("duration") or 0) <= 35):
+                raise NoFullSong("SoundCloud only has a 30-second preview of this one (Go+)")
             headers = dict(info.get("http_headers") or {})
             if i != order[-1] and not url_works(url, headers):       # refused: this client's links don't play, try the next
                 raise NoFullSong("the link was refused")
         except Exception as exc:
             last = exc
+            _note(f"YouTube link {_client_name(attempts[i])}: {str(exc)[:160]}")
             continue
         _preferred_attempt = i
         return url, headers, info.get("duration") or 0
@@ -232,9 +297,18 @@ def _find(line, key, duration_ms, source, extract):
             search_errors["YouTube"] = str(exc)[:300]
         timings["youtube_search"] = round(time.time() - t, 1)
 
+    def soundcloud():
+        t = time.time()
+        try:
+            found["sc"] = _pick_soundcloud(e, line, int((duration_ms or 0) / 1000))
+        except Exception as exc:
+            found["sc"] = None
+            search_errors["SoundCloud"] = str(exc)[:300]
+        timings["soundcloud"] = round(time.time() - t, 1)
+
     def candidates():
         """(name, page) to try, in order; the searches run at the same time and YouTube is only waited for when
-        Bandcamp has nothing."""
+        Bandcamp has nothing, SoundCloud when neither has it."""
         threads = {}
         for name, fn, wanted in (("bc", bandcamp, source != downloader.SOURCE_YOUTUBE),
                                  ("yt", youtube, source != downloader.SOURCE_BANDCAMP)):
@@ -249,6 +323,10 @@ def _find(line, key, duration_ms, source, extract):
             threads["yt"].join()
             if found.get("yt"):
                 yield "YouTube", found["yt"]
+        if source == downloader.SOURCE_BOTH:
+            soundcloud()       # only asked when the others had nothing playable (one site fewer per song)
+            if found.get("sc"):
+                yield "SoundCloud", found["sc"]
 
     last = None
     known = _pages.get(key)
@@ -290,7 +368,58 @@ def _find(line, key, duration_ms, source, extract):
     if last and len(search_errors) <= 1:
         raise NoFullSong(str(last))
     why = "; ".join(f"{k} search failed: {v}" for k, v in search_errors.items())
-    raise NoFullSong("not found on Bandcamp or YouTube" + (f" ({why})" if why else ""))
+    raise NoFullSong("not found on Bandcamp, YouTube or SoundCloud" + (f" ({why})" if why else ""))
+
+
+def remember_page(artist, title, source_name, page):
+    """A song picked straight from a site's own search (e.g. "On SoundCloud" in Search): play / download exactly
+    that page instead of searching for the song again."""
+    if not _page_ok(source_name, page):
+        return False
+    line = downloader.song_line(artist, title)
+    with _lock:
+        for src in (downloader.SOURCE_BOTH,):
+            _pages[(line.casefold(), src)] = (source_name, page)
+    _save_pages()
+    return True
+
+
+def remembered_page(artist, title, source_name):
+    line = downloader.song_line(artist, title)
+    with _lock:
+        for (key_line, _src), (name, page) in _pages.items():
+            if key_line == line.casefold() and name == source_name:
+                return page
+    return ""
+
+
+def search_soundcloud(query, limit=10):
+    """Songs on SoundCloud for a search (for the "On SoundCloud" part of Search): [OnlineTrack]."""
+    from core.online.models import OnlineTrack
+    e = downloader.engine()
+    if e.yt_dlp is None:
+        return []
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud", "soundcloud:.*"]}
+    with e.yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f"scsearch{int(limit)}:{query}", download=False) or {}
+    out = []
+    for entry in info.get("entries") or []:
+        url = entry.get("url") or entry.get("webpage_url") or ""
+        if not is_soundcloud_track(url) or not entry.get("title"):
+            continue
+        secs = entry.get("duration") or 0
+        if 0 < secs <= 35:
+            continue                                   # a preview or a jingle
+        title, artist = entry["title"], entry.get("uploader") or ""
+        if " - " in title and not artist:
+            artist, title = title.split(" - ", 1)
+        thumbs = entry.get("thumbnails") or []
+        cover = (thumbs[-1].get("url") if thumbs and isinstance(thumbs[-1], dict) else "") or entry.get("thumbnail") or ""
+        out.append(OnlineTrack(title=title.strip(), artist=artist.strip() or "SoundCloud", duration_ms=int(secs * 1000),
+                               cover_url=cover if str(cover).startswith("https://") else "", source="soundcloud",
+                               page_url=url))
+    return out
 
 
 def youtube_page(artist, title, duration_ms=0, search=True):

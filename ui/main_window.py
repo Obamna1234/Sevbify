@@ -62,13 +62,7 @@ SLIDER_STYLE = (
     " margin: -4px 0; border-radius: 6px; }"
     "QSlider::handle:horizontal:hover { background: #ffffff; }")
 
-MENU_STYLE = """
-QMenu { background: #282828; color: white; border: 1px solid #3e3e3e; padding: 4px; font-size: 13px; }
-QMenu::item { padding: 8px 24px 8px 12px; border-radius: 3px; }
-QMenu::item:selected { background: #3e3e3e; }
-QMenu::item:disabled { color: #6a6a6a; }
-QMenu::separator { height: 1px; background: #3e3e3e; margin: 4px 0; }
-"""
+from .menu_style import STYLE as MENU_STYLE  # Spotify-style menus (ui/menu_style.py)
 PILL_BUTTON = ("QPushButton { color: white; background: transparent; border: 1px solid #727272; "
                "padding: 6px 16px; border-radius: 16px; font-weight: bold; } "
                "QPushButton:hover { border-color: white; }")
@@ -421,6 +415,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
         self.top_bar.menu_clicked.connect(self._show_app_menu)
         self.top_bar.online_toggled.connect(lambda: self.set_online(not self.online_enabled))
+        self.top_bar.private_toggled.connect(lambda: self.apply_settings({"private_session": not self.private_session}))
         self.main_layout.addWidget(self.top_bar)
         self.sidebar = self.top_bar        # older code/tests: .online_label, .set_online_state
         self._history, self._history_pos, self._replaying = [], -1, False
@@ -451,6 +446,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.library_panel.playlist_menu.connect(self._playlist_context_menu)
         self.library_panel.songs_dropped.connect(lambda pl, songs: self.add_to_playlist(pl, songs))
         self.library_panel.files_dropped.connect(lambda pl, paths: self.add_files_to_playlist(pl, paths))
+        self.library_panel.new_from_files.connect(self.playlists_from_dropped)
         self.top_layout.addWidget(self.library_panel)
 
         self.center_panel = QFrame()
@@ -631,6 +627,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             for pl in self.playlists:
                 pl.songs = [by_key.get(s.key, s) for s in pl.songs]
 
+        if self._relink_missing(songs):
+            self.schedule_save(3000)
         self.pq.rebind(by_key)
         if first_load:
             for path in reversed(self.user_data.recent):
@@ -757,6 +755,74 @@ class MainWindow(ShowsMixin, QMainWindow):
     # ==================================================================
     # Playlist operations (each one saves immediately)
     # ==================================================================
+    # --- Liked Songs (Spotify's heart): a playlist that's always first in Your Library ------------------------
+    LIKED_NAME = "Liked Songs"
+
+    def liked_playlist(self, create=False):
+        for pl in self.playlists:
+            if getattr(pl, "origin", "") == "liked":
+                return pl
+        if not create:
+            return None
+        name, n = self.LIKED_NAME, 2
+        while self._name_taken(name):                       # someone already has a playlist with that name
+            name, n = f"{self.LIKED_NAME} {n}", n + 1
+        pl = Playlist(name)
+        pl.origin = "liked"
+        pl.custom_cover = self._liked_cover()
+        pl.generate_cover()
+        self.playlists.append(pl)
+        return pl
+
+    def _liked_cover(self):
+        """Spotify's Liked Songs picture: a purple-to-blue gradient with a white heart (made once, kept with your
+        data)."""
+        path = os.path.join(self.storage.data_dir, "covers", "liked_songs.png")
+        if os.path.isfile(path):
+            return path
+        from PyQt6.QtGui import QImage, QLinearGradient
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        img = QImage(600, 600, QImage.Format.Format_ARGB32)
+        p = QPainter(img)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        g = QLinearGradient(0, 0, 600, 600)
+        g.setColorAt(0.0, QColor("#450af5"))
+        g.setColorAt(1.0, QColor("#c4efd9"))
+        p.fillRect(0, 0, 600, 600, g)
+        p.drawPixmap(180, 180, icons.heart("#ffffff", 240, filled=True).pixmap(240, 240))
+        p.end()
+        img.save(path, "PNG")
+        return path
+
+    def is_liked(self, song):
+        pl = self.liked_playlist()
+        return pl is not None and song is not None and any(s.key == song.key for s in pl.songs)
+
+    def toggle_like(self, song=None):
+        """Add the song to Liked Songs (newest first, like Spotify), or take it out again."""
+        song = song if song is not None else self.current_song
+        if song is None:
+            return
+        pl = self.liked_playlist(create=True)
+        if self.is_liked(song):
+            pl.songs[:] = [s for s in pl.songs if s.key != song.key]
+            self.show_status("Removed from Liked Songs", kind="info", timeout_ms=3000)
+        else:
+            pl.songs.insert(0, song)
+            self.show_status("Added to Liked Songs", kind="info", timeout_ms=3000)
+        self._playlists_changed(pl)
+        self._update_like_button()
+
+    def _update_like_button(self):
+        btn = getattr(self, "like_btn", None)
+        if btn is None:
+            return
+        song = self.current_song
+        btn.setVisible(song is not None)
+        liked = self.is_liked(song)
+        btn.setIcon(icons.heart("#1ed760" if liked else theme.SUBDUED, 16, filled=liked))
+        btn.setToolTip("Remove from Liked Songs" if liked else "Add to Liked Songs")
+
     def _name_taken(self, name, ignore=None):
         return any(p is not ignore and p.name.casefold() == name.casefold() for p in self.playlists)
 
@@ -777,6 +843,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         return pl
 
     def rename_playlist(self, playlist, new_name: str) -> bool:
+        if getattr(playlist, "origin", "") == "liked":
+            self.show_status("Liked Songs keeps its name.", kind="info", timeout_ms=3000)
+            return False
         new_name = new_name.strip()
         if not new_name or new_name == playlist.name:
             return False
@@ -793,6 +862,9 @@ class MainWindow(ShowsMixin, QMainWindow):
     def delete_playlist(self, playlist):
         if playlist not in self.playlists:
             return
+        if getattr(playlist, "origin", "") == "liked" and playlist.songs:
+            self.show_status("Liked Songs can't be deleted while it has songs (unlike them first).", 5000)
+            return
         self.playlists.remove(playlist)
         self._remove_generated_cover(playlist.cover_path)
         if self.open_playlist is playlist:
@@ -802,6 +874,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def add_to_playlist(self, playlist, songs) -> int:
         """Add songs, skipping ones already in the playlist. Returns number added."""
+        songs = list(songs)
+        relinked = self._relink_missing(songs, [playlist])
         existing = {s.key for s in playlist.songs}
         added = 0
         for s in songs:
@@ -809,10 +883,11 @@ class MainWindow(ShowsMixin, QMainWindow):
                 playlist.add_song(s)
                 existing.add(s.key)
                 added += 1
-        if added:
+        if added or relinked:
             playlist.generate_cover()
             self._playlists_changed(playlist)
-            self.show_status(f"Added to {playlist.name}", kind="info", timeout_ms=3000)
+            self.show_status(f"Added to {playlist.name}" if added else
+                             f"Now plays from your file in {playlist.name}", kind="info", timeout_ms=3000)
         else:
             self.show_status(f"Already in {playlist.name}", kind="info", timeout_ms=3000)
         return added
@@ -834,6 +909,50 @@ class MainWindow(ShowsMixin, QMainWindow):
             playlist.generate_cover()
         self._playlists_changed(playlist)
 
+    @staticmethod
+    def _same_song_key(song):
+        title = (getattr(song, "title", "") or "").strip().casefold()
+        artist = (getattr(song, "artist", "") or "").strip().casefold()
+        if not title or artist in ("", "unknown artist"):
+            return None
+        return artist, title
+
+    def _relink_missing(self, candidates, playlists=None):
+        """A song in a playlist whose file is gone (moved, deleted, or the folder was copied somewhere else) is
+        pointed at a file you have now with the same artist and title, so it plays from your own copy instead of
+        asking to be downloaded again. If the playlist already has that file, the missing copy is dropped (it's
+        the same song twice). Returns how many entries were fixed."""
+        found = {}
+        for c in candidates:
+            if getattr(c, "is_remote", False) or not getattr(c, "exists", False):
+                continue
+            k = self._same_song_key(c)
+            if k is not None:
+                found.setdefault(k, c)
+        if not found:
+            return 0
+        fixed = 0
+        for pl in (self.playlists if playlists is None else playlists):
+            keys = {s.key for s in pl.songs}
+            out, changed = [], False
+            for s in pl.songs:
+                if not getattr(s, "is_remote", False) and not s.exists:
+                    match = found.get(self._same_song_key(s))
+                    if match is not None and not (s.duration and match.duration
+                                                  and abs(s.duration - match.duration) > 10000):
+                        changed = True
+                        fixed += 1
+                        if match.key in keys:
+                            continue                     # already in this playlist: drop the missing copy
+                        keys.add(match.key)
+                        out.append(match)
+                        continue
+                out.append(s)
+            if changed:
+                pl.songs[:] = out
+                pl.generate_cover()
+        return fixed
+
     def add_files_to_playlist(self, playlist, paths, index=None):
         """Music files or folders dropped from File Explorer. Folders add their music files (sub-folders
         included, in name order). Songs already in the playlist are skipped. Returns the number added."""
@@ -848,27 +967,78 @@ class MainWindow(ShowsMixin, QMainWindow):
             elif p.lower().endswith(SUPPORTED_EXTENSIONS) and os.path.isfile(p):
                 files.append(p)
         by_key = {s.key: s for s in self.songs}
+        new_songs = [by_key.get(normalise_path(f)) or Song(f) for f in files]
+        relinked = self._relink_missing(new_songs, [playlist])     # copies of songs whose files are gone
         existing = {s.key for s in playlist.songs}
         index = len(playlist.songs) if index is None else max(0, min(index, len(playlist.songs)))
         added = 0
-        for f in files:
+        for f, song in zip(files, new_songs):
             key = normalise_path(f)
             if key in existing:
                 continue
-            song = by_key.get(key) or Song(f)
             playlist.songs.insert(index + added, song)
             existing.add(key)
             added += 1
-        if added:
+        if added or relinked:
             playlist.generate_cover()
             self._playlists_changed(playlist)
-            self.show_status(f"Added {added} song{'s' if added != 1 else ''} to {playlist.name}",
-                             kind="info", timeout_ms=3000)
+            parts = ([f"Added {added} song{'s' if added != 1 else ''} to {playlist.name}"] if added else []) + \
+                ([f"{relinked} missing song{'s' if relinked != 1 else ''} now play{'s' if relinked == 1 else ''} "
+                  f"from {'this file' if relinked == 1 else 'these files'}"] if relinked else [])
+            self.show_status(" · ".join(parts), kind="info", timeout_ms=5000)
         elif files:
             self.show_status(f"Already in {playlist.name}", kind="info", timeout_ms=3000)
         else:
             self.show_status("Those aren't music files Sevbify can play (MP3, WAV, FLAC, OGG, M4A).", 6000)
         return added
+
+    FOLDER_COVER_NAMES = ("cover", "folder", "front", "albumart", "album")
+
+    def _folder_cover(self, folder):
+        """A folder's own cover picture (cover.jpg, folder.png, front.jpg...), if it has one."""
+        try:
+            names = os.listdir(folder)
+        except OSError:
+            return ""
+        pics = [n for n in names if n.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
+        for want in self.FOLDER_COVER_NAMES:
+            for n in sorted(pics, key=str.casefold):
+                if os.path.splitext(n)[0].lower().startswith(want):
+                    return os.path.join(folder, n)
+        return ""
+
+    def playlists_from_dropped(self, paths):
+        """Folders dropped on Your Library: a playlist for each, named after the folder, with its songs in the
+        folder's order (sub-folders too) and the folder's cover picture. Loose music files make one playlist."""
+        from core.models import SUPPORTED_EXTENSIONS
+        folders = [p for p in paths if os.path.isdir(p)]
+        files = [p for p in paths if os.path.isfile(p) and p.lower().endswith(SUPPORTED_EXTENSIONS)]
+        made = []
+        for folder, items in [(f, [f]) for f in folders] + ([("", files)] if files else []):
+            base = os.path.basename(os.path.normpath(folder)) if folder else "New playlist"
+            name, n = base or "New playlist", 2
+            while self._name_taken(name):
+                name, n = f"{base} {n}", n + 1
+            pl = Playlist(name)
+            self.playlists.append(pl)
+            added = self.add_files_to_playlist(pl, items)
+            if not added:
+                self.playlists.remove(pl)
+                continue
+            cover = self._folder_cover(folder) if folder else ""
+            if cover:
+                pl.custom_cover = cover
+                pl.generate_cover()
+            made.append(pl)
+        if made:
+            self._playlists_changed()
+            self.show_status(f"Made {len(made)} playlist{'s' if len(made) != 1 else ''} from what you dropped: "
+                             + ", ".join(p.name for p in made[:3]), kind="info", timeout_ms=6000)
+            if len(made) == 1:
+                self.show_playlist(made[0])
+        elif not folders and not files:
+            self.show_status("Drop folders or music files (MP3, WAV, FLAC, OGG, M4A) here.", 5000)
+        return made
 
     def move_in_playlist(self, playlist, index: int, delta: int):
         new = index + delta
@@ -903,9 +1073,8 @@ class MainWindow(ShowsMixin, QMainWindow):
     # Menus
     # ==================================================================
     def _new_menu(self):
-        menu = QMenu(self)
-        menu.setStyleSheet(MENU_STYLE)
-        return menu
+        from .menu_style import spotify_menu
+        return spotify_menu(QMenu(self))
 
     def build_song_menu(self, song, queue=None, playlist=None, row=None, source="",
                         saved_genre=None, saved_index=None):
@@ -919,6 +1088,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         has_artist = bool(song.artist) and song.artist != "Unknown Artist"
 
         self._add_playlist_submenu(menu, [song], skip=playlist)
+        if self.is_liked(song):
+            menu.addAction("♥  Remove from your Liked Songs").triggered.connect(lambda: self.toggle_like(song))
+        else:
+            menu.addAction("♡  Add to Liked Songs").triggered.connect(lambda: self.toggle_like(song))
         menu.addAction("≡  Add to queue").triggered.connect(lambda: self.add_to_queue(song))
         if is_remote:
             state, _note = self.downloads.state(song.track.key)
@@ -973,7 +1146,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 if not is_web_url(url):
                     continue
                 open_menu.addAction(label).triggered.connect(lambda _=False, u=url: QDesktopServices.openUrl(QUrl(u)))
-            share_menu = menu.addMenu("Share")
+            share_menu = menu.addMenu("⇪  Share")
             share_menu.setIcon(icons.share(theme.SUBDUED))
             share_menu.setStyleSheet(MENU_STYLE)
             for label, kind in (("Copy Spotify link", "spotify"), ("Copy YouTube link", "youtube"),
@@ -1298,7 +1471,20 @@ class MainWindow(ShowsMixin, QMainWindow):
         for lbl in (self.song_info, self.artist_info):
             lbl.setMinimumWidth(0)
             lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        info.addWidget(self.song_info)
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
+        title_row.addWidget(self.song_info)
+        self.like_btn = QPushButton()                         # Spotify's heart next to the playing song
+        self.like_btn.setFixedSize(24, 24)
+        self.like_btn.setIconSize(QSize(16, 16))
+        self.like_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.like_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
+        self.like_btn.clicked.connect(lambda: self.toggle_like())
+        self.like_btn.hide()
+        title_row.addWidget(self.like_btn)
+        title_row.addStretch()                                 # the heart sits right after the title, like Spotify
+        self.song_info.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        info.addLayout(title_row)
         info.addWidget(self.artist_info)
         # Small status line for errors and confirmations.
         self.status_label = QLabel("")
@@ -1696,6 +1882,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 alog("player", f"playing \"{getattr(self.current_song, 'title', '')}\" "
                                f"(length {self.player.get_length() // 1000} s)")
                 self._apply_volume()  # VLC can reset volume when audio output starts
+                self._prefetch_neighbours()
             self._open_elapsed_ms = 0
             self._seen_length = max(self._seen_length, self.player.get_length())
             if self._pending_resume is not None and state == vlc.State.Playing:
@@ -1721,6 +1908,13 @@ class MainWindow(ShowsMixin, QMainWindow):
             return
 
         if self._track_handled:
+            return
+
+        if state in (vlc.State.Ended, vlc.State.Error) and not self._reached_playing and self._stale_end():
+            # Seen on Windows: right after a new link is handed to VLC, the player can still report how the
+            # previous song finished ("Ended") for a moment. That was taken as "this link doesn't play", so every
+            # streamed song was looked up 3 times and then saved to a file first (20+ s). The new media's own
+            # state says whether it really ended.
             return
 
         if state == vlc.State.Ended and not self._reached_playing and self._known_length() > 0:
@@ -1751,6 +1945,19 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._track_handled = True
                 self.player.stop()
                 self._handle_failed_track("took too long to open")
+
+    def _stale_end(self):
+        """True while the player's "Ended"/"Error" is left over from the previous song, not about the new one."""
+        media = getattr(self, "_opened_media", None)
+        if media is None:
+            return False
+        try:
+            own = media.get_state()
+        except Exception:
+            return False
+        if own in (vlc.State.Ended, vlc.State.Error, vlc.State.Stopped):
+            return False
+        return time.monotonic() - getattr(self, "_opened_at", 0) < 15     # never wait forever on a stuck link
 
     def set_album_cover(self, path):
         self.album_cover.setPixmap(rounded(load_pixmap(path), 56, 4))
@@ -1956,6 +2163,15 @@ class MainWindow(ShowsMixin, QMainWindow):
             v.addWidget(self._muted_label(
                 "No music found yet.\n\nAdd .mp3, .wav, .flac, .ogg or .m4a files to one of your music folders, "
                 f"or open Your Songs in Your Library and add a folder.\n\nMusic folders:\n{folders}"))
+            add = QPushButton("＋  Add a music folder")              # straight to the folder picker
+            add.setObjectName("addMusicFolder")
+            add.setStyleSheet(GREEN_BUTTON.replace("QPushButton", "QPushButton#addMusicFolder")
+                              + " QPushButton#addMusicFolder { border-radius: 18px; padding: 8px 20px; font-weight: 700; }")
+            add.setFixedHeight(36)
+            add.setCursor(Qt.CursorShape.PointingHandCursor)
+            add.clicked.connect(self._choose_music_folder)
+            v.addSpacing(12)
+            v.addWidget(add, alignment=Qt.AlignmentFlag.AlignLeft)
             v.addStretch()
             theme.replace_scroll_widget(self.home_scroll, content)
             return
@@ -2151,7 +2367,18 @@ class MainWindow(ShowsMixin, QMainWindow):
         tv.addStretch()
         tv.addWidget(self.top_title)
         tv.addWidget(self.top_sub)
-        self.top_result.mousePressEvent = lambda e: self._play_top_result()
+        def top_pressed(e):
+            # Left click plays it; right click opens the song's menu (it used to start playing too).
+            if e.button() == Qt.MouseButton.RightButton:
+                song = getattr(self, "_top_song", None)
+                if song is not None:
+                    queue = [x for x in self.search_table.songs_in_view() + self.web_table.songs_in_view()
+                             if x is not None]
+                    self._show_song_menu(song, e.globalPosition().toPoint(), queue=queue,
+                                         source=f"Search: {self.search_input.text().strip()}")
+            elif e.button() == Qt.MouseButton.LeftButton:
+                self._play_top_result()
+        self.top_result.mousePressEvent = top_pressed
         left.addWidget(self.top_result)
         top.addLayout(left, 2)
         right = QVBoxLayout()
@@ -2206,6 +2433,20 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.web_table.context_requested.connect(
             lambda s, row, pos: self._show_song_menu(s, pos, queue=self.web_table.songs_in_view(), source=src()))
         rl.addWidget(self.web_table)
+        # "On SoundCloud": music that isn't in the catalogue above (e.g. taken down elsewhere, or only uploaded
+        # there). Playing or downloading one uses exactly that SoundCloud track.
+        self.sc_header = self._section_label("On SoundCloud")
+        self.sc_header.hide()
+        rl.addWidget(self.sc_header)
+        self.sc_table = TrackTable(sortable=False)
+        self.sc_table.set_two_line_titles(True)
+        self.sc_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.sc_table.mark_pending = True
+        self.sc_table.play_requested.connect(lambda s, view: self.play_song(s, queue=view, source=src()))
+        self.sc_table.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.sc_table.songs_in_view(), source=src()))
+        self.sc_table.hide()
+        rl.addWidget(self.sc_table)
         self.search_more = QVBoxLayout()              # Artists / Podcasts / Audiobooks shelves (filled per search)
         self.search_more_box = QWidget()
         self.search_more_box.setLayout(self.search_more)
@@ -2521,6 +2762,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.search_web_header.setVisible(songs_shown and online)
         self.search_web_status.setVisible(songs_shown and online and bool(self.search_web_status.text()))
         self.web_table.setVisible(songs_shown and has_web)
+        has_sc = self.sc_table.rowCount() > 0
+        self.sc_header.setVisible(songs_shown and has_sc)
+        self.sc_table.setVisible(songs_shown and has_sc)
         self._render_search_more()
 
     def _update_top_result(self):
@@ -2540,6 +2784,31 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_songs.set_songs(everything[:4])
         self.top_songs.set_current(self.current_song)
         self._fit_table(self.top_songs, 4)
+
+    def _search_soundcloud(self, query):
+        self.sc_table.set_songs([])
+        self.sc_header.hide()
+        self.sc_table.hide()
+        if len(query) < 3 or self.user_data.download_source != downloader.SOURCE_BOTH:
+            return
+
+        def done(tracks):
+            if self.search_input.text().strip() != query:
+                return
+            known = {s.key for s in self.web_table.songs_in_view() + self.search_table.songs_in_view() if s}
+            for t in tracks:
+                streamer.remember_page(t.artist, t.title, "SoundCloud", t.page_url)
+            items = [s for s in self.radio_items(self._allowed(tracks)) if s.key not in known]
+            if not items:
+                return
+            self.sc_table.set_songs(items)
+            self.sc_table.set_current(self.current_song)
+            self._fit_table(self.sc_table, 10)
+            chip = getattr(self, "search_chip", "all")
+            self.sc_header.setVisible(chip in ("all", "songs"))
+            self.sc_table.setVisible(chip in ("all", "songs"))
+            self.fetch_covers(items, limit=len(items))
+        self.online_call(streamer.search_soundcloud, query, 10, on_done=done, on_error=lambda _e: None, lane="songs")
 
     def _play_top_result(self):
         song = getattr(self, "_top_song", None)
@@ -2643,7 +2912,8 @@ class MainWindow(ShowsMixin, QMainWindow):
                     + ("  ·  ⬇ songs stream in full while online; download them to keep" if owned < len(items) else ""))
             else:
                 self.search_web_status.setText(f"No web results for \"{query}\".")
-            self.fetch_covers(items, limit=25)
+            self.fetch_covers(items, limit=len(items))
+            self._search_soundcloud(query)
             if not self._search_memory.isActive():          # the search had already settled
                 self._check_spelling(query)
 
@@ -4273,6 +4543,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 if option and value:
                     media.add_option(f":{option}={value}")
             self.player.set_media(media)
+            self._opened_media, self._opened_at = media, time.monotonic()
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
             self._apply_volume()
@@ -4287,6 +4558,9 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _stream_full_song(self, song):
         """Find the full song online (in the background) and stream it; if it can't be found, skip it."""
+        track = getattr(song, "track", None)
+        if track is not None and track.source == "soundcloud" and track.page_url:
+            streamer.remember_page(song.artist, song.title, "SoundCloud", track.page_url)   # exactly that track
         self.player.stop()
         self._track_handled = True                   # nothing to watch until the stream is found
         self.is_playing = True
@@ -4319,7 +4593,88 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._handle_failed_track("full song not found")
 
         self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
-                         self.user_data.download_source, on_done=done, on_error=failed)
+                         self.user_data.download_source, on_done=done, on_error=failed, lane="songs", priority=10)
+
+    def _needs_lookup(self, song):
+        """Would this song have to be found online before it can play (a song you haven't downloaded, or one
+        whose file is gone)?"""
+        if song is None:
+            return False
+        if getattr(song, "is_remote", False):
+            return song.track.source not in ("podcast", "audiobook", "youtube", "jellyfin", "webdav") \
+                and not song.track.stream_url
+        return not song.exists and bool(song.artist) and song.artist != "Unknown Artist"
+
+    def _prefetch_neighbours(self):
+        """While a song plays, quietly find the next and previous songs online too, so Next and Previous start
+        straight away instead of after the 5-10 s search (like Spotify loading the next song early). Only the
+        lookup is done (no audio is downloaded); the result is kept for a while in the streamer's memory."""
+        self._maybe_extend_radio()
+        if not self.online_enabled or not self.user_data.download_notice_accepted or getattr(self, "_shut_down", False):
+            return
+        pq = self.pq
+        wanted = []
+        if pq.user_queue:
+            wanted.append(pq.user_queue[0])
+        elif pq.items:
+            if pq.index + 1 < len(pq.items):
+                wanted.append(pq.items[pq.index + 1])
+            elif pq.repeat == "all":
+                wanted.append(pq.items[0])
+        if pq.items and pq.index > 0:
+            wanted.append(pq.items[pq.index - 1])
+        source = self.user_data.download_source
+        for song in wanted:
+            if song is self.current_song or not self._needs_lookup(song):
+                continue
+            run_async(self, streamer.find_full_song, song.artist, song.title, song.duration, source,
+                      on_done=lambda _r: None, on_error=lambda _e: None, lane="songs")
+
+    RADIO_EXTEND_WHEN_LEFT = 15         # songs left in a radio when more are fetched
+    RADIO_MAX_SONGS = 1000
+    RADIO_START_SONGS = 100             # Spotify starts with ~50; this starts longer and keeps adding while it plays
+
+    def _maybe_extend_radio(self):
+        """A radio keeps going: when fewer than 8 songs are left, more similar songs are added to the end, found
+        from a song that played recently (so the station drifts slowly, like Spotify's, but doesn't stop)."""
+        name = getattr(self, "_radio_name", "")
+        pq = self.pq
+        if not name or pq.source_name != name or not self.online_enabled or getattr(self, "_radio_extending", False):
+            return
+        if pq.repeat != "off" or len(pq.items) - pq.index - 1 >= self.RADIO_EXTEND_WHEN_LEFT \
+                or len(pq.items) >= self.RADIO_MAX_SONGS:
+            return
+        recent = [s for s in pq.items[max(0, pq.index - 6):pq.index + 1] if s.artist and s.title]
+        if not recent:
+            return
+        import random as _random
+        seed = _random.choice(recent)
+        have = [getattr(s, "track", None) or s for s in pq.items]
+        self._radio_extending = True
+
+        def done(tracks):
+            self._radio_extending = False
+            if pq.source_name != name:
+                return                                   # something else is playing now
+            known = {(s.artist.casefold(), s.title.casefold()) for s in pq.items}
+            items = [s for s in self.radio_items(self._allowed(tracks or []))
+                     if (s.artist.casefold(), s.title.casefold()) not in known]
+            if not items:
+                return
+            pq.items.extend(items)
+            pq.original.extend(items)
+            self._radio_songs = list(pq.items)
+            self._queue_changed()
+            if self.stack.currentWidget() is self.radio_page and self._radio_name == name:
+                self.radio_table.set_songs(self._radio_songs)        # the page shows the new songs too
+                self.radio_table.set_current(self.current_song)
+            self.fetch_covers(items, limit=len(items))
+            alog("radio", f"{name}: {len(items)} more songs (now {len(pq.items)})")
+
+        def failed(_e):
+            self._radio_extending = False
+        self.online_call(lambda: self.online.radio(seed.artist, seed.title, limit=50, exclude=have),
+                         on_done=done, on_error=failed)
 
     def _retry_stream(self):
         """A streamed song VLC couldn't open (e.g. YouTube refused that link): look it up again once with a fresh
@@ -4596,6 +4951,31 @@ class MainWindow(ShowsMixin, QMainWindow):
                 vlc.libvlc_audio_output_device_list_release(mods)
         except Exception:
             pass
+        if not out:
+            # VLC only lists the player's outputs once sound has started; before that (or if it can't), ask for
+            # the system's outputs directly. Windows' module is "mmdevice", macOS "auhal", Linux "pulse"/"alsa".
+            mods_by_os = {"nt": ("mmdevice", "directsound", "wasapi")}.get(os.name) or (
+                ("auhal",) if sys.platform == "darwin" else ("pulse", "alsa"))
+            for module in mods_by_os:
+                try:
+                    lst = self.vlc_instance.audio_output_device_list_get(module)
+                except Exception:
+                    continue
+                item = lst
+                while item:
+                    d = item.contents
+                    dev = d.device.decode("utf-8", "replace") if isinstance(d.device, bytes) else str(d.device or "")
+                    name = d.description.decode("utf-8", "replace") if isinstance(d.description, bytes) \
+                        else str(d.description or "")
+                    out.append((dev, name or dev or "Default"))
+                    item = d.next
+                if lst:
+                    try:
+                        vlc.libvlc_audio_output_device_list_release(lst)
+                    except Exception:
+                        pass
+                if out:
+                    break
         return out
 
     def set_audio_device(self, device_id):
@@ -4773,6 +5153,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._start_current()
 
     def _update_now_playing(self, song):
+        self._update_like_button()
         canvas = (find_canvas(song, self.storage.data_dir)
                   if song is not None and self.user_data.canvas_enabled
                   else None)
@@ -4999,9 +5380,11 @@ class MainWindow(ShowsMixin, QMainWindow):
     def online_enabled(self):
         return bool(self.user_data.online_enabled)
 
-    def online_call(self, fn, *args, on_done=None, on_error=None):
+    def online_call(self, fn, *args, on_done=None, on_error=None, lane="default", priority=0):
         """Run an online request in the background; callbacks run on the UI thread.
         Does nothing (calls on_error with OnlineDisabled) when online features are off."""
+        if lane == "default" and getattr(fn, "__name__", "") == "get_image":
+            lane, priority = "images", 2_100_000_000          # a single picture (artist photo, card): first
         if not self.online_enabled:
             if on_error:
                 on_error(OnlineDisabled("Online features are switched off in Settings."))
@@ -5020,7 +5403,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             if on_error:
                 on_error(err)
 
-        return run_async(self, fn, *args, on_done=done, on_error=failed)
+        return run_async(self, fn, *args, on_done=done, on_error=failed, lane=lane, priority=priority)
 
     # ------------------------------------------------------------------
     # "Not downloaded yet" slots + watching music folders
@@ -5420,7 +5803,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             else:
                 self.show_status(f"⚠ Radio couldn't start: {err}")
 
-        self.online_call(self.online.radio, seed.artist, seed.title, on_done=done, on_error=failed)
+        self.online_call(lambda: self.online.radio(seed.artist, seed.title, limit=self.RADIO_START_SONGS),
+                         on_done=done, on_error=failed)
 
     # --- Radio page: makes it obvious you're listening to a radio ---------------------------------------------
     def setup_radio_page(self):
@@ -5474,7 +5858,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._radio_header_box.addWidget(header)
         self.radio_table.set_songs(songs)
         self.radio_table.set_current(self.current_song)
-        self.fetch_covers(songs)
+        self.fetch_covers(songs, limit=len(songs))
         self.stack.setCurrentWidget(self.radio_page)
         self._set_nav("radio")
 
@@ -5534,7 +5918,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             local = find_local_match(t, self.songs, index)
             if local is not None:
                 out.append(local)
-            elif t.stream_url or t.preview_url:
+            elif t.stream_url or t.preview_url or (t.source == "soundcloud" and t.page_url):
                 out.append(RemoteSong(t))
             # else: nothing we're allowed to play here, so leave it out
         return out
@@ -5543,12 +5927,16 @@ class MainWindow(ShowsMixin, QMainWindow):
         """Download cover art for online songs in the background, then refresh views."""
         pending = [s for s in songs if getattr(s, "is_remote", False) and s.track.cover_url
                    and s.album_cover_path == PLACEHOLDER_IMAGE][:limit]
-        for s in pending:
+        # Covers have their own threads; the page you opened last goes first, top of the list first.
+        self._cover_batch = getattr(self, "_cover_batch", 0) + 1
+        base = min(self._cover_batch * 1000, 2_000_000_000)
+        for i, s in enumerate(pending):
             def done(path, song=s):
                 if path:
                     song.album_cover_path = path
                     self._schedule_view_refresh()
-            self.online_call(self.net.get_image, s.track.cover_url, on_done=done)
+            self.online_call(self.net.get_image, s.track.cover_url, on_done=done, lane="images",
+                             priority=base - i)
 
     def _ensure_playlist_covers(self, playlists):
         """Spotify-style pictures for playlists without one: the first 4 different albums' covers. Covers of songs
@@ -5598,6 +5986,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._queue_changed()
         self.web_table.refresh_artwork()
         self.pl_table.refresh_artwork()
+        self.radio_table.refresh_artwork()
+        self.sc_table.refresh_artwork()
+        from .shows_controller import _gone
+        for t in getattr(self, "_live_song_tables", []):          # artist / genre pages' song lists
+            if not _gone(t):
+                t.refresh_artwork()
+        top = getattr(self, "_top_song", None)
+        if top is not None and hasattr(self, "top_songs"):   # the Top result card and its four songs (search)
+            from .library_panel import rounded
+            self.top_art.setPixmap(rounded(load_pixmap(top.album_cover_path), 92, 4))
+            self.top_songs.refresh_artwork()
         if self.current_song is not None and getattr(self.current_song, "is_remote", False):
             self.set_album_cover(self.current_song.album_cover_path)
             self.now_playing_panel.artwork.set_pixmap(load_pixmap(self.current_song.album_cover_path))

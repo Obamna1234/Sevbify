@@ -47,3 +47,33 @@ def test_mp3_link_must_be_bandcamps_own_file_server():
     page = f'<div data-tralbum="{html.escape(json.dumps(data))}"></div>'
     with pytest.raises(bandcamp.NotPlayable):
         bandcamp.parse_track_page(page)
+
+
+def test_app_api_is_used_first_so_the_client_challenge_page_is_avoided(monkeypatch):
+    """Windows report: Bandcamp showed a home connection its "Client Challenge" page. The search gives the band and
+    track ids; Bandcamp's app API (as NewPipe uses) then gives the MP3 without the web page."""
+    import io
+    import json
+    from core import bandcamp
+    page = "https://earmake.bandcamp.com/track/im-the-law-3"
+    bandcamp.remember_ids(page, "123", 456)
+    asked = []
+
+    def urlopen(req, timeout=0):
+        asked.append(req.full_url)
+        body = {"tracks": [{"title": "I'm the Law", "band_name": "Earmake", "duration": 242.5,
+                            "streaming_url": {"mp3-128": "https://t4.bcbits.com/stream/abc/mp3-128/1?p=0"}}]}
+        r = io.BytesIO(json.dumps(body).encode())
+        r.__enter__ = lambda *a: r
+        r.__exit__ = lambda *a: False
+        return r
+    monkeypatch.setattr(bandcamp.urllib.request, "urlopen", urlopen)
+    url, headers, secs = bandcamp.stream(page)
+    assert url.startswith("https://t4.bcbits.com/") and secs == 242.5
+    assert asked[0].startswith(bandcamp.MOBILE_API) and "band_id=123" in asked[0] and "tralbum_id=456" in asked[0]
+    # a link anywhere but Bandcamp's file servers is never used
+    import pytest
+    with pytest.raises(bandcamp.NotPlayable):
+        bandcamp.parse_mobile_details({"tracks": [{"streaming_url": {"mp3-128": "https://evil.example/a.mp3"}}]})
+    bandcamp.remember_ids("https://evil.example/track/x", 1, 2)          # only real track pages are remembered
+    assert "https://evil.example/track/x" not in bandcamp._ids

@@ -483,3 +483,192 @@ def share(color=GREY, size=18):
         p.drawEllipse(pt, s * 0.12, s * 0.12)
     p.end()
     return QIcon(pm)
+
+
+# --- Song menu icons (Spotify's right-click menu: thin outline icons, 16 px) ---------------------------------
+def _heart_path(s, inset=0.0):
+    path = QPainterPath()
+    path.moveTo(s * 0.5, s * 0.84 - inset)
+    path.cubicTo(s * 0.12, s * 0.58, s * 0.08, s * 0.38, s * 0.16, s * 0.26)
+    path.cubicTo(s * 0.26, s * 0.12, s * 0.44, s * 0.14, s * 0.5, s * 0.3)
+    path.cubicTo(s * 0.56, s * 0.14, s * 0.74, s * 0.12, s * 0.84, s * 0.26)
+    path.cubicTo(s * 0.92, s * 0.38, s * 0.88, s * 0.58, s * 0.5, s * 0.84 - inset)
+    return path
+
+
+def heart(color=GREY, size=16, filled=False):
+    pm, p = _canvas(size)
+    p.setPen(_pen(color, max(1.2, size * 0.08)))
+    p.setBrush(QColor(color) if filled else Qt.BrushStyle.NoBrush)
+    p.drawPath(_heart_path(size))
+    p.end()
+    return QIcon(pm)
+
+
+def person(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawEllipse(QRectF(s * 0.34, s * 0.12, s * 0.32, s * 0.32))
+    path = QPainterPath()
+    path.moveTo(s * 0.16, s * 0.88)
+    path.cubicTo(s * 0.18, s * 0.58, s * 0.82, s * 0.58, s * 0.84, s * 0.88)
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)
+
+
+def disc(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawEllipse(QRectF(s * 0.12, s * 0.12, s * 0.76, s * 0.76))
+    p.drawEllipse(QRectF(s * 0.42, s * 0.42, s * 0.16, s * 0.16))
+    p.end()
+    return QIcon(pm)
+
+
+def external(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawPolyline(QPolygonF([QPointF(s * 0.44, s * 0.2), QPointF(s * 0.16, s * 0.2), QPointF(s * 0.16, s * 0.84),
+                              QPointF(s * 0.8, s * 0.84), QPointF(s * 0.8, s * 0.56)]))
+    p.drawLine(QPointF(s * 0.46, s * 0.54), QPointF(s * 0.84, s * 0.16))
+    p.drawPolyline(QPolygonF([QPointF(s * 0.58, s * 0.16), QPointF(s * 0.84, s * 0.16), QPointF(s * 0.84, s * 0.42)]))
+    p.end()
+    return QIcon(pm)
+
+
+def moon(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    path = QPainterPath()
+    path.moveTo(s * 0.62, s * 0.14)
+    path.cubicTo(s * 0.2, s * 0.16, s * 0.1, s * 0.7, s * 0.46, s * 0.86)
+    path.cubicTo(s * 0.66, s * 0.94, s * 0.84, s * 0.82, s * 0.88, s * 0.62)
+    path.cubicTo(s * 0.6, s * 0.72, s * 0.4, s * 0.42, s * 0.62, s * 0.14)
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)
+
+
+def minus_circle(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawEllipse(QRectF(s * 0.12, s * 0.12, s * 0.76, s * 0.76))
+    p.drawLine(QPointF(s * 0.32, s * 0.5), QPointF(s * 0.68, s * 0.5))
+    p.end()
+    return QIcon(pm)
+
+
+def arrow(direction="up", color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    if direction == "up":
+        p.drawLine(QPointF(s * 0.5, s * 0.84), QPointF(s * 0.5, s * 0.18))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.24, s * 0.42), QPointF(s * 0.5, s * 0.16), QPointF(s * 0.76, s * 0.42)]))
+    else:
+        p.drawLine(QPointF(s * 0.5, s * 0.16), QPointF(s * 0.5, s * 0.82))
+        p.drawPolyline(QPolygonF([QPointF(s * 0.24, s * 0.58), QPointF(s * 0.5, s * 0.84), QPointF(s * 0.76, s * 0.58)]))
+    p.end()
+    return QIcon(pm)
+
+
+def video(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawRoundedRect(QRectF(s * 0.12, s * 0.24, s * 0.56, s * 0.52), s * 0.08, s * 0.08)
+    p.drawPolygon(QPolygonF([QPointF(s * 0.68, s * 0.44), QPointF(s * 0.88, s * 0.3), QPointF(s * 0.88, s * 0.7),
+                             QPointF(s * 0.68, s * 0.56)]))
+    p.end()
+    return QIcon(pm)
+
+
+def stop_square(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawRoundedRect(QRectF(s * 0.24, s * 0.24, s * 0.52, s * 0.52), s * 0.06, s * 0.06)
+    p.end()
+    return QIcon(pm)
+
+
+def outline_play(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.28, s * 0.16), QPointF(s * 0.84, s * 0.5), QPointF(s * 0.28, s * 0.84)]))
+    p.end()
+    return QIcon(pm)
+
+
+def filled_play(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor(color))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.26, s * 0.14), QPointF(s * 0.86, s * 0.5), QPointF(s * 0.26, s * 0.86)]))
+    p.end()
+    return QIcon(pm)
+
+
+def pencil(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawPolygon(QPolygonF([QPointF(s * 0.18, s * 0.82), QPointF(s * 0.22, s * 0.62), QPointF(s * 0.66, s * 0.18),
+                             QPointF(s * 0.82, s * 0.34), QPointF(s * 0.38, s * 0.78)]))
+    p.end()
+    return QIcon(pm)
+
+
+def check(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.1))
+    p.drawPolyline(QPolygonF([QPointF(s * 0.2, s * 0.52), QPointF(s * 0.42, s * 0.74), QPointF(s * 0.82, s * 0.28)]))
+    p.end()
+    return QIcon(pm)
+
+
+def note(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawEllipse(QRectF(s * 0.16, s * 0.62, s * 0.24, s * 0.2))
+    p.drawLine(QPointF(s * 0.4, s * 0.72), QPointF(s * 0.4, s * 0.16))
+    p.drawLine(QPointF(s * 0.4, s * 0.16), QPointF(s * 0.78, s * 0.28))
+    p.end()
+    return QIcon(pm)
+
+
+def image(color=GREY, size=16):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.drawRoundedRect(QRectF(s * 0.12, s * 0.18, s * 0.76, s * 0.64), s * 0.08, s * 0.08)
+    p.drawPolyline(QPolygonF([QPointF(s * 0.18, s * 0.72), QPointF(s * 0.42, s * 0.48), QPointF(s * 0.6, s * 0.64),
+                              QPointF(s * 0.7, s * 0.56), QPointF(s * 0.84, s * 0.7)]))
+    p.end()
+    return QIcon(pm)
+
+
+def lock(color=GREY, size=16, closed=True):
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.09))
+    p.drawRoundedRect(QRectF(s * 0.2, s * 0.46, s * 0.6, s * 0.42), s * 0.06, s * 0.06)
+    path = QPainterPath()
+    path.moveTo(s * 0.32, s * 0.46)
+    path.lineTo(s * 0.32, s * 0.32)
+    path.cubicTo(s * 0.32, s * 0.08, s * 0.68, s * 0.08, s * 0.68, s * 0.32)
+    if closed:
+        path.lineTo(s * 0.68, s * 0.46)
+    p.drawPath(path)
+    p.end()
+    return QIcon(pm)

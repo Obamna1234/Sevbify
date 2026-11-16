@@ -965,10 +965,15 @@ class ShowsMixin:
         row.addWidget(shuffle)
         if radio_seed is not None:
             radio = QPushButton("Artist radio")
+            radio.setObjectName("artistRadio")
             radio.setCursor(Qt.CursorShape.PointingHandCursor)
-            radio.setStyleSheet(f"QPushButton {{ color: {theme.TEXT}; background: transparent; border: 1px solid "
-                                f"{theme.SUBDUED}; border-radius: 15px; padding: 5px 14px; font-weight: 700; }}"
-                                f" QPushButton:hover {{ border-color: {theme.TEXT}; }}")
+            radio.setFixedHeight(32)
+            # Spotify's outlined pill (like its Follow button): grey outline, white bold text, white outline on hover.
+            radio.setStyleSheet("QPushButton#artistRadio { color: #ffffff; background: transparent; "
+                                "border: 1px solid #7c7c7c; border-radius: 16px; padding: 0 16px; "
+                                "font-size: 14px; font-weight: 700; }"
+                                " QPushButton#artistRadio:hover { border-color: #ffffff; }"
+                                " QPushButton#artistRadio:pressed { border-color: #b3b3b3; color: #b3b3b3; }")
             radio.clicked.connect(lambda: self.start_radio(radio_seed))
             row.addWidget(radio)
         row.addStretch()
@@ -985,6 +990,7 @@ class ShowsMixin:
         t.play_requested.connect(lambda s, view: self.play_song(s, queue=songs, source=source))
         t.context_requested.connect(lambda s, r, pos: self._show_song_menu(s, pos, queue=songs, source=source))
         v.addWidget(t)
+        self._live_song_tables = [x for x in getattr(self, "_live_song_tables", []) if not _gone(x)] + [t]
         self.fetch_covers(songs)
         return box
 
@@ -1015,11 +1021,18 @@ class ShowsMixin:
             for group in releases.values():
                 for album in group:
                     album.setdefault("artist", {"name": a.get("name", name)})
-            return {"tracks": deezer.top_tracks(a.get("id"), 50), "releases": releases}
+            return {"tracks": deezer.top_tracks(a.get("id"), 50), "releases": releases,
+                    "picture": a.get("picture_xl") or a.get("picture_big") or ""}
 
         def done(data):
             if self.stack.currentWidget() is not self.genre_page or self._genre_page_token != token:
                 return
+            if data.get("picture"):
+                def photo(path):
+                    if path and self._genre_page_token == token:
+                        from PyQt6.QtGui import QPixmap
+                        self.genre_page.set_photo(QPixmap(path))
+                self.online_call(self.net.get_image, data["picture"], on_done=photo)
             sections = []
             songs = self.radio_items(data["tracks"])
             if songs:
@@ -1164,3 +1177,12 @@ class ShowsMixin:
             self.open_book(entry["obj"])
         else:
             self.open_show(entry["obj"])
+
+
+def _gone(widget):
+    """True once Qt has deleted this widget (the page it was on was rebuilt)."""
+    try:
+        from PyQt6 import sip
+        return sip.isdeleted(widget)
+    except Exception:
+        return False

@@ -365,6 +365,16 @@ def _find_in_channel(channel_url, episode_title, duration_ms, extract=None):
     return None
 
 
+def _from_the_show(entry, show_title, title_words):
+    """Is this video the show's own: its channel is named like the show, or its title names the show?"""
+    show = {w for w in _norm(show_title).split() if w not in _STOP}
+    if not show:
+        return True
+    channel = {w for w in _norm(entry.get("channel") or entry.get("uploader") or "").split() if w not in _STOP}
+    need = max(1, (len(show) + 1) // 2)
+    return len(show & channel) >= need or len(show & title_words) >= need
+
+
 def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=None, channel_url=""):
     """{"url": video link or "", "note": a short note on what was found, "channel", "channel_url"} (the channel of
     the video that was found: it's the show's own channel, which the Watch video button can use). Searches YouTube for the show and episode and accepts
@@ -416,9 +426,10 @@ def find_youtube_episode_info(show_title, episode_title, duration_ms=0, extract=
                 continue
             got = {w for w in _norm(entry.get("title") or "").split() if w not in stop}
             score = len(words & got) / len(words)
-            for pw in part_words:                       # one part of the title is enough if it matches closely
-                if len(pw & got) / len(pw) >= 0.75:
-                    score = max(score, 0.6)
+            if score < 0.6 and _from_the_show(entry, show_title, got):
+                for pw in part_words:                   # one part of the title is enough if it matches closely,
+                    if len(pw & got) / len(pw) >= 0.75:  # but only on the show's own video: "The Assassination of
+                        score = max(score, 0.6)          # Franz Ferdinand (Part 1)" is also another channel's video
             secs = entry.get("duration") or 0
             if duration_ms and secs and abs(secs * 1000 - duration_ms) > 0.35 * duration_ms:
                 skipped_len += 1                         # a clip or a different cut of the show

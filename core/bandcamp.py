@@ -8,6 +8,7 @@ web player plays) in a data-tralbum attribute, so Sevbify reads that itself, on 
 import html
 import json
 import re
+import urllib.parse
 import urllib.request
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -59,11 +60,57 @@ def parse_track_page(page_html):
             "cover": f"https://f4.bcbits.com/img/a{art}_10.jpg" if art else ""}
 
 
+MOBILE_API = "https://bandcamp.com/api/mobile/24/tralbum_details"
+_ids = {}                      # track page -> (band id, track id), from the search
+
+
+def remember_ids(page, band_id, track_id):
+    try:
+        band_id, track_id = int(band_id), int(track_id)
+    except (TypeError, ValueError):
+        return
+    if is_track_page(page) and band_id > 0 and track_id > 0:
+        _ids[page.split("?")[0].rstrip("/")] = (band_id, track_id)
+
+
+def parse_mobile_details(data):
+    """Bandcamp's app API reply → the same info as a track page. The MP3 must be on Bandcamp's own file servers."""
+    tracks = (data or {}).get("tracks") or []
+    if not tracks:
+        raise NotPlayable("Bandcamp's app API had no track")
+    t = tracks[0]
+    url = ((t.get("streaming_url") or {}).get("mp3-128") or "")
+    host = urlsplit_host(url)
+    if not url.startswith("https://") or not (host == "bcbits.com" or host.endswith(".bcbits.com")):
+        raise NotPlayable("this Bandcamp track can't be streamed")
+    return {"url": url, "duration": float(t.get("duration") or 0), "title": t.get("title") or "",
+            "artist": t.get("band_name") or (data.get("band") or {}).get("name") or ""}
+
+
+def _mobile_info(page):
+    """Like NewPipe and Bandcamp's own phone app: the track's details from the app API, which doesn't show the
+    "Client Challenge" page that the website shows some connections (seen on a home connection on Windows)."""
+    ids = _ids.get(page.split("?")[0].rstrip("/"))
+    if not ids:
+        return None
+    import json
+    q = urllib.parse.urlencode({"band_id": ids[0], "tralbum_type": "t", "tralbum_id": ids[1]})
+    req = urllib.request.Request(f"{MOBILE_API}?{q}", headers={"User-Agent": UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return parse_mobile_details(json.loads(r.read(MAX_PAGE).decode("utf-8", errors="replace")))
+
+
 def track_info(page, opener=None):
     if not is_track_page(page):
         raise NotPlayable("not a Bandcamp track page")
     if opener is not None:
         return parse_track_page(opener(page))
+    try:
+        info = _mobile_info(page)
+        if info:
+            return info
+    except Exception:
+        pass                                          # the web page below
     text = ""
     try:
         # Looking like a real browser (curl_cffi, on the computer apps): Bandcamp shows some connections a

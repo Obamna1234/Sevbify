@@ -543,6 +543,54 @@ class ShowPage(QWidget):
             self.cover_label.setPixmap(rounded(pixmap, 200, 8))
 
 
+class _PhotoHeader(QFrame):
+    """The header of an artist page: the artist's photo filling the width (like Spotify's), darkened towards the
+    bottom so the big name stays readable. Without a photo it's the coloured gradient."""
+
+    def __init__(self, colour):
+        super().__init__()
+        self.colour, self.photo = QColor(colour), None
+
+    def set_photo(self, pixmap):
+        self.photo = pixmap if pixmap is not None and not pixmap.isNull() else None
+        self.update()
+
+    def paintEvent(self, e):
+        from PyQt6.QtGui import QPainter, QLinearGradient, QPainterPath
+        from PyQt6.QtCore import QRectF
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect())
+        path = QPainterPath()
+        rad = float(theme.RADIUS)
+        path.moveTo(r.left(), r.bottom())
+        path.lineTo(r.left(), r.top() + rad)
+        path.quadTo(r.left(), r.top(), r.left() + rad, r.top())
+        path.lineTo(r.right() - rad, r.top())
+        path.quadTo(r.right(), r.top(), r.right(), r.top() + rad)
+        path.lineTo(r.right(), r.bottom())
+        path.closeSubpath()
+        p.setClipPath(path)
+        if self.photo is not None:
+            scaled = self.photo.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                       Qt.TransformationMode.SmoothTransformation)
+            # Spotify shows the upper-middle of the photo (faces), not the very centre.
+            x = (scaled.width() - self.width()) // 2
+            y = int((scaled.height() - self.height()) * 0.3)
+            p.drawPixmap(0, 0, scaled, x, y, self.width(), self.height())
+            shade = QLinearGradient(0, 0, 0, self.height())
+            shade.setColorAt(0.0, QColor(0, 0, 0, 0))
+            shade.setColorAt(0.55, QColor(0, 0, 0, 60))
+            shade.setColorAt(1.0, QColor(0, 0, 0, 170))
+            p.fillRect(self.rect(), shade)
+        else:
+            g = QLinearGradient(0, 0, self.width(), self.height())
+            g.setColorAt(0.0, self.colour)
+            g.setColorAt(1.0, self.colour.darker(170))
+            p.fillRect(self.rect(), g)
+        p.end()
+
+
 class GenrePage(QWidget):
     """A Browse genre: a big coloured header with the genre's name (like Spotify's), then shelves."""
 
@@ -556,6 +604,16 @@ class GenrePage(QWidget):
         self.scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         outer.addWidget(self.scroll)
         self.title, self.colour = "", "#8d67ab"
+        self.photo, self._header = None, None
+
+    def set_photo(self, pixmap):
+        """An artist's photo for the header (kept until another page is shown)."""
+        self.photo = pixmap
+        if self._header is not None:
+            try:
+                self._header.set_photo(pixmap)
+            except RuntimeError:
+                self._header = None
 
     def _base(self):
         content = QWidget()
@@ -564,13 +622,11 @@ class GenrePage(QWidget):
         v = QVBoxLayout(content)
         v.setContentsMargins(0, 0, 0, 24)
         v.setSpacing(10)
-        header = QFrame()
+        header = _PhotoHeader(self.colour)
         header.setObjectName("genreHeader")
-        header.setFixedHeight(260)
-        c = QColor(self.colour)
-        header.setStyleSheet(f"#genreHeader {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {c.name()},"
-                             f" stop:1 {c.darker(170).name()}); border-top-left-radius: {theme.RADIUS}px;"
-                             f" border-top-right-radius: {theme.RADIUS}px; }}")
+        header.setFixedHeight(300 if self.photo is not None else 260)
+        header.set_photo(self.photo)
+        self._header = header
         hv = QVBoxLayout(header)
         hv.setContentsMargins(28, 20, 28, 24)
         hv.addStretch()
@@ -582,7 +638,7 @@ class GenrePage(QWidget):
         return content, v
 
     def show_loading(self, title, colour):
-        self.title, self.colour = title, colour
+        self.title, self.colour, self.photo = title, colour, None
         self.show_message("Loading…")
 
     def show_message(self, text):

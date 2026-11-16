@@ -258,11 +258,20 @@ def test_find_youtube_episode_second_search_and_one_part_of_the_title_is_enough(
         asked.append(q)
         if q.count("|"):                                   # the long title finds nothing useful
             return {"entries": [{"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa", "title": "Unrelated", "duration": 3000}]}
-        return {"entries": [{"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb",
-                             "title": "Stalin: Yalta & Last Days", "duration": 2800}]}
+        return {"entries": [{"url": "https://www.youtube.com/watch?v=xxxxxxxxxxx",      # another channel's video
+                             "title": "Stalin: Yalta & Last Days", "duration": 2800, "channel": "History Explained"},
+                            {"url": "https://www.youtube.com/watch?v=bbbbbbbbbbb",
+                             "title": "Stalin: Yalta & Last Days", "duration": 2800, "channel": "Fin vs History"}]}
     url, note = podcasts.find_youtube_episode_ex(
         "Fin vs History", "Russian Humour Is Pushing People Into Canals | Stalin: Yalta & Last Days (Part 5)", 2820000, extract)
     assert url.endswith("bbbbbbbbbbb") and len(asked) == 2 and "|" not in asked[1]
+    # Windows report: only one part of the title matched, on a different channel's video about the same history
+    # (it played someone else's "Assassination of Franz Ferdinand"): not accepted.
+    url, note = podcasts.find_youtube_episode_ex(
+        "Fin vs History", "Serbs Don't Control The Weather | The Assassination of Franz Ferdinand (Part 1)", 3376000,
+        lambda q: {"entries": [{"url": "https://www.youtube.com/watch?v=ddddddddddd", "duration": 3907,
+                                "title": "The Assassination of Franz Ferdinand (Part 1)", "channel": "History Matters"}]})
+    assert url == ""
     # nothing close in either search: no video, and the note counts both searches
     url, note = podcasts.find_youtube_episode_ex("Fin vs History", "A | B C D E", 0,
                                                  lambda q: {"entries": [{"url": "https://www.youtube.com/watch?v=ccccccccccc", "title": "Cats"}]})

@@ -343,7 +343,7 @@ def test_song_menu_in_spotify_order_with_find_a_playlist(window):
     menu = window.build_song_menu(window.songs[0])
     tree = menu_tree(menu)
     names = list(tree)
-    assert names[0] == "＋  Add to playlist" and names[1] == "≡  Add to queue"
+    assert names[:3] == ["＋  Add to playlist", "♡  Add to Liked Songs", "≡  Add to queue"]
     assert names.index("◉  Go to song radio") > names.index("☾  Sleep timer")
     assert "👤  Go to artist" in names
     sub = tree["＋  Add to playlist"]
@@ -393,3 +393,87 @@ def test_player_bar_buttons_have_spotify_labels_and_lyrics_can_be_unavailable(wi
     assert window.stack.currentWidget() is before
     window._set_lyrics_available(True)
     assert window.lyrics_btn.toolTip() == "Lyrics"
+
+
+def test_liked_songs_heart_menu_and_pinned_first(window, qapp, tmp_path):
+    """Spotify's Liked Songs: the heart (song menu or next to the playing song) adds it, newest first; the
+    playlist is pinned at the top of Your Library, keeps its name and survives a restart."""
+    a, b = window.songs[0], window.songs[1]
+    assert window.liked_playlist() is None and not window.is_liked(a)
+    window.toggle_like(a)
+    window.toggle_like(b)
+    liked = window.liked_playlist()
+    assert liked.name == "Liked Songs" and liked.songs == [b, a] and os.path.isfile(liked.custom_cover)
+    assert window.library_panel.entries()[0]["obj"] is liked
+    names = list(menu_tree(window.build_song_menu(a)))
+    assert "♥  Remove from your Liked Songs" in names
+    assert not window.rename_playlist(liked, "Something else") and liked.name == "Liked Songs"
+    window.play_song(a)
+    window._update_like_button()
+    assert window.like_btn.isVisibleTo(window) and "Remove" in window.like_btn.toolTip()
+    window.like_btn.click()
+    assert not window.is_liked(a) and liked.songs == [b]
+    window.save_now()
+    from core.storage import Storage
+    stored = Storage(window.storage.data_dir).load()
+    assert any(p.origin == "liked" and p.name == "Liked Songs" for p in stored.playlists)
+
+
+def test_menus_show_outline_icons_instead_of_symbols(window):
+    from ui.menu_style import polish
+    menu = window.build_song_menu(window.songs[0])
+    polish(menu)
+    texts = [a.text() for a in menu.actions() if not a.isSeparator()]
+    assert "Add to queue" in texts and "Go to song radio" in texts
+    assert all(not a.icon().isNull() for a in menu.actions() if a.text() in ("Add to queue", "Go to song radio"))
+
+
+def test_folders_dropped_on_your_library_become_playlists_with_their_cover(window, tmp_path):
+    """A folder dragged from File Explorer onto Your Library: a playlist named after it, songs in the folder's
+    order, and the folder's own cover picture."""
+    from PyQt6.QtGui import QImage
+    album = tmp_path / "Night Drive"
+    album.mkdir()
+    for name in ("02 - Two.wav", "01 - One.wav", "03 - Three.wav"):
+        make_wav(album / name, 0.3)
+    img = QImage(10, 10, QImage.Format.Format_RGB32)
+    img.fill(0x336699)
+    img.save(str(album / "Cover.jpg"))
+    made = window.playlists_from_dropped([str(album)])
+    assert [p.name for p in made] == ["Night Drive"]
+    pl = made[0]
+    assert [os.path.basename(s.file_path) for s in pl.songs] == ["01 - One.wav", "02 - Two.wav", "03 - Three.wav"]
+    assert pl.custom_cover.endswith("Cover.jpg") and pl.cover_path == pl.custom_cover
+    # the same folder again: a second playlist with its own name, nothing lost
+    again = window.playlists_from_dropped([str(album)])
+    assert again[0].name == "Night Drive 2"
+
+
+def test_a_copied_folder_takes_over_songs_whose_files_are_gone(window, tmp_path):
+    """Windows report: songs imported from folder A, A deleted, the same songs added from a copy (folder B): the
+    playlist kept asking to download them. Now the missing entries play from the copies."""
+    import shutil
+    a = tmp_path / "A"
+    a.mkdir()
+    make_wav(a / "song.wav", 0.3)
+    pl = window.create_playlist("Mine", [])
+    window.add_files_to_playlist(pl, [str(a)])
+    from core.models import Song
+    first = pl.songs[0]
+    first.title, first.artist = "VB Anthem", "The Chats"
+    b = tmp_path / "B"
+    shutil.copytree(a, b)
+    shutil.rmtree(a)
+    assert not first.exists
+    import core.models as m
+    orig = m.Song.__init__
+
+    def tagged(self, path, *args, **kw):
+        orig(self, path, *args, **kw)
+        self.title, self.artist = "VB Anthem", "The Chats"
+    m.Song.__init__ = tagged
+    try:
+        window.add_files_to_playlist(pl, [str(b)])
+    finally:
+        m.Song.__init__ = orig
+    assert len(pl.songs) == 1 and pl.songs[0].exists and str(b) in pl.songs[0].file_path

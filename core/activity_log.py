@@ -23,7 +23,8 @@ _path = [""]
 _URL = re.compile(r"([a-z][a-z0-9+.-]*)://[^\s\"')]+", re.I)
 _private = [False]
 # While Private Session is on, these say what was played/searched, so only the kind of event is kept.
-PRIVATE_KINDS = {"play", "stream", "retry", "skip", "status", "player", "podcast", "download", "online", "error"}
+PRIVATE_KINDS = {"play", "stream", "retry", "skip", "status", "player", "podcast", "download", "online", "error",
+                 "radio"}
 
 
 def set_private(on):

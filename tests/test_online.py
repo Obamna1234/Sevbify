@@ -84,7 +84,11 @@ def test_radio_mixes_sources_removes_seed_duplicates_and_caps_artists(tmp_path):
     titles = [t.title for t in songs]
     assert "NARC" not in titles
     assert titles.count("Remoteness") == 1
-    assert sum(1 for t in songs if t.artist == "Mega Drive") <= 3
+    assert sum(1 for t in songs if t.artist == "Mega Drive") <= 5          # the seed artist: at most 5
+    assert all(sum(1 for t in songs if t.artist == a) <= 3 for a in {t.artist for t in songs} - {"Mega Drive"})
+    # songs already in the station are left out when it's extended
+    more = om.radio("Mega Drive", "NARC", rng=random.Random(4), exclude=songs)
+    assert not {t.key for t in more} & {t.key for t in songs}
     assert {"Turbo Killer", "Avalanche", "A Dream Drawn from Darkness", "Raining Steel"} <= set(titles)
 
 

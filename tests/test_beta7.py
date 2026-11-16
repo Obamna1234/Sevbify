@@ -281,7 +281,12 @@ def test_private_session_remembers_nothing(window, qapp):
     window.apply_settings({"private_session": False})
     window.play_song(window.songs[1], queue=[window.songs[1]])
     assert window.songs[1] in window.pq.recent
-    assert not window.top_bar.private_label.isVisibleTo(window.top_bar)
+    # the button stays (one click starts a private session again) but no longer says "Private session"
+    assert window.top_bar.private_label.text() == ""
+    window.top_bar.private_label.click()
+    assert window.private_session and window.top_bar.private_label.text() == "Private session"
+    window.top_bar.private_label.click()
+    assert not window.private_session
 
 
 def _drag_events(widget, mime, pos):

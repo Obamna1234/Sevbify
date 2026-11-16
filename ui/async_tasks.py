@@ -16,6 +16,13 @@ except ImportError:  # pragma: no cover
 
 _pool = QThreadPool()
 _pool.setMaxThreadCount(4)
+# Separate lanes so slow work never holds up quick work: finding a full song online takes 5-10 s (and the
+# next/previous songs are looked up early), and a page can ask for 50 covers at once. Before, all of it shared
+# the four threads above, so an artist page's pictures could wait 40 s behind song lookups.
+_pools = {"default": _pool}
+for _name, _threads in (("songs", 3), ("images", 8)):
+    _pools[_name] = QThreadPool()
+    _pools[_name].setMaxThreadCount(_threads)
 _alive = set()
 
 
@@ -50,7 +57,7 @@ def _owner_alive(owner):
         return True
 
 
-def run_async(owner, fn, *args, on_done=None, on_error=None, **kwargs):
+def run_async(owner, fn, *args, on_done=None, on_error=None, lane="default", priority=0, **kwargs):
     task = _Task(fn, args, kwargs)
     signals = task.signals
     _alive.add(signals)
@@ -62,10 +69,10 @@ def run_async(owner, fn, *args, on_done=None, on_error=None, **kwargs):
 
     signals.done.connect(lambda r: finish(on_done, r))
     signals.failed.connect(lambda e: finish(on_error, e))
-    _pool.start(task)
+    _pools.get(lane, _pool).start(task, priority)
     return task
 
 
 def wait_for_all(msecs=5000):
     """Used on shutdown and in tests."""
-    return _pool.waitForDone(msecs)
+    return all([p.waitForDone(msecs) for p in _pools.values()])

@@ -16,6 +16,7 @@ class TopBar(QWidget):
     downloads_clicked = pyqtSignal()          # the download progress pill was clicked
     menu_clicked = pyqtSignal()               # the ⋯ button (File / Edit / View / Playback / Help)
     online_toggled = pyqtSignal()             # the Online / Offline button was clicked
+    private_toggled = pyqtSignal()            # the Private session button was clicked
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -104,11 +105,14 @@ class TopBar(QWidget):
         self.downloads_btn.hide()
         h.addWidget(self.downloads_btn)
 
-        self.private_label = QLabel("🔒 Private session")
-        self.private_label.setToolTip("Private session: what you play isn't remembered (File → Private Session)")
-        self.private_label.setStyleSheet("color: #509bf5; font-size: 12px; font-weight: 700; padding: 0 6px;")
-        self.private_label.hide()
+        # One click turns Private session on or off (also in File → Private Session and Settings).
+        self.private_label = QPushButton()
+        self.private_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.private_label.setFixedHeight(28)
+        self.private_label.setIconSize(QSize(14, 14))
+        self.private_label.clicked.connect(self.private_toggled.emit)
         h.addWidget(self.private_label)
+        self.set_private(False, relayout=False)
 
         # Click to go offline / online (Sevbify contacts nothing at all while offline).
         self.online_label = QPushButton()
@@ -193,9 +197,18 @@ class TopBar(QWidget):
         self.downloads_btn.show()
         self._relayout()
 
-    def set_private(self, on):
-        self.private_label.setVisible(bool(on))
-        self._relayout()
+    def set_private(self, on, relayout=True):
+        on = bool(on)
+        self.private_label.setText("Private session" if on else "")
+        self.private_label.setIcon(icons.lock("#509bf5" if on else theme.SUBDUED, 14, closed=on))
+        self.private_label.setToolTip("Private session is on: what you play isn't remembered. Click to turn it off."
+                                      if on else "Start a private session (what you play isn't remembered)")
+        self.private_label.setStyleSheet(
+            "QPushButton { color: #509bf5; font-size: 12px; font-weight: 700; border: none; padding: 0 8px; "
+            "border-radius: 14px; background: " + ("rgba(80,155,245,0.15)" if on else "transparent") + "; }"
+            " QPushButton:hover { background: rgba(255,255,255,0.08); }")
+        if relayout:
+            self._relayout()
 
     def _relayout(self):
         from PyQt6.QtCore import QTimer

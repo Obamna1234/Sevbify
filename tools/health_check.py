@@ -123,6 +123,26 @@ def bandcamp():
     return f"{r['url']} streams ({int(secs)} s)"
 
 
+def bandcamp_app_api():
+    """Bandcamp's app API (what the app tries first, so the website's Client Challenge page isn't hit)."""
+    from core import downloader, bandcamp as bc
+    e = downloader.engine()
+    r = e.search_bandcamp("Perturbator - Future Club")
+    assert r.get("found") and r.get("url"), r
+    info = bc._mobile_info(r["url"])
+    assert info and info["url"].startswith("https://"), f"no ids from the search for {r['url']}"
+    return f"{info['title']} ({int(info['duration'])} s) from the app API"
+
+
+def soundcloud():
+    from core import streamer
+    found = streamer.search_soundcloud("Perturbator Future Club", 5)
+    assert found, "no SoundCloud results"
+    url, _h, secs = streamer._extract(__import__("core.downloader", fromlist=["x"]).engine(), found[0].page_url)
+    assert url.startswith("http"), url
+    return f"{found[0].artist} - {found[0].title} streams ({int(secs)} s)"
+
+
 def bandcamp_download():
     from core import downloader
     e = downloader.engine()
@@ -193,6 +213,8 @@ check("Spotify search (no account)", spotify_search, info_only=True)
 check("Spotify Canvas (no account)", spotify_canvas, info_only=True)
 check("Bandcamp search + stream link", bandcamp, blocked_ok=True)
 check("Bandcamp download", bandcamp_download, blocked_ok=True)
+check("Bandcamp app API (no Client Challenge)", bandcamp_app_api, blocked_ok=True)
+check("SoundCloud search + stream link", soundcloud, blocked_ok=True)
 check("YouTube full song", youtube, blocked_ok=True)
 check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)

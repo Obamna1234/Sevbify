@@ -307,39 +307,41 @@ class OnlineMusic:
                 card.setdefault("picture_url", w.get("picture_url", ""))
         return card
 
-    def radio(self, seed_artist, seed_title="", limit=50, rng=None):
+    def radio(self, seed_artist, seed_title="", limit=60, rng=None, exclude=()):
         """Songs similar to a seed song, like Spotify's 'Go to song radio'.
 
         Candidates, best first: Last.fm 'similar tracks' for this exact song (what listeners play together;
         needs a free key), Deezer's radio for the artist, then top songs of related artists. They're ordered
         by how close they are (with a little randomness, so each radio is a bit different), the seed artist is
-        limited to 3 songs and others to 2, and the same artist never plays twice in a row where avoidable.
+        limited to 5 songs and others to 3, and the same artist never plays twice in a row where avoidable. 60 songs to
+        start; `exclude` leaves out songs already in the station, so the app keeps it going as it plays (seeded
+        from songs further along), instead of stopping after about 50 like Spotify's.
         """
         rng = rng or random.Random()
         scored = []                                   # (score, track)
         if seed_title and self.lastfm.available:
             try:
-                for i, t in enumerate(self.lastfm.similar_tracks(seed_artist, seed_title, limit=40)):
-                    scored.append((3.0 - i / 40, t))
+                for i, t in enumerate(self.lastfm.similar_tracks(seed_artist, seed_title, limit=100)):
+                    scored.append((3.0 - i / 100, t))
             except ServiceError:
                 pass
         artist = self.deezer.find_artist(seed_artist)
         if artist:
             aid = artist.get("id")
             try:
-                for i, t in enumerate(self.deezer.artist_radio(aid, limit=60)):
-                    scored.append((2.2 - i / 60, t))
+                for i, t in enumerate(self.deezer.artist_radio(aid, limit=100)):
+                    scored.append((2.2 - i / 100, t))
             except ServiceError:
                 pass
-            for r, rel in enumerate(self.deezer.related(aid, limit=14)[:14]):
+            for r, rel in enumerate(self.deezer.related(aid, limit=20)[:20]):
                 try:
-                    for i, t in enumerate(self.deezer.top_tracks(rel.get("id"), limit=4)):
-                        scored.append((1.9 - r / 16 - i / 8, t))
+                    for i, t in enumerate(self.deezer.top_tracks(rel.get("id"), limit=6)):
+                        scored.append((1.9 - r / 22 - i / 12, t))
                 except ServiceError:
                     continue
         scored = [(sc + rng.uniform(0, 0.6), t) for sc, t in scored]
         scored.sort(key=lambda x: x[0], reverse=True)
-        seen, out, per_artist = set(), [], {}
+        seen, out, per_artist = {getattr(x, "key", x) for x in exclude}, [], {}
         seed_key = (seed_artist.casefold(), seed_title.casefold())
         for _sc, t in scored:
             if not t.title or not t.artist:
@@ -348,7 +350,7 @@ class OnlineMusic:
             if k in seen or (t.artist.casefold(), t.title.casefold()) == seed_key:
                 continue
             a = t.artist.casefold()
-            if per_artist.get(a, 0) >= (3 if a == seed_artist.casefold() else 2):
+            if per_artist.get(a, 0) >= (5 if a == seed_artist.casefold() else 3):
                 continue
             seen.add(k)
             per_artist[a] = per_artist.get(a, 0) + 1

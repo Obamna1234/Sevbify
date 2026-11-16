@@ -319,10 +319,23 @@ class NetClient:
             if os.path.exists(path):
                 return path
             raise
-        tmp = path + ".tmp"
-        with open(tmp, "wb") as f:
-            f.write(data)
-        os.replace(tmp, path)
+        # The same picture is often asked for twice at once (the top result and the song list). Each request
+        # writes its own temporary file; on Windows the final rename fails while the other copy is being read or
+        # renamed, and then the picture that's already there is used.
+        tmp = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
+        try:
+            with open(tmp, "wb") as f:
+                f.write(data)
+            try:
+                os.replace(tmp, path)
+            except OSError:
+                if not os.path.exists(path):
+                    raise
+        finally:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
         return path
 
     MAX_DOWNLOAD_BYTES = 3 * 1024 ** 3      # an episode or chapter is never bigger (a full day of audio is ~1 GB)

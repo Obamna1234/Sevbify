@@ -285,6 +285,8 @@ def _norm_fuzzy(data: dict) -> list[dict]:
             "band_name": r.get("band_name") or "",
             "album_name": r.get("album_name") or "",
             "url": r.get("url") or "",
+            "id": r.get("id") or "",
+            "band_id": r.get("band_id") or "",
         }
         for r in (data.get("results") or [])
     ]
@@ -305,6 +307,8 @@ def _norm_bcsearch(data) -> list[dict]:
                 "band_name": r.get("band_name") or "",
                 "album_name": r.get("album_name") or "",
                 "url": url,
+                "id": r.get("id") or "",
+                "band_id": r.get("band_id") or "",
             }
         )
     return out
@@ -495,6 +499,11 @@ def search_bandcamp(query: str, use_api: bool = True) -> dict:
     url = fix_bc_url(best.get("url") or "")
     if not url:
         return {"found": False}
+    try:                       # the ids let the song be played through Bandcamp's app API (no Client Challenge)
+        from core import bandcamp as _bc
+        _bc.remember_ids(url, best.get("band_id"), best.get("id"))
+    except Exception:
+        pass
     return {
         "found": True,
         "name": best.get("name") or "",
@@ -1230,7 +1239,7 @@ _MAX_WEB = 60 * 1024 * 1024        # most a page, JSON answer or picture may be 
 _MAX_BIN = 200 * 1024 * 1024       # the yt-dlp program
 # Songs only ever come from Bandcamp or YouTube: yt-dlp's other readers (its "generic" one opens any address it
 # is given, and follows redirects) are switched off, so a search result can't send it into your home network.
-SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*"]
+SONG_EXTRACTORS = ["Bandcamp", "youtube", "youtube:.*", "soundcloud", "soundcloud:.*"]
 
 
 def yt_extractor_args():
@@ -2260,6 +2269,32 @@ def _src_result(res: dict) -> str:
     return res.get("note") or ""
 
 
+def _download_soundcloud(song: str, out_dir: str, safe: str, say) -> str:
+    """The song's original audio from SoundCloud (a track picked by the same rules as streaming: close title and
+    length, never a 30-second Go+ preview). Returns the file's path, or "" if it isn't there."""
+    from core import streamer
+    artist, title = _split_query(song)
+    try:
+        page = streamer.remembered_page(artist, title, "SoundCloud") or \
+            streamer._pick_soundcloud(sys.modules[__name__], song, 0)
+    except Exception as e:
+        say(f"  -> SoundCloud search failed: {str(e)[:120]}")
+        return ""
+    if not page:
+        say("  -> not on SoundCloud")
+        return ""
+    say(f"  -> SoundCloud: {page}")
+    out = os.path.join(out_dir, safe)
+    try:
+        path = streamer.download_original_audio(page, out)
+    except Exception as e:
+        say(f"  -> SoundCloud download failed: {str(e)[:160]}")
+        return ""
+    finally:
+        streamer.cleanup_leftovers(out)
+    return path or ""
+
+
 def process_song(song: str, out_dir: str, opts: dict, state: dict, say, step=lambda _t: None) -> dict:
     """One song, start to finish. Used by the window and the command-line version.
     opts: use_bc, use_yt, free.  state: seen (set), bc_errors (int), bandcamp_down (bool).
@@ -2332,8 +2367,15 @@ def process_song(song: str, out_dir: str, opts: dict, state: dict, say, step=lam
                     "note": "YouTube" + (f" \u00b7 {extra}" if extra else "") + bc_note}
         if STOP_EVENT.is_set():
             return {"status": "fail", "source": None, "note": "stopped"}
+        # 3. SoundCloud (only when both other sources are on: "Bandcamp and YouTube" in Settings)
+        if opts.get("use_bc"):
+            step("Searching SoundCloud\u2026")
+            got = _download_soundcloud(song, out_dir, safe, say)
+            if got:
+                return {"status": "ok", "source": "SoundCloud", "path": got, "note": "SoundCloud" + bc_note}
         return {"status": "fail", "source": None,
-                "note": "not found on YouTube" if "not on" in bc_note or not opts.get("use_bc") else "couldn't be downloaded"}
+                "note": "not found on YouTube or SoundCloud" if "not on" in bc_note or not opts.get("use_bc")
+                else "couldn't be downloaded"}
     if opts.get("use_bc"):
         return {"status": "fail", "source": None, "note": bc_note.strip(" ()") or "not on Bandcamp"}
     return {"status": "fail", "source": None, "note": "no source selected"}

@@ -262,6 +262,10 @@ class LibraryRow(QFrame):
             self.files_dropped.emit([u.toLocalFile() for u in mime.urls() if u.isLocalFile()])
 
 
+def _local_paths(mime):
+    return [u.toLocalFile() for u in mime.urls() if u.isLocalFile()] if mime.hasUrls() else []
+
+
 class LibraryPanel(QFrame):
     create_clicked = pyqtSignal()                    # Create → Playlist
     create_folder_clicked = pyqtSignal()             # Create → Folder
@@ -274,6 +278,7 @@ class LibraryPanel(QFrame):
     folder_menu = pyqtSignal(str, object)            # folder name, global pos
     songs_dropped = pyqtSignal(object, list)         # playlist, songs
     files_dropped = pyqtSignal(object, list)         # playlist, file paths
+    new_from_files = pyqtSignal(list)                # folders / files dropped on Your Library itself
     open_album = pyqtSignal(object)                  # album dict
     play_album = pyqtSignal(object)
     open_artist = pyqtSignal(object)                 # artist dict
@@ -290,6 +295,7 @@ class LibraryPanel(QFrame):
         self.setStyleSheet(theme.panel_style("libraryPanel"))
         self.sort, self.view, self.collapsed, self.expanded = "recents", "list", False, False
         self.chip = None
+        self.setAcceptDrops(True)         # drop a folder from File Explorer here: a playlist made from it
         self.show_origin = False          # Settings: coloured border = where each playlist came from
         self._open_folders = set()
         self._grid_columns = 0
@@ -586,6 +592,28 @@ class LibraryPanel(QFrame):
         for w in (self.chips_fade_next, self.chips_fade_prev, self.chips_next, self.chips_prev):
             w.raise_()
 
+    # Folders / music files dragged from File Explorer onto Your Library (not onto a playlist): each folder becomes
+    # a playlist with its songs in the folder's order and its cover picture.
+    def dragEnterEvent(self, e):
+        if _local_paths(e.mimeData()):
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
+        if _local_paths(e.mimeData()):
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dropEvent(self, e):
+        paths = _local_paths(e.mimeData())
+        if not paths:
+            e.ignore()
+            return
+        e.acceptProposedAction()
+        self.new_from_files.emit(paths)
+
     def set_items(self, playlists, n_songs, n_saved, playing_source="", albums=None, artists=None, folders=None,
                   shows=None):
         self._state.update(playlists=list(playlists), n_songs=n_songs, n_saved=n_saved,
@@ -625,6 +653,11 @@ class LibraryPanel(QFrame):
 
         out = []
         n = lambda count, word: f"{count} {word}{'s' if count != 1 else ''}"
+        # Liked Songs is pinned to the top, like Spotify's.
+        liked = [p for p in st["playlists"] if getattr(p, "origin", "") == "liked"]
+        if liked and chip in (None, "playlists", "downloaded") and match(liked[0].name) \
+                and (chip != "downloaded" or self.is_downloaded(liked[0])):
+            out.append(self._pl_entry(liked[0], 0))
         if chip in (None, "playlists", "downloaded") and match("Your Songs"):
             out.append(dict(kind="songs", title="Your Songs", subtitle=f"Library • {n(st['n_songs'], 'song')}",
                             obj=None, indent=0))
@@ -632,7 +665,7 @@ class LibraryPanel(QFrame):
             out.append(dict(kind="saved", title="To download",
                             subtitle=f"Not downloaded yet • {n(st['n_saved'], 'song')}", obj=None, indent=0))
 
-        playlists = st["playlists"]
+        playlists = [p for p in st["playlists"] if getattr(p, "origin", "") != "liked"]
         if chip == "downloaded":
             playlists = [p for p in playlists if self.is_downloaded(p)]
         pl_recent = lambda p: p.last_played

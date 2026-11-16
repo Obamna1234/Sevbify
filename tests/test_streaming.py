@@ -364,3 +364,41 @@ def test_a_link_vlc_cant_open_is_tried_again_then_saved_first(window, qapp, tmp_
     assert wait_until(qapp, lambda: window._reached_playing, 20)
     assert failed_links == [str(tmp_path / "broken1.mp3")]
     assert window.player.get_media().get_mrl().endswith("saved.wav")
+
+
+def test_soundcloud_is_the_third_place_to_look_and_previews_are_refused():
+    """Songs on neither Bandcamp nor YouTube (e.g. an album taken down everywhere else) can be on SoundCloud.
+    It's only searched when the others have nothing, and only a close match of about the right length counts."""
+    from core import streamer
+
+    class Eng:
+        _QuietLogger = object
+        @staticmethod
+        def _split_query(line):
+            a, _, t = line.partition(" - ")
+            return a, t
+        @staticmethod
+        def _words(text):
+            import re
+            return re.findall(r"\w+", (text or "").casefold())
+
+        class yt_dlp:
+            class YoutubeDL:
+                def __init__(self, opts): self.opts = opts
+                def __enter__(self): return self
+                def __exit__(self, *a): return False
+                def extract_info(self, q, download=False):
+                    assert q.startswith("scsearch") and self.opts["allowed_extractors"][0] == "soundcloud"
+                    return {"entries": [
+                        {"url": "https://soundcloud.com/someone/sets/the-album", "title": "Abyssic Hate - Suicidal Emotions", "duration": 300},
+                        {"url": "https://soundcloud.com/dj/mix", "title": "Suicidal Emotions (2 hour mix)", "duration": 7200},
+                        {"url": "https://evil.example/abyssic/suicidal", "title": "Suicidal Emotions", "duration": 300},
+                        {"url": "https://soundcloud.com/abyssichate/suicidal-emotions", "title": "Suicidal Emotions",
+                         "uploader": "Abyssic Hate", "duration": 302}]}
+    assert streamer._pick_soundcloud(Eng, "Abyssic Hate - Suicidal Emotions", 300) == \
+        "https://soundcloud.com/abyssichate/suicidal-emotions"
+    assert streamer._pick_soundcloud(Eng, "Abyssic Hate - Something Else", 300) is None
+    assert streamer.is_soundcloud_track("https://soundcloud.com/a/b") and not streamer.is_soundcloud_track(
+        "https://soundcloud.com/a/sets/b") and not streamer.is_soundcloud_track("http://soundcloud.com/a/b")
+    assert streamer._page_ok("SoundCloud", "https://soundcloud.com/a/b")
+    assert not streamer._page_ok("SoundCloud", "https://soundcloud.com.evil.example/a/b")

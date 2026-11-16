@@ -482,7 +482,7 @@ class Storage:
             playlists.append(StoredPlaylist(name, tracks, folder if folder in data.folders else "",
                                             num("created"), num("last_played"),
                                             from_stored_path(str(cover)) if cover else "",
-                                            origin if (origin in ("spotify", "apple", "deezer", "jamendo", "youtube", "file", "link")
+                                            origin if (origin in ("spotify", "apple", "deezer", "jamendo", "youtube", "file", "link", "liked")
                                                       or re.fullmatch(r"server:[0-9a-f]{12}", origin)) else ""))
         data.playlists = playlists
         return data

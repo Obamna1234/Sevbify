@@ -178,9 +178,9 @@ def test_profiles_leave_out_songs_from_your_own_server():
     assert d["playlists"][0]["tracks"] == [{"title": "C", "artist": "D"}]
 
 
-def test_song_lookups_only_use_bandcamp_and_youtube():
+def test_song_lookups_only_use_bandcamp_youtube_and_soundcloud():
     from core import sevby_engine
-    assert sevby_engine.SONG_EXTRACTORS == ["Bandcamp", "youtube", "youtube:.*"]
+    assert sevby_engine.SONG_EXTRACTORS == ["Bandcamp", "youtube", "youtube:.*", "soundcloud", "soundcloud:.*"]
 
 
 def test_tooltips_show_titles_as_written(qapp):

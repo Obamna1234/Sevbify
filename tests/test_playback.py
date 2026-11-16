@@ -119,3 +119,28 @@ def test_now_playing_highlight_in_library(window, qapp):
     window.play_song(window.songs[1])
     row = [s.key for s in window.library_table.songs_in_view()].index(window.songs[1].key)
     assert window.library_table.item(row, 1).foreground().color() == GREEN
+
+
+def test_a_leftover_end_from_the_previous_song_is_not_a_failed_link(window, qapp, monkeypatch):
+    """Windows report: right after a streamed link was handed to VLC, the player still said "Ended" (how the last
+    song finished), so the new link was called broken, looked up 3 times and saved to a file first (20+ s)."""
+    import vlc
+    window.play_song(window.songs[0])
+    assert wait_until(qapp, lambda: window._reached_playing)
+
+    class Media:                       # the new song's own state: still opening
+        state = vlc.State.Opening
+        def get_state(self): return self.state
+    media = Media()
+    window._opened_media, window._opened_at = media, time.monotonic()
+    window._reached_playing, window._track_handled = False, False
+    monkeypatch.setattr(window.player, "get_state", lambda: vlc.State.Ended)
+    monkeypatch.setattr(window, "_known_length", lambda: 0)       # the new link hasn't said how long it is
+    failed = []
+    monkeypatch.setattr(window, "_handle_failed_track", lambda why: failed.append(why))
+    monkeypatch.setattr(window, "_retry_stream", lambda: failed.append("retry") or True)
+    window.update_progress()
+    assert failed == [] and not window._track_handled
+    media.state = vlc.State.Error      # now the new song itself failed: that is handled
+    window.update_progress()
+    assert failed == ["retry"]
