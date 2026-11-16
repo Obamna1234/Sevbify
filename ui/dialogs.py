@@ -159,7 +159,6 @@ def edit_details(parent, title, name, pixmap=None, can_change_cover=True, name_l
 def choose_downloads(parent, title, songs):
     """Spotify-like "Download …?" card without the Premium part: Download all, or tick the songs you want.
     `songs`: the songs not downloaded yet. Returns the chosen songs ([] = cancelled)."""
-    from PyQt6.QtWidgets import QListWidget, QListWidgetItem
     if getattr(parent, "_auto_answer_dialogs", None) is not None:          # tests
         answer = parent._auto_answer_dialogs
         return list(songs) if answer is True else (list(answer) if isinstance(answer, (list, tuple)) else [])
@@ -169,34 +168,76 @@ def choose_downloads(parent, title, songs):
     h.setWordWrap(True)
     h.setStyleSheet("font-size: 22px; font-weight: 800; color: white;")
     d.body.addWidget(h)
-    t = QLabel(f"{len(songs)} song{'s' if len(songs) != 1 else ''} aren't on your computer yet. Download them all, "
-               "or untick the ones you don't want.")
+    t = QLabel(f"{len(songs)} song{'s' if len(songs) != 1 else ''} {'aren' if len(songs) != 1 else 'isn'}'t on your "
+               "computer yet. Untick any you don't want.")
     t.setWordWrap(True)
     t.setStyleSheet(f"font-size: 14px; color: {theme.SUBDUED};")
     d.body.addWidget(t)
-    lst = QListWidget()
-    lst.setMinimumHeight(260)
-    lst.setStyleSheet(f"QListWidget {{ background: #1f1f1f; color: white; border: none; border-radius: 6px; font-size: 14px; }}"
-                      f" QListWidget::item {{ padding: 6px; }} QListWidget::item:hover {{ background: {theme.HOVER}; }}")
+    # The songs, like Spotify's lists: cover, title with the artist underneath, and a round green tick.
+    from PyQt6.QtWidgets import QScrollArea, QWidget
+    from PyQt6.QtGui import QPixmap
+    from .save_picker import RoundTick
+    from .library_panel import rounded
+    rows_box = QWidget()
+    rows_box.setStyleSheet("background: transparent;")
+    rv = QVBoxLayout(rows_box)
+    rv.setContentsMargins(0, 0, 0, 0)
+    rv.setSpacing(2)
+    ticks = []
+
+    class _SongRow(QFrame):
+        def __init__(self, song):
+            super().__init__()
+            self.setObjectName("dlRow")
+            self.setStyleSheet("#dlRow { background: transparent; border-radius: 4px; }"
+                               f" #dlRow:hover {{ background: {theme.HOVER}; }}")
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+            h = QHBoxLayout(self)
+            h.setContentsMargins(8, 4, 8, 4)
+            h.setSpacing(12)
+            art = QLabel()
+            art.setFixedSize(40, 40)
+            art.setPixmap(rounded(QPixmap(song.album_cover_path), 40, 4))
+            h.addWidget(art)
+            texts = QVBoxLayout()
+            texts.setSpacing(0)
+            name = QLabel(song.title)
+            name.setStyleSheet("color: white; font-size: 14px; font-weight: 600;")
+            who = QLabel(song.artist)
+            who.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
+            texts.addWidget(name)
+            texts.addWidget(who)
+            h.addLayout(texts, 1)
+            self.tick = RoundTick(True)
+            h.addWidget(self.tick)
+
+        def mousePressEvent(self, e):
+            if e.button() == Qt.MouseButton.LeftButton:
+                self.tick.toggle()
+
     for s in songs:
-        it = QListWidgetItem(f"{s.title}  —  {s.artist}")
-        it.setFlags(it.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-        it.setCheckState(Qt.CheckState.Checked)
-        lst.addItem(it)
-    d.body.addWidget(lst)
+        row_w = _SongRow(s)
+        rv.addWidget(row_w)
+        ticks.append(row_w.tick)
+    rv.addStretch()
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+    scroll.setWidget(rows_box)
+    scroll.setMinimumHeight(min(320, 50 * len(songs) + 8))
+    d.body.addWidget(scroll)
     row = QHBoxLayout()
-    pill = (f"QPushButton {{ color: white; background: transparent; border: 1px solid {theme.DIM}; border-radius: 16px;"
-            f" font-weight: 700; padding: 7px 16px; }} QPushButton:hover {{ border-color: white; }}")
-    all_btn, none_btn = QPushButton("Select all"), QPushButton("Select none")
-    for b, state in ((all_btn, Qt.CheckState.Checked), (none_btn, Qt.CheckState.Unchecked)):
-        b.setStyleSheet(pill)
-        b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.clicked.connect(lambda _=False, st=state: [lst.item(i).setCheckState(st) for i in range(lst.count())])
-        row.addWidget(b)
+    toggle_all = QPushButton()
+    toggle_all.setCursor(Qt.CursorShape.PointingHandCursor)
+    toggle_all.setStyleSheet(f"QPushButton {{ color: {theme.SUBDUED}; background: transparent; border: none;"
+                             " font-weight: 700; font-size: 14px; padding: 8px 4px; } QPushButton:hover { color: white; }")
+    row.addWidget(toggle_all)
     row.addStretch()
     cancel = QPushButton("Cancel")
-    cancel.setStyleSheet("QPushButton { color: white; background: transparent; border: none; font-weight: 700;"
-                         " padding: 10px 14px; }")
+    cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+    cancel.setStyleSheet(f"QPushButton {{ color: {theme.SUBDUED}; background: transparent; border: none;"
+                         " font-weight: 700; font-size: 14px; padding: 10px 14px; } QPushButton:hover { color: white; }")
     ok = QPushButton()
     ok.setDefault(True)
     ok.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -205,10 +246,19 @@ def choose_downloads(parent, title, songs):
                      f" QPushButton:disabled {{ background: #535353; }}")
 
     def count():
-        n = sum(1 for i in range(lst.count()) if lst.item(i).checkState() == Qt.CheckState.Checked)
-        ok.setText("Download all" if n == lst.count() else f"Download {n}")
+        n = sum(1 for t in ticks if t.isChecked())
+        ok.setText("Download all" if n == len(ticks) else f"Download {n}")
         ok.setEnabled(n > 0)
-    lst.itemChanged.connect(lambda _it: count())
+        toggle_all.setText("Clear all" if n == len(ticks) else "Select all")
+
+    def flip_all():
+        on = not all(t.isChecked() for t in ticks)
+        for t in ticks:
+            t.setChecked(on)
+        count()
+    for t in ticks:
+        t.toggled.connect(lambda _on: count())
+    toggle_all.clicked.connect(flip_all)
     count()
     cancel.clicked.connect(d.reject)
     ok.clicked.connect(d.accept)
@@ -217,4 +267,4 @@ def choose_downloads(parent, title, songs):
     d.body.addLayout(row)
     if d.exec() != QDialog.DialogCode.Accepted:
         return []
-    return [s for i, s in enumerate(songs) if lst.item(i).checkState() == Qt.CheckState.Checked]
+    return [s for s, t in zip(songs, ticks) if t.isChecked()]
