@@ -891,7 +891,39 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._playlists_changed(pl)
         self._update_like_button()
 
+    # --- Windows: Like / Previous / Play / Next in the taskbar preview (hover over Sevbify in the taskbar) ---
+    def _thumbbar(self):
+        tb = getattr(self, "_thumb_bar", None)
+        if tb is None and sys.platform == "win32" and not getattr(self, "_shut_down", False):
+            from . import win_taskbar
+            tb = self._thumb_bar = win_taskbar.ThumbBar(int(self.winId()), {
+                "like": lambda: self.current_song is not None and self.toggle_like(),
+                "previous": self.prev_song, "play": self.play_pause_song, "next": self.next_song})
+        return tb
+
+    def _update_thumbbar(self):
+        tb = getattr(self, "_thumb_bar", None)
+        if tb is not None:
+            tb.update(self.is_liked(self.current_song), bool(getattr(self, "is_playing", False)))
+
+    def nativeEvent(self, event_type, message):
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                from ctypes import wintypes
+                msg = wintypes.MSG.from_address(int(message))
+                tb = self._thumbbar()
+                what = tb.handle(msg.message, msg.wParam) if tb is not None else None
+                if what == "created":
+                    tb.add(self.is_liked(self.current_song), bool(getattr(self, "is_playing", False)))
+                elif what == "clicked":
+                    return True, 0
+            except Exception:
+                pass
+        return super().nativeEvent(event_type, message)
+
     def _update_like_button(self):
+        self._update_thumbbar()
         btn = getattr(self, "like_btn", None)
         if btn is None:
             return
@@ -1728,6 +1760,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.play_btn.setIcon(icons.pause("#000000", 14) if playing else icons.play("#000000", 14))
         self.play_btn.setToolTip("Pause (Space)" if playing else "Play (Space)")
         self.play_btn.setProperty("state", "pause" if playing else "play")
+        self._update_thumbbar()
 
     def _set_now_playing_text(self, title, artist, note=""):
         self.song_info.setText(self.song_info.fontMetrics().elidedText(title, Qt.TextElideMode.ElideRight, 260))

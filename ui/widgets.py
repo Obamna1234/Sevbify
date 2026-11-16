@@ -279,7 +279,10 @@ class PanelResizeHandle(QWidget):
         from PyQt6.QtCore import QEvent
         if obj is self.panel and e.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.Show,
                                               QEvent.Type.Hide, QEvent.Type.ParentChange):
-            self._follow()
+            try:
+                self._follow()
+            except RuntimeError:            # the window is being closed
+                pass
         return False
 
     def _follow(self):

@@ -61,4 +61,18 @@ def install(app=None):
         return _installed
     _installed = _Smoother(app)
     app.installEventFilter(_installed)
+    # Taken off again before Python starts tearing things down: an app-wide filter still being called while the
+    # interpreter exits crashed the Windows build on closing (access violation in the smoke test).
+    app.aboutToQuit.connect(uninstall)
     return _installed
+
+
+def uninstall():
+    global _installed
+    app = QApplication.instance()
+    if app is not None and _installed is not None:
+        try:
+            app.removeEventFilter(_installed)
+        except RuntimeError:
+            pass
+    _installed = None
