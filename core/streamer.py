@@ -223,8 +223,11 @@ def _extract(e, page):
     order = list(range(_preferred_attempt, len(attempts))) + list(range(0, min(_preferred_attempt, len(attempts))))
     last = None
     for i in order:
+        fmt = __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT
+        if is_soundcloud_track(page):      # a plain MP3 when SoundCloud has one (every player can stream it), else HLS
+            fmt = "bestaudio[protocol^=http][protocol!*=m3u8]/" + fmt
         opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "noplaylist": True,
-                "format": __import__("core.quality", fromlist=["x"]).STREAM_AUDIO_FORMAT,
+                "format": fmt,
                 "socket_timeout": 15 if len(attempts) > 1 else 20,
                 "skip_download": True, "allowed_extractors": e.SONG_EXTRACTORS, "extractor_args": attempts[i]}
         try:

@@ -143,6 +143,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.5.1")   // SoundCloud streams are often HLS (.m3u8)
     implementation("androidx.media3:media3-session:1.5.1")
     implementation("androidx.media3:media3-datasource:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
