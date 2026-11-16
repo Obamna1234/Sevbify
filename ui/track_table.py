@@ -32,6 +32,35 @@ save_clicked_handler = None    # set by the main window: (song, saved, global po
 SAVE_MARK = 16                 # size of the tick / + circle, drawn just left of the song's length
 
 
+def _paint_download_badge(painter, r, downloaded):
+    """Spotify's download badge: a green circle with a black arrow when the song is on this device, a grey
+    outlined circle with a grey arrow when it isn't downloaded yet."""
+    from PyQt6.QtCore import QPointF
+    from PyQt6.QtGui import QPen, QPolygonF
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    c = r.center()
+    w = r.width()
+    if downloaded:
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(SAVED_GREEN)
+        painter.drawEllipse(r)
+        colour = QColor("#000000")
+    else:
+        painter.setPen(QPen(GREY, 1.2))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(r.adjusted(0.6, 0.6, -0.6, -0.6))
+        colour = GREY
+    pen = QPen(colour, 1.4)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.drawLine(QPointF(c.x(), r.y() + w * 0.26), QPointF(c.x(), r.y() + w * 0.7))
+    painter.drawPolyline(QPolygonF([QPointF(c.x() - w * 0.2, r.y() + w * 0.5), QPointF(c.x(), r.y() + w * 0.72),
+                                    QPointF(c.x() + w * 0.2, r.y() + w * 0.5)]))
+    painter.restore()
+
+
 def _save_mark_rect(cell):
     """Where the tick (or + on hover) sits in the length column."""
     return QRectF(cell.x() + 10, cell.y() + (cell.height() - SAVE_MARK) / 2, SAVE_MARK, SAVE_MARK)
@@ -168,7 +197,16 @@ class RowDelegate(QStyledItemDelegate):
         painter.setFont(f)
         painter.setPen(title_colour)
         fm = painter.fontMetrics()
-        title = fm.elidedText(index.data(Qt.ItemDataRole.DisplayRole) or "", Qt.TextElideMode.ElideRight, width)
+        text = index.data(Qt.ItemDataRole.DisplayRole) or ""
+        # Like Spotify (phone, and Premium on the computer): a small round download badge before the artist:
+        # green = on this computer (your file or downloaded), grey = not downloaded yet. The "   ⬇" the list
+        # puts after the title of a song you don't have is drawn as the grey badge instead.
+        pending = text.endswith("   ⬇")
+        if pending:
+            text = text[:-len("   ⬇")]
+        local = song is not None and not getattr(song, "is_remote", False) and getattr(song, "exists", False)
+        badge = "local" if local else ("pending" if pending else "")
+        title = fm.elidedText(text, Qt.TextElideMode.ElideRight, width)
         mid = rect.y() + rect.height() // 2
         painter.drawText(text_x, mid - 4, title)
         f2 = QFont(option.font)
@@ -177,7 +215,12 @@ class RowDelegate(QStyledItemDelegate):
         dim = title_colour == DIM
         painter.setPen(DIM if dim else GREY)
         artist = getattr(song, "artist", "") if song is not None else ""
-        painter.drawText(text_x, mid + 15, painter.fontMetrics().elidedText(artist, Qt.TextElideMode.ElideRight, width))
+        artist_x = text_x
+        if badge:
+            _paint_download_badge(painter, QRectF(text_x, mid + 4, 14, 14), badge == "local")
+            artist_x += 20
+        painter.drawText(artist_x, mid + 15, painter.fontMetrics().elidedText(
+            artist, Qt.TextElideMode.ElideRight, width - (artist_x - text_x)))
         painter.restore()
 
     def sizeHint(self, option, index):
