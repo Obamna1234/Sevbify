@@ -293,6 +293,8 @@ def _find(line, key, duration_ms, source, extract):
             bc = {}
             search_errors["Bandcamp"] = str(exc)[:300]
         found["bc"] = bc if (bc or {}).get("found") and bc.get("url") else None
+        if not found["bc"] and (bc or {}).get("error"):
+            search_errors["Bandcamp"] = str(bc["error"])[:300]          # refused / failed, not "not there"
         timings["bandcamp"] = round(time.time() - t, 1)
 
     def youtube():
@@ -366,7 +368,8 @@ def _find(line, key, duration_ms, source, extract):
             continue
         timings["extract"] = round(time.time() - t, 1); timings["total"] = round(time.time() - t0, 1)
         result = {"url": url, "headers": headers, "page": page, "source": name,
-                  "duration_ms": int((seconds or 0) * 1000), "timings": timings}
+                  "duration_ms": int((seconds or 0) * 1000), "timings": timings,
+                  "skipped": dict(search_errors)}          # why an earlier place wasn't used (for the logs)
         with _lock:
             _cache[key] = (time.time(), dict(result))
             _pages[key] = (name, page)

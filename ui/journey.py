@@ -181,7 +181,7 @@ class Journey:
         self.wait(lambda: res or err, 180)
         return res, (err[0] if err else None)
 
-    def _play_found(self, artist, title):
+    def _play_found(self, artist, title, want_source=None):
         """Look the song up the way playback does, then play it from the search results and check it plays."""
         w = self.w
         res, err = self._find_song(artist, title)
@@ -196,14 +196,22 @@ class Journey:
         w.play_song(song, queue=[song], source="Journey")
         ok, how = self.position_moves()
         timings = res.get("timings")
-        detail = f"source: {res.get('source')}; {how}" + (f"; lookup timings: {timings}" if timings else "")
+        skipped = res.get("skipped") or {}
+        detail = f"source: {res.get('source')}; {how}" + (f"; lookup timings: {timings}" if timings else "") + \
+            (f"; not used: {skipped}" if skipped else "")
+        if ok and want_source and res.get("source") != want_source:
+            # It played, but from somewhere else: this step is about that one site, so say so honestly.
+            why = skipped.get(want_source) or skipped.get(want_source + " link") or f"{want_source} didn't have it"
+            if self.blocked_reason(why):
+                return "blocked", f"{want_source} refused this computer ({why[:160]}); played from {res.get('source')} instead"
+            return "fail", f"not from {want_source} ({why[:200]}); played from {res.get('source')} instead. {detail}"
         return ("pass" if ok else "fail"), detail
 
     def step_stream_bandcamp(self):
-        return self._play_found(*BANDCAMP_SONG)
+        return self._play_found(*BANDCAMP_SONG, want_source="Bandcamp")
 
     def step_stream_youtube(self):
-        return self._play_found(*YOUTUBE_SONG)
+        return self._play_found(*YOUTUBE_SONG, want_source="YouTube")
 
     def step_pause_resume_skip(self):
         w = self.w

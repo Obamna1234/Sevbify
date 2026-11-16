@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
@@ -24,7 +25,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         I18n.load(this)                       // Sevbify's language (Android's per-app language setting)
-        enableEdgeToEdge()
+        // Always light icons on a see-through bar, like Spotify: the clock, notifications and battery stay readable
+        // over Sevbify's dark screens, and the navigation bar is dark (not white) even when the phone is in light
+        // mode (the default "auto" style followed the phone's theme, so the icons were dark on dark).
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         setContent { SevbifyTheme { AppRoot() } }
         com.sevbify.app.ui.AudioOutput.start(this)
         val wanted = if (Build.VERSION.SDK_INT >= 33)
