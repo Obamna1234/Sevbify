@@ -143,6 +143,15 @@ def soundcloud():
     return f"{found[0].artist} - {found[0].title} streams ({int(secs)} s)"
 
 
+def soundcloud_albums():
+    from core import streamer
+    albums = streamer.soundcloud_albums("Perturbator", 5)
+    assert albums, "no albums found"
+    tracks = streamer.soundcloud_album_tracks(albums[0])
+    assert tracks, f"no songs in {albums[0]['url']}"
+    return f"{len(albums)} albums; {albums[0]['title']}: {len(tracks)} songs"
+
+
 def bandcamp_download():
     from core import downloader
     e = downloader.engine()
@@ -215,6 +224,7 @@ check("Bandcamp search + stream link", bandcamp, blocked_ok=True)
 check("Bandcamp download", bandcamp_download, blocked_ok=True)
 check("Bandcamp app API (no Client Challenge)", bandcamp_app_api, blocked_ok=True)
 check("SoundCloud search + stream link", soundcloud, blocked_ok=True)
+check("SoundCloud albums (artist pages)", soundcloud_albums, blocked_ok=True)
 check("YouTube full song", youtube, blocked_ok=True)
 check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)

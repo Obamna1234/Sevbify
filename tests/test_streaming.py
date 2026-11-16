@@ -425,3 +425,23 @@ def test_url_works_asks_the_way_downloads_do(monkeypatch):
     assert streamer.url_works("https://rr1.googlevideo.com/good", {}) is True
     assert streamer.url_works("https://rr1.googlevideo.com/bad", {}) is False
     assert seen == ["bytes=0-1", "bytes=0-1"]
+
+
+def test_soundcloud_albums_are_the_artists_own_each_once(monkeypatch):
+    from core import streamer
+    monkeypatch.setattr(streamer, "_sc_api", lambda path, query, ident="x": {"collection": [
+        {"title": "Suicidal Emotions", "permalink_url": "https://soundcloud.com/rob/sets/suicidal-emotions",
+         "artwork_url": "https://i1.sndcdn.com/artworks-abc-large.jpg", "publisher_metadata": {"artist": "Abyssic Hate"},
+         "user": {"username": "Rob_rob_"}, "release_date": "1994-01-01", "track_count": 7, "set_type": "album"},
+        {"title": "Abyssic Hate - Suicidal Emotions", "permalink_url": "https://soundcloud.com/x/sets/se",
+         "user": {"username": "x"}},                                     # the same album again: listed once
+        {"title": "Abyssic Hate - Cleansing of an Ancient Mind", "permalink_url": "https://soundcloud.com/y/sets/c",
+         "user": {"username": "y"}, "set_type": "ep"},
+        {"title": "Abyssic - Brought Forth", "permalink_url": "https://soundcloud.com/z/sets/b",
+         "user": {"username": "Abyssic"}},                               # a different band
+        {"title": "Some playlist", "permalink_url": "https://soundcloud.com/abyssichate/likes",
+         "user": {"username": "Abyssic Hate"}}]})                        # not an album link
+    albums = streamer.soundcloud_albums("Abyssic Hate")
+    assert [a["title"] for a in albums] == ["Suicidal Emotions", "Cleansing of an Ancient Mind"]
+    assert albums[0]["cover"] == "https://i1.sndcdn.com/artworks-abc-t500x500.jpg" and albums[0]["year"] == "1994"
+    assert albums[1]["kind"] == "EP" and albums[1]["cover"] == ""

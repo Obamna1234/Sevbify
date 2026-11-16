@@ -1038,7 +1038,13 @@ class ShowsMixin:
             if a and not same(a.get("name"), name):
                 a = None                     # a different artist with a similar name ("Abyssic" for "Abyssic Hate")
             if not a:
-                return {"tracks": elsewhere(), "releases": {"albums": [], "singles": [], "compilations": []}}
+                from core import streamer
+                try:
+                    sc_albums = streamer.soundcloud_albums(name)
+                except Exception:
+                    sc_albums = []
+                return {"tracks": elsewhere(), "releases": {"albums": [], "singles": [], "compilations": []},
+                        "soundcloud_albums": sc_albums}
             releases = deezer.artist_albums(a.get("id"))
             for group in releases.values():
                 for album in group:
@@ -1062,6 +1068,11 @@ class ShowsMixin:
             mine = self.artist_songs(local) if local else []
             if mine:
                 sections.append((f"Your songs by {name}", self._songs_block(mine, name), 0))
+            sc_albums = data.get("soundcloud_albums") or []
+            if sc_albums:            # an artist only on SoundCloud: its albums and EPs, each with its own cover
+                sections.append(("Discography", [self._card(al["title"], " • ".join(
+                    x for x in (al.get("year"), al.get("kind")) if x), al.get("cover") or "",
+                    lambda al=al: self.open_soundcloud_album(al)) for al in sc_albums], 1))
             r = data["releases"]
             latest = sorted(r["albums"] + r["singles"], key=lambda a: a.get("release_date") or "", reverse=True)[:1]
             sections.append(("Latest release", [self._release_card(a) for a in latest], 1))
@@ -1106,6 +1117,16 @@ class ShowsMixin:
             self._show_web_collection("Playlist", p["title"], tracks, p.get("picture_xl") or p.get("picture_big") or "")
         self.online_call(self.online.deezer.playlist_tracks, p["id"], on_done=done,
                          on_error=lambda e: self.show_status(f"⚠ Couldn't load {p['title']}: {e}", 8000))
+
+    def open_soundcloud_album(self, album):
+        """A SoundCloud album or EP, shown like any album (its songs play and download from SoundCloud)."""
+        from core import streamer
+        self.show_status(f"Loading {album['title']}…", kind="info", timeout_ms=8000)
+
+        def done(tracks):
+            self._show_web_collection(album.get("kind") or "Album", album["title"], tracks, album.get("cover") or "")
+        self.online_call(streamer.soundcloud_album_tracks, album, on_done=done,
+                         on_error=lambda e: self.show_status(f"⚠ Couldn't load {album['title']}: {e}", 8000))
 
     def open_web_album(self, a):
         self.show_status(f"Loading {a.get('title', '')}…", kind="info", timeout_ms=8000)

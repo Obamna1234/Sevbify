@@ -439,7 +439,8 @@ def search_soundcloud(query, limit=10):
         secs = entry.get("duration") or 0
         if 0 < secs <= 35:
             continue                                   # a preview or a jingle
-        title, artist = entry["title"], entry.get("uploader") or ""
+        title = entry["title"]
+        artist = ((entry.get("artists") or [None])[0]) or entry.get("uploader") or ""   # the label's artist name
         # Uploads are often named "Artist - Title" (or "Artist : Title") by someone else: the uploader isn't the
         # artist then (beta.47: "Abyssic Hate : Bloodletting" by "Rob_rob_" went to Rob_rob_'s page).
         m = re.match(r"^\s*(.{1,60}?)\s+[-–—:|]\s+(.+)$", title)
@@ -451,6 +452,93 @@ def search_soundcloud(query, limit=10):
                                cover_url=cover if str(cover).startswith("https://") else "", source="soundcloud",
                                page_url=url))
     return out
+
+
+def _sc_api(path, query, ident="sevbify"):
+    """SoundCloud's public API through yt-dlp's SoundCloud reader (it handles SoundCloud's client id).
+    Tests replace this."""
+    e = downloader.engine()
+    if e.yt_dlp is None:
+        return {}
+    with e.yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "logger": e._QuietLogger(),
+                             "socket_timeout": 15}) as ydl:
+        ie = ydl.get_info_extractor("SoundcloudSearch")
+        ie.initialize()
+        return ie._call_api(ie._API_V2_BASE + path, ident, query=query, headers=ie._HEADERS) or {}
+
+
+def _artwork(url, size="t500x500"):
+    url = url or ""
+    return re.sub(r"-(large|t\d+x\d+|crop|original)\.(jpg|png)$", rf"-{size}.\2", url) if url.startswith("https://") else ""
+
+
+def soundcloud_albums(artist, limit=12):
+    """The artist's albums and EPs on SoundCloud, like a Spotify discography: [{"title", "url", "cover", "year",
+    "count", "kind"}]. Only ones credited to this artist (the label's artist name, the uploader, or a title like
+    "Artist - Album"), each with its own cover; the same album uploaded twice is listed once."""
+    words = lambda t: re.findall(r"\w+", (t or "").casefold())
+    want = words(artist)
+    data = _sc_api("search/albums", {"q": artist, "limit": max(limit * 2, 20)})
+    out, seen = [], set()
+    for item in (data or {}).get("collection") or []:
+        url = item.get("permalink_url") or ""
+        title = item.get("title") or ""
+        pub = item.get("publisher_metadata") or {}
+        user = (item.get("user") or {}).get("username") or ""
+        m = re.match(r"^\s*(.{1,60}?)\s+[-–—:|]\s+(.+)$", title)
+        credited = pub.get("artist") or (m.group(1) if m else "") or user
+        if words(credited) != want or not url.startswith("https://soundcloud.com/") or "/sets/" not in url:
+            continue
+        name = m.group(2) if m and words(m.group(1)) == want else title
+        key = tuple(words(name))
+        if key in seen:
+            continue
+        seen.add(key)
+        kind = {"album": "Album", "ep": "EP", "single": "Single", "compilation": "Compilation"}.get(
+            (item.get("set_type") or "").lower(), "Album")
+        out.append({"title": name, "url": url, "cover": _artwork(item.get("artwork_url")),
+                    "year": (item.get("release_date") or item.get("display_date") or item.get("created_at") or "")[:4],
+                    "count": int(item.get("track_count") or 0), "kind": kind, "artist": artist})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def soundcloud_album_tracks(album):
+    """The songs of a SoundCloud album (from soundcloud_albums), in order, as OnlineTracks credited to the artist."""
+    from core.online.models import OnlineTrack
+    if not is_soundcloud_set(album.get("url")):
+        return []
+    e = downloader.engine()
+    if e.yt_dlp is None:
+        return []
+    opts = {"quiet": True, "no_warnings": True, "logger": e._QuietLogger(), "extract_flat": True,
+            "skip_download": True, "socket_timeout": 15, "allowed_extractors": ["soundcloud:set", "soundcloud"]}
+    with e.yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(album["url"], download=False) or {}
+    out = []
+    for entry in info.get("entries") or []:
+        url = entry.get("webpage_url") or entry.get("url") or ""
+        title = entry.get("title") or entry.get("track") or ""
+        if not title:
+            continue
+        m = re.match(r"^\s*(.{1,60}?)\s+[-–—:|]\s+(.+)$", title)
+        if m and re.findall(r"\w+", m.group(1).casefold()) == re.findall(r"\w+", album["artist"].casefold()):
+            title = m.group(2)
+        out.append(OnlineTrack(title=title.strip(), artist=album["artist"], album=album["title"],
+                               duration_ms=int((entry.get("duration") or 0) * 1000), cover_url=album.get("cover", ""),
+                               source="soundcloud", page_url=url if is_soundcloud_track(url) else ""))
+    return [t for t in out if t.page_url]
+
+
+def is_soundcloud_set(url):
+    try:
+        u = urllib.parse.urlparse(url or "")
+    except ValueError:
+        return False
+    parts = [x for x in u.path.split("/") if x]
+    return u.scheme == "https" and (u.hostname or "").lower() in ("soundcloud.com", "www.soundcloud.com") \
+        and len(parts) == 3 and parts[1] == "sets"
 
 
 def youtube_page(artist, title, duration_ms=0, search=True):
