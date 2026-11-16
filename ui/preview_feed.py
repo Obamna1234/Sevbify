@@ -61,6 +61,7 @@ class PreviewFeed(QFrame):
         self.player = win.vlc_instance.media_player_new()
         self._token = 0
         self._started = 0
+        self._closed = False
         self.setObjectName("previewFeed")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setStyleSheet("QLabel { background: transparent; color: white; }")
@@ -206,7 +207,7 @@ class PreviewFeed(QFrame):
         saved = track.preview_url if track is not None else ""
 
         def got(url):
-            if token != self._token or self.isHidden():
+            if token != self._token or self._closed:
                 return
             if url:
                 self._start(url, 0)
@@ -216,13 +217,19 @@ class PreviewFeed(QFrame):
                              on_done=lambda u: got(u or saved), on_error=lambda _e: got(saved))
 
     def _start(self, location, start_ms):
+        if self._closed:
+            return
         self.player.set_media(self.win.vlc_instance.media_new(location))
         self.player.play()
         self._started = start_ms
-        if start_ms:
-            QTimer.singleShot(150, lambda: self.player.set_time(int(start_ms)))
+        token = self._token
+        if start_ms:      # (never on a player that was released meanwhile: the feed may close within 150 ms)
+            QTimer.singleShot(150, lambda: not self._closed and token == self._token
+                              and self.player.set_time(int(start_ms)))
 
     def _tick(self):
+        if self._closed:
+            return
         t = max(0, self.player.get_time() - self._started)
         if not self.bar.isSliderDown():
             self.bar.setValue(int(min(PREVIEW_MS, t)))
@@ -233,6 +240,8 @@ class PreviewFeed(QFrame):
         self.player.set_time(int(self._started + self.bar.value()))
 
     def go(self, step):
+        if self._closed:
+            return
         if self.index + step < len(self.songs) and self.index + step >= 0:
             self.show_song(self.index + step)
         elif step > 0:
@@ -260,6 +269,9 @@ class PreviewFeed(QFrame):
             self.win.play_song(s, queue=self.songs, source=self.source_name)
 
     def close_feed(self):
+        if self._closed:
+            return
+        self._closed = True
         self.timer.stop()
         self._token += 1
         try:
