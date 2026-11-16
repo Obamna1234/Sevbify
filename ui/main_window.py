@@ -466,8 +466,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.right_panel = QStackedWidget()
         self.right_panel.setObjectName("rightPanel")
         self.right_panel.setStyleSheet(f"#rightPanel {{ background: {theme.PANEL}; border-radius: {theme.RADIUS}px; }}")
-        self.right_panel.setMinimumWidth(300)
-        self.right_panel.setMaximumWidth(380)
+        self.right_panel.setFixedWidth(self.user_data.right_panel_width)
         self.queue_panel = QueuePanel(load_pixmap)
         self.queue_panel.close_requested.connect(lambda: self.set_right_panel(""))
         self.queue_panel.play_upcoming.connect(self._play_upcoming)
@@ -503,6 +502,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._playlist_files_timer.timeout.connect(self.write_playlist_files)
         self.right_panel.hide()
         self.top_layout.addWidget(self.right_panel)
+        from .widgets import PanelResizeHandle
+        # Floats over the gap left of the panel (so the gap stays the same size); follows the panel around.
+        self.right_handle = PanelResizeHandle(self.right_panel, 280, 720, self._right_panel_resized)
+        self.right_handle.hide()
 
         self.home_page = QWidget()
         self.search_page = QWidget()
@@ -819,27 +822,46 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def _saved_mark_clicked(self, song, saved, pos):
         """The tick / + next to a song's length, like Spotify: + saves it to Liked Songs; the tick opens the
-        'Saved in' choices (Liked Songs and your playlists)."""
+        "Add to playlist" pop-up (Saved in / Recently updated, Cancel / Done)."""
         if not saved:
             self.toggle_like(song)
             return
-        menu = self._new_menu()
-        title = menu.addAction("Saved in")
-        title.setEnabled(False)
-        menu.addSeparator()
-        liked = self.liked_playlist()
-        lk = menu.addAction(("♥  " if self.is_liked(song) else "♡  ") + "Liked Songs")
-        lk.triggered.connect(lambda: self.toggle_like(song))
-        for pl in self.playlists:
-            if pl is liked:
-                continue
-            inside = any(s.key == song.key for s in pl.songs)
-            act = menu.addAction(("✓  " if inside else "＋  ") + pl.name)
-            if inside:
-                act.triggered.connect(lambda _=False, p=pl: self.remove_song_from(p, song))
-            else:
-                act.triggered.connect(lambda _=False, p=pl: self.add_to_playlist(p, [song]))
-        menu.exec(pos)
+        self.open_save_picker(song, pos)
+
+    def open_save_picker(self, song, pos):
+        from .save_picker import SavePicker
+        liked = self.liked_playlist(create=True)
+        ordered = [liked] + [p for p in self.playlists if p is not liked]
+
+        def apply(add, remove):
+            for pl in add:
+                if pl is liked:
+                    pl.songs.insert(0, song)
+                else:
+                    pl.add_song(song)
+                pl.generate_cover()
+            for pl in remove:
+                pl.songs[:] = [s for s in pl.songs if s.key != song.key]
+                pl.generate_cover()
+            if add or remove:
+                self._playlists_changed()
+                self._update_like_button()
+                parts = ([f"Added to {', '.join(p.name for p in add[:2])}" + (" and more" if len(add) > 2 else "")]
+                         if add else []) + ([f"removed from {len(remove)}"] if remove else [])
+                self.show_status(" · ".join(parts).capitalize(), kind="info", timeout_ms=3500)
+
+        picker = SavePicker(self, song, ordered, load_pixmap, apply, lambda: self._new_playlist_with(song))
+        picker.adjustSize()
+        screen = self.screen().availableGeometry() if self.screen() else None
+        x, y = pos.x() - picker.width() + 20, pos.y() + 12
+        if screen is not None:
+            x = max(screen.left() + 8, min(x, screen.right() - picker.width() - 8))
+            if y + picker.height() > screen.bottom() - 8:
+                y = max(screen.top() + 8, pos.y() - picker.height() - 12)
+        picker.move(x, y)
+        picker.show()
+        self._save_picker = picker
+        return picker
 
     def remove_song_from(self, playlist, song):
         playlist.songs[:] = [s for s in playlist.songs if s.key != song.key]
@@ -5306,6 +5328,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         if save:
             self.schedule_save()
 
+    def _right_panel_resized(self, width):
+        self.user_data.right_panel_width = int(width)
+        self.schedule_save(1500)
+
     def reset_settings(self, which="all"):
         """Settings → Reset appearance / Reset all settings (asks first). Playlists, music folders, downloads,
         podcasts and audiobooks are never touched."""
@@ -6334,6 +6360,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         for key in ("volume", "muted", "library_view", "library_sort", "library_collapsed", "right_panel"):
             if key in values:
                 setattr(u, key, values[key])
+        if "right_panel_width" in values:
+            u.right_panel_width = min(720, max(280, int(values["right_panel_width"])))
+            self.right_panel.setFixedWidth(u.right_panel_width)
         if "shuffle" in values and bool(values["shuffle"]) != self.pq.shuffle:
             self.toggle_shuffle()
         if values.get("repeat") in ("off", "all", "one"):

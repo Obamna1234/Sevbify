@@ -1,5 +1,5 @@
 """Small reusable widgets in Spotify's style."""
-from PyQt6.QtWidgets import QAbstractButton, QSizePolicy
+from PyQt6.QtWidgets import QAbstractButton, QSizePolicy, QWidget
 from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtCore import Qt, QSize, QRectF, QPointF, QObject, pyqtSignal
 
@@ -259,3 +259,69 @@ class HoverHint(QObject):
             if HoverHint._label is not None:
                 HoverHint._label.hide()
         return False
+
+
+class PanelResizeHandle(QWidget):
+    """The thin strip on a side panel's inner edge: drag it to make the panel wider or narrower (Spotify's
+    right-hand panel works the same way). `done(width)` is called when the drag ends."""
+
+    def __init__(self, panel, minimum, maximum, done=None):
+        super().__init__()
+        self.panel, self.minimum, self.maximum, self.done = panel, minimum, maximum, done
+        self.setFixedWidth(theme.GAP)
+        self.setCursor(Qt.CursorShape.SizeHorCursor)
+        panel.installEventFilter(self)
+        self.setToolTip("Drag to resize")
+        self._start = None
+        self._hover = False
+
+    def eventFilter(self, obj, e):
+        from PyQt6.QtCore import QEvent
+        if obj is self.panel and e.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.Show,
+                                              QEvent.Type.Hide, QEvent.Type.ParentChange):
+            self._follow()
+        return False
+
+    def _follow(self):
+        parent = self.panel.parentWidget()
+        if parent is None:
+            return
+        if self.parentWidget() is not parent:
+            self.setParent(parent)
+        g = self.panel.geometry()
+        self.setGeometry(g.x() - self.width(), g.y(), self.width(), g.height())
+        self.setVisible(self.panel.isVisible())
+        self.raise_()
+
+    def enterEvent(self, e):
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, e):
+        self._hover = False
+        self.update()
+
+    def paintEvent(self, e):
+        if self._hover or self._start is not None:
+            p = QPainter(self)
+            p.fillRect(self.width() // 2 - 1, 0, 2, self.height(), QColor("#7c7c7c"))
+            p.end()
+
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self._start = (e.globalPosition().x(), self.panel.width())
+
+    def mouseMoveEvent(self, e):
+        if self._start is None:
+            return
+        x0, w0 = self._start
+        # The panel is on the right: dragging the edge left makes it wider.
+        width = int(min(self.maximum, max(self.minimum, w0 - (e.globalPosition().x() - x0))))
+        self.panel.setFixedWidth(width)
+
+    def mouseReleaseEvent(self, e):
+        if self._start is not None:
+            self._start = None
+            self.update()
+            if self.done:
+                self.done(self.panel.width())

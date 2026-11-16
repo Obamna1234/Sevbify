@@ -497,8 +497,33 @@ def test_green_tick_for_songs_in_your_playlists_and_plus_saves_to_liked(window, 
     from PyQt6.QtTest import QTest
     QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=mark)
     assert window.is_liked(b) and tt.is_saved(b)
-    shown = []
-    monkeypatch.setattr(window, "_new_menu", lambda: shown.append(1) or __import__("PyQt6.QtWidgets", fromlist=["QMenu"]).QMenu(window))
-    monkeypatch.setattr(__import__("PyQt6.QtWidgets", fromlist=["QMenu"]).QMenu, "exec", lambda self, *a: None)
-    QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=mark)   # the tick: "Saved in" choices
-    assert shown and window.is_liked(b)
+    QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=mark)   # the tick: "Add to playlist" pop-up
+    picker = window._save_picker
+    rows = {r.playlist.name: r for r in picker.rows}
+    assert rows["Liked Songs"].tick.isChecked() and not rows["Road"].tick.isChecked()
+    picker.find.setText("roa")
+    assert rows["Road"].isVisible() and not rows["Liked Songs"].isVisible()
+    rows["Road"].tick.toggle()
+    rows["Liked Songs"].tick.toggle()
+    road = next(p for p in window.playlists if p.name == "Road")
+    assert b not in road.songs                                    # nothing changes until Done
+    picker._done()
+    assert b in road.songs and not window.is_liked(b) and tt.is_saved(b)
+
+
+def test_right_panel_can_be_dragged_wider_and_remembers_it(window, qapp):
+    from PyQt6.QtTest import QTest
+    from PyQt6.QtCore import QPoint
+    window.show()
+    window.set_right_panel("nowplaying")
+    qapp.processEvents()
+    h = window.right_handle
+    assert h.isVisible() and h.parentWidget() is window.right_panel.parentWidget()
+    start = window.right_panel.width()
+    QTest.mousePress(h, Qt.MouseButton.LeftButton, pos=QPoint(2, 50))
+    QTest.mouseMove(h, QPoint(-98, 50))
+    QTest.mouseRelease(h, Qt.MouseButton.LeftButton, pos=QPoint(-98, 50))
+    assert window.right_panel.width() == start + 100 == window.user_data.right_panel_width
+    window.set_right_panel("")
+    qapp.processEvents()
+    assert not h.isVisible()

@@ -104,6 +104,7 @@ class UserData:
     shuffle: bool = False
     repeat: str = "off"                 # "off" | "all" | "one"
     right_panel: str = "nowplaying"     # "" | "queue" | "nowplaying"
+    right_panel_width: int = 340        # dragged wider / narrower by its left edge, like Spotify
     online_enabled: bool = True         # Settings -> Online features
     lastfm_api_key: str = ""
     jamendo_client_id: str = ""
@@ -166,7 +167,7 @@ class UserData:
 
 # Settings → Reset: which values go back to how Sevbify starts. Never your playlists, folders, downloads,
 # podcasts or keys you typed in.
-APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapsed", "right_panel", "np_on_play",
+APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapsed", "right_panel", "right_panel_width", "np_on_play",
                        "canvas_enabled", "spotify_canvas")
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
@@ -247,6 +248,7 @@ class Storage:
                 "shuffle": bool(data.shuffle),
                 "repeat": data.repeat if data.repeat in ("off", "all", "one") else "off",
                 "right_panel": data.right_panel,
+                "right_panel_width": int(data.right_panel_width),
                 "online_enabled": bool(data.online_enabled),
                 "lastfm_api_key": data.lastfm_api_key,
                 "jamendo_client_id": data.jamendo_client_id,
@@ -331,6 +333,10 @@ class Storage:
             data.music_folders = [from_stored_path(str(p)) for p in folders]
         data.shuffle = bool(settings.get("shuffle", False))
         data.repeat = settings.get("repeat", "off") if settings.get("repeat") in ("off", "all", "one") else "off"
+        try:
+            data.right_panel_width = min(720, max(280, int(settings.get("right_panel_width", 340))))
+        except (TypeError, ValueError):
+            data.right_panel_width = 340
         data.right_panel = settings.get("right_panel", "") if settings.get("right_panel") in ("", "queue", "nowplaying") else ""
         data.online_enabled = bool(settings.get("online_enabled", True))
         data.lastfm_api_key = str(settings.get("lastfm_api_key", "") or "")
