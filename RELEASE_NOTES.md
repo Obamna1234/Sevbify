@@ -1,4 +1,23 @@
-## What's new in beta.46 (Windows, macOS, Linux, plus phone fixes)
+## What's new in beta.47 (Windows, macOS, Linux, plus engine fixes on the phones)
+
+From your Windows test of beta.46:
+
+- **Songs start much faster.** The 20+ second wait was a bug: right after a new song started, the player still reported that the *previous* song had ended, so every YouTube link was treated as broken, looked up three times and saved to a file before playing. Next and previous songs are now also looked up in the background while a song plays, like Spotify.
+- **Artwork loads properly**: the Top result, radio, artist pages and search lists show their covers (a Windows file clash and covers waiting behind song lookups).
+- **Bandcamp works again**, through Bandcamp's app connection (as NewPipe does), which avoids its "prove you're a browser" page.
+- **SoundCloud**: Sevbify looks there when a song isn't on Bandcamp or YouTube, downloads from it, and Search has an **On SoundCloud** section for music outside the catalogue. 30-second previews are never used.
+- **Liked Songs**: a heart next to the playing song and in the song menu; pinned at the top of Your Library.
+- **Spotify's green tick** next to songs that are in Liked Songs or your playlists; a grey ⊕ saves a song to Liked Songs; the tick opens the **Add to playlist** pop-up (Saved in / Recently updated, Cancel / Done).
+- **Download badges like Spotify's**: a green circle = on your computer, a grey circle = not downloaded yet.
+- **Spotify-style right-click menus**, a one-click **Private session** lock in the top bar, a **resizable side panel**, the **artist's photo** on artist pages and an **Artist radio** pill.
+- **Longer radios** (100 songs to start, and they keep growing), with covers on every song.
+- **Drag folders from File Explorer onto Your Library** to make playlists (in order, with the folder's cover); re-imported copies of missing songs play from the new files; **Add a music folder** button on an empty Home.
+- Right-clicking the Top result opens its menu (it used to play it); the wrong podcast episode is no longer picked; **Connect to a device** lists your outputs before anything has played; the **Download** window looks like Spotify's lists.
+- **Android:** the clock and notification icons are always readable and the bottom bar is dark. Bandcamp, SoundCloud and the podcast fix apply on the phones too.
+
+Tested automatically on Windows, macOS, Ubuntu and an Android emulator; real songs now play and download on those test computers. Please check on your own connection: songs starting quickly, Bandcamp and SoundCloud, and Connect to a device.
+
+### Earlier, in beta.46 (Windows, macOS, Linux, plus phone fixes)
 
 From your Windows testing list:
 
