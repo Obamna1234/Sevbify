@@ -90,11 +90,27 @@ def launch_detached(cmd):
     subprocess.Popen(cmd, **kw)
 
 
-def prepare(url, data_dir, sha256="", size=0):
-    """Download and unpack an update into the data folder. Returns the new app's path."""
+def prepare(url, data_dir, sha256="", size=0, opener=None):
+    """Download an update, check it's signed with Sevbify's release key (core/update_sign.py), and unpack it into
+    the data folder. Returns the new app's path. Nothing unsigned is ever unpacked or installed."""
+    from core import update_sign
+    sig_url, tag, name = update_sign.parse_release_url(url)
     folder = os.path.join(data_dir, "update")
-    archive = download(url, folder, sha256, size)
+    archive = download(url, folder, sha256, size, opener=opener)
     try:
+        h = hashlib.sha256()
+        with open(archive, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        try:
+            with (opener or _fetch)(sig_url) as r:
+                signatures = r.read(update_sign.MAX_SIGNATURES_BYTES + 1).decode("utf-8", "replace")
+        except Exception:
+            signatures = ""
+        try:
+            update_sign.check(signatures, tag, name, h.hexdigest())
+        except update_sign.SignatureError as e:
+            raise UpdateError(str(e))
         return unpack(archive, os.path.join(folder, "new"))
     finally:
         try:

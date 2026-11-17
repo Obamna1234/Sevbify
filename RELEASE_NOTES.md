@@ -58,7 +58,7 @@ Tested automatically on Windows, macOS, Ubuntu, an Android emulator and an iPhon
    Prefer no installer? **Sevbify-Windows.zip** still works: extract it and double-click **Sevbify.exe**.
 
 **macOS** (Apple Silicon)
-1. Download **Sevbify-macOS.dmg**, open it and drag **Sevbify** onto **Applications** (or use
+1. Download **Sevbify-Mac.dmg**, open it and drag **Sevbify** onto **Applications** (or use
    **Sevbify-macOS.zip**). To remove it, drag it from Applications to the Bin.
 2. The first time, right-click Sevbify → **Open** → **Open** (or System Settings → Privacy & Security → Open Anyway).
 

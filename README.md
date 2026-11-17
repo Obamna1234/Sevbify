@@ -61,7 +61,7 @@ If you're a rights holder with a concern about this project, please open an issu
 
 - **Windows:** download `Sevbify-Windows-Setup.exe` and open it (no admin password needed; uninstall from Settings →
   Apps). Or download `Sevbify-Windows.zip`, extract it and run `Sevbify.exe`.
-- **macOS:** download `Sevbify-macOS.dmg`, open it and drag Sevbify onto Applications. The first time, right-click it →
+- **macOS:** download `Sevbify-Mac.dmg`, open it and drag Sevbify onto Applications. The first time, right-click it →
   **Open** → **Open** (the app isn't signed by Apple yet).
 - **Linux:** `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager
   (for example `sudo apt install vlc`).

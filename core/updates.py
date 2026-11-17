@@ -106,6 +106,12 @@ def check_app(net, current=None, plat="", fresh=False, include_pre=None):
     result["checked"] = True
     if include_pre is None:
         include_pre = "-" in current                  # auto: beta testers also hear about new betas
+    # The updater installs the .zip / .tar.gz. The Windows installer (.exe) and the Mac disk image (.dmg) are for
+    # people downloading by hand, so they're left out here (otherwise "Setup.exe" could be picked by name).
+    if plat not in ("android", "ios"):
+        data = [dict(r, assets=[a for a in (r.get("assets") or []) if isinstance(a, dict)
+                                and not str(a.get("name") or "").lower().endswith((".exe", ".dmg"))])
+                if isinstance(r, dict) else r for r in (data if isinstance(data, list) else [])]
     best = e.app_pick_release(data, include_pre, plat)
     if not best:
         result["message"] = ("No official release yet — turn on beta updates to get test builds."

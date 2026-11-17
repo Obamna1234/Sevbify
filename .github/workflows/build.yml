@@ -258,7 +258,7 @@ jobs:
             macOS)   ditto -c -k --keepParent dist/Sevbify.app Sevbify-macOS.zip
                      # A disk image too: open it and drag Sevbify onto Applications (uninstall = drag it to the Bin).
                      mkdir -p dmg && cp -R dist/Sevbify.app dmg/ && ln -s /Applications dmg/Applications
-                     hdiutil create -volname Sevbify -srcfolder dmg -ov -format UDZO Sevbify-macOS.dmg ;;
+                     hdiutil create -volname Sevbify -srcfolder dmg -ov -format UDZO Sevbify-Mac.dmg ;;
             Linux)   cp README.md CHANGELOG.md packaging/sevbify.desktop packaging/install.sh dist/Sevbify/
                      cp assets/branding/sevbify_256.png dist/Sevbify/sevbify.png
                      tar czf Sevbify-Linux.tar.gz -C dist Sevbify ;;
@@ -544,12 +544,30 @@ jobs:
         if: steps.version.outputs.release == 'true'
         run: |
           ls -la artifacts
-          extra=$(cd artifacts && ls -A | grep -vxE 'Sevbify-(Windows|macOS)\.zip|Sevbify-Linux\.tar\.gz|Sevbify-Android\.apk|Sevbify-iOS\.ipa' || true)
+          extra=$(cd artifacts && ls -A | grep -vxE 'Sevbify-(Windows|macOS)\.zip|Sevbify-Linux\.tar\.gz|Sevbify-Android\.apk|Sevbify-iOS\.ipa|Sevbify-Windows-Setup\.exe|Sevbify-Mac\.dmg' || true)
           if [ -n "$extra" ]; then echo "::error title=Release::unexpected files: $extra"; exit 1; fi
           if [ ! -f artifacts/Sevbify-Android.apk ]; then
             echo "::error title=Release::No release-signed Android app: add the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD secrets."
             exit 1
           fi
+      # Signed updates (core/update_sign.py): the computer app only installs files signed with this key. The key
+      # is a GitHub secret (and the owner's offline backup), never in the code. No key, no release.
+      - name: Sign the downloads for the in-app updater
+        if: steps.version.outputs.release == 'true'
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          # Only pycryptodomex, pinned with the same hashes as the app (requirements-lock.txt).
+          python3 - <<'PY'
+          import re
+          text = open("requirements-lock.txt").read()
+          m = re.search(r"^pycryptodomex==[^\n]*(?:\n +--hash=[^\n]*)*", text, re.M)
+          open("/tmp/crypto-req.txt", "w").write(m.group(0).rstrip(" \\\n") + "\n")
+          PY
+          python3 -m venv /tmp/signenv
+          /tmp/signenv/bin/pip install --quiet --require-hashes -r /tmp/crypto-req.txt
+          /tmp/signenv/bin/python tools/sign_release.py "v$V" artifacts
       - name: Publish release (new VERSION or a pushed tag)
         if: steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -567,6 +585,7 @@ jobs:
             artifacts/Sevbify-*.dmg
             artifacts/Sevbify-*.apk
             artifacts/Sevbify-*.ipa
+            artifacts/Sevbify-update-signatures.json
       - name: Update the AltStore / SideStore source (iPhone updates)
         if: (steps.version.outputs.release == 'true') && hashFiles('artifacts/Sevbify-iOS.ipa') != ''
         env:
