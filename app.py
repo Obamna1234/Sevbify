@@ -387,6 +387,14 @@ def main():
         window.showMinimized()                 # started at login with "Minimized"
     else:
         window.show()
+        # After an update: tell the waiting updater this version opened (else it rolls back), and say if the
+        # last update had to be rolled back.
+        from PyQt6.QtCore import QTimer as _T
+        from core import app_update as _au
+        _T.singleShot(1500, lambda: _au.confirm_started(window.storage.data_dir))
+        _note = _au.take_rollback_note(window.storage.data_dir)
+        if _note:
+            _T.singleShot(2500, lambda: window.show_status(_note, timeout_ms=15000))
         if not SMOKE_TEST and not JOURNEY and not window.user_data.tour_seen:
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(1200, window.show_feature_tour)      # first start: what Sevbify can do

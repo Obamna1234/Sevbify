@@ -69,6 +69,7 @@ class SettingsPage(QWidget):
     profile_export_requested = pyqtSignal()
     profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
+    go_back_requested = pyqtSignal()
     update_ytdlp_requested = pyqtSignal()
     server_add_requested = pyqtSignal(str)          # "jellyfin" | "webdav"
     server_refresh_requested = pyqtSignal(str)      # server id
@@ -391,6 +392,13 @@ class SettingsPage(QWidget):
         tour.clicked.connect(self.tour_requested.emit)
         row.insertWidget(1, tour)
         self.controls["feature_tour"] = tour
+        if info.get("has_previous"):
+            back = QPushButton("Go back to the previous version")
+            back.setToolTip("Sevbify keeps the version before the last update. This switches back to it (and keeps "
+                            "this one, so you can switch forward again).")
+            back.clicked.connect(self.go_back_requested.emit)
+            row.insertWidget(2, back)
+            self.controls["go_back"] = back
         self.app_update_label = QLabel(info.get("app_update", ""))
         self.app_update_label.setObjectName("desc")
         self.app_update_label.setWordWrap(True)

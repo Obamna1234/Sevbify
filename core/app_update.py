@@ -5,6 +5,11 @@
 2. `unpack()` extracts it into Sevbify's data folder (entries that would land outside it are refused).
 3. `restart_command()` writes a small script that waits for Sevbify to close, swaps the old app for the new
    one (the old one is kept until the new one is in place, and put back if the swap fails), and opens it again.
+4. Roll-back: the old version is kept next to the app as "<folder>.sevbify-previous". After an update the script
+   waits for the new version to say it started (`confirm_started()`, called once the window is up). If it
+   doesn't within START_WAIT seconds, it tries once more; if it still doesn't, the previous version is put back
+   and opened, and the next start says so (`take_rollback_note()`). Settings can also go back by hand
+   (`rollback_command()`).
 Your playlists, settings and music live elsewhere (the data folder and your music folders), so they're untouched.
 Only works for the packaged app; running from source just opens the release page instead.
 """
@@ -200,22 +205,90 @@ def _q(path):
     return "'" + path.replace("'", "'\\''") + "'"
 
 
-def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=None, reopen=True):
+START_WAIT = 90          # seconds the new version gets to open its window before it's tried again / rolled back
+PREVIOUS = ".sevbify-previous"
+
+
+def previous_path(target):
+    return target.rstrip("/\\") + PREVIOUS
+
+
+def has_previous(target=None):
+    target = target or install_target()
+    return bool(target) and os.path.isdir(previous_path(target))
+
+
+def _marker_paths(script_dir):
+    return (os.path.join(script_dir, "start-pending"), os.path.join(script_dir, "start-ok"),
+            os.path.join(script_dir, "rolled-back"))
+
+
+def confirm_started(data_dir):
+    """Called by the app once its window is up: tells a waiting updater script this version works."""
+    pending, ok, _ = _marker_paths(os.path.join(data_dir, "update"))
+    try:
+        with open(pending, encoding="utf-8") as f:
+            token = f.read().strip()
+    except OSError:
+        return False
+    if not token or len(token) > 64:
+        return False
+    try:
+        with open(ok, "w", encoding="utf-8") as f:
+            f.write(token)
+        os.remove(pending)
+    except OSError:
+        return False
+    return True
+
+
+def take_rollback_note(data_dir):
+    """If the last update was rolled back, the message to show once (and forget); else ""."""
+    _, _, note = _marker_paths(os.path.join(data_dir, "update"))
+    if not os.path.exists(note):
+        return ""
+    try:
+        os.remove(note)
+    except OSError:
+        pass
+    return ("The new Sevbify didn't open, so your previous version was put back. Nothing in your library "
+            "changed. The fix will come in a later update.")
+
+
+def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=None, reopen=True, rollback=False):
     """Write the swap-and-reopen script; returns the command that starts it (run it detached, then quit).
-    reopen=False: just swap (an update downloaded earlier is put in place when you close Sevbify)."""
+    reopen=False: just swap (an update downloaded earlier is put in place when you close Sevbify).
+    rollback=True: new_app is the kept previous version and the current one becomes the kept one (Settings →
+    Go back to the previous version); no start check then."""
     platform = platform or sys.platform
     os.makedirs(script_dir, exist_ok=True)
     # A fresh name Sevbify makes itself: a folder that already exists is never removed.
     old = target.rstrip("/\\") + ".sevbify-old-" + uuid.uuid4().hex[:8]
+    failed = target.rstrip("/\\") + ".sevbify-failed-" + uuid.uuid4().hex[:8]
+    prev = previous_path(target)
+    pending, ok, note = _marker_paths(script_dir)
+    check = bool(reopen) and not rollback
+    token = uuid.uuid4().hex
+    for path in (ok, note):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    if check:
+        with open(pending, "w", encoding="utf-8") as f:
+            f.write(token)
     if platform.startswith("win"):
         def c(p):                      # cmd expands %...% even inside quotes
             if any(ch in p for ch in '"\r\n'):
                 raise UpdateError("Sevbify's folder has a name the updater can't use; update from the release page.")
             return p.replace("%", "%%")
-        target_c, new_c, old_c = c(target), c(new_app), c(old)
-        exe = target_c.rstrip("\\") + "\\" + c(exe_name or "Sevbify.exe")
+        target_c, new_c, old_c, prev_c, failed_c = c(target), c(new_app), c(old), c(prev), c(failed)
+        ok_c, note_c = c(ok), c(note)
+        exe_base = c(exe_name or "Sevbify.exe")
+        exe = target_c.rstrip("\\") + "\\" + exe_base
         script = os.path.join(script_dir, "sevbify-update.cmd")
-        target, new_app, old = target_c, new_c, old_c
+        target, new_app, old, prev = target_c, new_c, old_c, prev_c
+        start = f'start "" "{exe}"' if reopen else "rem not reopened"
         lines = [
             "@echo off",
             "chcp 65001 >NUL",            # the paths below are UTF-8 (names like José or Мария)
@@ -230,40 +303,109 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
             f'  move "{old}" "{target}" >NUL',
             "  goto copy",
             ")",
-            f'rmdir /s /q "{old}"',
+            # Keep the version just replaced as the previous one (one copy; an older one is removed).
+            f'if exist "{prev}" rmdir /s /q "{prev}"',
+            f'move "{old}" "{prev}" >NUL',
             "goto start",
             ":copy",
             # The folder couldn't be renamed (something has it open): copy the new files over instead.
             f'robocopy "{new_app}" "{target}" /E /NFL /NDL /NJH /NJS >NUL',
             ":start",
-            f'start "" "{exe}"' if reopen else "rem not reopened",
-            '(goto) 2>nul & del "%~f0"',
         ]
+        if check:
+            lines += [
+                "set tries=0",
+                ":launch",
+                start,
+                "set waited=0",
+                ":check",
+                f'if exist "{ok_c}" findstr /x /c:"{token}" "{ok_c}" >NUL && goto done',
+                "timeout /t 1 /nobreak >NUL",
+                "set /a waited+=1",
+                f"if %waited% LSS {START_WAIT} goto check",
+                f'taskkill /F /IM "{exe_base}" >NUL 2>&1',
+                "timeout /t 2 /nobreak >NUL",
+                "set /a tries+=1",
+                "if %tries% LSS 2 goto launch",
+                # Twice without a window: put the previous version back.
+                f'if not exist "{prev}" goto done',
+                f'move "{target}" "{c(failed)}" >NUL',
+                "if errorlevel 1 goto done",
+                f'move "{prev}" "{target}" >NUL',
+                "if errorlevel 1 (",
+                f'  move "{c(failed)}" "{target}" >NUL',
+                "  goto done",
+                ")",
+                f'rmdir /s /q "{c(failed)}"',
+                f'echo rolled back> "{note_c}"',
+                start,
+                ":done",
+            ]
+        else:
+            lines.append(start)
+        lines.append('(goto) 2>nul & del "%~f0"')
         with open(script, "w", encoding="utf-8", newline="\r\n") as f:
             f.write("\n".join(lines) + "\n")
         return [__import__("ntpath").join(os.environ.get("SystemRoot") or r"C:\Windows", "System32", "cmd.exe")
                 if os.name == "nt" else "cmd.exe", "/c", script]
     script = os.path.join(script_dir, "sevbify-update.sh")
     if not reopen:
-        reopen = ":"
+        start = ":"
     elif platform == "darwin":
-        reopen = f"open {_q(target)}"
+        start = f"open {_q(target)}"
     else:
-        reopen = f"( {_q(os.path.join(target, exe_name or 'Sevbify'))} >/dev/null 2>&1 & )"
+        start = f"( {_q(os.path.join(target, exe_name or 'Sevbify'))} >/dev/null 2>&1 & )"
+    stop = f"pkill -f -- {_q(target.rstrip('/') + '/')} 2>/dev/null; sleep 2"
     body = f"""#!/bin/sh
-# Sevbify updater: wait for Sevbify to close, swap in the new version, open it again.
+# Sevbify updater: wait for Sevbify to close, swap in the new version, open it again (and, after an update,
+# put the previous version back if the new one doesn't open).
 while kill -0 {int(pid)} 2>/dev/null; do sleep 0.5; done
 if mv {_q(target)} {_q(old)}; then
   if mv {_q(new_app)} {_q(target)}; then
-    rm -rf {_q(old)}
+    rm -rf {_q(prev)}
+    mv {_q(old)} {_q(prev)} || rm -rf {_q(old)}
   else
     mv {_q(old)} {_q(target)}
   fi
 fi
-{reopen}
-rm -f "$0"
 """
+    if check:
+        body += f"""started() {{ [ -f {_q(ok)} ] && [ "$(cat {_q(ok)})" = "{token}" ]; }}
+try_start() {{
+  {start}
+  i=0
+  while [ $i -lt {START_WAIT} ]; do started && return 0; sleep 1; i=$((i+1)); done
+  {stop}
+  return 1
+}}
+if ! try_start && ! try_start && [ -d {_q(prev)} ]; then
+  if mv {_q(target)} {_q(failed)}; then
+    if mv {_q(prev)} {_q(target)}; then
+      rm -rf {_q(failed)}
+      echo "rolled back" > {_q(note)}
+      {start}
+    else
+      mv {_q(failed)} {_q(target)}
+    fi
+  fi
+fi
+"""
+    else:
+        body += f"{start}\n"
+    body += 'rm -f "$0"\n'
     with open(script, "w", encoding="utf-8", newline="\n") as f:
         f.write(body)
     os.chmod(script, 0o755)
     return ["/bin/sh", script]
+
+
+def rollback_command(pid, script_dir, target=None, platform=None, exe_name=None):
+    """Settings → Go back to the previous version: swap the kept previous version in (the current one is kept
+    in its place, so you can go forward again the same way) and reopen."""
+    target = target or install_target()
+    if not has_previous(target):
+        raise UpdateError("There's no previous version on this computer.")
+    staged = os.path.join(script_dir, "back-" + uuid.uuid4().hex[:8])
+    os.makedirs(script_dir, exist_ok=True)
+    os.rename(previous_path(target), staged)                     # same drive: a quick rename
+    return restart_command(staged, target, pid, script_dir, platform, exe_name, reopen=True, rollback=True)

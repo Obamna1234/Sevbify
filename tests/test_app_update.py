@@ -94,28 +94,93 @@ def test_windows_script_waits_swaps_and_restores_on_failure(tmp_path):
     assert "robocopy" in text and r'start "" "D:\Apps\Sevbify\Sevbify.exe"' in text
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="runs the shell script")
-def test_linux_update_swaps_the_folder_after_the_app_closes(tmp_path):
+def _fake_app(folder, data, works=True):
+    """A stand-in Sevbify: when it starts it notes that, and (if it 'works') tells the updater it opened."""
+    confirm = f'cp "{data}/update/start-pending" "{data}/update/start-ok" 2>/dev/null; rm -f "{data}/update/start-pending"'
+    return ("#!/bin/sh\necho started >> \"$(dirname \"$0\")/started\"\n" + (confirm + "\n" if works else "")).encode()
+
+
+def _install(tmp_path, works=True):
+    data = tmp_path / "data"
     target = tmp_path / "install" / "Sevbify"
     target.mkdir(parents=True)
-    (target / "Sevbify").write_text("#!/bin/sh\necho started > \"$(dirname \"$0\")/started\"\n")
+    (target / "Sevbify").write_bytes(_fake_app(target, data))
     os.chmod(target / "Sevbify", 0o755)
     (target / "old-only.txt").write_text("old")
     archive = tmp_path / "Sevbify-Linux.tar.gz"
-    archive.write_bytes(tgz({"Sevbify/Sevbify": b"#!/bin/sh\necho started > \"$(dirname \"$0\")/started\"\n",
-                             "Sevbify/_internal/new.txt": b"new"}))
-    new_app = app_update.unpack(str(archive), str(tmp_path / "data" / "update" / "new"))
+    archive.write_bytes(tgz({"Sevbify/Sevbify": _fake_app(target, data, works), "Sevbify/_internal/new.txt": b"new"}))
+    new_app = app_update.unpack(str(archive), str(data / "update" / "new"))
+    return data, target, new_app
+
+
+def _run(cmd, seconds, done):
     app = subprocess.Popen(["sleep", "1"])                                  # stands in for the running Sevbify
-    cmd = app_update.restart_command(new_app, str(target), app.pid, str(tmp_path / "data"), "linux")
-    subprocess.Popen(cmd)
+    cmd = cmd(app.pid)
+    proc = subprocess.Popen(cmd)
     app.wait()
-    deadline = time.time() + 15
-    while time.time() < deadline and not (target / "started").exists():
+    deadline = time.time() + seconds
+    while time.time() < deadline and not done():
         time.sleep(0.2)
+    return proc
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="runs the shell script")
+def test_linux_update_swaps_the_folder_keeps_the_previous_one_and_checks_it_opened(tmp_path):
+    data, target, new_app = _install(tmp_path)
+    proc = _run(lambda pid: app_update.restart_command(new_app, str(target), pid, str(data / "update"), "linux"), 15,
+                lambda: (data / "update" / "start-ok").exists())
+    proc.wait(timeout=10)                                                   # it saw the new version open: done
     assert (target / "_internal" / "new.txt").read_text() == "new"
     assert not (target / "old-only.txt").exists()
-    assert [p.name for p in (tmp_path / "install").iterdir()] == ["Sevbify"]          # the old copy is gone
-    assert (target / "started").exists()                                   # reopened
+    prev = tmp_path / "install" / "Sevbify.sevbify-previous"
+    assert (prev / "old-only.txt").read_text() == "old"                     # the old version is kept
+    assert sorted(p.name for p in (tmp_path / "install").iterdir()) == ["Sevbify", "Sevbify.sevbify-previous"]
+    assert app_update.has_previous(str(target))
+    assert app_update.take_rollback_note(str(data)) == ""
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="runs the shell script")
+def test_a_new_version_that_never_opens_is_rolled_back(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_update, "START_WAIT", 2)
+    data, target, new_app = _install(tmp_path, works=False)
+    proc = _run(lambda pid: app_update.restart_command(new_app, str(target), pid, str(data / "update"), "linux"), 40,
+                lambda: (data / "update" / "rolled-back").exists())
+    proc.wait(timeout=20)
+    assert (target / "old-only.txt").read_text() == "old"                   # the previous version is back
+    assert not (target / "_internal").exists()
+    assert [p.name for p in (tmp_path / "install").iterdir()] == ["Sevbify"]
+    assert "previous version was put back" in app_update.take_rollback_note(str(data))
+    assert app_update.take_rollback_note(str(data)) == ""                   # said once
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="runs the shell script")
+def test_going_back_to_the_previous_version_by_hand_and_forward_again(tmp_path):
+    data, target, new_app = _install(tmp_path)
+    proc = _run(lambda pid: app_update.restart_command(new_app, str(target), pid, str(data / "update"), "linux"), 15,
+                lambda: (data / "update" / "start-ok").exists())
+    proc.wait(timeout=10)
+    proc = _run(lambda pid: app_update.rollback_command(pid, str(data / "update"), str(target), "linux"), 15,
+                lambda: (target / "old-only.txt").exists())
+    proc.wait(timeout=10)
+    assert (target / "old-only.txt").exists()                                # back on the old one
+    assert (tmp_path / "install" / "Sevbify.sevbify-previous" / "_internal" / "new.txt").exists()   # new one kept
+
+
+def test_confirm_started_only_answers_a_waiting_update(tmp_path):
+    assert not app_update.confirm_started(str(tmp_path))
+    (tmp_path / "update").mkdir()
+    (tmp_path / "update" / "start-pending").write_text("abc123")
+    assert app_update.confirm_started(str(tmp_path))
+    assert (tmp_path / "update" / "start-ok").read_text() == "abc123"
+    assert not (tmp_path / "update" / "start-pending").exists()
+
+
+def test_windows_script_checks_the_new_version_opened_and_rolls_back(tmp_path):
+    cmd = app_update.restart_command(r"C:\data\update\new\Sevbify", r"D:\Apps\Sevbify", 1234, str(tmp_path), "win32")
+    text = open(cmd[2], encoding="utf-8").read()
+    assert r'move "D:\Apps\Sevbify.sevbify-old-' in text and r'"D:\Apps\Sevbify.sevbify-previous"' in text
+    assert "start-ok" in text and 'taskkill /F /IM "Sevbify.exe"' in text and "rolled-back" in text
+    assert (tmp_path / "start-pending").read_text() in text                 # the token it waits for
 
 
 def test_percent_signs_in_windows_paths_are_kept(tmp_path):
@@ -151,3 +216,13 @@ def test_the_shipped_folder_layout_can_be_updated(tmp_path):
         assert app_update.looks_like_sevbify(str(d), platform=plat)
         (d / "my holiday photos").mkdir()
         assert not app_update.looks_like_sevbify(str(d), platform=plat)
+
+
+def test_settings_offers_going_back_only_when_a_previous_version_is_kept(window, monkeypatch):
+    from core import app_update as au
+    window.open_settings()
+    assert "go_back" not in window.settings_page.controls
+    monkeypatch.setattr(au, "can_install", lambda: True)
+    monkeypatch.setattr(au, "has_previous", lambda target=None: True)
+    window.open_settings()
+    assert "go_back" in window.settings_page.controls

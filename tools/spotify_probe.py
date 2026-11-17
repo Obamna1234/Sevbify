@@ -31,6 +31,19 @@ def get(url, headers=None, data=None):
         return 0, str(e).encode()
 
 
+def shape(v, depth=0):
+    """The structure of a JSON value with every text replaced by its type (no song names are printed)."""
+    if depth > 7:
+        return "…"
+    if isinstance(v, dict):
+        return {k: shape(x, depth + 1) for k, x in list(v.items())[:25]}
+    if isinstance(v, list):
+        return [shape(v[0], depth + 1), f"×{len(v)}"] if v else []
+    if isinstance(v, str):
+        return "uri" if v.startswith("spotify:") else ("url" if v.startswith("http") else "str")
+    return type(v).__name__
+
+
 def say(label, text):
     print(f"{label}: {text}", flush=True)
 
@@ -105,6 +118,11 @@ def main():
             content = pl.get("content") or {}
             say(f"3 {name}", f"{st} total={content.get('totalCount')} got={len(content.get('items') or [])} "
                              f"errors={[e.get('message', '')[:60] for e in d.get('errors') or []]}")
+            items = content.get("items") or []
+            if items:
+                say(f"3 {name} item shape", json.dumps(shape(items[0]))[:3000])
+            if name == "fetchPlaylist":
+                say("3 playlist shape", json.dumps(shape({k: v for k, v in pl.items() if k != "content"}))[:1500])
         except Exception:
             say(f"3 {name}", f"{st} {body[:160]!r}")
 

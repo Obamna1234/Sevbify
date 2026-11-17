@@ -545,6 +545,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             lambda: self.stack.currentWidget() is self.settings_page and self.open_settings())
         QTimer.singleShot(1500, lambda: not getattr(self, "_shut_down", False) and self.phone_link.start_if_paired())
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
+        self.settings_page.go_back_requested.connect(self.go_back_to_previous_version)
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.settings_page.reset_requested.connect(self.reset_settings)
         self.stack.addWidget(self.settings_page)
@@ -6581,6 +6582,8 @@ class MainWindow(ShowsMixin, QMainWindow):
                     phones_available=bool(getattr(self, "phone_link", None) and self.phone_link.available()),
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
+                    has_previous=__import__("core.app_update", fromlist=["x"]).can_install()
+                    and __import__("core.app_update", fromlist=["x"]).has_previous(),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),
                     can_start_at_login=can_start_at_login(), can_make_shortcuts=shortcuts.can_create(),
                     portable=__import__("core.portable", fromlist=["x"]).is_portable(self.storage.data_dir),
@@ -6700,6 +6703,30 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._quitting = True
             self.close()
             QApplication.quit()
+        return True
+
+    def go_back_to_previous_version(self):
+        """Settings → Go back to the previous version (kept by the updater next to the app)."""
+        from core import app_update
+        from .dialogs import confirm
+        if not (app_update.can_install() and app_update.has_previous()):
+            self.show_status("There's no previous version on this computer.")
+            return False
+        if not confirm(self, "Go back to the previous version?",
+                       "Sevbify closes, switches to the version you had before the last update, and opens again. "
+                       "Your library and settings stay as they are. This version is kept, so you can switch back.",
+                       ok_text="Go back", safe_default=True):
+            return False
+        try:
+            cmd = app_update.rollback_command(os.getpid(), os.path.join(self.storage.data_dir, "update"),
+                                              exe_name=os.path.basename(sys.executable))
+            app_update.launch_detached(cmd)
+        except Exception as e:
+            self.show_status(f"⚠ Couldn't go back: {e}", timeout_ms=10000)
+            return False
+        self._quitting = True
+        self.close()
+        QApplication.quit()
         return True
 
     def _auto_update_check(self):
