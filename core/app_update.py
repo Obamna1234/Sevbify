@@ -58,7 +58,10 @@ def looks_like_sevbify(target, platform=None, exe_name=None):
     if not os.path.isfile(os.path.join(target, exe)) or not os.path.isdir(os.path.join(target, "_internal")):
         return False
     allowed = {exe.lower(), "_internal", "sevbify.exe", "sevbify", "deno", "deno.exe", "ffmpeg", "ffmpeg.exe",
-               "libvlc.dll", "libvlccore.dll", "plugins", "vlc", "readme.txt", "licenses"}
+               "libvlc.dll", "libvlccore.dll", "plugins", "vlc", "readme.txt", "licenses",
+               # what the release build puts next to the program (Windows: README, CHANGELOG; Linux: also the
+               # menu entry, its installer and icon)
+               "readme.md", "changelog.md", "sevbify.desktop", "install.sh", "sevbify.png"}
     return all(n.lower() in allowed for n in os.listdir(target))
 
 
@@ -68,6 +71,10 @@ def launch_detached(cmd):
     kw = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "close_fds": True}
     if sys.platform.startswith("win"):
         kw["creationflags"] = 0x00000008 | 0x00000200 | 0x08000000   # detached, new group, no window
+        if len(cmd) == 3 and cmd[1] == "/c":
+            # cmd.exe reads its own command line: the script's path always in quotes, so a user name with & (or
+            # spaces) in it can't split the command.
+            cmd = f'"{cmd[0]}" /c "{cmd[2]}"'
     else:
         kw["start_new_session"] = True
     subprocess.Popen(cmd, **kw)

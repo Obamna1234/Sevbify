@@ -349,10 +349,14 @@ def track_from_line(line):
 
 
 def is_network_path(path):
-    """True for a Windows network location in any spelling (\\\\host\\x, //host/x, /\\host\\x, \\/host/x)."""
+    """True for a Windows network location in any spelling (\\\\host\\x, //host/x, /\\host\\x, \\/host/x) and for
+    Windows' raw device paths (\\??\\UNC\\..., \\GLOBAL??\\...), which also reach other computers."""
     import ntpath
     p = (path or "").strip().replace("/", "\\")
-    return p.startswith("\\\\") or ntpath.splitdrive(p)[0].startswith("\\\\")
+    if p.startswith("\\\\") or ntpath.splitdrive(p)[0].startswith("\\\\"):
+        return True
+    low = p.lower()
+    return low.startswith("\\??\\") or low.startswith("\\global??\\") or low.startswith("\\device\\")
 
 
 def read_playlist_file(path):

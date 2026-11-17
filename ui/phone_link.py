@@ -166,7 +166,8 @@ class PhoneLink(QObject):
         d = PairDialog(self.win, srv)
         self._dialog = d
         d.finished.connect(lambda _r: (srv.close_pairing(), setattr(self, "_dialog", None),
-                                       not srv.store.devices and self.stop()))
+                                       (not srv.store.devices or not getattr(self.win.user_data, "phone_link", True))
+                                       and self.stop()))
         if getattr(self.win, "_auto_answer_dialogs", None) is not None:      # tests
             d.show()
             return d

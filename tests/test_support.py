@@ -76,3 +76,8 @@ def test_support_card_on_the_desktop(window, qapp):
     d.show_links([{"label": "Buy on Bandcamp", "url": "https://a.bandcamp.com/", "site": "a.bandcamp.com"}], "none")
     assert d.links and d.status.isHidden()
     d.close()
+
+
+def test_lookalike_sites_are_shown_as_they_really_are():
+    assert support.domain("https://bаndcamp.com/x").startswith("xn--")
+    assert support.domain("https://www.bandcamp.com/") == "bandcamp.com"

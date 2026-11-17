@@ -29,10 +29,17 @@ def _norm(s):
 
 
 def domain(url):
+    """The website's name as shown before a link opens. A name with non-ASCII letters is shown as the browser
+    really reaches it (xn--…), so a look-alike such as "bаndcamp.com" with a Cyrillic "а" can't pass for the real one."""
     try:
         host = urllib.parse.urlparse(url).hostname or ""
     except ValueError:
         return ""
+    if any(ord(c) > 127 for c in host):
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError:
+            return ""
     return host[4:] if host.startswith("www.") else host
 
 
@@ -43,6 +50,8 @@ def safe_link(url):
     except ValueError:
         return False
     host = (u.hostname or "").lower()
+    if any(ord(c) > 127 for c in host) and not domain(url):
+        return False
     return (u.scheme == "https" and bool(host) and "." in host and u.username is None and u.password is None
             and u.port in (None, 443) and domain(url) not in SHORTENERS and len(url) < 500)
 

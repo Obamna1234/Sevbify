@@ -87,9 +87,17 @@ def report(dest):
     folder = os.path.dirname(base)
     parts = [f"{base}.{i}" for i in range(KEEP, 0, -1)] + [base, os.path.join(folder, "error.log")]
     home = os.path.expanduser("~")
+    user = os.path.basename(home.rstrip("\\/")) if home else ""
+    import re as _re
+    forms = {home, home.replace("\\", "/"), home.replace("/", "\\")} if home and home not in ("/", "~") else set()
+
     def tidy(text):
         text = _short(text)
-        return text.replace(home, "~") if home and home not in ("/", "~") else text
+        for f in sorted(forms, key=len, reverse=True):            # any case, either slash
+            text = _re.sub(_re.escape(f), "~", text, flags=_re.IGNORECASE)
+        if user and len(user) >= 3 and user.lower() not in ("root", "user", "admin", "home", "users"):
+            text = _re.sub(r"(?i)(?<![A-Za-z0-9])" + _re.escape(user) + r"(?![A-Za-z0-9])", "<user>", text)
+        return text
     fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as out:
         for p in parts:

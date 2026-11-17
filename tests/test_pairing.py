@@ -459,3 +459,18 @@ def test_reconnects_dont_say_a_fixed_id_in_the_open(server):
 def test_device_tag_vector():
     # Pinned: the phone apps compute the same.
     assert pc.device_tag(bytes(range(32)), b"\x01" * 32) == "e256933f5648bc68335c15bef8c47324"
+
+
+def test_unproven_connections_from_many_addresses_dont_lock_out_a_phone(server, monkeypatch):
+    srv, _ev = server
+    monkeypatch.setattr(pr, "MAX_HANDSHAKES_PER_ADDRESS", 100)      # (all from 127.0.0.1 here: many 'addresses')
+    hold = []
+    for _ in range(pr.MAX_HANDSHAKES + 2):
+        s = socket.create_connection(("127.0.0.1", srv.port))
+        s.sendall(struct.pack(">I", 900) + b"{")
+        hold.append(s)
+    time.sleep(0.3)
+    sess, _ = _pair(srv)                                        # still gets in
+    sess.link.close()
+    for s in hold:
+        s.close()

@@ -92,7 +92,6 @@ jobs:
         run: |
           # Exact versions with their SHA-256 (requirements-lock.txt, made with `uv pip compile --universal
           # --generate-hashes`): a changed or tampered package on PyPI can't get into the build.
-          python -m pip install --upgrade pip
           pip install --require-hashes --no-deps -r requirements-lock.txt
 
       - name: Run automated tests
@@ -285,9 +284,10 @@ jobs:
           gradle-version: "8.11.1"
       - name: Build the APK (shares the repository's core/ with Windows)
         env:
-          # The signing key is only handed to builds of main or a release tag, never to other branches.
-          KEYSTORE_B64: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
-          SEVBIFY_KEYSTORE_PASSWORD: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          # The signing key is only handed to builds of main (releases are made from main), never to other branches
+          # or to pushed tags (a tag can point at any commit).
+          KEYSTORE_B64: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          SEVBIFY_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
         run: |
           # The release signing key comes from the repository's secrets (never stored in the code).
           if [ -n "$KEYSTORE_B64" ] && [ -n "$SEVBIFY_KEYSTORE_PASSWORD" ]; then
@@ -500,15 +500,19 @@ jobs:
           echo "version=$V" >> "$GITHUB_OUTPUT"
           if [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then echo "release=true" >> "$GITHUB_OUTPUT";
           else echo "release=false" >> "$GITHUB_OUTPUT"; fi
+      # Only the app builds (Sevbify-*), never screenshots or test reports from jobs that run outside tools.
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         if: steps.version.outputs.release == 'true'
         with:
           path: artifacts
+          pattern: Sevbify-*
           merge-multiple: true
-      - name: Every download is there (the Android one needs the signing-key secrets)
+      - name: Every download is there, and nothing else (the Android one needs the signing-key secrets)
         if: steps.version.outputs.release == 'true'
         run: |
           ls -la artifacts
+          extra=$(cd artifacts && ls -A | grep -vxE 'Sevbify-(Windows|macOS)\.zip|Sevbify-Linux\.tar\.gz|Sevbify-Android\.apk|Sevbify-iOS\.ipa' || true)
+          if [ -n "$extra" ]; then echo "::error title=Release::unexpected files: $extra"; exit 1; fi
           if [ ! -f artifacts/Sevbify-Android.apk ]; then
             echo "::error title=Release::No release-signed Android app: add the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD secrets."
             exit 1

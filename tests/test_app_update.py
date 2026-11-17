@@ -134,3 +134,20 @@ def test_only_a_real_sevbify_folder_is_ever_replaced(tmp_path):
     desktop.mkdir()
     (desktop / "Sevbify").write_text("x")
     assert not app_update.looks_like_sevbify(str(desktop), "linux")
+
+
+def test_the_shipped_folder_layout_can_be_updated(tmp_path):
+    """What the release build ships (README, CHANGELOG; Linux: menu entry, installer, icon) must pass the check,
+    or nobody gets updates."""
+    from core import app_update
+    for plat, exe, extra in (("win32", "Sevbify.exe", ["README.md", "CHANGELOG.md"]),
+                             ("linux", "Sevbify", ["README.md", "CHANGELOG.md", "sevbify.desktop", "install.sh",
+                                                   "sevbify.png"])):
+        d = tmp_path / plat
+        (d / "_internal").mkdir(parents=True)
+        (d / exe).write_text("x")
+        for n in extra:
+            (d / n).write_text("x")
+        assert app_update.looks_like_sevbify(str(d), platform=plat)
+        (d / "my holiday photos").mkdir()
+        assert not app_update.looks_like_sevbify(str(d), platform=plat)

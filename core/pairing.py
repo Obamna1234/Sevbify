@@ -759,6 +759,7 @@ class PairServer:
         self.lock = threading.Lock()
         self._pairing = None          # {"code", "until", "fails": {addr: n}, "fail_total"}
         self._handshakes = {}         # address -> connections still proving who they are
+        self._unproven = {}           # socket -> when it connected (the oldest makes way when all places are taken)
         self._stop = threading.Event()
 
     # pairing window
@@ -827,11 +828,23 @@ class PairServer:
                 time.sleep(0.2)
                 continue
             ip = addr[0]
+            oldest = None
             with self.lock:
-                busy = (not is_private_address(ip) or sum(self._handshakes.values()) >= MAX_HANDSHAKES
-                        or self._handshakes.get(ip, 0) >= MAX_HANDSHAKES_PER_ADDRESS)
+                busy = not is_private_address(ip) or self._handshakes.get(ip, 0) >= MAX_HANDSHAKES_PER_ADDRESS
+                if not busy and sum(self._handshakes.values()) >= MAX_HANDSHAKES and self._unproven:
+                    # All places taken by connections that haven't proven anything yet (maybe someone tying them
+                    # up from several addresses): the one that has had longest makes way, so a real phone, which
+                    # proves itself in well under a second, still gets in.
+                    oldest = min(self._unproven, key=self._unproven.get)
+                    self._unproven.pop(oldest, None)
                 if not busy:
                     self._handshakes[ip] = self._handshakes.get(ip, 0) + 1
+                    self._unproven[conn] = time.monotonic()
+            if oldest is not None:
+                try:
+                    oldest.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
             if busy:
                 conn.close()
                 continue
@@ -851,6 +864,8 @@ class PairServer:
             try:
                 sess = self._handshake(conn, ip)
             finally:
+                with self.lock:
+                    self._unproven.pop(conn, None)
                 self._done_handshake(ip)
             if sess is None:
                 return
