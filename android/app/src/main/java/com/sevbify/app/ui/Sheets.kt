@@ -157,6 +157,11 @@ private fun SongMenuSheet(m: SongMenu) {
                     }
                 }
             }
+            if (!t.isItem) {
+                val liked = Library.isLiked(t)
+                SheetItem(if (liked) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
+                          if (liked) "Remove from Liked Songs" else "Add to Liked Songs") { close(); Library.toggleLike(t) }
+            }
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
             if (t.source == "podcast") {
                 val saved = com.sevbify.app.Library.isSavedEpisode(t)

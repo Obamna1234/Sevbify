@@ -195,6 +195,12 @@ struct TrackMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     item("plus.circle", "Add to playlist") { choosing = true }
+                    if !track.isItem {
+                        let liked = lib.isLiked(track)
+                        item(liked ? "checkmark.circle.fill" : "heart", liked ? "Remove from Liked Songs" : "Add to Liked Songs") {
+                            lib.toggleLike(track); dismiss()
+                        }
+                    }
                     item("text.line.first.and.arrowtriangle.forward", "Play next") { player.playNext(track); dismiss() }
                     item("text.append", "Add to queue") { player.addToQueue(track); dismiss() }
                     if !lib.isDownloaded(track) && !track.isItem {

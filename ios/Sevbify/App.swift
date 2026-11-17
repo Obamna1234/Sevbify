@@ -229,6 +229,7 @@ extension View {
 struct MiniPlayer: View {
     @EnvironmentObject var player: Player
     @EnvironmentObject var nav: Nav
+    @EnvironmentObject var lib: Library
     var body: some View {
         if let t = player.current {
             VStack(spacing: 0) {
@@ -239,6 +240,13 @@ struct MiniPlayer: View {
                         Text(player.isPreview ? "Preview • \(t.artist)" : t.artist).font(.caption).foregroundColor(C.dim).lineLimit(1)
                     }
                     Spacer()
+                    if !t.isItem {
+                        let liked = lib.isLiked(t)
+                        Button { lib.toggleLike(t) } label: {
+                            Image(systemName: liked ? "checkmark.circle.fill" : "plus.circle").font(.title3)
+                                .foregroundColor(liked ? C.green : .white).frame(width: 40, height: 40)
+                        }.buttonStyle(.plain).accessibilityLabel(liked ? "Remove from Liked Songs" : "Add to Liked Songs")
+                    }
                     if player.loading { ProgressView().frame(width: 40, height: 40) }
                     else {
                         Button { player.toggle() } label: {

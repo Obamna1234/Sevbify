@@ -300,6 +300,17 @@ object Library {
     }
 
     // --- playlists ----------------------------------------------------------------------------------------
+    /** Liked Songs, like Spotify's (and the PC's): a playlist kept at the top of Your Library. */
+    val liked: Playlist? get() = playlists.firstOrNull { it.origin == "liked" }
+    fun isLiked(t: Track): Boolean = liked?.tracks?.any { it.matchKey == t.matchKey } == true
+    fun toggleLike(t: Track): Boolean {
+        val pl = liked ?: newPlaylist("Liked Songs").also { it.origin = "liked"; it.pinned = true }
+        val on = pl.tracks.none { it.matchKey == t.matchKey }
+        if (on) pl.tracks.add(0, t) else pl.tracks.removeAll { it.matchKey == t.matchKey }
+        changed()
+        return on
+    }
+
     fun newPlaylist(name: String? = null, tracks: List<Track> = emptyList()): Playlist {
         var n = playlists.size + 1
         var base = name?.trim().takeUnless { it.isNullOrEmpty() } ?: "My Playlist #$n"

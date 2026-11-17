@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
@@ -241,6 +243,13 @@ private fun MiniPlayer() {
             }
             IconButton(onClick = { Nav.connectOpen = true }) {
                 Icon(Icons.Filled.Devices, "Connect to a device", tint = if (AudioOutput.kind != "speaker") C.Green else C.Text)
+            }
+            if (!t.isItem) {
+                val liked = Library.changes.let { Library.isLiked(t) }
+                IconButton(onClick = { Nav.say(if (Library.toggleLike(t)) "Added to Liked Songs" else "Removed from Liked Songs") }) {
+                    Icon(if (liked) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
+                         if (liked) "Remove from Liked Songs" else "Add to Liked Songs", tint = if (liked) C.Green else C.Text)
+                }
             }
             IconButton(onClick = { Player.playPause() }) {
                 Icon(if (Player.showPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,

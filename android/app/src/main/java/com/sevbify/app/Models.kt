@@ -94,7 +94,7 @@ data class Playlist(
             tracks = (o.optJSONArray("tracks") ?: JSONArray()).tracks().toMutableList(),
             folder = o.optString("folder"), coverUrl = o.optString("cover_url"), created = o.optLong("created"),
             lastPlayed = o.optLong("last_played"), pinned = o.optBoolean("pinned"),
-            origin = o.optString("origin").takeIf { it in listOf("spotify", "apple", "deezer", "jamendo", "youtube", "link", "file") ||
+            origin = o.optString("origin").takeIf { it in listOf("spotify", "apple", "deezer", "jamendo", "youtube", "link", "file", "liked") ||
                                                    Regex("server:[0-9a-f]{12}").matches(it) } ?: "",
             description = o.optString("description").take(300),
         )

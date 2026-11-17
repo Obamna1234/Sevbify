@@ -153,6 +153,22 @@ final class Library: ObservableObject {
         return pl
     }
 
+    /// Liked Songs, like Spotify's (and the PC's and Android's): a pinned playlist at the top of Your Library.
+    func isLiked(_ t: Track) -> Bool { playlists.first { $0.origin == "liked" }?.tracks.contains { $0.matchKey == t.matchKey } ?? false }
+    @discardableResult
+    func toggleLike(_ t: Track) -> Bool {
+        let id = playlists.first { $0.origin == "liked" }?.id ?? {
+            let pl = newPlaylist("Liked Songs", origin: "liked")
+            update(pl.id) { $0.pinned = true }
+            return pl.id
+        }()
+        let on = !isLiked(t)
+        update(id) { pl in
+            if on { pl.tracks.insert(t.fresh(), at: 0) } else { pl.tracks.removeAll { $0.matchKey == t.matchKey } }
+        }
+        return on
+    }
+
     func index(of id: String) -> Int? { playlists.firstIndex { $0.id == id } }
     func playlist(_ id: String) -> Playlist? { playlists.first { $0.id == id } }
 
