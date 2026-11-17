@@ -43,9 +43,17 @@ class _Task(QRunnable):
             result = self.fn(*self.args, **self.kwargs)
         except Exception as e:  # reported to on_error
             e.__traceback_text__ = traceback.format_exc()
-            self.signals.failed.emit(e)
+            self._send("failed", e)
         else:
-            self.signals.done.emit(result)
+            self._send("done", result)
+
+    def _send(self, name, value):
+        # A background lookup can finish after Sevbify has started closing (a song looked up ahead, say): its
+        # answer is no longer wanted then, and Qt has already removed what would receive it. That's not an error.
+        try:
+            getattr(self.signals, name).emit(value)
+        except RuntimeError:
+            pass
 
 
 def _owner_alive(owner):

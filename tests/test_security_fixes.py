@@ -66,3 +66,12 @@ def test_log_hides_keys_in_bare_links():
     from core.activity_log import _short
     out = _short("api.example.com/v1/a?api_key=SECRET and token=abc and me@example.org")
     assert "SECRET" not in out and "abc" not in out and "me@example.org" not in out
+
+
+def test_a_lookup_finishing_while_closing_is_not_an_error(qapp):
+    from PyQt6 import sip
+    from ui.async_tasks import _Task
+    t = _Task(lambda: 42, (), {})
+    t.setAutoDelete(False)
+    sip.delete(t.signals)                       # what Qt does to it while the app closes
+    t.run()                                     # must not raise
