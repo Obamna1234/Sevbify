@@ -189,7 +189,7 @@ def main():
         shot("search_browse")
         tap("What do you want to listen to?")
         time.sleep(2)
-        sh("input text daft%spunk")
+        sh("input text monkeys%sspinning%smonkeys")   # openly licensed music only (Kevin MacLeod), song covers not people
         time.sleep(10)
         hide_keyboard()
         shot("search_results", 3)
@@ -278,9 +278,28 @@ def main():
             back()
     step("create", create_playlist)
 
+    def cc_album_link():
+        """A Deezer album of openly licensed music (Chris Zabriskie), looked up now (only CC music in screenshots)."""
+        import json as _json
+        import urllib.parse as _up
+        import urllib.request as _ur
+        try:
+            q = _up.quote("Chris Zabriskie")
+            with _ur.urlopen(f"https://api.deezer.com/search/album?q={q}&limit=10", timeout=20) as r:
+                data = _json.loads(r.read())
+            for a in data.get("data") or []:
+                if (a.get("artist") or {}).get("name", "").lower() == "chris zabriskie" and a.get("nb_tracks", 0) >= 5:
+                    return a["link"]
+        except Exception as e:
+            note(f"!! Deezer album lookup failed: {e}")
+        return ""
+
     def import_link():
+        link = cc_album_link()
+        if not link:
+            return
         sh(f"am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "
-           f"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M {PKG}")
+           f"{link} {PKG}")
         shot("import_from_share", 6)
         tap("Import", tries=2)
         shot("import_result", 20)

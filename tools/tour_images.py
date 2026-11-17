@@ -19,7 +19,7 @@ DESKTOP = {"search.jpg": ("search", False), "save.jpg": ("save-picker", False), 
            "support.jpg": ("support", True), "mini.jpg": ("mini-player", True),
            "private.jpg": ("private-session", False), "settings.jpg": ("settings", False)}
 ANDROID = {"search.jpg": "search_results", "save.jpg": "your_songs_menu", "import.jpg": "import_result",
-           "radio.jpg": "radio_page", "podcast.jpg": "podcast_show", "pair.jpg": "settings_computer",
+           "radio.jpg": "radio_page", "podcast.jpg": "audiobook_page", "pair.jpg": "settings_computer",
            "support.jpg": "support_sheet", "lyrics.jpg": "lyrics_card", "downloads.jpg": "download_choice",
            "settings.jpg": "settings_privacy"}
 IPHONE = {"search.jpg": "search", "library.jpg": "library", "now_playing.jpg": "now_playing",
@@ -47,7 +47,7 @@ def main(kind, folder):
         out, size, table = os.path.join(HERE, "ios", "Sevbify", "Tour"), (540, 1100), \
             {k: (v, False) for k, v in IPHONE.items()}
     os.makedirs(out, exist_ok=True)
-    backdrop = find(folder, "home") if kind == "desktop" else None
+    backdrop = find(folder, "liked-songs") if kind == "desktop" else None      # CC songs only (Home shows live charts)
     made = 0
     for pic, (name, dialog) in table.items():
         src = find(folder, name)

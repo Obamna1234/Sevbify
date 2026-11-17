@@ -77,6 +77,18 @@ music = os.path.join(DATA, "music")
 os.makedirs(music, exist_ok=True)
 w = MainWindow(audio_folder=music, data_dir=DATA, vlc_args=("--aout=adummy", "--no-video", "--quiet"))
 w.move(0, 0)
+# No photos of real people in the pictures (artist photos, Wikipedia portraits): those come back blank, so the app
+# shows its placeholder. Album covers stay.
+_real_get_image = w.net.get_image
+
+
+def _no_people(url, *a, **k):
+    if "/images/artist/" in str(url) or "wikimedia.org" in str(url) or "/avatars" in str(url):
+        raise OSError("no artist photos in showcase pictures")
+    return _real_get_image(url, *a, **k)
+
+
+w.net.get_image = _no_people
 w.user_data.auto_update_check = False
 w.user_data.download_notice_accepted = True
 w.offer_update = lambda r: None
@@ -105,7 +117,7 @@ def home():
 
 def search():
     w.show_search()
-    w.search_input.setText("Chris Zabriskie")
+    w.search_input.setText("Kevin MacLeod")
     wait(lambda: w.web_table.isVisible() and len(w.web_table.songs_in_view()) >= 5, 60)
     pump(12)
     state["songs"] = w.web_table.songs_in_view()
@@ -114,10 +126,10 @@ def search():
 
 def play():
     songs = state.get("songs") or []
-    hits = [s for s in songs if "candlepower" in s.title.lower()] or songs
+    hits = [s for s in songs if "monkeys spinning" in s.title.lower()] or songs
     song = hits[0]
     w.set_right_panel("nowplaying")
-    w.play_song(song, queue=songs[:20], source="Chris Zabriskie")
+    w.play_song(song, queue=songs[:20], source="Kevin MacLeod")
     wait(lambda: w._reached_playing, 120)
     pump(10)
     for s in songs[1:6]:
@@ -128,13 +140,13 @@ def play():
 
 
 def artist():
-    w.show_web_artist("Chris Zabriskie")
+    w.show_web_artist("Kevin MacLeod")
     pump(20)
     shot("artist")
 
 
 def album():
-    a = w.online.deezer.find_artist("Chris Zabriskie")
+    a = w.online.deezer.find_artist("Kevin MacLeod")
     albums = w.online.deezer.artist_albums(a.get("id")).get("albums") or []
     pick = albums[0]
     w.open_web_album(pick)
@@ -191,7 +203,7 @@ def radio():
 
 def preview_feed():
     songs = state.get("songs") or []
-    w.open_preview_feed(songs[:10], "Chris Zabriskie")
+    w.open_preview_feed(songs[:10], "Kevin MacLeod")
     pump(10)
     shot("preview-feed")
     feed = getattr(w, "_preview_feed", None)
@@ -201,11 +213,11 @@ def preview_feed():
 
 
 def podcast():
-    from core import podcasts
-    found = podcasts.search(w.net, "Huberman Lab", 5, "us")
-    w.open_show(found[0], follow=True)
-    wait(lambda: w._show_ctx and w._show_ctx["items"], 60)
-    pump(10)
+    # A public-domain audiobook (LibriVox via the Internet Archive): no real people's photos, nothing commercial.
+    from core import audiobooks
+    found = audiobooks.search(w.net, "Sherlock Holmes", 10)
+    w.open_book(found[0])
+    pump(20)
     shot("podcast")
 
 
@@ -290,7 +302,7 @@ def pair_dialog():
 def support_dialog():
     w._auto_answer_dialogs = []
     try:
-        d = w.support_artist("Chris Zabriskie", (state.get("songs") or [None])[0])
+        d = w.support_artist("Kevin MacLeod", (state.get("songs") or [None])[0])
         wait(lambda: d.links or not d.status.text().startswith("Looking"), 40)
         pump(2)
         shot("support", d)
