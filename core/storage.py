@@ -137,6 +137,7 @@ class UserData:
     fade_seconds: int = 0   # Settings: fade out/in between songs (0 = off)
     normalize: bool = False   # Settings: Volume levelling (core/loudness.py)
     mono: bool = False        # Settings: Mono audio (needs restart)
+    speed: float = 1.0        # podcast / audiobook playback speed
     eq_enabled: bool = False   # Settings: equaliser on
     eq_preset: str = 'Flat'   # equaliser preset name (or 'Custom')
     eq_bands: List[float] = field(default_factory=lambda: [0.0] * 10)   # 10 values in dB (-20..20)
@@ -298,6 +299,7 @@ class Storage:
                 "fade_seconds": data.fade_seconds,
                 "normalize": data.normalize,
                 "mono": bool(data.mono),
+                "speed": float(data.speed),
                 "eq_enabled": data.eq_enabled,
                 "eq_preset": data.eq_preset,
                 "eq_bands": list(data.eq_bands),
@@ -422,6 +424,8 @@ class Storage:
         try:
             data.normalize = bool(settings.get('normalize', False))
             data.mono = settings.get('mono') is True
+            sp = settings.get('speed', 1.0)
+            data.speed = max(0.5, min(3.0, float(sp))) if isinstance(sp, (int, float)) else 1.0
         except (TypeError, ValueError):
             pass
         try:

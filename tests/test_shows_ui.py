@@ -289,3 +289,17 @@ def test_your_episodes_save_open_remove_and_keep(win, qapp):
     win.save_episode(ep)
     win.storage.save(win.user_data)
     assert Storage(win.storage.data_dir).load().saved_episodes[0]["title"] == ep.title   # kept after a restart
+
+
+def test_podcast_speed_but_music_stays_normal(win, qapp, monkeypatch):
+    from core import podcasts
+    rates = []
+    monkeypatch.setattr(win.player, "set_rate", lambda r: rates.append(r))
+    win.open_show(podcasts.Show("Fin vs History", feed_url="https://feeds.example.com/fvh"))
+    assert wait_until(qapp, lambda: len(win._show_ctx["items"]) == 2)
+    win.current_song = win._show_ctx["items"][0]
+    win.set_speed(1.5)
+    assert rates[-1] == 1.5 and win.user_data.speed == 1.5
+    win.current_song = win.songs[0] if win.songs else None
+    win._apply_speed()
+    assert rates[-1] == 1.0                                                  # music: normal speed

@@ -1326,6 +1326,9 @@ class MainWindow(ShowsMixin, QMainWindow):
             menu.addAction("✕  Remove from this playlist").triggered.connect(
                 lambda: self.remove_from_playlist(playlist, row))
         self._add_sleep_timer_menu(menu)
+        if getattr(getattr(song, "track", None), "source", "") in ("podcast", "audiobook", "youtube") \
+                and getattr(song, "track", None) is not None and getattr(self.current_song, "key", None) == song.key:
+            self._add_speed_menu(menu)
 
         menu.addSeparator()
         play = menu.addAction("▶  Play")
@@ -1561,6 +1564,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         act(pb, "Volume Up", lambda: self.volume_slider.setValue(self.volume_slider.value() + 5), "Ctrl+Up")
         act(pb, "Volume Down", lambda: self.volume_slider.setValue(self.volume_slider.value() - 5), "Ctrl+Down")
         self._add_sleep_timer_menu(pb)
+        self._add_speed_menu(pb)
 
         h = sub("Help")
         act(h, "Help and questions (FAQ)", lambda: __import__("ui.help_faq", fromlist=["x"]).show(self), "F1")
@@ -1607,6 +1611,41 @@ class MainWindow(ShowsMixin, QMainWindow):
     # --- Sleep timer ---------------------------------------------------------------------------------------
     SLEEP_CHOICES = ((5, "5 minutes"), (10, "10 minutes"), (15, "15 minutes"), (30, "30 minutes"),
                      (45, "45 minutes"), (60, "1 hour"))
+
+    SPEEDS = (0.5, 0.8, 1.0, 1.2, 1.5, 1.75, 2.0, 3.0)
+
+    def _add_speed_menu(self, menu):
+        """Playback speed for podcasts and audiobooks (music always plays at normal speed), like Spotify's."""
+        sub = menu.addMenu(f"⏩  Playback speed ({self._speed_text(self.user_data.speed)})")
+        sub.setStyleSheet(MENU_STYLE)
+        for r in self.SPEEDS:
+            a = sub.addAction(self._speed_text(r))
+            a.setCheckable(True)
+            a.setChecked(abs(r - self.user_data.speed) < 1e-6)
+            a.triggered.connect(lambda _=False, r=r: self.set_speed(r))
+
+    @staticmethod
+    def _speed_text(r):
+        return f"{r:g}×"
+
+    def _is_talk(self, song):
+        return getattr(getattr(song, "track", None), "source", "") in ("podcast", "audiobook") or (
+            getattr(getattr(song, "track", None), "source", "") == "youtube" and bool(item_key(song))
+            and any(getattr(s, "key", None) == getattr(song, "key", None) for s in (getattr(self, "_show_ctx", None) or {}).get("items", [])))
+
+    def set_speed(self, rate):
+        self.user_data.speed = max(0.5, min(3.0, float(rate)))
+        self.schedule_save()
+        self._apply_speed()
+        self.show_status(f"Podcasts and audiobooks play at {self._speed_text(self.user_data.speed)}", kind="info",
+                         timeout_ms=3000)
+
+    def _apply_speed(self):
+        try:
+            rate = self.user_data.speed if self._is_talk(self.current_song) else 1.0
+            self.player.set_rate(rate)
+        except Exception as e:
+            print(f"Speed error: {e}")
 
     def _add_sleep_timer_menu(self, menu):
         sub = menu.addMenu("☾  Sleep timer")
@@ -5151,6 +5190,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
             self._apply_volume()
+            self._apply_speed()
         except Exception as e:
             self._track_handled = True
             self._handle_failed_track(f"playback error: {e}")
