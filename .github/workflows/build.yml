@@ -255,12 +255,37 @@ jobs:
           case "${{ runner.os }}" in
             Windows) cp README.md CHANGELOG.md dist/Sevbify/
                      pwsh -Command 'Compress-Archive -Path "dist\Sevbify" -DestinationPath "Sevbify-Windows.zip"' ;;
-            macOS)   ditto -c -k --keepParent dist/Sevbify.app Sevbify-macOS.zip ;;
+            macOS)   ditto -c -k --keepParent dist/Sevbify.app Sevbify-macOS.zip
+                     # A disk image too: open it and drag Sevbify onto Applications (uninstall = drag it to the Bin).
+                     mkdir -p dmg && cp -R dist/Sevbify.app dmg/ && ln -s /Applications dmg/Applications
+                     hdiutil create -volname Sevbify -srcfolder dmg -ov -format UDZO Sevbify-macOS.dmg ;;
             Linux)   cp README.md CHANGELOG.md packaging/sevbify.desktop packaging/install.sh dist/Sevbify/
                      cp assets/branding/sevbify_256.png dist/Sevbify/sevbify.png
                      tar czf Sevbify-Linux.tar.gz -C dist Sevbify ;;
           esac
           ls -la Sevbify-*
+
+      - name: Make the Windows installer (Setup.exe with an uninstaller)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $v = (Get-Content VERSION -Raw).Trim()
+          & $iscc "/DAppVersion=$v" packaging\sevbify.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+          # Check it: install silently into a temporary folder, run the installed app's smoke test, uninstall.
+          $dir = Join-Path $env:RUNNER_TEMP "SevbifyInstalled"
+          $p = Start-Process -FilePath ".\Sevbify-Windows-Setup.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=`"$dir`"" -PassThru -Wait
+          if ($p.ExitCode -ne 0 -or -not (Test-Path "$dir\Sevbify.exe")) { throw "Installer didn't install (exit $($p.ExitCode))" }
+          $s = Start-Process -FilePath "$dir\Sevbify.exe" -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($s.ExitCode -ne 0) { throw "The installed app's smoke test failed" }
+          $u = Get-ChildItem $dir -Filter "unins*.exe" | Select-Object -First 1
+          $q = Start-Process -FilePath $u.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path "$dir\Sevbify.exe") { throw "The uninstaller left the app behind" }
+          Write-Host "Installer, installed app and uninstaller all OK"
+          Get-Item Sevbify-Windows-Setup.exe | Format-List Name, Length
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -268,6 +293,8 @@ jobs:
           path: |
             Sevbify-*.zip
             Sevbify-*.tar.gz
+            Sevbify-*.exe
+            Sevbify-*.dmg
           retention-days: 30
 
   android:
@@ -535,6 +562,8 @@ jobs:
           files: |
             artifacts/Sevbify-*.zip
             artifacts/Sevbify-*.tar.gz
+            artifacts/Sevbify-*.exe
+            artifacts/Sevbify-*.dmg
             artifacts/Sevbify-*.apk
             artifacts/Sevbify-*.ipa
       - name: Update the AltStore / SideStore source (iPhone updates)
