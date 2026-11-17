@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 
 from . import theme
 from .widgets import ToggleSwitch, EqualizerCurve, ZoomPreview
-from core.audio_settings import BAND_LABELS
+from core.audio_settings import BAND_LABELS, band_labels
 
 RESTART_KEYS = ("zoom", "normalize", "proxy_mode", "proxy_url", "hw_accel", "language")
 SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
@@ -44,6 +44,14 @@ QSlider::sub-page:vertical {{ background: #4d4d4d; border-radius: 2px; }}
 QSlider::add-page:vertical {{ background: {theme.GREEN}; border-radius: 2px; }}
 QSlider::handle:vertical {{ background: white; height: 12px; width: 12px; margin: 0 -4px; border-radius: 6px; }}
 """
+
+
+def _vlc_band_labels():
+    try:
+        import vlc
+        return band_labels(vlc)
+    except Exception:
+        return BAND_LABELS
 
 
 class SettingsPage(QWidget):
@@ -494,7 +502,7 @@ class SettingsPage(QWidget):
                               else self._eq_set([0.0] * 10, "Custom"))
         top.addWidget(reset)
         pv.addLayout(top)
-        self.eq_curve = EqualizerCurve(u.eq_bands, BAND_LABELS)
+        self.eq_curve = EqualizerCurve(u.eq_bands, _vlc_band_labels())
         self.eq_curve.setEnabled(bool(u.eq_enabled))
         self.eq_curve.released.connect(self._eq_curve_released)
         self.eq_curve.changed.connect(lambda bands: self.eq_preview.emit([float(b) for b in bands]))

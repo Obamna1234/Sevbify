@@ -1,5 +1,19 @@
 """Equaliser and fade helpers for VLC playback (no UI code)."""
-BAND_LABELS = ("60 Hz", "170 Hz", "310 Hz", "600 Hz", "1 kHz", "3 kHz", "6 kHz", "12 kHz", "14 kHz", "16 kHz")
+# The 10 bands VLC's equaliser really uses (libvlc_audio_equalizer_get_band_frequency). The labels used to be an
+# older VLC band list (60 Hz, 170 Hz, ...), so a dot labelled "1 kHz" moved the 500 Hz band and seemed to do nothing.
+BAND_LABELS = ("31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz")
+
+
+def band_labels(vlc):
+    """Labels for the bands this VLC uses (its own frequencies), or the usual ones."""
+    try:
+        out = []
+        for i in range(vlc.libvlc_audio_equalizer_get_band_count()):
+            f = float(vlc.libvlc_audio_equalizer_get_band_frequency(i))
+            out.append(f"{f / 1000:g} kHz" if f >= 1000 else f"{int(round(f))} Hz")
+        return tuple(out) if len(out) == 10 else BAND_LABELS
+    except Exception:
+        return BAND_LABELS
 
 
 def presets(vlc):
