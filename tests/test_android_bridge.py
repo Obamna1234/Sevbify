@@ -70,3 +70,16 @@ def test_bridge_book_chapters_and_quality(bridge, monkeypatch):
     book = audiobooks.Book(identifier="x", title="A Book")
     got = call(bridge, "book_chapters", json.dumps(book.to_dict()), "high")
     assert [t["title"] for t in got] == ["Chapter 1"] and seen["quality"] == "high"
+
+
+def test_bridge_opens_shared_playlists_and_blends(bridge):
+    from core import share_playlist as SP
+    link = call(bridge, "share_link", "Road trip", json.dumps([{"title": "Siesta", "artist": "Jahzzar"}]))
+    got = call(bridge, "import_link", "Here: " + link)
+    assert got["shared"] == "playlist" and got["name"] == "Road trip" and got["tracks"][0]["title"] == "Siesta"
+    taste = SP.taste_link([["Jahzzar", "Siesta", 1]], "Sam")
+    got = call(bridge, "import_link", taste, "", "", False, json.dumps([["Kevin MacLeod", "Sneaky Snitch", 1]]))
+    assert got["shared"] == "blend" and got["name"] == "You + Sam" and len(got["tracks"]) == 2
+    assert call(bridge, "taste_link", json.dumps([["A", "B", 1]])).startswith("sevbify://taste#")
+    bad = json.loads(bridge.import_link("sevbify://playlist#v1.%%%"))
+    assert not bad["ok"]

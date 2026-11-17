@@ -113,7 +113,10 @@ class MainActivity : ComponentActivity() {
         when (intent.action) {
             // "Open with ▸ Sevbify" on an audio file in a file manager.
             Intent.ACTION_VIEW -> intent.data?.let { uri ->
-                if (uri.scheme == "sevbify") {
+                if (uri.scheme == "sevbify" && (uri.host == "playlist" || uri.host == "taste")) {
+                    Nav.tab = Tab.LIBRARY
+                    Nav.go(Screen.Import(uri.toString().take(400_000)))     // shown first; nothing added yet
+                } else if (uri.scheme == "sevbify") {
                     // A pairing QR code scanned with the phone's camera: ask first ("Pair with <computer>?").
                     val code = PairLink.parse(uri.toString())
                     if (code != null) { PairLink.pendingCode = code } else com.sevbify.app.ui.Nav.say("That pairing code isn't valid")

@@ -75,6 +75,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sevbify" android:host="pair" />
             </intent-filter>
+            <!-- A playlist or Blend taste a friend shared (sevbify://playlist#… / sevbify://taste#…): opens Import with
+                 it filled in, so you see what's in it before anything is added. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sevbify" android:host="playlist" />
+                <data android:scheme="sevbify" android:host="taste" />
+            </intent-filter>
             <!-- "Share ▸ Sevbify" on an audio file. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

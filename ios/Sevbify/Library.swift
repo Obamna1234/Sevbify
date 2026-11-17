@@ -176,6 +176,7 @@ final class Library: ObservableObject {
     }
 
     func addRecent(_ t: Track) {
+        Listens.record(t)
         recent.removeAll { $0.matchKey == t.matchKey }
         recent.insert(t, at: 0)
         if recent.count > 50 { recent.removeLast(recent.count - 50) }

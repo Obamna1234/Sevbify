@@ -51,6 +51,12 @@ fun ImportScreen(start: String) {
               "under To download. Your Spotify account is never signed in to.")
         OutlinedTextField(link, { link = it }, singleLine = true, placeholder = { Text(tr("https://open.spotify.com/playlist/…")) },
                           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+        if (link.startsWith("sevbify://")) {
+            Muted(if (link.startsWith("sevbify://taste"))
+                "A friend's taste for a Blend: Import makes a playlist mixing your favourites and theirs. Nothing is sent anywhere."
+                else "A playlist a friend shared: Import adds it (or, if you have one with the same name, adds the songs you " +
+                     "don't have yet). Nothing plays or downloads by itself.")
+        }
         if ("jamendo.com" in link.lowercase()) {
             var jid by remember { mutableStateOf(Library.settings.jamendoId) }
             Muted(tr("Jamendo needs a free client ID (make one at devportal.jamendo.com). It's kept on this phone only."))
@@ -66,8 +72,22 @@ fun ImportScreen(start: String) {
             busy = true
             scope.launch {
                 try {
-                    val o = Bridge.obj("import_link", link, songs, Library.settings.jamendoId, Library.settings.spotifyFull)
+                    val o = Bridge.obj("import_link", link, songs, Library.settings.jamendoId, Library.settings.spotifyFull,
+                                       Library.listensJson())
                     val tracks = o.getJSONArray("tracks").tracks()
+                    // A shared playlist with the name of one you have: merge (add the songs you don't have).
+                    val same = if (o.optString("shared") == "playlist")
+                        Library.playlists.firstOrNull { it.name == o.optString("name") } else null
+                    if (same != null) {
+                        val have = same.tracks.map { it.matchKey }.toSet()
+                        val add = tracks.filter { it.matchKey !in have }
+                        same.tracks.addAll(add)
+                        Library.changed()
+                        Nav.back(); Nav.go(Screen.PlaylistPage(same.id))
+                        Nav.say(if (add.isEmpty()) "You already have every song in “${same.name}”"
+                                else "Added ${add.size} songs to “${same.name}”")
+                        return@launch
+                    }
                     val pl = Library.newPlaylist(o.optString("name", "Imported playlist"), tracks)
                     pl.coverUrl = o.optString("cover_url")
                     pl.origin = o.optString("origin", "spotify")

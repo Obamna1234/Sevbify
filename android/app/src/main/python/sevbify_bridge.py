@@ -271,8 +271,10 @@ def download_url(url, path):
 
 # --- importing ----------------------------------------------------------------------------------------------
 @_call
-def import_link(text, song_links="", jamendo_client_id="", spotify_full=False):
+def import_link(text, song_links="", jamendo_client_id="", spotify_full=False, listens_json="[]"):
     from core import importers
+    if "sevbify://" in (text or "") or (text or "").lstrip().startswith("{"):
+        return _open_shared(text, listens_json)
     head = None
     if importers.parse_link(text) is not None:
         try:
@@ -290,6 +292,46 @@ def import_link(text, song_links="", jamendo_client_id="", spotify_full=False):
     head["tracks"] = _tracks(head["tracks"])
     head["origin"] = importers.origin_of(text)
     return head
+
+
+def _open_shared(text, listens_json="[]"):
+    """A playlist or taste a friend shared (core/share_playlist.py): read strictly, nothing looked up or opened."""
+    from core import share_playlist as SP
+    from core.online.models import OnlineTrack
+    try:
+        got = SP.read(text)
+    except SP.ShareError as e:
+        raise ValueError(str(e))
+    if got["type"] == "taste":
+        try:
+            listens = [x for x in json.loads(listens_json or "[]") if isinstance(x, list)][-5000:]
+        except ValueError:
+            listens = []
+        b = SP.blend(listens, got)
+        name, songs, kind = b["name"], b["songs"], "blend"
+    else:
+        name, songs, kind = got["name"], got["songs"], "playlist"
+    tracks = [OnlineTrack(title=s["title"], artist=s["artist"], album=s.get("album", ""),
+                          duration_ms=s.get("duration_ms", 0), source=s.get("source", ""), page_url=s.get("page_url", ""))
+              for s in songs]
+    return {"name": name, "cover_url": "", "tracks": _tracks(tracks), "origin": "file", "shared": kind,
+            "truncated": False, "chosic_url": ""}
+
+
+@_call
+def share_link(name, tracks_json, description=""):
+    """A sevbify://playlist link holding this playlist (only song names and their public links)."""
+    from core import share_playlist as SP
+    songs = [t for t in json.loads(tracks_json or "[]") if isinstance(t, dict)]
+    return SP.playlist_link(name, songs, description)
+
+
+@_call
+def taste_link(listens_json="[]", nickname=""):
+    """Blend: your top artists and songs as a link (no dates, nothing else)."""
+    from core import share_playlist as SP
+    listens = [x for x in json.loads(listens_json or "[]") if isinstance(x, list)][-5000:]
+    return SP.taste_link(listens, nickname)
 
 
 # --- your own music servers (Jellyfin, Nextcloud / WebDAV) ------------------------------------------------------

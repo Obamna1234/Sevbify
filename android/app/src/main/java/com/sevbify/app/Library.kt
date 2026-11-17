@@ -207,6 +207,13 @@ object Library {
         finished.clear()
         o.optJSONArray("finished")?.let { a -> for (i in 0 until a.length()) finished.add(a.getString(i)) }
         Hidden.load(o.optJSONObject("hidden"))
+        listens.clear()
+        o.optJSONArray("listens")?.let { a ->
+            for (i in maxOf(0, a.length() - 5000) until a.length()) {
+                val r = a.optJSONArray(i) ?: continue
+                if (r.length() >= 3) listens.add(Triple(r.optString(0).take(200), r.optString(1).take(300), r.optLong(2)))
+            }
+        }
     }
 
     private var saveJob: kotlinx.coroutines.Job? = null
@@ -245,6 +252,7 @@ object Library {
             put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
             put("hidden", Hidden.toJson())
+            put("listens", JSONArray(listensJson()))
         }
         val text = o.toString()
         // Written on a background thread (one at a time, in order) so the screen never waits for the disk.
@@ -341,8 +349,18 @@ object Library {
         return playlists.flatMap { it.tracks }.filter { !it.isLocal && !it.isItem && localFor(it) == null && seen.add(it.matchKey) }
     }
 
+    /** What you've played ([artist, title, time]), on this phone only: for Blend (and Wrapped). Last 5000. */
+    val listens = mutableListOf<Triple<String, String, Long>>()
+
+    fun listensJson(): String = JSONArray().also { a ->
+        listens.forEach { (ar, ti, at) -> a.put(JSONArray().put(ar).put(ti).put(at)) } }.toString()
+
     fun played(t: Track) {
         if (privateSession) return
+        if (!t.isItem) {
+            listens.add(Triple(t.artist.take(200), t.title.take(300), System.currentTimeMillis() / 1000))
+            while (listens.size > 5000) listens.removeAt(0)
+        }
         recent.removeAll { it.matchKey == t.matchKey }
         recent.add(0, t)
         while (recent.size > 50) recent.removeAt(recent.size - 1)

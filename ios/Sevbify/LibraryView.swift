@@ -66,6 +66,7 @@ struct LibraryView: View {
                 Menu {
                     Button { newName = ""; creating = true } label: { Label("Playlist", systemImage: "music.note.list") }
                     Button { nav.go(.importLink) } label: { Label("Import a playlist", systemImage: "link") }
+                    Button { Sharing.shared.shareTaste() } label: { Label("Blend with a friend", systemImage: "person.2") }
                 } label: { Image(systemName: "plus").font(.title3) }.accessibilityLabel("Create")
             }
             ToolbarItem(placement: .navigationBarLeading) {
@@ -173,6 +174,9 @@ struct PlaylistPage: View {
                             Button { lib.update(id) { $0.pinned.toggle() } } label: {
                                 Label(pl.pinned ? "Unpin" : "Pin", systemImage: "pin")
                             }
+                            Button { Sharing.shared.sharePlaylist(pl) } label: {
+                                Label("Share with a friend", systemImage: "square.and.arrow.up")
+                            }
                             Button(role: .destructive) { lib.delete(id); nav.library = NavigationPath() } label: {
                                 Label("Delete playlist", systemImage: "trash")
                             }
@@ -269,6 +273,9 @@ struct ImportView: View {
         } message: { Text("Then every song is checked, so a spelling mistake can be fixed before you stream or download it.") }
         .scrollContentBackground(.hidden).background(C.bg.ignoresSafeArea())
         .navigationTitle("Import a playlist")
+        .onAppear {                                       // a shared sevbify:// link opened from another app
+            if !Sharing.shared.pending.isEmpty { link = Sharing.shared.pending; Sharing.shared.pending = "" }
+        }
     }
 
     /// Copies the picked file under its own name (it becomes the playlist's name), reads it with the shared core.
@@ -318,8 +325,19 @@ struct ImportView: View {
         busy = true
         Task {
             do {
-                let o = try await Bridge.object("import_link", [link, songs, lib.settings.jamendoId, lib.settings.spotifyFull])
+                let o = try await Bridge.object("import_link", [link, songs, lib.settings.jamendoId, lib.settings.spotifyFull,
+                                                                Listens.json()])
                 let tracks = (o["tracks"] as? [[String: Any]] ?? []).map(Track.init(dict:))
+                // A shared playlist with the name of one you have: add the songs you don't have yet.
+                if o["shared"] as? String == "playlist", let same = lib.playlists.first(where: { $0.name == o["name"] as? String }) {
+                    let have = Set(same.tracks.map(\.matchKey))
+                    let add = tracks.filter { !have.contains($0.matchKey) }
+                    lib.update(same.id) { $0.tracks.append(contentsOf: add) }
+                    player.status = add.isEmpty ? "You already have every song in “\(same.name)”" : "Added \(add.count) songs to “\(same.name)”"
+                    nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(same.id))
+                    busy = false
+                    return
+                }
                 var pl = lib.newPlaylist(o["name"] as? String ?? "Imported playlist", tracks: tracks,
                                          origin: o["origin"] as? String ?? "spotify")
                 pl.coverUrl = o["cover_url"] as? String ?? ""

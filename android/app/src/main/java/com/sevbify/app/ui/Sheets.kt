@@ -72,6 +72,23 @@ fun Sheets() {
     Nav.previewFor?.let { PreviewDialog(it) }
 }
 
+/** Hand text (a shared playlist or taste link) to Android's share sheet: the user picks the app and person. */
+fun shareText(context: android.content.Context, text: String) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+        .putExtra(android.content.Intent.EXTRA_TEXT, text)
+    context.startActivity(android.content.Intent.createChooser(send, "Share").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+/** Blend: send your taste (top artists and songs, no dates) to a friend. */
+fun shareTaste(context: android.content.Context) {
+    com.sevbify.app.SevbifyApp.instance.scope.launch {
+        try {
+            val link = com.sevbify.app.Bridge.call("taste_link", com.sevbify.app.Library.listensJson()) as? String ?: return@launch
+            shareText(context, "Let's make a Blend in Sevbify (paste this in Import a playlist, then send me yours):\n$link")
+        } catch (e: Exception) { Nav.say("⚠ Couldn't make the link: ${e.message}") }
+    }
+}
+
 /** After hiding something: the first time, a note on where to undo it; after that, a short message. */
 fun hideNote(on: Boolean) {
     if (on && !com.sevbify.app.Library.settings.hideNoteSeen) Nav.hideNoteOpen = true
@@ -178,6 +195,17 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
                 SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}",
                           enabled = mine.isNotEmpty()) { close(); com.sevbify.app.PairLink.send(mine, pl.name) }
             }
+            val context = androidx.compose.ui.platform.LocalContext.current
+            SheetItem(Icons.Filled.Share, "Share with a friend") {
+                close()
+                com.sevbify.app.SevbifyApp.instance.scope.launch {
+                    try {
+                        val tracks = org.json.JSONArray().also { a -> pl.tracks.forEach { a.put(it.toJson()) } }
+                        val link = com.sevbify.app.Bridge.call("share_link", pl.name, tracks.toString()) as? String ?: return@launch
+                        shareText(context, "Here's my playlist “${pl.name}” for Sevbify (paste it in Import a playlist):\n$link")
+                    } catch (e: Exception) { Nav.say("⚠ Couldn't make the link: ${e.message}") }
+                }
+            }
             SheetItem(Icons.Filled.Edit, tr("Edit details")) { close(); askName(pl.name) { Library.rename(pl, it) } }
             SheetItem(Icons.Filled.Delete, tr("Delete playlist")) {
                 close()
@@ -272,6 +300,8 @@ fun CreateSheet(onClose: () -> Unit) {
             }
             SheetItem(Icons.Filled.Folder, tr("Folder")) { onClose(); Nav.tab = Tab.LIBRARY; askNewFolder() }
             SheetItem(Icons.Filled.Link, tr("Import a playlist")) { onClose(); Nav.tab = Tab.LIBRARY; Nav.go(Screen.Import()) }
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            SheetItem(Icons.Filled.Share, "Blend with a friend") { onClose(); shareTaste(ctx) }
         }
     }
 }

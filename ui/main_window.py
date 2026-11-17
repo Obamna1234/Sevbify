@@ -1495,6 +1495,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         act(f, "New Playlist", self.new_playlist, "Ctrl+N")
         act(f, "New Playlist Folder", self.create_folder, "Ctrl+Shift+N")
         act(f, "Import playlist…", self.import_playlist_dialog)
+        act(f, "Blend with a friend (copy your taste link)", self.share_taste)
         act(f, "Add music folder…", self._choose_music_folder)
         f.addSeparator()
         act(f, "Private Session", lambda: self.apply_settings({"private_session": not self.private_session}),
@@ -3669,7 +3670,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         def pick():
             path, _ = QFileDialog.getOpenFileName(d, "Import a playlist file", os.path.expanduser("~"),
-                                                  "Playlists (*.csv *.txt *.m3u *.m3u8)")
+                                                  "Playlists (*.csv *.txt *.m3u *.m3u8 *.sevbify)")
             if path:
                 d.done(2)
                 self.import_from_file(path, ask_name=True)
@@ -3682,6 +3683,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
     def import_from_link(self, text, song_links=""):
         """A playlist / album link, and/or Spotify song links copied from the Spotify app (all songs, in order)."""
+        if "sevbify://" in (text or "") or (text or "").lstrip().startswith("{"):
+            return self.open_shared(text)                    # a shared Sevbify playlist / taste (no server, no lookup)
         from core import importers
         ids = importers.parse_track_links(song_links) or (importers.parse_track_links(text)
                                                           if importers.parse_link(text) is None else [])
@@ -3930,6 +3933,15 @@ class MainWindow(ShowsMixin, QMainWindow):
         """A playlist file: you name it (the file's name is filled in), then every song is checked online so a
         spelling mistake can be fixed before you stream or download it."""
         from core import importers
+        if path.lower().endswith(".sevbify"):                # a playlist or taste a friend shared
+            try:
+                if os.path.getsize(path) > 3_000_000:
+                    raise OSError("too big for a shared playlist")
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    return self.open_shared(f.read())
+            except OSError as e:
+                self.show_status(f"⚠ Couldn't read {os.path.basename(path)}: {e}", 10000)
+                return None
         try:
             result = importers.read_playlist_file(path)
         except OSError as e:
@@ -4218,6 +4230,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             menu.addAction("Use song covers").triggered.connect(lambda: self.set_playlist_cover(playlist, ""))
         share = menu.addMenu("⇪  Share and export")
         share.setStyleSheet(MENU_STYLE)
+        share.addAction("Share with a friend (link or file)…").triggered.connect(lambda: self.share_playlist(playlist))
         share.addAction("Export playlist file (.m3u8)…").triggered.connect(lambda: self.export_playlist_file(playlist))
         share.addAction("Copy songs to a folder or phone…").triggered.connect(lambda: self.copy_playlist_songs(playlist))
         share.addAction("Copy song list (Artist - Title)").triggered.connect(
@@ -5797,6 +5810,130 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._add_sleep_timer_menu(menu)
         menu.addAction("ⓘ  View credits").triggered.connect(lambda: self.show_credits(song))
         menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
+
+    # --- Collaborative playlists and Blend (core/share_playlist.py): links and files, no server ----------------
+    def share_playlist(self, playlist):
+        """Share this playlist as a link (to paste in any messaging app) or a small file."""
+        from core import share_playlist as SP
+        from .dialogs import _Card
+        link = SP.playlist_link(playlist.name, playlist.songs, getattr(playlist, "description", "") or "")
+        d = _Card(self, light=False)
+        d.setMinimumWidth(520)
+        h = QLabel(f"Share “{playlist.name}”")
+        h.setTextFormat(Qt.TextFormat.PlainText)
+        h.setStyleSheet("font-size: 22px; font-weight: 800;")
+        d.body.addWidget(h)
+        t = QLabel("Send this link in any messaging app (or save it as a file). It holds only the playlist: names of "
+                   "the songs and their public links, nothing about you, and it's stored nowhere else. Your friend opens "
+                   "it in Sevbify (Import a playlist → paste), adds songs, and sends theirs back: you merge it in.")
+        t.setWordWrap(True)
+        t.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px;")
+        d.body.addWidget(t)
+        box = QLineEdit(link)
+        box.setReadOnly(True)
+        d.body.addWidget(box)
+        size = QLabel(f"{len(playlist.songs)} songs · {len(link):,} characters"
+                      + (" (long: some apps cut long messages, so a file may be safer)" if len(link) > 30000 else ""))
+        size.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
+        d.body.addWidget(size)
+        row = QHBoxLayout()
+        copy = QPushButton("Copy link")
+        copy.setStyleSheet(GREEN_BUTTON)
+        copy.clicked.connect(lambda: (QApplication.clipboard().setText(link), copy.setText("Copied")))
+        save = QPushButton("Save as file…")
+        save.setStyleSheet(PILL_BUTTON)
+
+        def save_file():
+            path, _ = QFileDialog.getSaveFileName(d, "Save playlist", os.path.join(os.path.expanduser("~"),
+                                                  "".join("_" if c in '\\/:*?"<>|' else c for c in playlist.name) + ".sevbify"),
+                                                  "Sevbify playlist (*.sevbify)")
+            if path:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(SP.playlist_file_text(playlist.name, playlist.songs))
+                save.setText("Saved")
+        save.clicked.connect(save_file)
+        close = QPushButton("Close")
+        close.setStyleSheet(PILL_BUTTON)
+        close.clicked.connect(d.accept)
+        row.addWidget(copy)
+        row.addWidget(save)
+        row.addStretch()
+        row.addWidget(close)
+        d.body.addLayout(row)
+        if getattr(self, "_auto_answer_dialogs", None) is not None:      # tests
+            d.show()
+            return d, link
+        d.exec()
+        d.deleteLater()
+        return None, link
+
+    def open_shared(self, text):
+        """A shared playlist or taste (link or file). Shows what's in it first; nothing plays or opens by itself."""
+        from core import share_playlist as SP
+        from core.online.models import OnlineTrack
+        from .dialogs import confirm
+        try:
+            got = SP.read(text)
+        except SP.ShareError as e:
+            self.show_status(f"⚠ {e}", 8000)
+            return None
+        if got["type"] == "taste":
+            return self.make_blend(got)
+        songs = got["songs"]
+        if not songs:
+            self.show_status("⚠ That shared playlist has no songs.", 6000)
+            return None
+        tracks = [OnlineTrack(title=s["title"], artist=s["artist"], album=s["album"], duration_ms=s["duration_ms"],
+                              source=s["source"], page_url=s["page_url"]) for s in songs]
+        mine = next((p for p in self.playlists if p.name == got["name"]), None)
+        if mine is not None:
+            m = SP.merge(mine.songs, songs)
+            text_ = (f"<b>{len(m['add'])}</b> of its {len(songs)} songs aren't in your “{_html.escape(mine.name)}” yet. "
+                     "Add them to yours?"
+                     + (f"<br><br>Their copy doesn't have {len(m['missing'])} of your songs; yours are kept."
+                        if m["missing"] else ""))
+            if m["add"] and confirm(self, "Merge shared playlist?", text_, ok_text="Add them"):
+                add = {SP._key(s["artist"], s["title"]) for s in m["add"]}
+                mine.songs.extend(RemoteSong(t) for t in tracks if SP._key(t.artist, t.title) in add)
+                self._fill_pending_slots()
+                self._playlists_changed(mine)
+                self.show_playlist(mine)
+                self.show_status(f"Added {len(m['add'])} songs to “{mine.name}”", kind="info")
+                return mine
+            if not m["add"]:
+                self.show_status(f"You already have every song in “{mine.name}”.", kind="info")
+                return mine
+            return None
+        if not confirm(self, "Add shared playlist?",
+                       f"<b>{_html.escape(got['name'])}</b> · {len(songs)} songs. It's added to Your Library; songs "
+                       "stream when you play them and nothing downloads by itself.", ok_text="Add playlist"):
+            return None
+        return self._create_imported_playlist(got["name"], [("track", t) for t in tracks], origin="file", enrich=False)
+
+    def share_taste(self):
+        """Blend: send your taste (top artists and songs, no dates) to a friend."""
+        from core import share_playlist as SP
+        link = SP.taste_link(self.taste_listens())
+        QApplication.clipboard().setText(link)
+        self.show_status("Your taste link is copied: send it to a friend. They open it in Sevbify (Import a playlist → "
+                         "paste) to make a Blend, and send theirs back for yours. It holds only your top artists and "
+                         "songs.", kind="info", timeout_ms=12000)
+        return link
+
+    def make_blend(self, their_taste):
+        from core import share_playlist as SP
+        from core.online.models import OnlineTrack
+        from .dialogs import confirm
+        b = SP.blend(self.taste_listens(), their_taste)
+        if not b["songs"]:
+            self.show_status("⚠ Not enough listening yet to make a Blend.", 6000)
+            return None
+        if not confirm(self, "Make a Blend?",
+                       f"<b>{_html.escape(b['name'])}</b>: {len(b['songs'])} songs from both your tastes"
+                       + (f", {b['together']} you both love" if b["together"] else "") + ".", ok_text="Make Blend"):
+            return None
+        tracks = [OnlineTrack(title=s["title"], artist=s["artist"]) for s in b["songs"]]
+        return self._create_imported_playlist(b["name"], [("track", t) for t in tracks], origin="file", enrich=False)
 
     def show_credits(self, song):
         """Song credits (MusicBrainz, core/credits.py) in a small card."""

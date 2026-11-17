@@ -693,7 +693,8 @@ struct PairDialogs: ViewModifier {
                 }
             }
             .onOpenURL { url in
-                if url.scheme == "sevbify", let code = PairLink.parse(url.absoluteString) { link.pendingCode = code }
+                if url.scheme == "sevbify", url.host == "playlist" || url.host == "taste" { Sharing.shared.open(url) }
+                else if url.scheme == "sevbify", let code = PairLink.parse(url.absoluteString) { link.pendingCode = code }
             }
     }
 }
