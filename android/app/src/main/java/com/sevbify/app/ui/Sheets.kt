@@ -163,7 +163,7 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
                 if (t.isItem) SheetItem(Icons.Filled.Speed, "Playback speed: ${p.speed.toString().removeSuffix(".0")}×") {
                     val steps = listOf(0.8f, 1f, 1.2f, 1.5f, 1.75f, 2f)
-                    p.setSpeed(steps[(steps.indexOf(p.speed).let { if (it < 0) 0 else it } + 1) % steps.size])
+                    p.changeSpeed(steps[(steps.indexOf(p.speed).let { if (it < 0) 0 else it } + 1) % steps.size])
                 }
             }
             if (!t.isItem && t.artist.isNotBlank() && t.artist != "Unknown Artist")

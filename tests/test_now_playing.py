@@ -62,7 +62,8 @@ def test_artist_card_filled_from_online(window, qapp, tmp_path):
     window._artist_cards.clear()
     window.songs[0].artist = "Mega Drive"
     window.set_right_panel("nowplaying")
-    window.play_song(window.songs[0], queue=window.songs)
+    window.play_song(window.songs[0], queue=[window.songs[0]])      # one song: the 1-second test file can't move on
+    window.pq.repeat = "one"
     p = window.now_playing_panel
     assert wait_until(qapp, lambda: "Mega Drive" == p.card_name.text(), timeout=25)   # slow test Macs
     assert "85,860 fans on Deezer" in p.card_stats.text() and "123,456 listeners" in p.card_stats.text()

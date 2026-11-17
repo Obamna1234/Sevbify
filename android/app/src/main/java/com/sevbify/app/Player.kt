@@ -553,7 +553,7 @@ object Player {
     }
 
     /** Podcasts and audiobooks only (songs always play at normal speed, like Spotify). */
-    fun setSpeed(s: Float) {
+    fun changeSpeed(s: Float) {
         speed = s.coerceIn(0.5f, 3f)
         controller?.setPlaybackSpeed(if (current?.isItem == true) speed else 1f)
     }
