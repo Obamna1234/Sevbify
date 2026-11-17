@@ -147,6 +147,7 @@ def open_window(qapp):
         # in for its "full song" (and a song without one is "not found", like a failed lookup).
         w.user_data.auto_update_check = False          # tests never ask GitHub for updates
         w.user_data.download_notice_accepted = True
+        w.user_data.canvas_auto = False                 # tests never look up music videos on YouTube
         w.offer_update = lambda r: None                 # never a modal "Update Sevbify?" box in tests
         w.reviewed_imports = []
         w._review_import = lambda pl, problems, _w=w: _w.reviewed_imports.append((pl.name, problems))
