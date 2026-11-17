@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayCircleOutline
@@ -69,6 +70,12 @@ fun Sheets() {
     Nav.folderMenu?.let { FolderMenuSheet(it) }
     Nav.addTo?.let { AddToSheet(it) }
     Nav.previewFor?.let { PreviewDialog(it) }
+}
+
+/** After hiding something: the first time, a note on where to undo it; after that, a short message. */
+fun hideNote(on: Boolean) {
+    if (on && !com.sevbify.app.Library.settings.hideNoteSeen) Nav.hideNoteOpen = true
+    else Nav.say(if (on) "Hidden · undo in Settings → Playback → Hidden songs and artists" else "It'll play again")
 }
 
 @Composable
@@ -132,6 +139,18 @@ private fun SongMenuSheet(m: SongMenu) {
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
             if (!t.isItem && t.artist.isNotBlank() && t.artist != "Unknown Artist")
                 SheetItem(Icons.Filled.Favorite, "Support the artist") { close(); Nav.supportFor = t }
+            if (!t.isItem) {
+                val hiddenSong = com.sevbify.app.Hidden.songHidden(t)
+                SheetItem(Icons.Filled.Block, if (hiddenSong) "Show this song again" else "Hide song") {
+                    close(); com.sevbify.app.Hidden.set("song", t.artist, t.title, !hiddenSong); hideNote(!hiddenSong)
+                }
+                if (t.artist.isNotBlank() && t.artist != "Unknown Artist") {
+                    val hiddenArtist = com.sevbify.app.Hidden.artistHidden(t.artist)
+                    SheetItem(Icons.Filled.Block, if (hiddenArtist) "Play ${t.artist} again" else "Don't play this artist") {
+                        close(); com.sevbify.app.Hidden.set("artist", t.artist, "", !hiddenArtist); hideNote(!hiddenArtist)
+                    }
+                }
+            }
             if (com.sevbify.app.PairLink.connected && t.localUri.isNotEmpty())
                 SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}") {
                     close(); com.sevbify.app.PairLink.send(listOf(t))

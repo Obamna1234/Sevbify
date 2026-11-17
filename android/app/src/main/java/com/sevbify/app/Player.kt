@@ -545,8 +545,14 @@ object Player {
             index += 1
             start(); return
         }
-        if (index + 1 < context.size) { index += 1; start(); return }
-        if (context.isNotEmpty() && (repeat == "all" || (!auto && !failed))) { index = 0; start(); return }
+        // Hidden songs and artists (Hidden.kt) are skipped when the music moves on by itself or with Next.
+        var next = index + 1
+        while (next < context.size && Hidden.isHidden(context[next])) next++
+        if (next < context.size) { index = next; start(); return }
+        if (context.isNotEmpty() && (repeat == "all" || (!auto && !failed))) {
+            val first = context.indexOfFirst { !Hidden.isHidden(it) }
+            if (first >= 0) { index = first; start(); return }
+        }
         val last = current
         if (auto && Library.settings.autoplay && Library.settings.online && last != null && !last.isItem) {
             startRadio(last, autoplay = true)                  // keep playing similar songs, like Spotify
@@ -561,7 +567,7 @@ object Player {
         SevbifyApp.instance.scope.launch {
             try {
                 val songs = Bridge.tracks("radio", seed.artist, seed.title, if (autoplay) 50 else 100)
-                    .filter { Library.settings.explicitOk || !it.explicit }
+                    .filter { (Library.settings.explicitOk || !it.explicit) && !Hidden.isHidden(it) }
                 if (songs.isEmpty()) { status = "No radio for this song"; return@launch }
                 val list = if (autoplay) songs else listOf(seed) + songs
                 if (autoplay) {

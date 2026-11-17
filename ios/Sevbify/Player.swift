@@ -149,6 +149,7 @@ final class Player: ObservableObject {
             do {
                 var songs = try await Bridge.tracks("radio", [seed.artist, seed.title, 50])
                 if !Library.shared.settings.explicitOk { songs = songs.filter { !$0.explicit } }
+                songs = songs.filter { !Hidden.shared.isHidden($0) }
                 guard !songs.isEmpty else { status = "No radio for this song"; return }
                 let list = autoplay ? songs : [seed.fresh()] + songs
                 Library.shared.settings.shuffle = false
@@ -194,8 +195,12 @@ final class Player: ObservableObject {
             index += 1
             startCurrent(); return
         }
-        if index + 1 < context.count { index += 1; startCurrent(); return }
-        if !context.isEmpty && (repeatMode == "all" || (!auto && !failed)) { index = 0; startCurrent(); return }
+        // Hidden songs and artists (Hidden.swift) are skipped when the music moves on by itself or with Next.
+        var next = index + 1
+        while next < context.count && Hidden.shared.isHidden(context[next]) { next += 1 }
+        if next < context.count { index = next; startCurrent(); return }
+        if !context.isEmpty && (repeatMode == "all" || (!auto && !failed)),
+           let first = context.firstIndex(where: { !Hidden.shared.isHidden($0) }) { index = first; startCurrent(); return }
         let s = Library.shared.settings
         if auto, s.autoplay, s.online, let last = current, !last.isItem {
             startRadio(last, autoplay: true)            // keep playing similar songs, like Spotify

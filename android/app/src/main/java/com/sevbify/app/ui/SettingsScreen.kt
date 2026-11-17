@@ -222,6 +222,7 @@ fun SettingsPageScreen(key: String) {
         }
         "playback" -> {
         item { EqualiserSection() }
+        item { HiddenSection() }
         item { Toggle(tr("Autoplay"), "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
         item {
             Toggle(tr("Lyrics"), "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
@@ -466,6 +467,32 @@ private fun openAppLanguage(context: android.content.Context) {
     else android.content.Intent(android.provider.Settings.ACTION_LOCALE_SETTINGS)
     try { context.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {
         Nav.say(tr("Change Sevbify's language in your phone's Settings → Apps → Sevbify → Language"))
+    }
+}
+
+/** Settings → Playback → Hidden songs and artists (Hidden.kt): a switch for each, and Remove. */
+@Composable
+private fun HiddenSection() {
+    val list = com.sevbify.app.Hidden.entries
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(tr("Hidden songs and artists"), style = MaterialTheme.typography.bodyLarge)
+        if (list.isEmpty()) {
+            Text("Nothing hidden. A song's ⋮ menu has Hide song and Don't play this artist: they're then skipped in " +
+                 "playlists, albums, radio and mixes, and come back here with one switch.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("On = skipped when music plays by itself (you can still pick it yourself).", style = MaterialTheme.typography.bodySmall)
+            list.toList().asReversed().take(300).forEach { e ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    Text(if (e.kind == "song") "${e.title} · ${e.artist}" else "${e.artist} (artist)",
+                         style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Switch(checked = e.on, onCheckedChange = { on ->
+                        com.sevbify.app.Hidden.set(e.kind, e.artist, e.title, on) })
+                    androidx.compose.material3.TextButton(onClick = { com.sevbify.app.Hidden.remove(e) }) {
+                        Text("Remove", color = C.Sub)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -274,6 +274,25 @@ private fun Dialogs() {
     if (Nav.carTip) CarTipDialog()
     PairDialogs()
     FeatureTourDialog()
+    if (Nav.hideNoteOpen) {
+        var never by remember { mutableStateOf(true) }
+        AlertDialog(onDismissRequest = { Nav.hideNoteOpen = false },
+            title = { Text("Hidden") },
+            text = { Column {
+                Text("It won't play by itself any more: playlists, albums, radio and mixes skip it. You can still play it " +
+                     "by picking it yourself.\n\nChanged your mind? Settings → Playback → Hidden songs and artists lists " +
+                     "everything you've hidden, with a switch to bring each one back.")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Checkbox(checked = never, onCheckedChange = { never = it })
+                    Text("Don't show this again")
+                }
+            } },
+            confirmButton = { TextButton(onClick = {
+                Nav.hideNoteOpen = false
+                if (never) { com.sevbify.app.Library.settings.hideNoteSeen = true; com.sevbify.app.Library.changed() }
+            }) { Text("OK", color = C.Green) } },
+            containerColor = C.Elevated)
+    }
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },

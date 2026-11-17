@@ -22,6 +22,7 @@ struct SettingsView: View {
             }
             if Smoke.value("-SEVRoute") == "pair" { PairSettingsSection() }    // screenshot for the feature tour
             EqualiserSection()
+            HiddenSection()
             Section("Playback") {
                 Toggle("Autoplay similar songs when your music ends", isOn: $lib.settings.autoplay)
             }

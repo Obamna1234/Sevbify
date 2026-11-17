@@ -172,6 +172,14 @@ struct TrackMenu: View {
     @State private var choosing = false
     @State private var previewing = false
     @State private var supporting = false
+    @State private var hideNote = false
+
+    /** Hide, then (the first time) say where to undo it. */
+    private func hide(_ action: () -> Void) {
+        action()
+        if Hidden.shared.noteSeen { player.status = "Hidden · undo in Settings → Hidden songs and artists"; dismiss() }
+        else { hideNote = true }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -209,6 +217,23 @@ struct TrackMenu: View {
                                 PairLink.shared.send([track]); dismiss()
                             }
                         }
+                        let h = Hidden.shared
+                        if h.songHidden(track) {
+                            item("eye", "Show this song again") { h.set("song", artist: track.artist, title: track.title, on: false); dismiss() }
+                        } else {
+                            item("eye.slash", "Hide song") { hide { h.set("song", artist: track.artist, title: track.title, on: true) } }
+                        }
+                        if !track.artist.isEmpty && track.artist != "Unknown Artist" {
+                            if h.artistHidden(track.artist) {
+                                item("person.crop.circle.badge.checkmark", "Play \(track.artist) again") {
+                                    h.set("artist", artist: track.artist, on: false); dismiss()
+                                }
+                            } else {
+                                item("person.crop.circle.badge.xmark", "Don't play this artist") {
+                                    hide { h.set("artist", artist: track.artist, on: true) }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -217,6 +242,12 @@ struct TrackMenu: View {
         .foregroundColor(C.text)
         .sheet(isPresented: $choosing) { AddToPlaylistSheet(tracks: [track]) { dismiss() } }
         .sheet(isPresented: $supporting) { SupportSheet(track: track).presentationDetents([.medium, .large]) }
+        .alert("Hidden", isPresented: $hideNote) {
+            Button("OK") { dismiss() }
+            Button("Don't show this again") { Hidden.shared.noteSeen = true; dismiss() }
+        } message: {
+            Text("It won't play by itself any more: playlists, albums, radio and mixes skip it. You can still play it by picking it yourself. Changed your mind? Settings → Hidden songs and artists lists everything you've hidden, with a switch to bring each one back.")
+        }
         .sheet(isPresented: $previewing) { PreviewView(track: track) }
     }
 

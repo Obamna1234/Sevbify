@@ -48,6 +48,7 @@ data class Settings(
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
     var tourSeen: Boolean = false,
     var spotifyFull: Boolean = false,
+    var hideNoteSeen: Boolean = false,         // the "undo in Settings" note after the first Hide song
     var eqOn: Boolean = false,                 // equaliser (Eq.kt)
     var eqPreset: String = "",                 // one of the phone's presets, or "" = Custom (eqBands)
     var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom          // read whole Spotify playlists the web player's way (anonymous; off by default)             // the feature tour was closed with "Don't show this again"
@@ -67,7 +68,7 @@ data class Settings(
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen); put("spotify_full", spotifyFull)
-        put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
+        put("hide_note_seen", hideNoteSeen); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
     }
 
     companion object {
@@ -103,7 +104,7 @@ data class Settings(
             s.betaUpdates = o.optBoolean("beta_updates", true)
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             s.tourSeen = o.optBoolean("tour_seen"); s.spotifyFull = o.optBoolean("spotify_full")
-            s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
+            s.hideNoteSeen = o.optBoolean("hide_note_seen"); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
             o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }
             return s
         }
@@ -199,6 +200,7 @@ object Library {
         o.optJSONObject("resume")?.let { m -> m.keys().forEach { k -> resume[k] = m.getLong(k) } }
         finished.clear()
         o.optJSONArray("finished")?.let { a -> for (i in 0 until a.length()) finished.add(a.getString(i)) }
+        Hidden.load(o.optJSONObject("hidden"))
     }
 
     private var saveJob: kotlinx.coroutines.Job? = null
@@ -236,6 +238,7 @@ object Library {
             put("plain_http_hosts", JSONArray(plainHttpHosts.toList().takeLast(200)))
             put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
+            put("hidden", Hidden.toJson())
         }
         val text = o.toString()
         // Written on a background thread (one at a time, in order) so the screen never waits for the disk.
