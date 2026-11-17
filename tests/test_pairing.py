@@ -54,7 +54,11 @@ def server(tmp_path):
 def _pair(srv, **kw):
     link = srv.open_pairing()
     info = pr.parse_pair_link(link)
+    kw.setdefault("receive_folder", os.path.join(srv.receive_folder, "..", "phone"))
     return pr.connect("127.0.0.1", info["port"], code=info["code"], name="Pixel", platform="android", **kw)
+
+
+RF = {"receive_folder": "unused"}
 
 
 def _run(sess):
@@ -99,9 +103,10 @@ def test_pair_then_reconnect_with_the_saved_key(server):
     sess, info = _pair(srv)
     assert info["dev"] in srv.store.devices and len(info["ltk"]) == 32 and ev.paired
     sess.link.close()
-    sess2, info2 = pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=info["ltk"], name="Pixel 9")
-    assert info2["name"] == "Test PC"
-    assert _wait(lambda: srv.store.devices[info["dev"]]["name"] == "Pixel 9")
+    sess2, info2 = pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=info["ltk"], name="Pixel 9", **RF)
+    assert info2["name"] == "Test PC" and info2["port"] == srv.port
+    assert _wait(lambda: srv.connected())
+    assert srv.connected()[0].name == "Pixel"          # keeps the name it was paired with
     sess2.link.close()
 
 
@@ -109,28 +114,42 @@ def test_the_qr_code_works_once(server):
     srv, _ev = server
     link = srv.open_pairing()
     info = pr.parse_pair_link(link)
-    s, _ = pr.connect("127.0.0.1", srv.port, code=info["code"])
+    s, _ = pr.connect("127.0.0.1", srv.port, code=info["code"], **RF)
     s.link.close()
     with pytest.raises(pc.LinkError):
-        pr.connect("127.0.0.1", srv.port, code=info["code"])
+        pr.connect("127.0.0.1", srv.port, code=info["code"], **RF)
 
 
-def test_wrong_code_is_refused_and_tries_are_limited(server):
+def test_wrong_code_is_refused_and_tries_are_limited_per_address(server):
     srv, _ev = server
-    srv.open_pairing()
-    for _ in range(pr.MAX_PAIR_TRIES):
+    info = pr.parse_pair_link(srv.open_pairing())
+    for _ in range(pr.MAX_PAIR_FAILS_PER_ADDRESS):
         with pytest.raises((pc.LinkError, OSError, ConnectionError)):
-            s, _ = pr.connect("127.0.0.1", srv.port, code=os.urandom(32))
+            s, _ = pr.connect("127.0.0.1", srv.port, code=os.urandom(32), **RF)
             s.link.recv()
-    # the window is now used up, even for the right code
-    assert srv._pairing is None or srv._pairing["tries"] >= pr.MAX_PAIR_TRIES
     assert not srv.store.devices
+    # this address is now refused, even with the right code; the code itself still works for other addresses
+    with pytest.raises((pc.LinkError, OSError, ConnectionError)):
+        pr.connect("127.0.0.1", srv.port, code=info["code"], **RF)
+    assert srv._pairing is not None
+
+
+def test_hellos_alone_dont_use_up_the_code(server):
+    srv, _ev = server
+    info = pr.parse_pair_link(srv.open_pairing())
+    for _ in range(10):                     # someone sends pairing hellos and goes away
+        sock = socket.create_connection(("127.0.0.1", srv.port))
+        sock.sendall(pr._plain_frame({"t": "hello", "v": [1], "mode": "pair"}))
+        sock.close()
+    time.sleep(0.3)
+    s, _ = pr.connect("127.0.0.1", srv.port, code=info["code"], **RF)
+    s.link.close()
 
 
 def test_no_pairing_without_the_window(server):
     srv, _ev = server
-    with pytest.raises(pc.LinkError, match="not_pairing"):
-        pr.connect("127.0.0.1", srv.port, code=os.urandom(32))
+    with pytest.raises(pc.LinkError, match="refused"):
+        pr.connect("127.0.0.1", srv.port, code=os.urandom(32), **RF)
 
 
 def test_expired_window(server, monkeypatch):
@@ -138,7 +157,7 @@ def test_expired_window(server, monkeypatch):
     info = pr.parse_pair_link(srv.open_pairing())
     srv._pairing["until"] = time.time() - 1
     with pytest.raises(pc.LinkError):
-        pr.connect("127.0.0.1", srv.port, code=info["code"])
+        pr.connect("127.0.0.1", srv.port, code=info["code"], **RF)
 
 
 def test_a_forgotten_phone_cant_reconnect(server):
@@ -146,8 +165,8 @@ def test_a_forgotten_phone_cant_reconnect(server):
     sess, info = _pair(srv)
     sess.link.close()
     srv.forget(info["dev"])
-    with pytest.raises(pc.LinkError, match="unknown_device"):
-        pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=info["ltk"])
+    with pytest.raises(pc.LinkError, match="refused"):          # same answer as any refusal: tells nothing
+        pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=info["ltk"], **RF)
 
 
 def test_wrong_long_term_key_is_refused(server):
@@ -155,15 +174,15 @@ def test_wrong_long_term_key_is_refused(server):
     sess, info = _pair(srv)
     sess.link.close()
     with pytest.raises((pc.LinkError, OSError, ConnectionError)):
-        s, _ = pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=os.urandom(32))
+        s, _ = pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=os.urandom(32), **RF)
         s.link.recv()
 
 
 def test_old_or_new_versions_get_a_clear_answer(server):
     srv, _ev = server
     sock = socket.create_connection(("127.0.0.1", srv.port))
-    pr._plain_send(sock, {"t": "hello", "v": [99], "mode": "pair"})
-    reply = pr._plain_recv(sock)
+    sock.sendall(pr._plain_frame({"t": "hello", "v": [99], "mode": "pair"}))
+    reply, _raw = pr._plain_recv(sock)
     assert reply == {"t": "error", "code": "version", "supported": [1]}
     sock.close()
 
@@ -233,6 +252,102 @@ def test_computer_sends_to_the_phone_and_declining_saves_nothing(server, tmp_pat
     sess.link.close()
 
 
+def test_slow_handshakes_cant_block_others(server, monkeypatch):
+    srv, _ev = server
+    monkeypatch.setattr(pr, "HANDSHAKE_SECONDS", 2)
+    slow = []
+    for _ in range(4):                       # drip a byte now and then, never finishing
+        sock = socket.create_connection(("127.0.0.1", srv.port))
+        sock.sendall(struct.pack(">I", 900) + b"{")
+        slow.append(sock)
+    # at most two per address got in; a paired phone from elsewhere still connects (here: the same test address,
+    # after the slow ones are cut off at the deadline)
+    time.sleep(2.5)
+    sess, _ = _pair(srv)
+    sess.link.close()
+    for s in slow:
+        s.close()
+
+
+def test_unproven_first_frame_is_small(server):
+    srv, _ev = server
+    info = pr.parse_pair_link(srv.open_pairing())
+    sock = socket.create_connection(("127.0.0.1", srv.port))
+    mine = pc.new_keypair()
+    sock.sendall(pr._plain_frame({"t": "hello", "v": [1], "mode": "pair", "dev": "",
+                                  "epk": pc.b64e(pc.public_bytes(mine)), "nonce": pc.b64e(os.urandom(32))}))
+    pr._plain_recv(sock)
+    sock.sendall(struct.pack(">I", 500_000))         # announces a big first frame without the key
+    sock.settimeout(5)
+    try:
+        assert sock.recv(10) == b""
+    except ConnectionResetError:
+        pass
+    sock.close()
+
+
+def test_receiver_takes_each_file_once_and_no_more_than_offered(tmp_path):
+    rec = pr.Receiver({"id": "a", "items": [("a.mp3", 3), ("b.mp3", 3)]}, str(tmp_path))
+    rec.start_file(0)
+    rec.data(b"abc")
+    assert rec.end_file(0, hashlib.sha256(b"abc").hexdigest())
+    with pytest.raises(pc.LinkError):
+        rec.start_file(0)                            # the same file again
+    rec.start_file(1)
+    with pytest.raises(pc.LinkError):
+        rec.start_file(1)
+    rec.abort_file()
+
+
+def test_one_file_at_a_time_and_ids_not_reused(server, tmp_path):
+    srv, ev = server
+    sess, _ = _pair(srv)
+    assert _wait(lambda: srv.connected())
+    pc_sess = srv.connected()[0]
+    oid = "abc123"
+    sess.link.send_json({"t": "offer", "id": oid, "items": [{"path": "a.mp3", "size": 3}]})
+    assert _wait(lambda: ev.offers)                   # accepted by the Events helper
+    sess.link.send_json({"t": "offer", "id": oid, "items": [{"path": "b.mp3", "size": 3}]})   # reused id
+    time.sleep(0.3)
+    assert len(ev.offers) == 1
+    sess.link.close()
+
+
+def test_bad_ids_and_deep_json_close_the_session_cleanly(server):
+    srv, _ev = server
+    sess, _ = _pair(srv)
+    assert _wait(lambda: srv.connected())
+    sess.link.send_json({"t": "answer", "id": ["x"], "accept": True})
+    assert _wait(lambda: not srv.connected())          # not left listed as connected
+    sess2, info = _pair(srv)
+    assert _wait(lambda: srv.connected())
+    sess2.link._send(pc.KIND_JSON, b'{"t":"x","a":' + b"[" * 50000 + b"]" * 50000 + b"}")
+    assert _wait(lambda: not srv.connected())
+    sess2.link.close()
+
+
+def test_declined_offers_pause_more_offers(server, tmp_path):
+    srv, ev = server
+    ev.accept = False
+    sess, _ = _pair(srv)
+    assert _wait(lambda: srv.connected())
+    for k in range(pr.DECLINES_BEFORE_PAUSE + 2):
+        sess.link.send_json({"t": "offer", "id": f"o{k}", "items": [{"path": "a.mp3", "size": 3}]})
+    time.sleep(0.5)
+    assert len(ev.offers) == pr.DECLINES_BEFORE_PAUSE
+    sess.link.close()
+
+
+def test_names_cant_carry_markup_or_tricks():
+    assert pr.clean_name("Pixel <b>x</b> & <img src=a>") == "Pixel bx/b  img src=a"
+    assert pr.clean_name("Sev's PC") == "Sev's PC"
+    assert "\u202e" not in pr.clean_name("a\u202eb")
+    assert pr.safe_part("a\u202e3pm.m3u") == "a3pm.m3u"
+    for bad in ("CON .mp3", "COM\u00b9.mp3", "conin$.mp3", "LPT0.flac", "aux.mp3"):
+        assert pr.safe_part(bad).startswith("_"), bad
+    assert pr.safe_relative("x" * 150 + "/" + "y" * 100 + ".mp3") is None      # too long a path
+
+
 def test_hostile_offers_are_cleaned():
     bad = {"id": "x", "items": [{"path": "../../etc/passwd.mp3", "size": 5}, {"path": "/abs/x.mp3", "size": 5},
                                 {"path": "C:\\Windows\\a.mp3", "size": 5}, {"path": "CON.mp3", "size": 1},
@@ -255,13 +370,13 @@ def test_receiver_refuses_more_data_than_offered(tmp_path):
 
 
 def test_receiver_drops_a_file_whose_checksum_is_wrong(tmp_path):
-    rec = pr.Receiver({"id": "a", "items": [("a.mp3", 3)]}, str(tmp_path))
+    rec = pr.Receiver({"id": "a", "items": [("a.mp3", 3), ("b.mp3", 3)]}, str(tmp_path))
     rec.start_file(0)
     rec.data(b"abc")
     assert rec.end_file(0, "0" * 64) is None and not [n for n in os.listdir(tmp_path) if n.startswith("a.mp3")]
-    rec.start_file(0)
+    rec.start_file(1)
     rec.data(b"abc")
-    assert rec.end_file(0, hashlib.sha256(b"abc").hexdigest()).endswith("a.mp3")
+    assert rec.end_file(1, hashlib.sha256(b"abc").hexdigest()).endswith("b.mp3")
 
 
 def test_receiver_never_overwrites(tmp_path):
@@ -292,6 +407,6 @@ def test_crypto_test_vector_is_stable():
     assert v["c2s"] == EXPECTED["c2s"] and v["s2c"] == EXPECTED["s2c"] and v["first_frame"] == EXPECTED["first_frame"]
 
 
-EXPECTED = {"c2s": "25965bb141a8d3a126a851d8e3af247cdbf75e0bead52748999b659ee1aa85f0",
-            "s2c": "768dc7d0d60084533fbbd2d2b5f30162c0d6e86f62a60666f05e69bc18c1c369",
-            "first_frame": "0000001d28e746c2b264c3d0acc7fda5cd04b13bfe1cdf44a25860267ad4ccab2c"}
+EXPECTED = {"c2s": "8638dfdad0487dfde8d45c9487939f51f72828040e0c707ec4dfc5bdb4725b52",
+            "s2c": "12fb672e706357a42565dacd9cb252aa46de1e3101aa2d1a9018c942128aa67e",
+            "first_frame": "0000001d66d891584379f9cd9fcd93c63311ea622004319f5c86f7e1c96a625ae2"}

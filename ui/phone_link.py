@@ -187,7 +187,7 @@ class PhoneLink(QObject):
         names = ", ".join(os.path.basename(p) for p, _s in items[:3]) + ("…" if len(items) > 3 else "")
         text = (f"<b>{_esc(sess.name)}</b> wants to send you {what}{' — ' + _esc(title) if title else ''}.<br><br>"
                 f"{_esc(names)}<br><br>They'll be saved in your music folder, in “From {_esc(sess.name)}”.")
-        ok = confirm(self.win, "Receive music?", text, ok_text="Accept")
+        ok = confirm(self.win, "Receive music?", text, ok_text="Accept", cancel_text="Decline", safe_default=True)
         sess.answer(oid, ok)
 
     def _progress(self, sess, oid, done, total):
@@ -238,8 +238,9 @@ class PairDialog(_Card):
         h = QLabel("Pair your phone")
         h.setStyleSheet("font-size: 22px; font-weight: 800;")
         self.body.addWidget(h)
-        t = QLabel("In Sevbify on your phone, open Your Library → ⋯ → Pair with a computer, and scan this code. "
-                   "Your phone needs to be on the same Wi-Fi.")
+        t = QLabel("In Sevbify on your phone, open Settings → Your computer → Pair with a computer, and scan this "
+                   "code. Your phone needs to be on the same Wi-Fi. If your computer asks whether Sevbify may use "
+                   "the network (Windows firewall, Mac), choose Allow – on private networks only is enough.")
         t.setWordWrap(True)
         t.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px;")
         self.body.addWidget(t)
@@ -269,6 +270,7 @@ class PairDialog(_Card):
         self.timer.timeout.connect(self._tick)
         self.timer.start(1000)
         self.link = ""
+        self._paired = False
         self.new_code()
 
     def new_code(self):
@@ -281,19 +283,20 @@ class PairDialog(_Card):
         self._tick()
 
     def _tick(self):
-        if self.server._pairing is None:
+        if self._paired:
             return
         self._left -= 1
-        if self._left <= 0:
+        if self._left <= 0 or not self.server.pairing_open():
             self.server.close_pairing()
             self.qr.setVisible(False)
-            self.status.setText("The code has expired.")
+            self.status.setText("This code can't be used any more. Make a new one.")
             self.new_btn.setVisible(True)
             return
         m, s = divmod(self._left, 60)
         self.status.setText(f"Waiting for your phone… (code works for {m}:{s:02d})")
 
     def done_pairing(self, name):
+        self._paired = True
         self.timer.stop()
         self.qr.setVisible(False)
         self.status.setText(f"✓  Paired with {name}")

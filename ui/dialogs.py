@@ -41,8 +41,9 @@ class _Card(QDialog):
         super().keyPressEvent(e)
 
 
-def confirm(parent, title, text, ok_text="Delete"):
-    """Spotify's white confirmation card. text may use <b>…</b>. Returns True for OK."""
+def confirm(parent, title, text, ok_text="Delete", cancel_text="Cancel", safe_default=False):
+    """Spotify's white confirmation card. text may use <b>…</b>. Returns True for OK.
+    safe_default: Enter means Cancel and OK only works after a second (for questions another device asks)."""
     d = _Card(parent, light=True)
     d.setMinimumWidth(460)
     h = QLabel(title)
@@ -56,14 +57,14 @@ def confirm(parent, title, text, ok_text="Delete"):
     d.body.addSpacing(10)
     row = QHBoxLayout()
     row.addStretch()
-    cancel = QPushButton("Cancel")
+    cancel = QPushButton(cancel_text)
     cancel.setCursor(Qt.CursorShape.PointingHandCursor)
     cancel.setStyleSheet("QPushButton { color: #000000; background: transparent; border: none; font-size: 15px;"
                          " font-weight: 700; padding: 10px 18px; } QPushButton:hover { font-size: 15px;"
                          " color: #000000; }")
     ok = QPushButton(ok_text)
     ok.setCursor(Qt.CursorShape.PointingHandCursor)
-    ok.setDefault(True)
+    ok.setDefault(not safe_default)
     ok.setFixedHeight(48)                       # a full pill, like Spotify's (Qt drops a radius over half the height)
     ok.setStyleSheet(f"QPushButton {{ color: #000000; background: #1ed760; border: none; border-radius: 24px;"
                      f" font-size: 15px; font-weight: 700; padding: 0 32px; }}"
@@ -74,6 +75,12 @@ def confirm(parent, title, text, ok_text="Delete"):
     row.addWidget(ok)
     d.body.addLayout(row)
     d.confirm_button, d.cancel_button = ok, cancel
+    if safe_default:
+        from PyQt6.QtCore import QTimer
+        cancel.setDefault(True)
+        cancel.setFocus()
+        ok.setEnabled(False)
+        QTimer.singleShot(1000, lambda: ok.setEnabled(True))
     if getattr(parent, "_auto_answer_dialogs", None) is not None:      # tests
         return bool(parent._auto_answer_dialogs)
     return d.exec() == QDialog.DialogCode.Accepted

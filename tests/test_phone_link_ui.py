@@ -28,7 +28,8 @@ def test_pair_a_phone_and_receive_a_song(window, qapp, tmp_path):
     d = w.phone_link.open_pairing()
     assert d is not None and not d.qr.pixmap().isNull()
     info = pr.parse_pair_link(d.link)
-    sess, saved = pr.connect("127.0.0.1", info["port"], code=info["code"], name="Pixel", platform="android")
+    sess, saved = pr.connect("127.0.0.1", info["port"], code=info["code"], name="Pixel", platform="android",
+                             receive_folder=str(tmp_path / "phone"))
     assert _wait(qapp, lambda: w.phone_link.phones())
     assert w.phone_link.phones()[0]["name"] == "Pixel"
     import threading
@@ -55,7 +56,7 @@ def test_declining_saves_nothing(window, qapp, tmp_path):
     w._auto_answer_dialogs = True
     d = w.phone_link.open_pairing()
     info = pr.parse_pair_link(d.link)
-    sess, _ = pr.connect("127.0.0.1", info["port"], code=info["code"], name="Nope")
+    sess, _ = pr.connect("127.0.0.1", info["port"], code=info["code"], name="Nope", receive_folder=str(tmp_path / "phone"))
     import threading
     threading.Thread(target=sess.run, daemon=True).start()
     w._auto_answer_dialogs = False

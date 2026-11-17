@@ -10,7 +10,10 @@ Handshake (version 1). The phone ("client") connects to the computer ("server"):
 Both sides then compute
   secret  = ECDH(one-time keys)                                  (forward secrecy)
   psk     = the 32-byte code from the QR code ("pair"), or the device's long-term key ("resume")
-  salt    = SHA-256("sevbify-pair-v1" | mode | dev | c_nonce | s_nonce | c_epk | s_epk)
+  salt    = SHA-256("sevbify-pair-v1" | mode | "|" | dev | "|" | c_nonce | s_nonce | c_epk | s_epk
+                    | SHA-256(client hello frame) | SHA-256(server hello frame))
+            (the hello frames exactly as sent: 4-byte length + JSON bytes, so the offered and chosen versions are
+            covered too: nobody in between can remove a newer version from the list unnoticed)
   prk     = HMAC-SHA256(salt, secret | psk)                       (HKDF-Extract)
   keys    = HKDF-Expand(prk, "sevbify v1 keys", 64) -> c2s key (32) | s2c key (32)
 
@@ -18,6 +21,9 @@ Everything after the hellos is AES-256-GCM, each direction with its own key and 
 an 8-byte big-endian counter, starting at 0), so a frame can't be replayed, reordered or reflected. Someone without
 the QR code (or the long-term key) can't make a frame the other side accepts, so the first good frame also proves
 who is talking. Frames are length-prefixed: 4-byte big-endian length, then ciphertext + 16-byte tag.
+
+Before the keys exist, a computer may answer the hello with a plain {"t": "error", "code": ...}. Nothing checks it,
+so a phone only shows it ("Scan the code again") and never deletes its pairing because of it.
 
 Plain-text inside a frame: one kind byte (1 = JSON message, 2 = raw file data) and the payload.
 
@@ -92,10 +98,10 @@ def hkdf_expand(prk, info, length):
     return out[:length]
 
 
-def derive_keys(secret, psk, mode, dev, c_nonce, s_nonce, c_epk, s_epk):
-    """-> (client-to-server key, server-to-client key)."""
+def derive_keys(secret, psk, mode, dev, c_nonce, s_nonce, c_epk, s_epk, c_hello, s_hello):
+    """-> (client-to-server key, server-to-client key). c_hello / s_hello: the hello frames as sent."""
     salt = hashlib.sha256(LABEL + mode.encode() + b"|" + dev.encode() + b"|" + c_nonce + s_nonce + c_epk
-                          + s_epk).digest()
+                          + s_epk + hashlib.sha256(c_hello).digest() + hashlib.sha256(s_hello).digest()).digest()
     prk = hmac.new(salt, secret + psk, hashlib.sha256).digest()
     okm = hkdf_expand(prk, b"sevbify v1 keys", 64)
     return okm[:32], okm[32:]
@@ -142,9 +148,10 @@ def test_vector():
     secret = ecdh(c_priv, load_public(s_epk))
     psk = bytes(range(32))
     c_nonce, s_nonce = b"\x01" * 32, b"\x02" * 32
-    c2s, s2c = derive_keys(secret, psk, "pair", "", c_nonce, s_nonce, c_epk, s_epk)
+    c_hello, s_hello = b"\0\0\0\x02{}", b"\0\0\0\x03[1]"
+    c2s, s2c = derive_keys(secret, psk, "pair", "", c_nonce, s_nonce, c_epk, s_epk, c_hello, s_hello)
     frame = Channel(c2s, s2c).seal(KIND_JSON, b'{"t":"ping"}')
-    return {"c_epk": c_epk.hex(), "s_epk": s_epk.hex(), "secret": secret.hex(), "psk": psk.hex(),
+    return {"c_hello": c_hello.hex(), "s_hello": s_hello.hex(), "c_epk": c_epk.hex(), "s_epk": s_epk.hex(), "secret": secret.hex(), "psk": psk.hex(),
             "c_nonce": c_nonce.hex(), "s_nonce": s_nonce.hex(), "c2s": c2s.hex(), "s2c": s2c.hex(),
             "first_frame": frame.hex()}
 
