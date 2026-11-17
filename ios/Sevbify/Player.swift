@@ -231,6 +231,8 @@ final class Player: ObservableObject {
                 let (asset, preview) = try await resolve(t)
                 guard gen == generation else { return }
                 let item = AVPlayerItem(asset: asset)
+                if EqualiserTap.isOn, let mix = await EqualiserTap.audioMix(for: asset) { item.audioMix = mix }  // Settings → Equaliser
+                guard gen == generation else { return }
                 itemObserver = item.publisher(for: \.status).receive(on: DispatchQueue.main).sink { [weak self] st in
                     Task { @MainActor in
                         guard let self, gen == self.generation else { return }

@@ -47,7 +47,10 @@ data class Settings(
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
     var tourSeen: Boolean = false,
-    var spotifyFull: Boolean = false,          // read whole Spotify playlists the web player's way (anonymous; off by default)             // the feature tour was closed with "Don't show this again"
+    var spotifyFull: Boolean = false,
+    var eqOn: Boolean = false,                 // equaliser (Eq.kt)
+    var eqPreset: String = "",                 // one of the phone's presets, or "" = Custom (eqBands)
+    var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom          // read whole Spotify playlists the web player's way (anonymous; off by default)             // the feature tour was closed with "Don't show this again"
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -64,6 +67,7 @@ data class Settings(
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen); put("spotify_full", spotifyFull)
+        put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
     }
 
     companion object {
@@ -99,6 +103,8 @@ data class Settings(
             s.betaUpdates = o.optBoolean("beta_updates", true)
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             s.tourSeen = o.optBoolean("tour_seen"); s.spotifyFull = o.optBoolean("spotify_full")
+            s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
+            o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }
             return s
         }
     }

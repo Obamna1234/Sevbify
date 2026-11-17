@@ -21,6 +21,7 @@ struct SettingsView: View {
                 Text("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), Bandcamp and YouTube (full songs, downloads), Spotify, Apple Music or Deezer only when you import a link, song.link when you share, and GitHub for updates.")
             }
             if Smoke.value("-SEVRoute") == "pair" { PairSettingsSection() }    // screenshot for the feature tour
+            EqualiserSection()
             Section("Playback") {
                 Toggle("Autoplay similar songs when your music ends", isOn: $lib.settings.autoplay)
             }
@@ -138,6 +139,7 @@ enum Smoke {
                 out["radio"] = r.count
             } catch { out["radio"] = "failed: \(error.localizedDescription)" }
             out["pair_self_test"] = PairCrypto.selfTest() ? "ok" : "FAILED"
+            out["equaliser_self_test"] = EqualiserTap.selfTest() ? "ok" : "FAILED"
             do {
                 let o = try Bridge.callSync("resolve", ["Perturbator", "Future Club", 0]) as? [String: Any] ?? [:]
                 out["full_song"] = "\(o["source"] ?? "") \((o["url"] as? String)?.prefix(40) ?? "")"

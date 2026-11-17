@@ -221,6 +221,7 @@ fun SettingsPageScreen(key: String) {
         }
         }
         "playback" -> {
+        item { EqualiserSection() }
         item { Toggle(tr("Autoplay"), "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
         item {
             Toggle(tr("Lyrics"), "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +
@@ -465,6 +466,50 @@ private fun openAppLanguage(context: android.content.Context) {
     else android.content.Intent(android.provider.Settings.ACTION_LOCALE_SETTINGS)
     try { context.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {
         Nav.say(tr("Change Sevbify's language in your phone's Settings → Apps → Sevbify → Language"))
+    }
+}
+
+/** Settings → Playback → Equaliser (Eq.kt): on/off, the phone's presets or Custom with a slider per band. */
+@Composable
+private fun EqualiserSection() {
+    val s = Library.settings
+    var on by remember { mutableStateOf(s.eqOn) }
+    var preset by remember { mutableStateOf(s.eqPreset) }
+    val levels = remember { androidx.compose.runtime.mutableStateListOf<Int>().apply { addAll(com.sevbify.app.Eq.levels()) } }
+    Column {
+        Toggle(tr("Equaliser"), if (com.sevbify.app.Eq.available) "Shape the sound: a preset, or Custom with a slider for each band."
+               else "Play a song once, then come back here: Android connects the equaliser to the player when it starts. " +
+                    "(A few phones don't offer one to apps.)", on) {
+            on = it; s.eqOn = it; Library.changed(); com.sevbify.app.Eq.apply()
+        }
+        if (on && com.sevbify.app.Eq.available) {
+            Choice(tr("Preset"), "", listOf("" to tr("Custom")) + com.sevbify.app.Eq.presets.map { it to it }, preset) { p ->
+                preset = p; s.eqPreset = p
+                com.sevbify.app.Eq.apply()
+                if (p.isEmpty() && s.eqBands.size != com.sevbify.app.Eq.bands.size) s.eqBands = com.sevbify.app.Eq.levels().toMutableList()
+                levels.clear(); levels.addAll(com.sevbify.app.Eq.levels())
+                Library.changed()
+            }
+            com.sevbify.app.Eq.bands.forEachIndexed { b, band ->
+                Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(band.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp))
+                    androidx.compose.material3.Slider(
+                        value = (levels.getOrNull(b) ?: 0).toFloat(),
+                        onValueChange = { v ->
+                            while (levels.size <= b) levels.add(0)
+                            levels[b] = v.toInt()
+                            preset = ""; s.eqPreset = ""
+                            s.eqBands = levels.toMutableList()
+                            com.sevbify.app.Eq.apply()
+                        },
+                        onValueChangeFinished = { Library.changed() },
+                        valueRange = band.min.toFloat()..band.max.toFloat(),
+                        modifier = Modifier.weight(1f))
+                    Text("${(levels.getOrNull(b) ?: 0) / 100} dB", style = MaterialTheme.typography.bodySmall,
+                         modifier = Modifier.width(52.dp))
+                }
+            }
+        }
     }
 }
 

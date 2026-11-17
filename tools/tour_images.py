@@ -19,7 +19,7 @@ DESKTOP = {"search.jpg": ("search", False), "save.jpg": ("save-picker", False), 
            "support.jpg": ("support", True), "mini.jpg": ("mini-player", True),
            "private.jpg": ("private-session", False), "settings.jpg": ("settings", False)}
 ANDROID = {"search.jpg": "search_results", "save.jpg": "your_songs_menu", "import.jpg": "import_result",
-           "radio.jpg": "radio_page", "podcast.jpg": "audiobook_page", "pair.jpg": "settings_computer",
+           "radio.jpg": "now_playing", "podcast.jpg": "audiobook_page", "pair.jpg": "settings_computer",
            "support.jpg": "support_sheet", "lyrics.jpg": "lyrics_card", "downloads.jpg": "download_choice",
            "settings.jpg": "settings_privacy"}
 IPHONE = {"search.jpg": "search", "library.jpg": "library", "now_playing.jpg": "now_playing",

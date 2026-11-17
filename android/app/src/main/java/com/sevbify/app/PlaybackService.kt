@@ -92,7 +92,7 @@ class PlaybackService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)       // headphones unplugged: pause, like Spotify
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-        val player = object : ForwardingPlayer(exo) {
+        Eq.attach(exo.audioSessionId)                // Settings → Playback → Equaliser        val player = object : ForwardingPlayer(exo) {
             override fun getAvailableCommands(): MediaPlayer.Commands = super.getAvailableCommands().buildUpon()
                 .add(MediaPlayer.COMMAND_SEEK_TO_NEXT).add(MediaPlayer.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
                 .add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS).add(MediaPlayer.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM).build()
@@ -189,6 +189,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        Eq.release()
         session?.run { player.release(); release() }
         session = null
         try { cache?.release() } catch (e: Exception) { /* already released */ }
