@@ -367,6 +367,24 @@ final class Player: ObservableObject {
             if let e = e as? MPChangePlaybackPositionCommandEvent { Task { @MainActor in self?.seek(to: e.positionTime) } }
             return .success
         }
+        // Podcasts and audiobooks: 15 seconds back / forward on the lock screen, like Spotify's.
+        c.skipBackwardCommand.preferredIntervals = [15]
+        c.skipForwardCommand.preferredIntervals = [15]
+        c.skipBackwardCommand.addTarget { [weak self] _ in
+            Task { @MainActor in if let s = self { s.seek(to: max(0, s.position - 15)) } }; return .success
+        }
+        c.skipForwardCommand.addTarget { [weak self] _ in
+            Task { @MainActor in if let s = self { s.seek(to: min(max(0, s.duration - 1), s.position + 15)) } }; return .success
+        }
+        // Liked Songs from the lock screen and Control Centre.
+        c.likeCommand.localizedTitle = "Add to Liked Songs"
+        c.likeCommand.localizedShortTitle = "Like"
+        c.likeCommand.addTarget { [weak self] _ in
+            Task { @MainActor in
+                if let t = self?.current, !t.isItem { Library.shared.toggleLike(t); self?.updateNowPlaying() }
+            }
+            return .success
+        }
     }
 
     private func updateNowPlaying() {
@@ -376,8 +394,14 @@ final class Player: ObservableObject {
             MPMediaItemPropertyAlbumTitle: t.album,
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: position,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? Double(t.isItem ? speed : 1) : 0.0,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: Double(t.isItem ? speed : 1),
         ]
+        let c = MPRemoteCommandCenter.shared()
+        c.skipBackwardCommand.isEnabled = t.isItem
+        c.skipForwardCommand.isEnabled = t.isItem
+        c.likeCommand.isEnabled = !t.isItem
+        c.likeCommand.isActive = !t.isItem && Library.shared.isLiked(t)
         if let (key, art) = artwork, key == t.art { info[MPMediaItemPropertyArtwork] = art }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         let wanted = t.art

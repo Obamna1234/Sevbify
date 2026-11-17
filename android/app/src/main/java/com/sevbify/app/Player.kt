@@ -207,7 +207,10 @@ object Player {
         }, MoreExecutors.directExecutor())
         ticker?.cancel()
         ticker = SevbifyApp.instance.scope.launch {
+            var widgetState = ""
             while (isActive) {
+                // The home-screen widget follows the song and play state (only redrawn when they change).
+                "${current?.matchKey}|$showPlaying".let { if (it != widgetState) { widgetState = it; PlayerWidget.refresh(SevbifyApp.instance) } }
                 if (videoMode) {
                     VideoPlayer.player?.let { v ->
                         position = v.currentPosition.coerceAtLeast(0)
