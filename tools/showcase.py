@@ -75,7 +75,7 @@ def step(name, fn):
 
 music = os.path.join(DATA, "music")
 os.makedirs(music, exist_ok=True)
-w = MainWindow(audio_folder=music, data_dir=DATA, vlc_args=("--aout=adummy",))
+w = MainWindow(audio_folder=music, data_dir=DATA, vlc_args=("--aout=adummy", "--no-video", "--quiet"))
 w.move(0, 0)
 w.user_data.auto_update_check = False
 w.user_data.download_notice_accepted = True

@@ -41,7 +41,7 @@ jobs:
           ffmpeg -loglevel error -f x11grab -framerate 30 -video_size 1600x960 -i :99 \
             -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p showcase/desktop.mp4 &
           FF=$!
-          timeout 1800 python tools/showcase.py showcase || echo "::warning::showcase exited with $?"
+          timeout 1800 python -X faulthandler tools/showcase.py showcase || echo "::warning::showcase exited with $?"
           kill -INT $FF; wait $FF || true
           ls -la showcase
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
