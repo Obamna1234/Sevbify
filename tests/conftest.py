@@ -196,3 +196,17 @@ def pytest_runtest_logreport(report):
         msg = (report.longreprtext or "").strip().splitlines()
         tail = " | ".join(line.strip() for line in msg[-12:] if line.strip())
         print(f"\n::error title=TEST FAILED {report.nodeid} ({report.when})::{tail[:900]}")
+
+@pytest.fixture(autouse=True)
+def zoom_back_to_normal():
+    """A test that zooms (Ctrl +, Settings → Zoom) leaves the next one drawn at 100%."""
+    yield
+    from ui import live_zoom
+    if live_zoom.current not in (None, 1.0) and live_zoom._func is not None:
+        from PyQt6.QtCore import qInstallMessageHandler
+        previous = qInstallMessageHandler(lambda *_a: None)
+        try:
+            live_zoom._func(1.0)
+        finally:
+            qInstallMessageHandler(previous)
+        live_zoom.current = 1.0

@@ -505,8 +505,7 @@ class SettingsPage(QWidget):
     def _zoom(self, current):
         """Spotify's zoom: three pictures (Dense / Default / Spacious), the exact levels, and Reset."""
         from core.storage import ZOOM_LEVELS
-        self._name_desc("Zoom level", f"Now {current}%. You can also use Ctrl + and Ctrl − (Ctrl 0 resets). "
-                                      "Sevbify restarts to show a new size.")
+        self._name_desc("Zoom level", f"Now {current}%. You can also use Ctrl + and Ctrl − (Ctrl 0 resets).")
         pics = QHBoxLayout()
         pics.setSpacing(12)
         self.zoom_pictures = {}
@@ -540,6 +539,10 @@ class SettingsPage(QWidget):
             group.button(z).setChecked(True)
         for level, pic in getattr(self, "zoom_pictures", {}).items():
             pic.setChecked(level == z)
+        live = getattr(self, "zoom_live", None)            # the main window: show the new size straight away
+        if live is not None and live(z):
+            self.changed.emit({"zoom": z})
+            return
         self._emit({"zoom": z})
 
     def _reset_section(self):

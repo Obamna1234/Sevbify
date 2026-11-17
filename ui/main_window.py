@@ -520,6 +520,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core.audio_settings import presets as eq_presets
         self.settings_page = SettingsPage(eq_presets(vlc))
         self.settings_page.changed.connect(self.apply_settings)
+        self.settings_page.zoom_live = self._zoom_live
         self.settings_page.eq_preview.connect(self._preview_equalizer)
         self.settings_page.add_folder_requested.connect(lambda: (self._choose_music_folder(), self.open_settings()))
         self.settings_page.remove_folder_requested.connect(lambda f: (self.remove_music_folder(f), self.open_settings()))
@@ -5686,7 +5687,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.set_right_panel(values["right_panel"])
         self.save_now()
         self.open_settings()
-        if values.get("zoom") == 100 and self._zoom_at_start != 100:
+        if values.get("zoom") == 100 and self._zoom_at_start != 100 and not self._zoom_live(100):
             self.show_restart_bar("Zoom 100%")
         self.show_status("Settings reset.", kind="info", timeout_ms=4000)
         return True
@@ -5719,8 +5720,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._update_now_playing(song)
 
     def change_zoom(self, step):
-        """Ctrl + / Ctrl - / Ctrl 0. Sevbify draws everything at its zoom when it starts, so a new zoom needs
-        a quick restart: the bar at the bottom says so, with a Restart button."""
+        """Ctrl + / Ctrl - / Ctrl 0, like Spotify: the new size shows straight away and a small "110%" note pops
+        up. If this computer's Qt can't change size while running, the bar at the bottom offers a restart."""
         from core.storage import ZOOM_LEVELS
         cur = getattr(self, "_zoom_after_restart", None) or self.user_data.zoom
         if step == 0:
@@ -5729,10 +5730,62 @@ class MainWindow(ShowsMixin, QMainWindow):
             levels = list(ZOOM_LEVELS)
             i = levels.index(cur) if cur in levels else levels.index(100)
             new = levels[max(0, min(len(levels) - 1, i + step))]
-        self._zoom_after_restart = new
         self.apply_settings({"zoom": new})
-        self.show_restart_bar(f"Zoom {new}%")
+        if self._zoom_live(new):
+            self._zoom_after_restart = None
+            if getattr(self, "restart_bar", None) is not None:
+                self.restart_bar.hide()
+            self._show_zoom_note(new)
+        else:
+            self._zoom_after_restart = new
+            self.show_restart_bar(f"Zoom {new}%")
         return new
+
+    def _zoom_live(self, new):
+        """Redraw every open Sevbify window at the new zoom now. False when that isn't possible here."""
+        drawn = getattr(self, "_zoom_at_start", 100)
+        if new == drawn:
+            return True
+        try:
+            from . import live_zoom
+            if not live_zoom.available():
+                return False
+            from PyQt6.QtWidgets import QApplication
+            skip = (Qt.WindowType.Popup, Qt.WindowType.ToolTip)
+            windows = [w for w in QApplication.topLevelWidgets()
+                       if w.isVisible() and w.windowType() not in skip]
+            if self in windows:                              # the main window first, the others on top of it
+                windows.remove(self)
+                windows.insert(0, self)
+            if not live_zoom.apply(drawn, new, windows):
+                return False
+        except Exception as e:
+            alog("error", f"Live zoom failed ({e}); offering a restart instead")
+            return False
+        self._zoom_at_start = new
+        if getattr(self, "_thumb_bar", None) is not None:   # Windows gives the window a new taskbar button
+            self._thumb_bar.hwnd = int(self.winId())
+            self._thumb_bar.added = False
+        return True
+
+    def _show_zoom_note(self, percent):
+        """Spotify's little zoom note in the middle of the window (fades after a moment)."""
+        note = getattr(self, "_zoom_note", None)
+        if note is None:
+            note = self._zoom_note = QLabel(self)
+            note.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            note.setStyleSheet("QLabel { background: rgba(40,40,40,0.95); color: white; border-radius: 8px;"
+                               " font-size: 15px; font-weight: 700; padding: 10px 22px; }")
+            note.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            self._zoom_note_timer = QTimer(self)
+            self._zoom_note_timer.setSingleShot(True)
+            self._zoom_note_timer.timeout.connect(note.hide)
+        note.setText(f"{percent}%")
+        note.adjustSize()
+        note.move((self.width() - note.width()) // 2, (self.height() - note.height()) // 2)
+        note.show()
+        note.raise_()
+        self._zoom_note_timer.start(1200)
 
     def show_restart_bar(self, text):
         """A small bar above the player with "Restart now" (zoom and a few settings apply after a restart)."""

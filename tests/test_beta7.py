@@ -187,7 +187,8 @@ def test_zoom_keys_and_reset_settings_keep_your_music(window, qapp):
     window._auto_answer_dialogs = True
     pl = window.create_playlist("Keep me", [window.songs[0]])
     assert window.change_zoom(+1) == 110 and window.change_zoom(+1) == 125
-    assert window.user_data.zoom == 125 and not window.restart_bar.isHidden()
+    assert window.user_data.zoom == 125 and window._zoom_at_start == 125      # shown straight away
+    assert getattr(window, "restart_bar", None) is None or window.restart_bar.isHidden()
     assert window.change_zoom(0) == 100
     window.change_zoom(+1)
     window.apply_settings({"fade_seconds": 7, "autoplay": False, "canvas_enabled": False})
@@ -198,6 +199,7 @@ def test_zoom_keys_and_reset_settings_keep_your_music(window, qapp):
     assert u.fade_seconds == 7                       # appearance only
     assert window.reset_settings("all")
     assert u.fade_seconds == 0 and u.autoplay
+    assert window._zoom_at_start == 100
     assert pl in window.playlists and window.songs and u.music_folders   # music and playlists kept
     window._auto_answer_dialogs = False
     assert not window.reset_settings("all")          # Cancel changes nothing
