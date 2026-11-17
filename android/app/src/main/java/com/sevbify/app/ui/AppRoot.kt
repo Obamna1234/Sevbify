@@ -274,6 +274,7 @@ private fun Dialogs() {
     if (Nav.carTip) CarTipDialog()
     PairDialogs()
     FeatureTourDialog()
+    if (Nav.wrappedOpen) WrappedDialog { Nav.wrappedOpen = false }
     if (Nav.hideNoteOpen) {
         var never by remember { mutableStateOf(true) }
         AlertDialog(onDismissRequest = { Nav.hideNoteOpen = false },

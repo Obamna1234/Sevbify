@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NewReleases
@@ -120,6 +121,7 @@ fun ProfileDrawer(modifier: Modifier = Modifier) {
             go(Screen.Collection("recent", tr("Recently played"), Library.recent.toList(), "", saveable = false))
         }
         DrawerItem(Icons.Filled.Download, "Downloads") { go(Screen.Downloads) }
+        DrawerItem(Icons.Filled.BarChart, "Your Wrapped") { Nav.drawerOpen = false; Nav.wrappedOpen = true }
         DrawerItem(Icons.Filled.Settings, "Settings and privacy") { go(Screen.Settings) }
     }
 }

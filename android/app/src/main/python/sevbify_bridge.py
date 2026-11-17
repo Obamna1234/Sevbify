@@ -327,6 +327,14 @@ def share_link(name, tracks_json, description=""):
 
 
 @_call
+def wrapped(listens_json="[]", period="This year"):
+    """Your listening stats (core/wrapped.py), worked out on the phone."""
+    from core import wrapped as W
+    listens = [x for x in json.loads(listens_json or "[]") if isinstance(x, list)][-5000:]
+    return W.stats(listens, period if period in W.PERIODS else "This year")
+
+
+@_call
 def taste_link(listens_json="[]", nickname=""):
     """Blend: your top artists and songs as a link (no dates, nothing else)."""
     from core import share_playlist as SP

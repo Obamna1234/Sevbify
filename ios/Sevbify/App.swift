@@ -148,6 +148,7 @@ struct RootView: View {
 struct ProfileMenu: View {
     @EnvironmentObject var nav: Nav
     @EnvironmentObject var lib: Library
+    @State private var wrapped = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -165,9 +166,11 @@ struct ProfileMenu: View {
             }
             item("clock.arrow.circlepath", "Recently played") { open(.songs("Recently played", Array(lib.recent))) }
             item("arrow.down.circle", "Downloads") { open(.downloads) }
+            item("chart.bar", "Your Wrapped") { wrapped = true }
             item("gearshape", "Settings and privacy") { open(.settings) }
             Spacer()
         }
+        .sheet(isPresented: $wrapped) { WrappedView() }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(C.elevated.ignoresSafeArea())
         .foregroundColor(C.text)

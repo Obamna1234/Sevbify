@@ -55,3 +55,44 @@ enum Listens {
         (try? JSONSerialization.data(withJSONObject: all())).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
     }
 }
+
+/// Your listening stats ("Wrapped"), worked out on this iPhone from what you've played (core/wrapped.py).
+struct WrappedView: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var period = "This year"
+    @State private var st: [String: Any]?
+    var body: some View {
+        NavigationStack {
+            List {
+                Picker("Period", selection: $period) {
+                    ForEach(["4 weeks", "6 months", "This year", "All time"], id: \.self) { Text($0) }
+                }.pickerStyle(.segmented)
+                if let s = st {
+                    if (s["plays"] as? Int ?? 0) == 0 {
+                        Text("Nothing played in this period yet.")
+                    } else {
+                        VStack(alignment: .leading) {
+                            Text("\(s["minutes"] as? Int ?? 0)").font(.system(size: 44, weight: .heavy))
+                            Text("minutes · \(s["plays"] as? Int ?? 0) plays · \(s["artists"] as? Int ?? 0) artists").foregroundColor(C.dim)
+                        }
+                        Section("Top artists") {
+                            ForEach(Array((s["top_artists"] as? [[String: Any]] ?? []).enumerated()), id: \.offset) { i, a in
+                                Text("\(i + 1). \(a["artist"] as? String ?? "")  ·  \(a["plays"] as? Int ?? 0) plays")
+                            }
+                        }
+                        Section("Top songs") {
+                            ForEach(Array((s["top_songs"] as? [[String: Any]] ?? []).enumerated()), id: \.offset) { i, t in
+                                Text("\(i + 1). \(t["title"] as? String ?? "") · \(t["artist"] as? String ?? "")")
+                            }
+                        }
+                    }
+                } else { Text("Working it out…") }
+                Text("Worked out on this iPhone from what you've played; nothing is sent anywhere.").font(.caption).foregroundColor(C.dim)
+            }
+            .navigationTitle("Your Wrapped")
+            .toolbar { Button("Close") { dismiss() } }
+            .task(id: period) { st = try? await Bridge.object("wrapped", [Listens.json(), period]) }
+        }
+        .preferredColorScheme(.dark)
+    }
+}

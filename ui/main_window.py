@@ -1496,6 +1496,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         act(f, "New Playlist Folder", self.create_folder, "Ctrl+Shift+N")
         act(f, "Import playlist…", self.import_playlist_dialog)
         act(f, "Blend with a friend (copy your taste link)", self.share_taste)
+        act(f, "Your listening stats (Wrapped)", self.show_wrapped)
         act(f, "Add music folder…", self._choose_music_folder)
         f.addSeparator()
         act(f, "Private Session", lambda: self.apply_settings({"private_session": not self.private_session}),
@@ -5934,6 +5935,81 @@ class MainWindow(ShowsMixin, QMainWindow):
             return None
         tracks = [OnlineTrack(title=s["title"], artist=s["artist"]) for s in b["songs"]]
         return self._create_imported_playlist(b["name"], [("track", t) for t in tracks], origin="file", enrich=False)
+
+    def show_wrapped(self, period="This year"):
+        """Your listening stats, worked out on this computer from what you've played (core/wrapped.py)."""
+        from core import wrapped
+        from PyQt6.QtWidgets import QComboBox
+        from .dialogs import _Card
+        durations = {wrapped._key(s.artist, s.title): getattr(s, "duration_ms", 0) or 0 for s in self.songs}
+        d = _Card(self, light=False)
+        d.setMinimumWidth(520)
+        top = QHBoxLayout()
+        h = QLabel("Your Wrapped")
+        h.setStyleSheet("font-size: 26px; font-weight: 800;")
+        top.addWidget(h, 1)
+        pick = QComboBox()
+        pick.addItems(list(wrapped.PERIODS))
+        pick.setCurrentText(period)
+        top.addWidget(pick)
+        d.body.addLayout(top)
+        body = QLabel("")
+        body.setTextFormat(Qt.TextFormat.RichText)
+        body.setWordWrap(True)
+        body.setStyleSheet("font-size: 14px;")
+        d.body.addWidget(body)
+        note = QLabel("Worked out on this computer from what you've played; nothing is sent anywhere. Private sessions "
+                      "and songs you excluded from your taste profile don't count.")
+        note.setWordWrap(True)
+        note.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px;")
+        d.body.addWidget(note)
+        row = QHBoxLayout()
+        make = QPushButton("Make a “Your Top Songs” playlist")
+        make.setStyleSheet(GREEN_BUTTON)
+        close = QPushButton("Close")
+        close.setStyleSheet(PILL_BUTTON)
+        close.clicked.connect(d.accept)
+        row.addWidget(make)
+        row.addStretch()
+        row.addWidget(close)
+        d.body.addLayout(row)
+        state = {}
+
+        def fill(p):
+            st = wrapped.stats(self.taste_listens(), p, durations)
+            state["st"] = st
+            e = _html.escape
+            if not st["plays"]:
+                body.setText("<p>Nothing played in this period yet. Play some music and come back.</p>")
+                make.setEnabled(False)
+                return
+            make.setEnabled(True)
+            arts = "".join(f"<li>{e(a['artist'])} <span style='color:#b3b3b3'>· {a['plays']} plays</span></li>"
+                           for a in st["top_artists"])
+            sngs = "".join(f"<li>{e(s['title'])} <span style='color:#b3b3b3'>· {e(s['artist'])}</span></li>"
+                           for s in st["top_songs"])
+            body.setText(f"<p style='font-size:40px; font-weight:800; margin:0'>{st['minutes']:,}</p>"
+                         f"<p style='margin-top:0'>minutes listened · {st['plays']:,} plays · {st['songs']:,} songs · "
+                         f"{st['artists']:,} artists on {st['days']} days"
+                         + (f" · mostly in the {st['time_of_day']}" if st["time_of_day"] else "") + "</p>"
+                         f"<p><b>Top artists</b></p><ol>{arts}</ol><p><b>Top songs</b></p><ol>{sngs}</ol>")
+
+        def make_playlist():
+            from core.online.models import OnlineTrack
+            st = state.get("st") or {}
+            items = [("track", OnlineTrack(title=s["title"], artist=s["artist"])) for s in st.get("top_50", [])]
+            if items:
+                d.accept()
+                self._create_imported_playlist(f"Your Top Songs ({st['period']})", items, origin="file", enrich=True)
+        pick.currentTextChanged.connect(fill)
+        make.clicked.connect(make_playlist)
+        fill(period)
+        if getattr(self, "_auto_answer_dialogs", None) is not None:      # tests
+            d.show()
+            return d, state
+        d.exec()
+        d.deleteLater()
+        return None, state
 
     def show_credits(self, song):
         """Song credits (MusicBrainz, core/credits.py) in a small card."""
