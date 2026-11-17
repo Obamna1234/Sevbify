@@ -267,6 +267,7 @@ jobs:
 
       - name: Make the Windows installer (Setup.exe with an uninstaller)
         if: runner.os == 'Windows'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"

@@ -72,9 +72,10 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then
-    if MsgBox('Also delete your Sevbify data (playlists, settings, podcasts you follow)?' #13#10#13#10 +
+    { SuppressibleMsgBox: a silent uninstall (/SUPPRESSMSGBOXES) gets the default answer, No, instead of waiting. }
+    if SuppressibleMsgBox('Also delete your Sevbify data (playlists, settings, podcasts you follow)?' #13#10#13#10 +
               'Choose No to keep it, so it''s all still there if you install Sevbify again. ' +
               'Songs you downloaded, and songs your phone sent (Received music), are kept either way.',
-              mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+              mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
       DeleteDataKeepingMusic(ExpandConstant('{userappdata}\Sevbify'));
 end;
