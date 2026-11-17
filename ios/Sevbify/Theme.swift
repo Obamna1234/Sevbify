@@ -200,6 +200,11 @@ struct TrackMenu: View {
                         item("play.circle", "Preview (30 s)") { previewing = true }
                         item("person", "Go to artist") { dismiss(); nav.go(.artist(track.artist)) }
                         item("square.and.arrow.up", "Share") { share(); dismiss() }
+                        if PairLink.shared.connected && track.isLocal {
+                            item("desktopcomputer", "Send to \(PairLink.shared.computer?.name ?? "computer")") {
+                                PairLink.shared.send([track]); dismiss()
+                            }
+                        }
                     }
                 }
             }

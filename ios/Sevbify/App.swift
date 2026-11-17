@@ -22,6 +22,7 @@ struct SevbifyApp: App {
                 _ = try? await Bridge.call("set_source", [s.source])
                 await Library.shared.scan()
             }
+            PairLink.shared.start()          // a paired computer: stay connected while Sevbify runs (same Wi-Fi only)
             Smoke.runIfAsked()
             if ok && !Smoke.args.contains("-SEVSmoke") { await AppUpdates.shared.check() }
         }
@@ -41,6 +42,7 @@ struct SevbifyApp: App {
                 .modifier(UpdateAlert())
                 .modifier(ImportReviewSheet())
                 .modifier(CarPlayAlert())
+                .modifier(PairDialogs())
         }
     }
 }

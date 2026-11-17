@@ -70,6 +70,19 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Sevbify pairing</string>
+			<key>CFBundleURLSchemes</key>
+			<array><string>sevbify</string></array>
+		</dict>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Only to scan your computer's pairing QR code (Settings → Your computer).</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>To send music between this iPhone and Sevbify on your computer, over your own Wi-Fi only.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Only audio and video may still come over plain http (some podcast episodes; Sevbify tries https

@@ -33,9 +33,9 @@ for i in $(seq 1 30); do [ -f "$DATA/Documents/smoke.json" ] && break; sleep 5; 
 cp "$DATA/Documents/smoke.json" screens/smoke.json 2>/dev/null || echo '{"error": "no smoke.json (the app may not have started Python)"}' > screens/smoke.json
 xcrun simctl io "$DEV" screenshot screens/02_home.png >/dev/null 2>&1
 
-run 03_search 25 -SEVTab search -SEVQuery "daft punk"
+run 03_search 25 -SEVTab search -SEVQuery "chris zabriskie"
 run 04_library 8 -SEVTab library
-run 05_now_playing 30 -SEVTab home -SEVQuery "daft punk" -SEVPlay open
+run 05_now_playing 30 -SEVTab home -SEVQuery "chris zabriskie" -SEVPlay open
 run 06_first_run_notice 10
 
 # What's inside the app, and any crash reports.

@@ -66,6 +66,7 @@ struct SettingsView: View {
             } header: { Text("Sevbify updates") } footer: {
                 Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
+            PairSettingsSection()
             Section("Car") {
                 Text(CarPlayInfo.text).font(.footnote).foregroundColor(C.dim)
             }
@@ -95,7 +96,7 @@ struct SettingsView: View {
     }
 }
 
-/// For the automatic build: start with a screen open (-SEVTab search -SEVQuery "daft punk") and, with
+/// For the automatic build: start with a screen open (-SEVTab search -SEVQuery "chris zabriskie") and, with
 /// -SEVSmoke, check Python and the online features and write the result to Documents/smoke.json.
 enum Smoke {
     static var args: [String] { ProcessInfo.processInfo.arguments }
@@ -117,7 +118,7 @@ enum Smoke {
             out["python_start"] = Bridge.startError ?? "ok"
             out["python_info"] = (try? Bridge.callSync("python_info")) ?? "failed"
             do {
-                let found = try Bridge.callSync("search", ["daft punk", 5]) as? [[String: Any]] ?? []
+                let found = try Bridge.callSync("search", ["chris zabriskie", 5]) as? [[String: Any]] ?? []
                 out["search"] = found.map { "\($0["artist"] ?? "") - \($0["title"] ?? "")" }
             } catch { out["search"] = "failed: \(error.localizedDescription)" }
             do {
@@ -125,9 +126,10 @@ enum Smoke {
                 out["genres"] = g.count
             } catch { out["genres"] = "failed: \(error.localizedDescription)" }
             do {
-                let r = try Bridge.callSync("radio", ["Daft Punk", "One More Time", 10]) as? [[String: Any]] ?? []
+                let r = try Bridge.callSync("radio", ["Chris Zabriskie", "Candlepower", 10]) as? [[String: Any]] ?? []
                 out["radio"] = r.count
             } catch { out["radio"] = "failed: \(error.localizedDescription)" }
+            out["pair_self_test"] = PairCrypto.selfTest() ? "ok" : "FAILED"
             do {
                 let o = try Bridge.callSync("resolve", ["Perturbator", "Future Club", 0]) as? [String: Any] ?? [:]
                 out["full_song"] = "\(o["source"] ?? "") \((o["url"] as? String)?.prefix(40) ?? "")"
@@ -140,7 +142,7 @@ enum Smoke {
     }
 
     @MainActor static func playFirstSearchResult() async {
-        let q = initialQuery.isEmpty ? "daft punk" : initialQuery
+        let q = initialQuery.isEmpty ? "chris zabriskie" : initialQuery
         guard let songs = try? await Bridge.tracks("search", [q, 10]), let first = songs.first else { return }
         Player.shared.play(first, in: songs, source: "Search: \(q)")
         if value("-SEVPlay") == "open" { Nav.current?.nowPlaying = true }
