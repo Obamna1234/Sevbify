@@ -5372,8 +5372,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         if pq.items and pq.index > 0:
             wanted.append(pq.items[pq.index - 1])
         source = self.user_data.download_source
+        cur_key = getattr(self.current_song, "key", None)
         for song in wanted:
-            if song is self.current_song or not self._needs_lookup(song):
+            if song is self.current_song or (cur_key and getattr(song, "key", None) == cur_key) \
+                    or not self._needs_lookup(song):
                 continue
             run_async(self, streamer.find_full_song, song.artist, song.title, song.duration, source,
                       on_done=lambda _r: None, on_error=lambda _e: None, lane="songs")
