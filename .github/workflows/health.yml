@@ -33,7 +33,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: python tools/health_check.py
       - name: Openly licensed songs for tests (information only, when run by hand)
-        if: github.event_name == 'workflow_dispatch'
+        if: always() && github.event_name == 'workflow_dispatch'
         env:
           QT_QPA_PLATFORM: offscreen
         run: python tools/cc_probe.py || true
