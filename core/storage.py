@@ -111,6 +111,7 @@ class UserData:
     jamendo_client_id: str = ""
     download_source: str = "Bandcamp + YouTube"   # Settings -> Downloads (see core/downloader.SOURCES)
     download_notice_accepted: bool = False        # the one-time notice about downloading/streaming
+    whats_new_seen: float = 0.0                   # the bell's dot: things newer than this are new
     phone_remote: bool = True                     # Settings: paired phones may control music here (remote, Jam)
     spotify_full: bool = False                    # Settings: read whole Spotify playlists (web player, anonymous)
     tour_seen: bool = False                       # the feature tour was closed with "Don't show this again"
@@ -271,6 +272,7 @@ class Storage:
                 "tour_seen": bool(data.tour_seen),
                 "spotify_full": bool(data.spotify_full),
                 "phone_remote": bool(data.phone_remote),
+                "whats_new_seen": float(data.whats_new_seen),
                 "stream_full": bool(data.stream_full),
                 "download_folder": to_stored_path(data.download_folder) if data.download_folder else "",
                 "use_browser_cookies": bool(data.use_browser_cookies),
@@ -371,6 +373,10 @@ class Storage:
         data.tour_seen = bool(settings.get("tour_seen", False))
         data.spotify_full = bool(settings.get("spotify_full", False))
         data.phone_remote = bool(settings.get("phone_remote", True))
+        try:
+            data.whats_new_seen = float(settings.get("whats_new_seen", 0) or 0)
+        except (TypeError, ValueError):
+            data.whats_new_seen = 0.0
         data.stream_full = bool(settings.get("stream_full", True))
         folder = settings.get("download_folder") or ""
         data.download_folder = from_stored_path(folder) if folder else ""

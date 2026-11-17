@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NewReleases
@@ -110,7 +111,19 @@ fun ProfileDrawer(modifier: Modifier = Modifier) {
             }
         }
         HorizontalDivider(color = C.Highlight)
-        DrawerItem(Icons.Filled.NewReleases, "What's new") {
+        DrawerItem(Icons.Filled.Notifications, "New for you") {
+            Nav.drawerOpen = false
+            com.sevbify.app.SevbifyApp.instance.scope.launch {
+                try {
+                    val shows = org.json.JSONArray().also { a -> Library.shows.forEach { a.put(it.json) } }
+                    val items = com.sevbify.app.Bridge.arr("whats_new", shows.toString(), Library.listensJson())
+                    val tracks = (0 until items.length()).map { com.sevbify.app.Track.fromJson(items.getJSONObject(it).getJSONObject("track")) }
+                    if (tracks.isEmpty()) Nav.say("Nothing new in the last two weeks: follow shows and play artists you like")
+                    else Nav.go(Screen.Collection("new", "New for you", tracks, "", saveable = true))
+                } catch (e: Exception) { Nav.say("⚠ ${e.message}") }
+            }
+        }
+        DrawerItem(Icons.Filled.NewReleases, "What's new in Sevbify") {
             Nav.drawerOpen = false
             try {
                 context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,

@@ -327,6 +327,19 @@ def share_link(name, tracks_json, description=""):
 
 
 @_call
+def whats_new(shows_json="[]", listens_json="[]"):
+    """New episodes of followed shows and new releases from artists you play (last two weeks), newest first."""
+    from core import podcasts, whats_new as W
+    if not _state["online_on"]:
+        return []
+    shows = [podcasts.Show.from_dict(d) for d in json.loads(shows_json or "[]") if isinstance(d, dict)][:30]
+    listens = [x for x in json.loads(listens_json or "[]") if isinstance(x, list)][-5000:]
+    items = W.gather(_net(), _state["music"], shows, listens)
+    return [{"title": x["title"], "subtitle": x["subtitle"], "kind": x["kind"], "when": x["when"],
+             "track": _track(x["track"])} for x in items[:60]]
+
+
+@_call
 def wrapped(listens_json="[]", period="This year"):
     """Your listening stats (core/wrapped.py), worked out on the phone."""
     from core import wrapped as W

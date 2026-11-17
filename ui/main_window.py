@@ -413,6 +413,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.top_bar.back_clicked.connect(self.go_back)
         self.top_bar.forward_clicked.connect(self.go_forward)
         self.top_bar.settings_clicked.connect(self.open_settings)
+        self.top_bar.whats_new_clicked.connect(self.show_whats_new)
         self.top_bar.search_activated.connect(lambda: self.show_search(select=False))
         self.top_bar.browse_clicked.connect(self.show_browse)
         self.top_bar.downloads_clicked.connect(self._show_downloads_menu)
@@ -602,6 +603,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._update_online_indicator()
         self.rescan_library()
         QTimer.singleShot(8000, self._auto_update_check)      # once a day, when online
+        if getattr(self.user_data, "auto_update_check", True):    # the bell's dot (tests switch this off)
+            QTimer.singleShot(20000, self.check_whats_new)
 
     # --- Compatibility: older code/tests use .queue / .queue_index -------
     @property
@@ -6089,6 +6092,37 @@ class MainWindow(ShowsMixin, QMainWindow):
             return None
         tracks = [OnlineTrack(title=s["title"], artist=s["artist"]) for s in b["songs"]]
         return self._create_imported_playlist(b["name"], [("track", t) for t in tracks], origin="file", enrich=False)
+
+    # --- What's new (the bell): new episodes of followed shows and new releases from artists you play -------
+    def check_whats_new(self):
+        if not self.online_enabled:
+            return
+        from core import whats_new
+        shows = self.followed_shows()
+        listens = self.taste_listens()
+
+        def done(items):
+            self._whats_new = items
+            self.top_bar.set_new(whats_new.unseen(items, self.user_data.whats_new_seen))
+        self.online_call(whats_new.gather, self.net, self.online, shows, listens, on_done=done,
+                         on_error=lambda _e: None)
+
+    def show_whats_new(self):
+        import time as _t
+        items = getattr(self, "_whats_new", None)
+        self.user_data.whats_new_seen = _t.time()
+        self.top_bar.set_new(0)
+        self.schedule_save()
+        if items is None:
+            self.show_status("Looking for what's new…", kind="info")
+            self.check_whats_new()
+            QTimer.singleShot(6000, lambda: getattr(self, "_whats_new", None) is not None and self.show_whats_new())
+            return
+        if not items:
+            self.show_status("Nothing new in the last two weeks. Follow shows and play artists you like, and their "
+                             "new episodes and releases show up here.", kind="info", timeout_ms=8000)
+            return
+        self._show_web_collection("Playlist", "What's new", [x["track"] for x in items], "")
 
     def show_wrapped(self, period="This year"):
         """Your listening stats, worked out on this computer from what you've played (core/wrapped.py)."""

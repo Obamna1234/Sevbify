@@ -691,3 +691,24 @@ def preview_feed(color=GREY, size=24):
     p.drawPolygon(QPolygonF([QPointF(s * 0.43, s * 0.32), QPointF(s * 0.43, s * 0.6), QPointF(s * 0.62, s * 0.46)]))
     p.end()
     return QIcon(pm)
+
+
+def bell(color=GREY, size=20, dot=False):
+    """Spotify's What's new bell (a green dot when there's something new)."""
+    pm, p = _canvas(size)
+    s = size
+    p.setPen(_pen(color, s * 0.08))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    path = QPainterPath()
+    path.moveTo(s * 0.22, s * 0.70)
+    path.lineTo(s * 0.78, s * 0.70)
+    path.moveTo(s * 0.28, s * 0.70)
+    path.cubicTo(s * 0.32, s * 0.55, s * 0.26, s * 0.18, s * 0.5, s * 0.18)
+    path.cubicTo(s * 0.74, s * 0.18, s * 0.68, s * 0.55, s * 0.72, s * 0.70)
+    p.drawPath(path)
+    p.drawLine(QPointF(s * 0.43, s * 0.82), QPointF(s * 0.57, s * 0.82))
+    if dot:
+        p.setBrush(QColor("#1ed760")); p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(QPointF(s * 0.76, s * 0.22), s * 0.12, s * 0.12)
+    p.end()
+    return QIcon(pm)

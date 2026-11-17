@@ -160,7 +160,15 @@ struct ProfileMenu: View {
                 }
             }.padding(16).contentShape(Rectangle()).onTapGesture { open(.settings) }
             Divider().background(C.card)
-            item("sparkles", "What's new") {
+            item("bell", "New for you") {
+                Task {
+                    let items = (try? await Bridge.call("whats_new", ["[]", Listens.json()])) as? [[String: Any]] ?? []
+                    let tracks = items.compactMap { ($0["track"] as? [String: Any]).map(Track.init(dict:)) }
+                    if tracks.isEmpty { Player.shared.status = "Nothing new in the last two weeks" }
+                    else { open(.songs("New for you", tracks)) }
+                }
+            }
+            item("sparkles", "What's new in Sevbify") {
                 nav.drawer = false
                 if let u = URL(string: "https://github.com/Obamna1234/Sevbify/releases") { UIApplication.shared.open(u) }
             }

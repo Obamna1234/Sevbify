@@ -11,6 +11,7 @@ class TopBar(QWidget):
     forward_clicked = pyqtSignal()
     home_clicked = pyqtSignal()
     settings_clicked = pyqtSignal()
+    whats_new_clicked = pyqtSignal()
     search_activated = pyqtSignal()           # search box clicked / typed into
     browse_clicked = pyqtSignal()             # the Browse button in the search pill
     downloads_clicked = pyqtSignal()          # the download progress pill was clicked
@@ -119,18 +120,26 @@ class TopBar(QWidget):
         self.online_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.online_label.clicked.connect(self.online_toggled.emit)
         h.addWidget(self.online_label)
+        self.bell_btn = self._round(icons.bell(theme.SUBDUED, 20), "What's new", 36, "transparent")
+        self.bell_btn.clicked.connect(self.whats_new_clicked.emit)
+        h.addWidget(self.bell_btn)
         self.settings_btn = self._round(icons.gear(theme.SUBDUED, 20), "Settings", 36, "transparent")
         self.settings_btn.clicked.connect(self.settings_clicked.emit)
         h.addWidget(self.settings_btn)
         self.set_online_state("unknown")
         self.set_history(False, False)
 
+    def set_new(self, count):
+        """The green dot on the bell when there are new episodes or releases you haven't looked at."""
+        self.bell_btn.setIcon(icons.bell(theme.SUBDUED, 20, dot=count > 0))
+        self.bell_btn.setToolTip(f"What's new ({count})" if count else "What's new")
+
     CENTER_MAX = 48 + 8 + 480                 # Home button + gap + Spotify-width search pill
 
     def _place_center(self):
         w = self.width()
         left = max(b.geometry().right() for b in self._left_group) + 12
-        right_items = [x for x in (self.downloads_btn, self.private_label, self.online_label, self.settings_btn)
+        right_items = [x for x in (self.downloads_btn, self.private_label, self.online_label, self.bell_btn, self.settings_btn)
                        if not x.isHidden()]
         right = min((x.geometry().left() for x in right_items), default=w) - 12
         cw = min(self.CENTER_MAX, w - 2 * max(left, w - right))
