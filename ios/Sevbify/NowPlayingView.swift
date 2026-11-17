@@ -54,13 +54,9 @@ struct NowPlayingView: View {
             }.padding(.horizontal, 24)
 
             VStack(spacing: 4) {
-                Slider(value: Binding(get: { dragging ?? player.position },
-                                      set: { dragging = $0 }),
-                       in: 0...max(1, player.duration),
-                       onEditingChanged: { editing in
-                           if !editing, let d = dragging { player.seek(to: d); dragging = nil }
-                       })
-                .tint(.white)
+                SpotifyScrubber(value: dragging ?? player.position, total: max(1, player.duration),
+                                onDrag: { dragging = $0 },
+                                onEnd: { if let d = dragging { player.seek(to: d); dragging = nil } })
                 HStack {
                     Text(formatTime(Int((dragging ?? player.position) * 1000)))
                     Spacer()
@@ -92,12 +88,13 @@ struct NowPlayingView: View {
             }.padding(.horizontal, 24).padding(.top, 8)
 
             HStack {
+                // Spotify's row: devices on the left; share and queue on the right (song radio is in the ••• menu).
                 RoutePicker().frame(width: 44, height: 44).accessibilityLabel("Connect to a device")
                 Spacer()
                 if let t, !t.isItem {
-                    Button { player.startRadio(t) } label: { Image(systemName: "dot.radiowaves.left.and.right") }
-                        .accessibilityLabel("Song radio")
-                    Spacer()
+                    Button { Share.song(t) } label: { Image(systemName: "square.and.arrow.up") }
+                        .accessibilityLabel("Share")
+                        .padding(.trailing, 20)
                 }
                 Button { showQueue = true } label: { Image(systemName: "list.bullet") }.accessibilityLabel("Queue")
             }.font(.title3).padding(.horizontal, 24).padding(.vertical, 16)
@@ -112,6 +109,43 @@ struct NowPlayingView: View {
 }
 
 /// AirPlay / Bluetooth speakers and headphones (Apple's own picker, like Spotify's Connect button).
+/// Spotify's progress bar: a thin 4 pt line (white played part on a grey track) with a small white dot, a bit
+/// bigger while you drag. The whole row height is touchable, so it's easy to grab.
+struct SpotifyScrubber: View {
+    let value: Double
+    let total: Double
+    let onDrag: (Double) -> Void
+    let onEnd: () -> Void
+    @State private var active = false
+
+    var body: some View {
+        GeometryReader { g in
+            let w = max(1, g.size.width)
+            let frac = min(1, max(0, value / total))
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.3)).frame(height: 4)
+                Capsule().fill(Color.white).frame(width: w * frac, height: 4)
+                Circle().fill(Color.white).frame(width: active ? 16 : 12, height: active ? 16 : 12)
+                    .offset(x: w * frac - (active ? 8 : 6))
+            }
+            .frame(height: 24)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { v in active = true; onDrag(min(1, max(0, v.location.x / w)) * total) }
+                .onEnded { _ in active = false; onEnd() })
+        }
+        .frame(height: 24)
+        .animation(.easeOut(duration: 0.12), value: active)
+        .accessibilityElement()
+        .accessibilityLabel("Song position")
+        .accessibilityValue(formatTime(Int(value * 1000)))
+        .accessibilityAdjustableAction { dir in
+            let step = 10.0
+            onDrag(min(total, max(0, value + (dir == .increment ? step : -step)))); onEnd()
+        }
+    }
+}
+
 struct RoutePicker: UIViewRepresentable {
     func makeUIView(context: Context) -> AVRoutePickerView {
         let v = AVRoutePickerView()

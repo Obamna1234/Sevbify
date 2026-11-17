@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PushPin
@@ -118,23 +120,59 @@ fun LibraryScreen() {
     }
     SwipePages(chipKeys.indexOf(chip).coerceAtLeast(0), chipKeys.size, { chip = chipKeys[it] }) {
     LazyColumn {
-        if ((chip == "" || chip == "playlists" || chip == "downloaded") && (q.isEmpty() || "your songs".contains(q))) {
+        val showYourSongs = (chip == "" || chip == "playlists" || chip == "downloaded") && (q.isEmpty() || "your songs".contains(q))
+        val showToDownload = (chip == "") && (q.isEmpty() || "to download".contains(q))
+        val showPlaylists = chip == "" || chip == "playlists" || chip == "downloaded"
+        val all = if (showPlaylists) Library.playlists.filter { q.isEmpty() || q in it.name.lowercase() }
+            .filter { chip != "downloaded" || (it.tracks.isNotEmpty() && it.tracks.all { t -> Library.localFor(t) != null }) }
+            else emptyList()
+        val inFolders = if (showPlaylists && q.isEmpty() && chip != "downloaded") Library.folders.toList() else emptyList()
+        val loose = sorted(all.filter { inFolders.isEmpty() || it.folder.isEmpty() || it.folder !in inFolders })
+        if (grid) {
+            // Spotify's grid view: everything is a tile, Your Songs and folders too (a folder opens in place).
+            val tiles = mutableListOf<Any>()          // "your" / "todl" / LibFolder / Playlist
+            if (showYourSongs) tiles += "your"
+            if (showToDownload) tiles += "todl"
+            for (f in inFolders) {
+                val kids = sorted(all.filter { it.folder == f })
+                tiles += LibFolder(f, kids.size)
+                if (f in open) tiles.addAll(kids)
+            }
+            tiles.addAll(loose)
+            fun keyOf(t: Any) = when (t) { is LibFolder -> "folder:" + t.name; is Playlist -> "p" + t.id; else -> t.toString() }
+            items(tiles.chunked(3), key = { row -> "g" + keyOf(row.first()) }) { row ->
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { t ->
+                        val m = Modifier.weight(1f)
+                        when (t) {
+                            "your" -> SpecialTile("Your Songs", "${Library.localSongs.size} songs",
+                                Brush.linearGradient(listOf(Color(0xFF450AF5), Color(0xFFC4EFD9))), "♥", m) { Nav.go(Screen.YourSongs) }
+                            "todl" -> SpecialTile("To download", "${Library.toDownload().size} songs",
+                                Brush.linearGradient(listOf(Color(0xFF1ED760), Color(0xFF0E7A36))), "⬇", m) { Nav.go(Screen.ToDownload) }
+                            is LibFolder -> FolderTile(t.name, t.count, t.name in open, m,
+                                onClick = { open = if (t.name in open) open - t.name else open + t.name },
+                                onLongClick = { Nav.folderMenu = t.name })
+                            is Playlist -> PlaylistTile(t, m)
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        } else {
+        if (showYourSongs) {
             item {
                 LibRow("Your Songs", "Songs on your phone • ${Library.localSongs.size}", null,
                        Brush.linearGradient(listOf(Color(0xFF450AF5), Color(0xFFC4EFD9))), "♥") { Nav.go(Screen.YourSongs) }
             }
         }
-        if ((chip == "") && (q.isEmpty() || "to download".contains(q))) {
+        if (showToDownload) {
             val n = Library.toDownload().size
             item {
                 LibRow("To download", "Not downloaded yet • $n songs", null,
                        Brush.linearGradient(listOf(Color(0xFF1ED760), Color(0xFF0E7A36))), "⬇") { Nav.go(Screen.ToDownload) }
             }
         }
-        if (chip == "" || chip == "playlists" || chip == "downloaded") {
-            val all = Library.playlists.filter { q.isEmpty() || q in it.name.lowercase() }
-                .filter { chip != "downloaded" || (it.tracks.isNotEmpty() && it.tracks.all { t -> Library.localFor(t) != null }) }
-            val inFolders = if (q.isEmpty() && chip != "downloaded") Library.folders.toList() else emptyList()
+        if (showPlaylists) {
             for (f in inFolders) {
                 val kids = sorted(all.filter { it.folder == f })
                 item {
@@ -154,15 +192,8 @@ fun LibraryScreen() {
                 }
                 if (f in open) items(kids, key = { "f" + it.id }) { pl -> PlaylistRow(pl, indent = true) }
             }
-            val loose = sorted(all.filter { inFolders.isEmpty() || it.folder.isEmpty() || it.folder !in inFolders })
-            if (grid) {
-                items(loose.chunked(3), key = { row -> "g" + row.first().id }) { row ->
-                    Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        row.forEach { pl -> PlaylistTile(pl, Modifier.weight(1f)) }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                    }
-                }
-            } else items(loose, key = { it.id }) { pl -> PlaylistRow(pl) }
+            items(loose, key = { it.id }) { pl -> PlaylistRow(pl) }
+        }
         }
         if (chip == "" || chip == "podcasts" || chip == "audiobooks") {
             val shows = Library.shows.filter { (chip == "" || (chip == "audiobooks") == it.isBook) && (q.isEmpty() || q in it.title.lowercase()) }
@@ -199,6 +230,36 @@ private fun SortSheet(current: String, done: (String?) -> Unit) {
 }
 
 private fun Modifier.androidxNavPadding() = this.then(Modifier.padding(bottom = 24.dp))
+
+private data class LibFolder(val name: String, val count: Int)
+
+/** A grid tile with a coloured square and a glyph (Your Songs, To download), like Spotify's Liked Songs tile. */
+@Composable
+private fun SpecialTile(title: String, subtitle: String, brush: Brush, glyph: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clickable(onClick = onClick)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(4.dp)).background(brush),
+            contentAlignment = Alignment.Center) {
+            Text(glyph, color = Color.White, style = MaterialTheme.typography.headlineMedium)
+        }
+        Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium,
+             modifier = Modifier.padding(top = 6.dp))
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
+}
+
+/** A folder as a grid tile; tapping it shows its playlists right after it. */
+@Composable
+private fun FolderTile(name: String, count: Int, isOpen: Boolean, modifier: Modifier, onClick: () -> Unit, onLongClick: () -> Unit) {
+    Column(modifier.combinedClickableCompat(onClick = onClick, onLongClick = onLongClick)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(4.dp)).background(C.Card),
+            contentAlignment = Alignment.Center) {
+            Icon(if (isOpen) Icons.Filled.FolderOpen else Icons.Filled.Folder, null, tint = C.Sub, modifier = Modifier.size(40.dp))
+        }
+        Text(name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium,
+             modifier = Modifier.padding(top = 6.dp))
+        Text("$count playlists", style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
+}
 
 @Composable
 private fun PlaylistTile(pl: Playlist, modifier: Modifier) {

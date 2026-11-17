@@ -6,6 +6,8 @@ mutagen>=1.47
 Pillow>=10.0
 certifi           # up-to-date web certificates for online features (needed on macOS)
 yt-dlp[default,curl-cffi]>=2025.11.12  # songs; [default] adds yt-dlp-ejs (YouTube), [curl-cffi] lets it look like a browser (Bandcamp asks)
+pycryptodomex>=3.21     # pairing a phone: P-256 key agreement and AES-GCM (also used by yt-dlp)
+segno>=1.6         # the QR code for pairing a phone (pure Python)
 imageio-ffmpeg    # provides ffmpeg for downloads, so nothing else has to be installed
 
 # Development / tests

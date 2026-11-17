@@ -63,6 +63,8 @@ class SettingsPage(QWidget):
     open_folder_requested = pyqtSignal(str)
     shortcuts_requested = pyqtSignal()
     import_requested = pyqtSignal()
+    pair_requested = pyqtSignal()
+    phone_remove_requested = pyqtSignal(str)
     profile_export_requested = pyqtSignal()
     profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
@@ -185,6 +187,30 @@ class SettingsPage(QWidget):
             self.controls["add_" + kind] = b
         add_row.addStretch()
         self._v.addLayout(add_row)
+
+        self._section("Your phone")
+        self._text("Pair Sevbify on your phone with this computer to send songs and folders either way. It only works "
+                   "on your own Wi-Fi: nothing goes through the internet, everything is encrypted, and you say yes to "
+                   "every transfer before anything is saved.")
+        for ph in info.get("phones", []):
+            row = QHBoxLayout()
+            state = "Connected" if ph.get("connected") else "Not connected"
+            row.addLayout(self._name_desc(ph.get("name", "Phone"), f"{ph.get('platform', '').title()} · {state}".strip(" ·"),
+                                          into=row), 1)
+            b = QPushButton("Remove")
+            b.clicked.connect(lambda _=False, i=ph["id"]: self.phone_remove_requested.emit(i))
+            row.addWidget(b)
+            self._v.addLayout(row)
+        pair_row = QHBoxLayout()
+        pb = QPushButton("Pair a phone…")
+        pb.setEnabled(bool(info.get("phones_available", False)))
+        pb.clicked.connect(self.pair_requested.emit)
+        self.controls["pair_phone"] = pb
+        pair_row.addWidget(pb)
+        pair_row.addStretch()
+        self._v.addLayout(pair_row)
+        self._toggle("phone_link", "Let paired phones connect",
+                     "When off, this computer doesn't listen for your phone.", getattr(u, "phone_link", True))
 
         self._section("Your Library")
         self._toggle("library_compact", "Use compact library layout", "", u.library_view == "compact")

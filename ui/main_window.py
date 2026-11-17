@@ -536,6 +536,13 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.server_refresh_requested.connect(
             lambda i: [self.refresh_music_server(s) for s in self.music_servers() if s["id"] == i])
         self.settings_page.server_remove_requested.connect(self.remove_music_server)
+        from .phone_link import PhoneLink
+        self.phone_link = PhoneLink(self)
+        self.settings_page.pair_requested.connect(self.phone_link.open_pairing)
+        self.settings_page.phone_remove_requested.connect(self.phone_link.forget)
+        self.phone_link.phones_changed.connect(
+            lambda: self.stack.currentWidget() is self.settings_page and self.open_settings())
+        QTimer.singleShot(1500, lambda: not getattr(self, "_shut_down", False) and self.phone_link.start_if_paired())
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.settings_page.reset_requested.connect(self.reset_settings)
@@ -1250,6 +1257,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         else:
             menu.addAction("♡  Add to Liked Songs").triggered.connect(lambda: self.toggle_like(song))
         menu.addAction("≡  Add to queue").triggered.connect(lambda: self.add_to_queue(song))
+        self._add_send_to_phone(menu, [song])
         if is_remote:
             state, _note = self.downloads.state(song.track.key)
             if state in ("queued", "downloading"):
@@ -4078,10 +4086,23 @@ class MainWindow(ShowsMixin, QMainWindow):
         else:
             self.set_right_panel(self.user_data.right_panel, save=False)
 
+    def _add_send_to_phone(self, menu, songs, title=""):
+        """'Send to <phone>' for each paired phone that's connected now (songs on this computer only)."""
+        link = getattr(self, "phone_link", None)
+        if link is None:
+            return
+        local = [s.file_path for s in songs if s is not None and not getattr(s, "is_remote", False)
+                 and getattr(s, "exists", False)]
+        for sess in link.connected():
+            act = menu.addAction(f"📱  Send to {sess.name}")
+            act.setEnabled(bool(local))
+            act.triggered.connect(lambda _=False, s=sess: link.send(s, local, title))
+
     def build_playlist_menu(self, playlist):
         """A playlist's ••• / right-click menu, in Spotify's order (only what Sevbify can do)."""
         menu = self._new_menu()
         menu.addAction("≡  Add to queue").triggered.connect(lambda: [self.add_to_queue(x) for x in playlist.songs])
+        self._add_send_to_phone(menu, playlist.songs, title=playlist.name)
         menu.addSeparator()
         menu.addAction("✎  Edit details").triggered.connect(lambda: self.edit_playlist_details(playlist))
         menu.addAction("⊖  Delete").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
@@ -6512,6 +6533,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         from core import servers as _servers
         info = dict(version=app_version(), private_session=self.private_session,
                     servers=[_servers.public(s) for s in self.music_servers()],
+                    phones=self.phone_link.phones() if getattr(self, "phone_link", None) else [],
+                    phones_available=bool(getattr(self, "phone_link", None) and self.phone_link.available()),
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),
@@ -6816,6 +6839,10 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.show_status("Private session on: what you play isn't remembered (ends when you close Sevbify "
                              "or after 6 hours)" if self.private_session else "Private session off",
                              kind="info", timeout_ms=5000)
+        if "phone_link" in values:
+            u.phone_link = bool(values["phone_link"])
+            if getattr(self, "phone_link", None) is not None:
+                self.phone_link.stop() if not u.phone_link else self.phone_link.start_if_paired()
         if "library_compact" in values:
             self.library_panel.set_view_options(view="compact" if values["library_compact"] else "list")
         if any(k in values for k in ("eq_enabled", "eq_bands", "eq_preset")):
@@ -6941,6 +6968,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             super().closeEvent(event)
             return
         self._shut_down = True
+        if getattr(self, "phone_link", None) is not None:
+            self.phone_link.stop()
         if getattr(self, "_pending_update", None):
             self.install_update_and_quit(reopen=False)       # downloaded earlier: put in place now
         preview = getattr(self, "_preview_window", None)

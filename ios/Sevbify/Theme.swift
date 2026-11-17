@@ -221,8 +221,11 @@ struct TrackMenu: View {
     }
 
     /// Sevbify has no accounts: a song is shared as a Spotify/YouTube link (exact when song.link finds it).
-    private func share() {
-        let t = track
+    private func share() { Share.song(track) }
+}
+
+extension Share {
+    static func song(_ t: Track) {
         Task {
             var text = "\(t.title) by \(t.artist)"
             if let o = try? await Bridge.object("share_links", [t.artist, t.title, t.pageUrl, ""]) {

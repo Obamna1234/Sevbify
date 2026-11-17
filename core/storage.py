@@ -137,6 +137,7 @@ class UserData:
     np_on_play: bool = True   # Settings: open the Now playing panel when you play
     notify_track: bool = False   # Settings: desktop notification when the song changes
     canvas_enabled: bool = True   # Settings: Canvas loop videos
+    phone_link: bool = True       # Settings → Your phone: listen for paired phones on the local network
     spotify_canvas: bool = False  # Spotify's Canvas needs a signed-in account (not used; see core/spotify_canvas.py)
     zoom: int = 100   # Settings: zoom level in % (applies after restart)
     startup: str = 'no'   # Settings: open after login (Windows)
@@ -178,7 +179,7 @@ ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
     "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
-    "disabled_folders", "language", "save_space")
+    "disabled_folders", "language", "save_space", "phone_link")
 
 
 def default_settings(which="all"):
@@ -284,6 +285,7 @@ class Storage:
                 "np_on_play": data.np_on_play,
                 "notify_track": data.notify_track,
                 "canvas_enabled": data.canvas_enabled,
+                "phone_link": data.phone_link,
                 "spotify_canvas": bool(data.spotify_canvas),
                 "zoom": data.zoom,
                 "startup": data.startup,
@@ -410,6 +412,7 @@ class Storage:
             pass
         try:
             data.canvas_enabled = bool(settings.get('canvas_enabled', True))
+            data.phone_link = bool(settings.get('phone_link', True))
             data.spotify_canvas = False
         except (TypeError, ValueError):
             pass
