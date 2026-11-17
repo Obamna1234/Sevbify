@@ -5,6 +5,7 @@ struct HomeView: View {
     @EnvironmentObject var player: Player
     @EnvironmentObject var nav: Nav
     @State private var genres: [[String: Any]] = []
+    @StateObject private var mfy = MadeForYou.shared
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -64,6 +65,19 @@ struct HomeView: View {
                     }
                 }
 
+                if !mfy.mixes.isEmpty {
+                    SectionTitle("Made for you")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 14) {
+                            ForEach(mfy.mixes, id: \.title) { m in
+                                Card(title: m.title, subtitle: m.subtitle, art: m.tracks.first?.art ?? "") {
+                                    nav.go(.songs(m.title, m.tracks))
+                                }
+                            }
+                        }.padding(.horizontal, 16)
+                    }
+                }
+
                 if lib.settings.online && !genres.isEmpty {
                     SectionTitle("Browse")
                     GenreGrid(genres: genres)
@@ -75,6 +89,7 @@ struct HomeView: View {
         .navigationBarHidden(true)
         .task {
             if genres.isEmpty && lib.settings.online { genres = (try? await Bridge.list("genres")) ?? [] }
+            if lib.settings.online { await mfy.refresh(local: lib.localSongs) }
         }
     }
 }
@@ -128,5 +143,28 @@ struct GenreGrid: View {
                 }.buttonStyle(.plain)
             }
         }.padding(.horizontal, 16)
+    }
+}
+
+/// Made for you on iPhone, like the PC and Android: daylist, Discover Weekly, Release Radar, Daily Mixes and mood
+/// mixes, worked out on this iPhone from what you've played (core/discovery.py). Refreshed every few hours.
+@MainActor
+final class MadeForYou: ObservableObject {
+    static let shared = MadeForYou()
+    struct Mix { let title: String; let subtitle: String; let tracks: [Track] }
+    @Published var mixes: [Mix] = []
+    private var key = ""
+
+    func refresh(local: [Track]) async {
+        let k = "\(Int(Date().timeIntervalSince1970) / 10800):\(Listens.all().count / 50)"
+        guard k != key else { return }
+        key = k
+        let known = local.prefix(20000).map { [$0.artist, $0.title] }
+        guard let rows = try? await Bridge.list("made_for_you", [Listens.json(), Bridge.json(known)]) else { key = ""; return }
+        mixes = rows.compactMap { r in
+            let tracks = (r["tracks"] as? [[String: Any]] ?? []).map(Track.init(dict:))
+            guard let title = r["title"] as? String, !tracks.isEmpty else { return nil }
+            return Mix(title: title, subtitle: r["subtitle"] as? String ?? "", tracks: tracks)
+        }
     }
 }

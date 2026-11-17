@@ -96,3 +96,18 @@ def test_bridge_debug_log_is_a_local_text_file_without_emails(bridge, tmp_path):
     assert "Jahzzar - Siesta" in text and "[example.com link]" in text and "token=secret" not in text
     assert "someone.private" not in text and "[email]" in text
     assert "Sneaky Snitch" not in text and "Private Session" in text
+
+
+def test_bridge_made_for_you(bridge, monkeypatch):
+    from core import discovery
+    from core.online.models import OnlineTrack
+    assert call(bridge, "made_for_you", "[]") == []
+    songs = [OnlineTrack(f"Song {i}", f"Artist {i % 3}", source="deezer", source_id=str(i)) for i in range(20)]
+    monkeypatch.setattr(discovery, "discover_weekly", lambda m, l, k: songs)
+    monkeypatch.setattr(discovery, "release_radar", lambda m, l: [])
+    monkeypatch.setattr(discovery, "daily_mixes", lambda m, l: [{"title": "Daily Mix 1", "subtitle": "x", "tracks": songs}])
+    monkeypatch.setattr(discovery, "daylist", lambda m, l: None)
+    monkeypatch.setattr(discovery, "mood_mix", lambda m, mood, l: (_ for _ in ()).throw(RuntimeError("down")))
+    listens = json.dumps([["Jahzzar", "Siesta", 1700000000 + i] for i in range(10)])
+    got = call(bridge, "made_for_you", listens, json.dumps([["Jahzzar", "Siesta"]]))
+    assert [m["title"] for m in got] == ["Discover Weekly", "Daily Mix 1"] and got[0]["tracks"][0]["title"] == "Song 0"

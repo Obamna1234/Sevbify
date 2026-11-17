@@ -388,6 +388,55 @@ def whats_new(shows_json="[]", listens_json="[]"):
 
 
 @_call
+def made_for_you(listens_json="[]", known_json="[]"):
+    """Made for you, worked out on the phone like the PC's: daylist, Discover Weekly, Release Radar, Daily Mixes and
+    mood mixes: [{"title", "subtitle", "tracks"}]. Only Deezer's public catalogue is asked (as for search)."""
+    from core import discovery
+    try:
+        raw = json.loads(listens_json or "[]")
+    except ValueError:
+        raw = []
+    listens = [[str(r[0]), str(r[1]), int(r[2])] for r in raw
+               if isinstance(r, list) and len(r) >= 3 and isinstance(r[2], (int, float)) and r[0] and r[1]][-5000:]
+    if len(listens) < 5:
+        return []
+    try:
+        known = {(discovery._norm(a), discovery._norm(t)) for a, t in json.loads(known_json or "[]")[:20000]}
+    except (ValueError, TypeError):
+        known = set()
+    music = _state["music"]
+    out = []
+
+    def add(title, subtitle, tracks):
+        if tracks:
+            out.append({"title": title, "subtitle": subtitle, "tracks": _tracks(tracks)})
+    for make in (lambda: discovery.daylist(music, listens),
+                 lambda: {"title": "Discover Weekly", "subtitle": "Your weekly mixtape of fresh music",
+                          "tracks": discovery.discover_weekly(music, listens, known)},
+                 lambda: {"title": "Release Radar", "subtitle": "New music from artists you listen to",
+                          "tracks": discovery.release_radar(music, listens)}):
+        try:
+            m = make()
+            if m:
+                add(m["title"], m["subtitle"], m["tracks"])
+        except Exception:
+            pass
+    try:
+        for m in discovery.daily_mixes(music, listens):
+            add(m["title"], m["subtitle"], m["tracks"])
+    except Exception:
+        pass
+    for mood, _label in discovery.MOODS[:3]:
+        try:
+            m = discovery.mood_mix(music, mood, listens)
+            if m:
+                add(m["title"], m["subtitle"], m["tracks"])
+        except Exception:
+            pass
+    return out
+
+
+@_call
 def wrapped(listens_json="[]", period="This year"):
     """Your listening stats (core/wrapped.py), worked out on the phone."""
     from core import wrapped as W

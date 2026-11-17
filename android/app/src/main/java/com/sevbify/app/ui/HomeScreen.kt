@@ -52,6 +52,9 @@ object HomeState {
     var topShows by mutableStateOf<List<Show>>(emptyList())
     var books by mutableStateOf<List<Show>>(emptyList())
     val shelves = androidx.compose.runtime.mutableStateMapOf<String, List<Show>>()
+    /** Made for you (daylist, Discover Weekly, Release Radar, Daily Mixes, mood mixes), worked out on the phone. */
+    var madeForYou by mutableStateOf<List<Triple<String, String, List<Track>>>>(emptyList())
+    var madeForYouKey = ""
 }
 
 /** Home, like Spotify's on Android: chips, eight quick tiles, then shelves. */
@@ -63,6 +66,22 @@ fun HomeScreen() {
     var topShows by HomeState::topShows
     LaunchedEffect(Library.settings.online) {
         if (!Library.settings.online) return@LaunchedEffect
+        // Changes every few hours (daylist) and as you listen; kept while you move around the app.
+        val key = "${System.currentTimeMillis() / (3 * 3600_000)}:${Library.listens.size / 50}"
+        if (HomeState.madeForYouKey != key) {
+            HomeState.madeForYouKey = key
+            try {
+                val known = org.json.JSONArray().also { a -> Library.localSongs.forEach { a.put(org.json.JSONArray(listOf(it.artist, it.title))) } }
+                val a = Bridge.arr("made_for_you", Library.listensJson(), known.toString())
+                HomeState.madeForYou = (0 until a.length()).map { i ->
+                    val o = a.getJSONObject(i)
+                    val ta = o.getJSONArray("tracks")
+                    Triple(o.optString("title"), o.optString("subtitle"), (0 until ta.length()).map { Track.fromJson(ta.getJSONObject(it)) })
+                }.filter { it.third.isNotEmpty() }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) { HomeState.madeForYouKey = ""; throw e }
+            }
+        }
         if (popular.isNotEmpty() && topShows.isNotEmpty()) return@LaunchedEffect   // already loaded: no reload on return
         try {
             val a = Bridge.obj("genre_overview", 0).getJSONArray("tracks")
@@ -141,6 +160,18 @@ fun HomeScreen() {
                 LazyRow(Modifier.padding(start = 16.dp)) {
                     items(Library.playlists.toList()) { pl ->
                         ShelfCard(pl.name, "Playlist • ${pl.tracks.size} songs", playlistCover(pl)) { Nav.go(Screen.PlaylistPage(pl.id)) }
+                    }
+                }
+            }
+        }
+        if (HomeState.madeForYou.isNotEmpty()) {
+            item { SectionTitle(tr("Made for you")) }
+            item {
+                LazyRow(Modifier.padding(start = 16.dp)) {
+                    items(HomeState.madeForYou) { (title, subtitle, tracks) ->
+                        ShelfCard(title, subtitle, tracks.firstOrNull()?.art ?: "") {
+                            Nav.go(Screen.Collection("Playlist", title, tracks, tracks.firstOrNull()?.art ?: ""))
+                        }
                     }
                 }
             }
