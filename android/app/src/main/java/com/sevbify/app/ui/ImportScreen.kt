@@ -66,7 +66,7 @@ fun ImportScreen(start: String) {
             busy = true
             scope.launch {
                 try {
-                    val o = Bridge.obj("import_link", link, songs, Library.settings.jamendoId)
+                    val o = Bridge.obj("import_link", link, songs, Library.settings.jamendoId, Library.settings.spotifyFull)
                     val tracks = o.getJSONArray("tracks").tracks()
                     val pl = Library.newPlaylist(o.optString("name", "Imported playlist"), tracks)
                     pl.coverUrl = o.optString("cover_url")

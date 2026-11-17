@@ -101,3 +101,60 @@ def test_only_song_lists_are_picked_up_from_downloads(window, tmp_path):
     bank.write_text("Date,Amount,Payee\n2026-10-01,12.50,Shop\n", encoding="utf-8")
     assert window._looks_like_song_list(str(songs))
     assert not window._looks_like_song_list(str(bank))
+
+
+def _pathfinder_item(n, typename="Track"):
+    return {"itemV2": {"data": {"__typename": typename, "name": f"Song {n}", "uri": f"spotify:track:{'a' * 21}{n % 10}",
+                                "artists": {"items": [{"profile": {"name": "Chris Zabriskie"}}]},
+                                "albumOfTrack": {"name": "Divider", "coverArt": {"sources": [
+                                    {"url": "https://i.scdn.co/image/small", "width": 64},
+                                    {"url": "https://i.scdn.co/image/big", "width": 640}]}},
+                                "trackDuration": {"totalMilliseconds": 200000}, "contentRating": {"label": "NONE"}}}}
+
+
+def test_whole_spotify_playlists_are_read_the_web_players_way(monkeypatch):
+    """Option B: the rest of a 250-song playlist, page by page, with the query id read from the web player."""
+    import json as _j
+    from core import importers
+    monkeypatch.setattr(importers, "_query_id", {"at": 0.0, "id": ""})
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    asked = []
+
+    def web(url, headers, data):
+        asked.append((url, headers, data))
+        if url == importers.SPOTIFY_WEB:
+            return b'<script src="https://open.spotifycdn.com/cdn/build/web-player/web-player.abc123.js"></script>'
+        if url.endswith(".js"):
+            return b'...{"fetchPlaylistContents","query","' + b"f" * 64 + b'"}...'
+        body = _j.loads(data)
+        off = body["variables"]["offset"]
+        items = [_pathfinder_item(n, "Episode" if n == 150 else "Track")   # a podcast episode: left out
+                 for n in range(off, min(off + 100, 250))]
+        return _j.dumps({"data": {"playlistV2": {"content": {"totalCount": 250, "items": items}}}}).encode()
+
+    more = importers.fetch_spotify_full("37i9dQZF1DX5Ejj0EkURtP", "tok", 100, opener=web)
+    assert len(more) == 149 and more[0].title == "Song 100" and more[0].artist == "Chris Zabriskie"
+    assert more[0].cover_url == "https://i.scdn.co/image/big" and more[0].page_url.startswith("https://open.spotify.com/track/")
+    calls = [h for u, h, d in asked if u == importers.PATHFINDER]
+    assert len(calls) == 2 and all(h["Authorization"] == "Bearer tok" for h in calls)
+    assert not any("Cookie" in h or "cookie" in h for u, h, d in asked)           # nothing about the user is sent
+
+
+def test_option_b_is_off_by_default_and_falls_back(monkeypatch):
+    from core import importers
+    from core.storage import UserData
+    assert UserData().spotify_full is False
+    embed = {"name": "Big", "cover_url": "", "tracks": [object()] * 100, "owner": "", "truncated": True, "_token": "tok"}
+    monkeypatch.setattr(importers, "parse_spotify_embed", lambda html: dict(embed))
+    used = []
+    monkeypatch.setattr(importers, "fetch_spotify_full", lambda *a, **k: used.append("B") or (_ for _ in ()).throw(OSError("no")))
+    monkeypatch.setattr(importers, "fetch_spotify_rest", lambda *a, **k: used.append("rest") or [])
+
+    class Net:
+        def get_text(self, url, ttl=0):
+            return ""
+    res = importers.fetch_from_link(Net(), "https://open.spotify.com/playlist/37i9dQZF1DX5Ejj0EkURtP")
+    assert used == ["rest"] and res["chosic_url"]                                # off: Option B never tried
+    used.clear()
+    res = importers.fetch_from_link(Net(), "https://open.spotify.com/playlist/37i9dQZF1DX5Ejj0EkURtP", spotify_full=True)
+    assert used == ["B", "rest"] and res["chosic_url"]                           # refused: falls back, then Chosic

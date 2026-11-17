@@ -318,7 +318,7 @@ struct ImportView: View {
         busy = true
         Task {
             do {
-                let o = try await Bridge.object("import_link", [link, songs, lib.settings.jamendoId])
+                let o = try await Bridge.object("import_link", [link, songs, lib.settings.jamendoId, lib.settings.spotifyFull])
                 let tracks = (o["tracks"] as? [[String: Any]] ?? []).map(Track.init(dict:))
                 var pl = lib.newPlaylist(o["name"] as? String ?? "Imported playlist", tracks: tracks,
                                          origin: o["origin"] as? String ?? "spotify")

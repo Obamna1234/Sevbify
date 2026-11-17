@@ -38,6 +38,9 @@ struct SettingsView: View {
             }
             ProfileSection()
             Section("Your Library") {
+                Toggle("Read whole Spotify playlists (over 100 songs)", isOn: $lib.settings.spotifyFull)
+                Text("Without signing in, Spotify only shares the first 100 songs of a playlist link. On: Sevbify reads the rest the way Spotify's own web player does, with the same anonymous access any visitor gets (no sign-in, nothing about you is sent, only the playlist's id). Spotify could notice or change this, so it's off by default; off, you can still paste copied songs or use Chosic.")
+                    .font(.caption).foregroundColor(C.dim)
                 Toggle("Show where playlists came from", isOn: $lib.settings.showPlaylistOrigin)
                 Text("A coloured border around playlist pictures: grey = made in Sevbify, green = Spotify link, white = Apple Music link, purple = Deezer link, orange = Jamendo link, blue = imported from a file.")
                     .font(.caption).foregroundColor(C.dim)

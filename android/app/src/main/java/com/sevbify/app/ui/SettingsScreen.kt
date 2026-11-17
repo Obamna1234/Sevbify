@@ -180,6 +180,11 @@ fun SettingsPageScreen(key: String) {
         }
         "privacy" -> {
         item {
+            Toggle(tr("Read whole Spotify playlists (over 100 songs)"), "Without signing in, Spotify only shares the first 100 songs of a playlist link. On: Sevbify reads the rest the way Spotify's own web player does, with the same anonymous access any visitor gets (no sign-in, nothing about you is sent, only the playlist's id). Spotify could notice or change this, so it's off by default; off, you can still paste copied songs or use Chosic.", s.spotifyFull) {
+                s.spotifyFull = it; Library.changed()
+            }
+        }
+        item {
             Toggle(tr("Online"), "Search, radio, streaming, podcasts and downloads. Off: Sevbify contacts nothing; your own " +
                    "and downloaded music still plays.", s.online) {
                 s.online = it; Library.changed(); scope.launch { try { Bridge.call("set_online", it) } catch (_: Exception) {} }

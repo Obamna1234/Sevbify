@@ -50,7 +50,15 @@ def spotify_import():
     from core import importers
     res = importers.fetch_from_link(net, "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M")
     assert len(res["tracks"]) >= 20, len(res["tracks"])
-    return f"{res['name']}: {len(res['tracks'])} songs, first {res['tracks'][0].artist} - {res['tracks'][0].title}"
+    return f"{len(res['tracks'])} songs read"                 # counts only: no song names in the log
+
+
+def spotify_whole_playlist():
+    """Settings → Read whole Spotify playlists: a public ~150-song playlist read in full, anonymously."""
+    from core import importers
+    res = importers.fetch_from_link(net, "https://open.spotify.com/playlist/37i9dQZF1DX5Ejj0EkURtP", spotify_full=True)
+    assert len(res["tracks"]) > 100 and not res["truncated"], (len(res["tracks"]), res["truncated"])
+    return f"{len(res['tracks'])} songs read (more than Spotify's 100 for a link)"
 
 
 def bandcamp():
@@ -176,6 +184,7 @@ check("Deezer search", deezer)
 check("Top songs in your country (Apple charts)", country_charts)
 check("Genre pages: more playlists (Deezer)", genre_playlists)
 check("Spotify playlist import (no account)", spotify_import)
+check("Whole Spotify playlists, over 100 songs (no account)", spotify_whole_playlist)
 check("Bandcamp search + stream link", bandcamp, blocked_ok=True)
 check("Bandcamp download", bandcamp_download, blocked_ok=True)
 check("Bandcamp app API (no Client Challenge)", bandcamp_app_api, blocked_ok=True)

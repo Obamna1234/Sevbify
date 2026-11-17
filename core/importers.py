@@ -272,7 +272,95 @@ def fetch_spotify_rest(net, playlist_id, token, have, opener=None):
     return out
 
 
-def fetch_from_link(net, text, jamendo_client_id=""):
+# --- Option B: whole Spotify playlists (Settings → "Read whole Spotify playlists", off by default) -------------
+# Spotify's own web player reads playlists through its "pathfinder" service, with the same anonymous key the embed
+# page hands any visitor. No sign-in and nothing about the user is sent: only the playlist's id. The query's id is
+# read from the web player's own script (it changes now and then), so nothing is hard-coded that could go stale.
+SPOTIFY_WEB = "https://open.spotify.com/"
+PATHFINDER = "https://api-partner.spotify.com/pathfinder/v1/query"
+_SCRIPT_RE = re.compile(r'src="(https://open\.spotifycdn\.com/cdn/build/web-player/[A-Za-z0-9._/-]+\.js)"')
+_QUERY_RE = re.compile(r'"fetchPlaylistContents","query","([0-9a-f]{64})"')
+_query_id = {"at": 0.0, "id": ""}
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/130.0.0.0 Safari/537.36")
+
+
+def _http(url, headers=None, data=None, opener=None, limit=8_000_000):
+    import urllib.request
+    if opener is not None:
+        return opener(url, headers or {}, data)
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": BROWSER_UA, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=25) as r:
+        return r.read(limit)
+
+
+def _playlist_query_id(opener=None):
+    import time as _t
+    if _query_id["id"] and _t.time() - _query_id["at"] < 86400:
+        return _query_id["id"]
+    html = _http(SPOTIFY_WEB, opener=opener, limit=2_000_000).decode("utf-8", "replace")
+    for src in _SCRIPT_RE.findall(html)[:12]:
+        js = _http(src, opener=opener, limit=12_000_000).decode("utf-8", "replace")
+        m = _QUERY_RE.search(js)
+        if m:
+            _query_id.update(at=_t.time(), id=m.group(1))
+            return m.group(1)
+    raise ImportError_("Spotify's web player has changed; whole playlists can't be read right now.")
+
+
+def parse_pathfinder_items(items):
+    """OnlineTracks from the web player's playlist items (songs only; podcast episodes and local files skipped)."""
+    out = []
+    for it in items or []:
+        d = (((it or {}).get("itemV2") or {}).get("data")) or {}
+        if d.get("__typename") != "Track" or not d.get("name"):
+            continue
+        artists = ", ".join(str(((a or {}).get("profile") or {}).get("name") or "")
+                            for a in ((d.get("artists") or {}).get("items") or []) if a)
+        album = d.get("albumOfTrack") or {}
+        sources = sorted(((album.get("coverArt") or {}).get("sources") or []),
+                         key=lambda x: -(x.get("width") or 0) if isinstance(x, dict) else 0)
+        cover = next((x.get("url", "") for x in sources if isinstance(x, dict)
+                      and str(x.get("url", "")).startswith("https://")), "")
+        uri = str(d.get("uri") or "")
+        tid = uri.split(":")[-1] if re.fullmatch(r"spotify:track:[A-Za-z0-9]{22}", uri) else ""
+        out.append(OnlineTrack(title=str(d["name"])[:300], artist=artists[:300], album=str(album.get("name") or "")[:300],
+                               duration_ms=int(((d.get("trackDuration") or {}).get("totalMilliseconds")) or 0),
+                               source="spotify", cover_url=cover,
+                               page_url=f"https://open.spotify.com/track/{tid}" if tid else "",
+                               explicit=((d.get("contentRating") or {}).get("label") == "EXPLICIT")))
+    return out
+
+
+def fetch_spotify_full(playlist_id, token, have, opener=None):
+    """Songs after the first `have` of a public Spotify playlist, read the way Spotify's web player does
+    (anonymously). Raises on any refusal; the caller then offers Paste copied songs / Chosic."""
+    import time as _t
+    if not token or not re.fullmatch(r"[A-Za-z0-9]{10,40}", playlist_id or ""):
+        raise ImportError_("no key")
+    qid = _playlist_query_id(opener)
+    headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json;charset=UTF-8",
+               "App-Platform": "WebPlayer", "Accept": "application/json"}
+    out, offset, total = [], have, None
+    while offset < MAX_IMPORT and (total is None or offset < total):
+        body = json.dumps({"variables": {"uri": f"spotify:playlist:{playlist_id}", "offset": offset, "limit": 100},
+                           "operationName": "fetchPlaylistContents",
+                           "extensions": {"persistedQuery": {"version": 1, "sha256Hash": qid}}}).encode()
+        data = json.loads(_http(PATHFINDER, headers, body, opener))
+        if data.get("errors"):
+            raise ImportError_("Spotify refused: " + str((data["errors"][0] or {}).get("message", ""))[:100])
+        content = (((data.get("data") or {}).get("playlistV2") or {}).get("content")) or {}
+        items = content.get("items") or []
+        total = int(content.get("totalCount") or 0)
+        out.extend(parse_pathfinder_items(items))
+        if not items:
+            break
+        offset += len(items)
+        _t.sleep(0.3)                                    # gently, like a person scrolling the playlist
+    return out
+
+
+def fetch_from_link(net, text, jamendo_client_id="", spotify_full=False):
     """Read a playlist from a Spotify / Apple Music / Deezer / Jamendo link (network). Returns the same dict as
     parse_spotify_embed."""
     link = parse_link(text)
@@ -282,15 +370,19 @@ def fetch_from_link(net, text, jamendo_client_id=""):
         res = parse_spotify_embed(net.get_text(spotify_embed_url(link[1], link[2]), ttl=600))
         token = res.pop("_token", "")
         if res["truncated"] and link[1] == "playlist":
-            # More than 100 songs: try the rest with the embed player's own anonymous key (no account). Spotify
-            # often refuses this ("quota exceeded"); then the app offers Chosic's exporter instead.
-            try:
-                more = fetch_spotify_rest(net, link[2], token, len(res["tracks"]))
+            # More than 100 songs: with "Read whole Spotify playlists" on, read the rest the way Spotify's web player
+            # does; else (or if that's refused) try the embed player's key on the public API (often refused). Both
+            # are anonymous. If neither works, the app offers Paste copied songs and Chosic.
+            ways = ([fetch_spotify_full] if spotify_full else []) + [lambda pid, tok, have: fetch_spotify_rest(net, pid, tok, have)]
+            for way in ways:
+                try:
+                    more = way(link[2], token, len(res["tracks"]))
+                except Exception:
+                    continue
                 if more:
                     res["tracks"] = res["tracks"] + more
                     res["truncated"] = len(res["tracks"]) >= MAX_IMPORT
-            except Exception:
-                pass
+                    break
         res["chosic_url"] = CHOSIC_EXPORTER if res["truncated"] and link[1] == "playlist" else ""
         return res
     if link[0] == "deezer":

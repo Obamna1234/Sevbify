@@ -111,6 +111,7 @@ class UserData:
     jamendo_client_id: str = ""
     download_source: str = "Bandcamp + YouTube"   # Settings -> Downloads (see core/downloader.SOURCES)
     download_notice_accepted: bool = False        # the one-time notice about downloading/streaming
+    spotify_full: bool = False                    # Settings: read whole Spotify playlists (web player, anonymous)
     tour_seen: bool = False                       # the feature tour was closed with "Don't show this again"
     stream_full: bool = True                      # Settings: play full songs you don't have (else previews)
     download_folder: str = ""                     # Settings: where downloads go ("" = automatic)
@@ -263,6 +264,7 @@ class Storage:
                 "download_source": data.download_source,
                 "download_notice_accepted": bool(data.download_notice_accepted),
                 "tour_seen": bool(data.tour_seen),
+                "spotify_full": bool(data.spotify_full),
                 "stream_full": bool(data.stream_full),
                 "download_folder": to_stored_path(data.download_folder) if data.download_folder else "",
                 "use_browser_cookies": bool(data.use_browser_cookies),
@@ -358,6 +360,7 @@ class Storage:
             data.download_source = settings["download_source"]
         data.download_notice_accepted = bool(settings.get("download_notice_accepted", False))
         data.tour_seen = bool(settings.get("tour_seen", False))
+        data.spotify_full = bool(settings.get("spotify_full", False))
         data.stream_full = bool(settings.get("stream_full", True))
         folder = settings.get("download_folder") or ""
         data.download_folder = from_stored_path(folder) if folder else ""

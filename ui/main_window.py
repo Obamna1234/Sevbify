@@ -3687,7 +3687,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             head = None
             if importers.parse_link(text) is not None:
                 try:
-                    head = importers.fetch_from_link(self.net, text, self.user_data.jamendo_client_id)
+                    head = importers.fetch_from_link(self.net, text, self.user_data.jamendo_client_id,
+                                                      self.user_data.spotify_full)
                 except importers.ImportError_:
                     if not ids:
                         raise
@@ -6904,7 +6905,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             if not values:
                 return
         was_online = u.online_enabled
-        simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
+        simple = ("online_enabled", "spotify_full", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
                   "language", "save_space", "ad_free_podcasts")

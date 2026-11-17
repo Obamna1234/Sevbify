@@ -163,6 +163,8 @@ class SettingsPage(QWidget):
             "and Last.fm / Jamendo if you add a key below. Those sites see "
             "your IP address and what you look up, like a web browser would. Sevbify only looks at the music folders "
             "you add; it never searches the rest of your computer.")
+        self._toggle("spotify_full", "Read whole Spotify playlists (over 100 songs)",
+                     "Without signing in, Spotify only shares the first 100 songs of a playlist link. On: Sevbify reads the rest the way Spotify's own web player does, with the same anonymous access any visitor gets (no sign-in, nothing about you is sent, only the playlist's id). Spotify could notice or change this, so it's off by default; off, you can still paste copied songs or use Chosic.", getattr(u, "spotify_full", False))
         self._line_edit("lastfm_api_key", "Last.fm API key (optional)",
                         "Makes song radio closer to Spotify's. Free at last.fm/api/account/create.", u.lastfm_api_key,
                         "e.g. 0123456789abcdef0123456789abcdef")
