@@ -635,12 +635,16 @@ def test_scroll_through_previews_of_a_playlist(window, qapp):
     feed = window._preview_feed
     assert feed is not None and feed.isVisible() and feed.title.text() == window.songs[0].title
     assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing(), 15)
+    feed.timer.timeout.disconnect()          # the 1-second test songs would end and move on by themselves
+    feed.go(-feed.index)
+    start = feed.index
     feed.go(1)
-    assert feed.index == 1 and feed.title.text() == window.songs[1].title
+    n = start + 1
+    assert feed.index == n and feed.title.text() == window.songs[n].title
     feed.toggle_like()
-    assert window.is_liked(window.songs[1])
+    assert window.is_liked(window.songs[n])
     feed.play_full_song()                                       # closes the feed, plays the full song
-    assert window._preview_feed is None and window.current_song is window.songs[1]
+    assert window._preview_feed is None and window.current_song is window.songs[n]
 
 
 def test_closing_dialogs_never_crashes_later(window, qapp):
