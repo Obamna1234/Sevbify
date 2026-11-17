@@ -5590,32 +5590,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                   if song is not None and self.user_data.canvas_enabled
                   else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
-        # (Spotify's own Canvas videos aren't fetched: Spotify only gives them to signed-in accounts - checked
-        # daily by the health check, see core/spotify_canvas.py.)
         self._refresh_artist_card()
-
-    def _fetch_spotify_canvas(self, song):
-        """No video of your own for this song: Spotify's Canvas, when it has one (no account; see core/spotify_canvas)."""
-        track = getattr(song, "track", None)
-        if (not self.user_data.canvas_enabled or not getattr(self.user_data, "spotify_canvas", False)
-                or not self.online_enabled or not song.artist or song.artist == "Unknown Artist"
-                or getattr(track, "source", "") in ("podcast", "audiobook", "youtube", "jellyfin", "webdav")):
-            return
-        from core import spotify_canvas
-        page = getattr(track, "page_url", "") or ""
-        deezer_page = page if "deezer.com" in page else ""
-
-        def deezer_lookup():
-            if deezer_page:
-                return deezer_page
-            found = self.online.deezer.find_track(song.artist, song.title)
-            return getattr(found, "page_url", "") if found is not None else ""
-
-        def done(path):
-            if path and self.current_song is song and self.user_data.canvas_enabled:
-                self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=path, playing=self.is_playing)
-        self.online_call(spotify_canvas.find, self.net, self.storage.data_dir, song.artist, song.title, page,
-                         deezer_lookup, on_done=done, on_error=lambda _e: None)
 
     def _refresh_artist_card(self):
         """Fill 'About the artist' for the current song (online, cached per artist)."""
@@ -6772,7 +6747,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         simple = ("online_enabled", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
-                  "language", "save_space", "ad_free_podcasts", "spotify_canvas")
+                  "language", "save_space", "ad_free_podcasts")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])

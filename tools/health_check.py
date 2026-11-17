@@ -53,65 +53,6 @@ def spotify_import():
     return f"{res['name']}: {len(res['tracks'])} songs, first {res['tracks'][0].artist} - {res['tracks'][0].title}"
 
 
-def spotify_canvas():
-    from core import spotify_canvas as sc
-    seen = {}
-
-    def opener(req):
-        import urllib.request
-        try:
-            with net._web.open(req, timeout=15) as r:
-                body = r.read(200_000)
-                seen["status"], seen["body"] = r.status, body
-                return body
-        except Exception as e:
-            seen["error"] = repr(e)
-            raise
-    # Variants tried while finding out what Spotify needs (printed, not failing on their own).
-    import urllib.request
-    tid = "0VjIjW4GlUZAMYd2vXMi3b"
-    token = sc._anonymous_token(net, tid)
-    for name, extra in (("web-player headers", {"app-platform": "WebPlayer", "Origin": "https://open.spotify.com",
-                                                "Referer": "https://open.spotify.com/", "Accept-Language": "en"}),
-                        ("android headers", {"User-Agent": "Spotify/9.0.0 Android/34 (Pixel 7)", "app-platform": "Android"})):
-        req = urllib.request.Request(sc.CANVAS_API, data=sc._request_body(tid), method="POST", headers={
-            "Authorization": "Bearer " + token, "Content-Type": "application/x-protobuf",
-            "Accept": "application/protobuf", **extra})
-        try:
-            with net._web.open(req, timeout=15) as r:
-                b = r.read(5000)
-            print(f"::notice title=Canvas variant {name}::HTTP {r.status} {len(b)} bytes {b[:200]!r}")
-        except Exception as e:
-            print(f"::notice title=Canvas variant {name}::{e!r}")
-    ids = ["0VjIjW4GlUZAMYd2vXMi3b", "0yLdNVWF3Srea0uzk55zFn", "4Dvkj6JhhA12EX05fT7y2e", "7MXVkk9YMctZqd1Srtv4MB",
-           "0V3wPSX9ygBnCm8psDIegu"]
-    body = b""
-    for i in ids:
-        uri = f"spotify:track:{i}".encode()
-        ent = b"\x0a" + bytes([len(uri)]) + uri
-        body += b"\x0a" + bytes([len(ent)]) + ent
-    req = urllib.request.Request(sc.CANVAS_API, data=body, method="POST", headers={
-        "Authorization": "Bearer " + token, "Content-Type": "application/x-protobuf", "Accept": "application/protobuf"})
-    try:
-        with net._web.open(req, timeout=15) as r:
-            b = r.read(20000)
-        print(f"::notice title=Canvas 5 hits::HTTP {r.status} {len(b)} bytes {b[:300]!r}")
-    except Exception as e:
-        print(f"::notice title=Canvas 5 hits::{e!r}")
-    import json, base64
-    try:
-        payload = token.split(".")[1] if token.count(".") == 2 else ""
-        print(f"::notice title=Token kind::{len(token)} chars, jwt={bool(payload)}")
-    except Exception:
-        pass
-    try:
-        return sc.canvas_url(net, tid, opener=opener)      # Blinding Lights has a Canvas
-    except Exception as e:
-        body = seen.get("body", b"")
-        raise RuntimeError(f"{e}; HTTP {seen.get('status')} {seen.get('error', '')} {len(body)} bytes: "
-                           + body[:400].decode("latin-1").encode("unicode_escape").decode()[:600])
-
-
 def bandcamp():
     from core import downloader
     e = downloader.engine()
@@ -226,16 +167,6 @@ check("Deezer search", deezer)
 check("Top songs in your country (Apple charts)", country_charts)
 check("Genre pages: more playlists (Deezer)", genre_playlists)
 check("Spotify playlist import (no account)", spotify_import)
-def spotify_search():
-    from core import spotify_canvas as sc
-    tid = sc.search_id(net, "The Weeknd", "Blinding Lights")
-    assert len(tid) == 22, tid
-    return tid
-
-
-# Not used by the app (Spotify keeps these for signed-in accounts); watched in case that changes.
-check("Spotify search (no account)", spotify_search, info_only=True)
-check("Spotify Canvas (no account)", spotify_canvas, info_only=True)
 check("Bandcamp search + stream link", bandcamp, blocked_ok=True)
 check("Bandcamp download", bandcamp_download, blocked_ok=True)
 check("Bandcamp app API (no Client Challenge)", bandcamp_app_api, blocked_ok=True)

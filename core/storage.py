@@ -138,7 +138,6 @@ class UserData:
     notify_track: bool = False   # Settings: desktop notification when the song changes
     canvas_enabled: bool = True   # Settings: Canvas loop videos
     phone_link: bool = True       # Settings → Your phone: listen for paired phones on the local network
-    spotify_canvas: bool = False  # Spotify's Canvas needs a signed-in account (not used; see core/spotify_canvas.py)
     zoom: int = 100   # Settings: zoom level in % (applies after restart)
     startup: str = 'no'   # Settings: open after login (Windows)
     close_to_tray: bool = False   # Settings: close button minimises to the tray
@@ -173,7 +172,7 @@ class UserData:
 # Settings → Reset: which values go back to how Sevbify starts. Never your playlists, folders, downloads,
 # podcasts or keys you typed in.
 APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapsed", "right_panel", "right_panel_width", "np_on_play",
-                       "canvas_enabled", "spotify_canvas")
+                       "canvas_enabled")
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
@@ -286,7 +285,6 @@ class Storage:
                 "notify_track": data.notify_track,
                 "canvas_enabled": data.canvas_enabled,
                 "phone_link": data.phone_link,
-                "spotify_canvas": bool(data.spotify_canvas),
                 "zoom": data.zoom,
                 "startup": data.startup,
                 "close_to_tray": data.close_to_tray,
@@ -413,7 +411,6 @@ class Storage:
         try:
             data.canvas_enabled = bool(settings.get('canvas_enabled', True))
             data.phone_link = bool(settings.get('phone_link', True))
-            data.spotify_canvas = False
         except (TypeError, ValueError):
             pass
         try:
