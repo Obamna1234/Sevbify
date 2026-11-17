@@ -1,0 +1,400 @@
+11-17 15:48:27.254  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.254  1043  1043 W AudioMediaPlayerWrapper: onMetadataChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.254  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:27.255  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.256  1043  1043 W AudioMediaPlayerWrapper: onMetadataChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.261  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026918, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.264  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.264  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026918, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.265  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.274  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026939, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.274  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.275  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026939, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.275  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.282  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026945, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.283  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.283  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026945, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.284  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.284  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026952, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.285  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.285  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1026952, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.285  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.287  1625  6391 I MediaProvider: Open with lower FS for /storage/emulated/0/Music/Test/Sevbify Test Band - Morning Light.mp3. Uid: 10192
+11-17 15:48:27.316   521  2481 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: com.obamna1234.sevbify/androidx.media3.session.id. (userId=0)
+11-17 15:48:27.316  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1026985, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.316  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.318  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1026985, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.318  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.426  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:27.426  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.426  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:27.426  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.511  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:27.513  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.513  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:27.514  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.669  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:27.688  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.689  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1027282, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.689  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.690  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:27.690  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.698  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1027282, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.698  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.842  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1027500, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.843  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:27.843  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.844  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1027500, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.844  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:27.845  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1027500, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.845  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:27.845  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:27.845  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1027500, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:27.845  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.417  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=454, buffered position=40071, speed=0.0, updated=1028081, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.421  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.422  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.422  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=454, buffered position=40071, speed=0.0, updated=1028081, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.422  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.423  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.437  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=454, buffered position=40071, speed=0.0, updated=1028081, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.437  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.437  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=454, buffered position=40071, speed=0.0, updated=1028081, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.437  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.479  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.479  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.513  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.515  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.519  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028185, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.519  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.520  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028185, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.520  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.522  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028190, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.522  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.522  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028190, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.522  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.523  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028191, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.523  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.523  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028191, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.523  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.528  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028193, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.528  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.528  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1028193, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.528  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.543   521  2481 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: com.obamna1234.sevbify/androidx.media3.session.id. (userId=0)
+11-17 15:48:28.543  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1028212, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.543  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.545  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1028212, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.546  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.564  1625  1645 I MediaProvider: Open with lower FS for /storage/emulated/0/Music/Test/Sevbify Test Band - City Rain.mp3. Uid: 10192
+11-17 15:48:28.857   521  2299 I ActivityManager: Background started FGS: Allowed [callingPackage: com.obamna1234.sevbify; callingUid: 10192; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { cmp=com.obamna1234.sevbify/com.sevbify.app.PlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; targetSdkVersion:35; callerTargetSdkVersion:35; startForegroundCount:1; bindFromPackage:null: isBindService:false]
+11-17 15:48:28.884  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.896  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.902  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.902  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.919  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.919  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.919  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:28.919  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.920  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.921  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.969  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.970  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.970  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1028589, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.970  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.970  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1028589, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.970  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.970  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=26749, speed=1.0, updated=1028591, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.971  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:28.971  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:28.972  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=26749, speed=1.0, updated=1028591, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.972  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.972  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=26749, speed=1.0, updated=1028628, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.972  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:28.972  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=26749, speed=1.0, updated=1028628, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:28.972  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.806  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.806  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:29.807  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.808  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.808  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.808  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:29.811   521  2299 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: com.obamna1234.sevbify/androidx.media3.session.id. (userId=0)
+11-17 15:48:29.814  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onMetadataChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onMetadataChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.839  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.839  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.840  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.840  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.840  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.840  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.840  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.840  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.840  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1029472, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.840  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.840  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1029480, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.842  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:29.843  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1029480, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:29.844  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:29.908  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:29.908  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:29.908  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:29.908  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.141  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:30.142  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.165  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:30.166  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.166  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.167  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.167  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.167  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.170  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1029830, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.170  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.170  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1029830, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.171  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.267  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=22230, speed=1.0, updated=1029857, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.267  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.267  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.275  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=22230, speed=1.0, updated=1029862, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.275  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.275  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=22230, speed=1.0, updated=1029857, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.276  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.276  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.291  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=22230, speed=1.0, updated=1029862, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.291  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.558  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=40071, speed=0.0, updated=1030204, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.558  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.559  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.593  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=40071, speed=0.0, updated=1030204, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.593  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:30.593  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=40071, speed=0.0, updated=1030204, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.597  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:30.597  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:30.599  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=40071, speed=0.0, updated=1030204, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:30.599  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.800  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.801  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.813  1625  1645 I MediaProvider: Open with lower FS for /storage/emulated/0/Music/Test/Sevbify Test Band - Morning Light.mp3. Uid: 10192
+11-17 15:48:35.824  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:35.825  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035489, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.825  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.825  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:35.828  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035489, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.828  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035490, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035490, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035492, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035492, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035492, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.829  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=0, buffered position=0, speed=0.0, updated=1035492, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.829  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.833   521  2450 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: com.obamna1234.sevbify/androidx.media3.session.id. (userId=0)
+11-17 15:48:35.836  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1035502, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.837  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:35.877  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1035502, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:35.877  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:35.883   521  2450 I ActivityManager: Background started FGS: Allowed [callingPackage: com.obamna1234.sevbify; callingUid: 10192; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { cmp=com.obamna1234.sevbify/com.sevbify.app.PlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; targetSdkVersion:35; callerTargetSdkVersion:35; startForegroundCount:2; bindFromPackage:null: isBindService:false]
+11-17 15:48:35.898  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.899  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.996  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.996  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.997  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.997  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.997  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:35.997  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:35.997  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:35.998  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:35.998  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:35.998  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:36.054  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1035670, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.054  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:36.056  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1035670, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.057  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:36.074  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1035743, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.077  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:36.078  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:36.080  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1035743, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.083  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:36.083  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:36.084  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1035744, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.084  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:36.084  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1035744, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:36.084  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.125  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=2894, buffered position=40071, speed=1.0, updated=1038793, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.126  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:39.126  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.127  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=2894, buffered position=40071, speed=1.0, updated=1038793, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.127  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:39.127  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.606  1625  1651 I MediaProvider: Open with lower FS for /storage/emulated/0/Music/Test/Sevbify Test Band - Morning Light.mp3. Uid: 10192
+11-17 15:48:39.609  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.612  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.614  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.614  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.614  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.615  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039277, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039277, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039285, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039285, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039287, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039287, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.625  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.625  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039289, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.626  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.626  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039289, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.626  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.708  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039303, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.763  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.763  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=BUFFERING(6), position=0, buffered position=0, speed=0.0, updated=1039303, actions=7339703, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.764  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.766  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.766  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.767  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.777  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.778  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.778  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.778  1043  1043 V AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify
+11-17 15:48:39.778  1043  1043 W AudioMediaPlayerWrapper: onQueueChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.778  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:39.779  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.779  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:39.779  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:39.855  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.888  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.893  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.893  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.893  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.893  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.893  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.894  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.895  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.895  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:39.895  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=0, buffered position=40045, speed=1.0, updated=1039394, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:39.895  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:42.727  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=2630, buffered position=40071, speed=1.0, updated=1042395, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:42.728  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:42.728  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:42.728  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PLAYING(3), position=2630, buffered position=40071, speed=1.0, updated=1042395, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:42.729  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:42.729  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:43.953  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=3848, buffered position=40071, speed=0.0, updated=1043616, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:43.954  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:43.956  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:43.956  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=3848, buffered position=40071, speed=0.0, updated=1043616, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:43.956  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:43.957  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=3848, buffered position=40071, speed=0.0, updated=1043616, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:43.957  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:43.957  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:43.958  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=3848, buffered position=40071, speed=0.0, updated=1043616, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:43.959  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:48.320   521   922 D CoreBackPreview: Window{baa0e47 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@f652099, mPriority=0, mIsAnimationCallback=false}
+11-17 15:48:48.553   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:48:48.876   521  2079 I ImeTracker: com.obamna1234.sevbify:dc962069: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:48:48.876   521  2079 I ImeTracker: com.obamna1234.sevbify:dc962069: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:48:48.968  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:48:49.471  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:48:49.701   521   555 D CoreBackPreview: Window{baa0e47 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+11-17 15:48:49.744   521   555 W InputManager-JNI: Input channel object 'baa0e47 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+11-17 15:48:49.759   521   555 D CoreBackPreview: Window{4a26209 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@e1d864b, mPriority=0, mIsAnimationCallback=false}
+11-17 15:48:49.862   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:48:50.085   521  2450 I ImeTracker: com.obamna1234.sevbify:13ef0cd5: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:48:50.085   521  2450 I ImeTracker: com.obamna1234.sevbify:13ef0cd5: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:48:50.091  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:48:50.589   521  2079 D CoreBackPreview: Window{4a26209 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+11-17 15:48:50.621   521  2079 W InputManager-JNI: Input channel object '4a26209 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+11-17 15:48:50.733   521   555 I ImeTracker: com.obamna1234.sevbify:185759ba: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:48:50.733   521   555 I ImeTracker: com.obamna1234.sevbify:185759ba: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:48:50.741  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:48:54.190  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40070, speed=0.0, updated=1053859, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.191  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:54.191  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:54.192  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40070, speed=0.0, updated=1053859, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.192  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:48:54.192  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:48:54.194  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40070, speed=0.0, updated=1053860, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.194  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:54.194  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40070, speed=0.0, updated=1053860, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.194  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:54.325  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40071, speed=0.0, updated=1053993, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.325  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:54.325  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=9160, buffered position=40071, speed=0.0, updated=1053993, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:48:54.326  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:48:55.172   521   614 D CoreBackPreview: Window{ca8e7a u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@c672734, mPriority=0, mIsAnimationCallback=false}
+11-17 15:48:55.389   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:48:55.626   521  2079 I ImeTracker: com.obamna1234.sevbify:ea84e04e: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:48:55.627   521  2079 I ImeTracker: com.obamna1234.sevbify:ea84e04e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:48:55.655  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:48:56.536   521   555 W InputManager-JNI: Input channel object 'ca8e7a com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+11-17 15:48:56.539   521   922 D CoreBackPreview: Window{ca8e7a u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity EXITING}: Setting back callback null
+11-17 15:48:56.542   521   640 W InputDispatcher: Not creating InputTarget for ca8e7a com.obamna1234.sevbify/com.sevbify.app.MainActivity, no input channel
+11-17 15:48:56.555   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:48:56.787   521  2079 I ImeTracker: com.obamna1234.sevbify:4cf6d202: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:48:56.787   521  2079 I ImeTracker: com.obamna1234.sevbify:4cf6d202: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:48:56.790  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:03.963  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063631, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:03.964  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:49:03.964  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:49:03.978  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063631, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:03.979  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:49:03.979  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063631, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:03.980  1043  1043 D AudioMediaPlayerWrapper: com.obamna1234.sevbify Only Title and Artist info sync for metadata
+11-17 15:49:03.980  1043  1043 V AudioMediaPlayerWrapper: trySendMediaUpdate(): Metadata has been updated for com.obamna1234.sevbify
+11-17 15:49:03.981  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063631, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:03.984  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:49:04.007  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063676, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:04.008  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:49:04.009  1043  1043 V AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify : PlaybackState {state=PAUSED(2), position=33790, buffered position=40071, speed=0.0, updated=1063676, actions=7340031, custom actions=[], active item id=0, error=null}
+11-17 15:49:04.009  1043  1043 W AudioMediaPlayerWrapper: onPlaybackStateChanged(): com.obamna1234.sevbify tried to update with no new data
+11-17 15:49:05.122   521   614 D CoreBackPreview: Window{b571b83 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@1c663f5, mPriority=0, mIsAnimationCallback=false}
+11-17 15:49:05.202   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:49:05.441   521  2079 I ImeTracker: com.obamna1234.sevbify:884bc2bc: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:49:05.442   521  2079 I ImeTracker: com.obamna1234.sevbify:884bc2bc: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:49:05.445  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:05.746  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:06.059   521   555 D CoreBackPreview: Window{b571b83 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+11-17 15:49:06.106   521  2079 W InputManager-JNI: Input channel object 'b571b83 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+11-17 15:49:06.221   521  2079 D CoreBackPreview: Window{cb127f4 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@b2e4de, mPriority=0, mIsAnimationCallback=false}
+11-17 15:49:06.419   521  2572 I ImeTracker: com.obamna1234.sevbify:94801263: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:49:06.419   521  2572 I ImeTracker: com.obamna1234.sevbify:94801263: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:49:06.427  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:06.591   521   640 W InputDispatcher: Waiting because no window has focus but ActivityRecord{7f00f23 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity t8} may eventually add a window when it finishes starting up. Will wait for 5000ms
+11-17 15:49:06.957   521  2079 I ImeTracker: com.obamna1234.sevbify:3d20000d: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:49:06.958   521  2079 I ImeTracker: com.obamna1234.sevbify:3d20000d: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:49:06.960  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:09.794   521   614 D CoreBackPreview: Window{cb127f4 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback null
+11-17 15:49:09.796   521  2572 W InputManager-JNI: Input channel object 'cb127f4 com.obamna1234.sevbify/com.sevbify.app.MainActivity (client)' was disposed without first being removed with the input manager!
+11-17 15:49:09.883   521  2572 I ImeTracker: com.obamna1234.sevbify:cb98d40d: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:49:09.884   521  2572 I ImeTracker: com.obamna1234.sevbify:cb98d40d: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:49:09.888  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:49:24.563  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[mParcelledData.dataSize=404]}, true)
+11-17 15:49:24.565  5602  5602 I ImeTracker: com.obamna1234.sevbify:6022bfe7: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+11-17 15:49:24.572  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1995 onStartInputView(EditorInfo{inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}]}, false)
+11-17 15:49:24.574  5602  5602 I ImeTracker: com.obamna1234.sevbify:38517cce: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+11-17 15:49:24.623  1516  1516 I AndroidIME: AbstractIme.onActivate():86 LatinIme.onActivate() : EditorInfo = inputType=0x8001(Normal) imeOptions=0x2000006 privateImeOptions=null actionName=DONE actionLabel=null actionId=0 initialSelStart=0 initialSelEnd=0 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=-1 fieldName=null extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=9, androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=true, android.support.text.emoji.emojiCompat_replaceAll=false}], IncognitoMode = false, DeviceLocked = false
+11-17 15:49:24.653   521   614 I ImeTracker: com.obamna1234.sevbify:6022bfe7: onFailed at PHASE_WM_SHOW_IME_RUNNER
+11-17 15:49:24.653   521  2450 D CoreBackPreview: Window{6110a5e u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8f6dc20, mPriority=0, mIsAnimationCallback=false}
+11-17 15:49:25.111  5602  5602 I ImeTracker: com.obamna1234.sevbify:38517cce: onShown
+11-17 15:49:26.444 11691 11691 I AndroidRuntime: VM exiting with result code 0.

@@ -1,0 +1,153 @@
+11-17 15:33:00.217  5602  5602 W DefaultDispatch: type=1400 audit(0.0:58): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/zlib.cpython-312.so" dev="dm-40" ino=328983 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.257  1625  1809 D PickerSyncController: syncAllMedia
+11-17 15:33:00.257  1625  1809 D PickerSyncController: syncAllMediaFromProvider() LOCAL, auth=com.android.providers.media.photopicker, retry=true
+11-17 15:33:00.257  1625  1809 D PickerSyncController: getSyncRequestParams() LOCAL, auth=com.android.providers.media.photopicker
+11-17 15:33:00.282  5602  5620 I OpenGLRenderer: Davey! duration=1657ms; Flags=1, FrameTimelineVsyncId=9706, IntendedVsync=98262813113, Vsync=99546146395, InputEventId=0, HandleInputStart=99560681747, AnimationStart=99560682658, PerformTraversalsStart=99576686502, DrawStart=99840359525, FrameDeadline=99146146411, FrameInterval=99558793505, FrameStartTime=16666666, SyncQueued=99840996684, SyncStart=99848289402, IssueDrawCommandsStart=99860217235, SwapBuffers=99861059081, FrameCompleted=99927124232, DequeueBufferDuration=4740, QueueBufferDuration=31269523, GpuCompleted=99927057916, SwapBuffersCompleted=99927124232, DisplayPresentTime=0, CommandSubmissionCompleted=99861059081, 
+11-17 15:33:00.300  1119  1119 I ActivityThread: Schedule relaunch activity: com.google.android.apps.nexuslauncher.NexusLauncherActivity
+11-17 15:33:00.303  1119  2059 D OneSearchSuggestProvider: Shut down the binder channel
+11-17 15:33:00.370  5602  5602 I MediaController: Init 3a29673 [AndroidXMedia3/1.5.1] [emu64xa, sdk_gphone64_x86_64, Google, 34]
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: *~*~*~ Channel {0} was not shutdown properly!!! ~*~*~*
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1:     Make sure to call shutdown()/shutdownNow() and wait until awaitTermination() returns true.
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: java.lang.RuntimeException: ManagedChannel allocation site
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at io.grpc.internal.y1.<init>(Unknown Source:20)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at io.grpc.internal.z1.<init>(Unknown Source:9)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at io.grpc.binder.d.a(Unknown Source:211)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.google.android.apps.nexuslauncher.allapps.N0.d(Unknown Source:88)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.google.android.apps.nexuslauncher.allapps.N0.c(Unknown Source:0)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.google.android.apps.nexuslauncher.allapps.A0.run(Unknown Source:22)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.android.launcher3.util.LooperExecutor.execute(Unknown Source:12)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.google.android.apps.nexuslauncher.allapps.y0.apply(Unknown Source:34)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at java.util.concurrent.CompletableFuture.uniExceptionally(CompletableFuture.java:966)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at java.util.concurrent.CompletableFuture$UniExceptionally.tryFire(CompletableFuture.java:950)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:486)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at java.util.concurrent.CompletableFuture.completeExceptionally(CompletableFuture.java:2138)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at com.google.android.apps.nexuslauncher.allapps.H0.onResult(Unknown Source:59)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at android.app.appsearch.SearchSessionUtil$1.lambda$onResult$0(SearchSessionUtil.java:129)
+11-17 15:33:00.376  1119  2059 E io.grpc.internal.z1: 	at android.app.appsearch.SearchSessionUtil$1.$r8$lambda$_nlk9WiPjSfaAsqKYmp0aPvSRC0(SearchSessionUtil.java:1)
+--
+11-17 15:33:00.445  5602  5602 W DefaultDispatch: type=1400 audit(0.0:59): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/java/chaquopy.so" dev="dm-40" ino=328991 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.481  5602  5602 W DefaultDispatch: type=1400 audit(0.0:60): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_ctypes.cpython-312.so" dev="dm-40" ino=328982 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.542  1759  2877 I PBSessionCacheImpl: Deleted sessionId[7737958742547433] from persistence.
+11-17 15:33:00.546  1625  1809 D PickerSyncController:    Latest ID/Gen=1407:5155e86b-3902-4244-afd1-46892cfe55ac:external_primary/25
+11-17 15:33:00.546  1625  1809 D PickerSyncController:    Cached ID/Gen=null/-1
+11-17 15:33:00.546  1625  1809 D PickerSyncController:    RESULT=SyncRequestParams{type=MEDIA_FULL, gen=0, latest=Bundle[{last_media_sync_generation=25, media_collection_id=1407:5155e86b-3902-4244-afd1-46892cfe55ac:external_primary}]}
+11-17 15:33:00.546  1625  1809 I PickerSyncController: Executing SyncReset. isLocal: true. authority: com.android.providers.media.photopicker
+11-17 15:33:00.564   521  2079 D CompatibilityChangeReporter: Compat change id reported: 214016041; UID 10192; state: ENABLED
+11-17 15:33:00.564   521  2079 I ImeTracker: com.obamna1234.sevbify:31d9f5e1: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:33:00.564   521  2079 I ImeTracker: com.obamna1234.sevbify:31d9f5e1: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:33:00.565   521   622 D ActivityManager: sync unfroze 1762 com.google.android.youtube for 6
+11-17 15:33:00.481  5602  5602 W DefaultDispatch: type=1400 audit(0.0:61): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_struct.cpython-312.so" dev="dm-40" ino=328981 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.537  5602  5602 W DefaultDispatch: type=1400 audit(0.0:62): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_bz2.cpython-312.so" dev="dm-40" ino=328989 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.561  5602  5602 W DefaultDispatch: type=1400 audit(0.0:63): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_lzma.cpython-312.so" dev="dm-40" ino=328984 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.692  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3227 
+11-17 15:33:00.696  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 0, unlocked = true
+11-17 15:33:00.696  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:33:00.696  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.shouldHideHeaderOnInitialState():4008 ShouldHideHeaderOnInitialState = false
+11-17 15:33:00.696  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 2, unlocked = true
+11-17 15:33:00.697  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.700  1516  1516 I KeyboardModeManager: KeyboardModeManager.setInputView():364 setInputView() : supportsOneHandedMode=true
+11-17 15:33:00.700  1516  1516 I NormalModeController: NormalModeController.getKeyboardBodyViewHolderPaddingBottom():116 currentPrimeKeyboardType:SOFT systemPaddingBottom:-1
+11-17 15:33:00.700  1516  1516 I KeyboardModeManager: KeyboardModeManager.setInputView():356 setInputView() : entry=hwn{languageTag=en-US, variant=qwerty, hasLocalizedResources=true, conditionCacheKey=_device=phone_device_size=default_enable_adaptive_text_editing=true_enable_inline_suggestions_on_client_side=false_enable_large_tablet_batch_1=false_enable_large_tablet_batch_2=false_enable_more_candidates_view_for_multilingual=false_enable_nav_redesign=false_enable_number_row=false_enable_preemptive_decode=true_enable_secondary_symbols=false_expressions=normal_four_or_more_letter_rows=false_keyboard_mode=normal_language=en-US_orientation=portrait_physical_keyboard=qwerty_show_secondary_digits=true_show_suggestions=true_split_with_duplicate_keys=true_variant=qwerty, imeDef.stringId=ime_english_united_states, imeDef.className=com.google.android.apps.inputmethod.libs.latin5.LatinIme, imeDef.languageTag=en-US}
+11-17 15:33:00.708  1516  1516 I StyledKeyboardTheme: StyledKeyboardTheme.<init>():87 Pref: [], themeName: [silk:], darkMode: [false], cacheKey: [overlay_builtin_dynamic_color_light_base.binarypb:dynamic-light-fff0f0f3-ff76d1ff-ce191c6173d879ea127e4e40bfd70d3c]
+11-17 15:33:00.708  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.708  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.708  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.710  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.710  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.711  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.initializeKeyboardTheme():1343 Apply keyboard theme: theme_border_bottom4dp_stylesheet_noshadow_gsans_pillkey_silkpopup_refinedkp_materiallight_phone_400_overlay_builtin_dynamic_color_light_base.binarypb:dynamic-light-fff0f0f3-ff76d1ff-ce191c6173d879ea127e4e40bfd70d3c_port
+11-17 15:33:00.711   521   622 D ActivityManager: sync unfroze 2730 com.android.chrome for 6
+11-17 15:33:00.713  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onCreateInputView():1768 onCreateInputView()
+11-17 15:33:00.723  5168  5182 I FontLog : Updating from directory version 0 to 25 from disk [CONTEXT service_id=132 ]
+11-17 15:33:00.724  5168  5195 I FontLog : Using directory in FlatBuffer format [CONTEXT service_id=132 ]
+11-17 15:33:00.730  1759  2387 W SearchServiceCore: Abort, client detached.
+11-17 15:33:00.743  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.743  1516  1516 I KeyboardViewUtil: KeyboardViewUtil.getKeyboardHeightRatio():189 systemKeyboardHeightRatio:1.000000; userKeyboardHeightRatio:1.000000.
+11-17 15:33:00.749  1516  1516 I DeviceModeUtil: DeviceModeUtil.getDeviceMode():122 Get device mode phone by ui mode:1 and smallestScreenWidthDp:411
+11-17 15:33:00.749  1516  1516 I KeyboardModeManager: KeyboardModeManager.setInputView():364 setInputView() : supportsOneHandedMode=true
+--
+11-17 15:33:00.861  5602  5602 W DefaultDispatch: type=1400 audit(0.0:64): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_datetime.cpython-312.so" dev="dm-40" ino=328987 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:00.946  5168  5173 I .gms.persistent: Compiler allocated 5020KB to compile void bwhy.C(java.util.Set, long, dmuh, dmui, java.util.List, java.util.LinkedHashMap, dzew, bwhx, boolean)
+11-17 15:33:00.950  1625  1809 I PickerSyncController: Paged sync successful. QueryArgs: Bundle[{}]. Result count: 0. Cursor count: 0
+11-17 15:33:00.955  1625  1809 D PickerSyncController: syncAllMediaFromProvider() CLOUD, auth=null, retry=true
+11-17 15:33:00.955  1625  1809 D PickerSyncController: getSyncRequestParams() CLOUD, auth=null
+11-17 15:33:00.955  1625  1809 D PickerSyncController:    RESULT=SyncRequestParams{type=MEDIA_RESET, gen=0, latest=null}
+11-17 15:33:00.955  1625  1809 I PickerSyncController: Executing SyncReset. isLocal: false. authority: null
+11-17 15:33:00.955  1625  1809 I PickerSyncController: SyncReset. isLocal:false. authority: null. result count: 0
+11-17 15:33:00.955  1625  1809 D PickerSyncController: Ignoring cache media info for null authority with bundle: null
+11-17 15:33:00.955  1625  1809 I PickerSyncController: Executing SyncAlbumReset. isLocal: true. authority: com.android.providers.media.photopicker. albumId: null
+11-17 15:33:00.965  1625  1809 I PickerSyncController: Successfully executed SyncResetAlbum. authority: com.android.providers.media.photopicker. albumId: null. Result count: 0
+11-17 15:33:00.965  1625  1809 I PickerSyncController: Executing SyncAlbumReset. isLocal: false. authority: null. albumId: null
+11-17 15:33:00.965  1625  1809 I PickerSyncController: Successfully executed SyncResetAlbum. authority: null. albumId: null. Result count: 0
+11-17 15:33:00.953  5602  5602 W DefaultDispatch: type=1400 audit(0.0:65): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/math.cpython-312.so" dev="dm-40" ino=328988 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.303     0     0 W audit   : audit_lost=1 audit_rate_limit=5 audit_backlog_limit=64
+11-17 15:33:00.973  5602  5602 W DefaultDispatch: type=1400 audit(0.0:66): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/bootstrap-native/x86_64/_random.cpython-312.so" dev="dm-40" ino=328985 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.309     0     0 E audit   : rate limit exceeded
+11-17 15:33:01.088  1119  1173 I AiAiSuggestUi: Connecting to system intelligence module.
+11-17 15:33:01.094  1646  1646 I AiAiOverview: Created AiAiContentSuggestionsService.
+11-17 15:33:01.115  5602  5602 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+11-17 15:33:01.115  5602  5602 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+11-17 15:33:01.115  1119  3035 I AiAiSuggestUi: Successfully connected to system intelligence: 
+11-17 15:33:01.170   521   944 D CoreBackPreview: Window{c229e42 u0 com.obamna1234.sevbify/com.sevbify.app.MainActivity}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@a4b78bc, mPriority=0, mIsAnimationCallback=false}
+11-17 15:33:01.317  1119  1119 D AutofillManager: Fill dialog is enabled:false, hints=[password, passwordAuto, creditCardNumber, creditCardSecurityCode, creditCardExpirationDate]
+11-17 15:33:01.366  1119  1119 D DeviceSearchAlg: search timeout = %d200
+11-17 15:33:01.367  1119  1119 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+11-17 15:33:01.367  1119  1119 W BcSmartspaceView: Current card is not present in the Adapter; cannot log.
+11-17 15:33:01.419  1119  1119 I OverviewComponentObserver: updateOverviewTargets: mIsHomeDisabled=false, isDefaultHomeNull=false, mIsDefaultHome=true
+11-17 15:33:01.531  1119  1119 D AutofillManager: view is not autofillable - activity denied for autofill
+11-17 15:33:01.541   521  1778 D SearchUiPerUserService: Creating SearchSessionInfo for session Id=com.google.android.apps.nexuslauncher:71495dbd-88dd-46e8-8ade-04a60dabaa8d,0
+11-17 15:33:01.542  1646  1646 I AiAiEcho: SearchContextManagerImpl::setSearchContext resultTypes=[141151] extras=[Bundle[mParcelledData.dataSize=684]] sessionId=[com.google.android.apps.nexuslauncher:71495dbd-88dd-46e8-8ade-04a60dabaa8d,0]
+11-17 15:33:01.553   521  1778 D SearchUiPerUserService: Storing callback for session Id=com.google.android.apps.nexuslauncher:71495dbd-88dd-46e8-8ade-04a60dabaa8d,0 and callback=android.os.BinderProxy@ebc88ec
+11-17 15:33:01.570  1119  1173 D SearchTargetUtil:  query= size=1
+11-17 15:33:01.570  1119  1173 D SearchTargetUtil: layoutType=icon_row resultType=4096 packageName= extras=Bundle{icon_container_enabled=true,zero_state_all_apps_web_suggest_count=3,rank=1.0,key_ipc_start=101235,hide_subtitle=true,zero_state_qsb_web_suggest_count=10,}ParentID: null targetID: SESSION_INFO:0::zero_state_flags
+11-17 15:33:01.553  5602  5602 W DefaultDispatch: type=1400 audit(0.0:76): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/_socket.cpython-312.so" dev="dm-40" ino=329022 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.641  5602  5602 W DefaultDispatch: type=1400 audit(0.0:77): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/array.cpython-312.so" dev="dm-40" ino=329023 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.659  1119  1119 I ContentCaptureHelper: Setting logging level to DEBUG
+11-17 15:33:01.659  1119  1119 D ContentCaptureManager: setFlushViewTreeAppearingEventDisabled(): setting to false
+11-17 15:33:01.659  1119  1119 D ContentCaptureManager: updateWindowAttributes(): window flags=-2137980672
+11-17 15:33:01.682  1119  1119 D ContentCaptureManager: updateWindowAttributes(): window flags=-2137980672
+11-17 15:33:01.686  5602  5602 I Choreographer: Skipped 33 frames!  The application may be doing too much work on its main thread.
+11-17 15:33:01.685  5602  5602 W DefaultDispatch: type=1400 audit(0.0:78): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/_ssl.cpython-312.so" dev="dm-40" ino=329024 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.769  1119  1119 I Choreographer: Skipped 85 frames!  The application may be doing too much work on its main thread.
+11-17 15:33:01.778   521   922 I ImeTracker: com.obamna1234.sevbify:41dba06e: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+11-17 15:33:01.779  1119  1173 I ImeTracker: com.google.android.apps.nexuslauncher:e7f52eeb: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+11-17 15:33:01.779   521   922 I ImeTracker: com.obamna1234.sevbify:41dba06e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+11-17 15:33:01.780  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3227 
+11-17 15:33:01.780  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 0, unlocked = true
+11-17 15:33:01.780  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.obamna1234.sevbify fieldId=0 fieldName=null extras=null}, false)
+11-17 15:33:01.780  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.shouldHideHeaderOnInitialState():4008 ShouldHideHeaderOnInitialState = false
+11-17 15:33:01.782  1516  1516 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 2, unlocked = true
+11-17 15:33:01.786   521  2079 W InputMethodManagerService: Ignoring hideSoftInput of uid 10169 : com.android.internal.inputmethod.IInputMethodClient$Stub$Proxy@76654ab
+11-17 15:33:01.787   521  2079 I ImeTracker: com.google.android.apps.nexuslauncher:e7f52eeb: onCancelled at PHASE_SERVER_CLIENT_FOCUSED
+11-17 15:33:01.787  1119  1173 I ImeTracker: com.google.android.apps.nexuslauncher:9b0fb7c7: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+11-17 15:33:01.787   521  1778 W InputMethodManagerService: Ignoring hideSoftInput of uid 10169 : com.android.internal.inputmethod.IInputMethodClient$Stub$Proxy@5f9aea1
+11-17 15:33:01.789   521  1778 I ImeTracker: com.google.android.apps.nexuslauncher:9b0fb7c7: onCancelled at PHASE_SERVER_CLIENT_FOCUSED
+11-17 15:33:01.781  5602  5602 W DefaultDispatch: type=1400 audit(0.0:79): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/unicodedata.cpython-312.so" dev="dm-40" ino=329029 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.912  1119  1119 W BcSmartspaceCard: No title view to update
+11-17 15:33:01.912  1119  1119 I BcSmartspaceCard: setFormattedContentDescription: text=null, iconDescription=null, contentDescription=null
+11-17 15:33:01.929   334  5753 I resolv  : GetAddrInfoHandler::run: {101 101 101 983141 10192 0}
+11-17 15:33:01.937  5602  5602 W DefaultDispatch: type=1400 audit(0.0:80): avc:  granted  { execute } for  path="/data/data/com.obamna1234.sevbify/files/chaquopy/AssetFinder/stdlib-x86_64/termios.cpython-312.so" dev="dm-40" ino=329047 scontext=u:r:untrusted_app:s0:c192,c256,c512,c768 tcontext=u:object_r:app_data_file:s0:c192,c256,c512,c768 tclass=file app=com.obamna1234.sevbify
+11-17 15:33:01.966  1119  1119 D TISBindHelper: TIS service connected
+11-17 15:33:01.978  1119  1119 D b/254119092: Set mActivity=com.google.android.apps.nexuslauncher.NexusLauncherActivity@779bc9a
+11-17 15:33:01.978  1119  1119 D b/254119092: mActivity and mContext agree taskbarIsPresent=false
+11-17 15:33:02.017  1759  1759 I ImeTracker: com.google.android.googlequicksearchbox:search:7810a82e: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+11-17 15:33:02.018  1759  1759 I ImeTracker: com.google.android.googlequicksearchbox:search:7810a82e: onFailed at PHASE_CLIENT_VIEW_SERVED
+11-17 15:33:02.019   521  2990 I ActivityTaskManager: Activity reported stop, but no longer stopping: ActivityRecord{709a442 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity t7} STOPPED
+11-17 15:33:02.020   334  5754 I resolv  : res_nmkquery: (QUERY, IN, AAAA)
+11-17 15:33:02.020   334  5755 I resolv  : res_nmkquery: (QUERY, IN, A)
+11-17 15:33:02.309     0     0 W audit   : audit_lost=12 audit_rate_limit=5 audit_backlog_limit=64
+11-17 15:33:02.312     0     0 E audit   : rate limit exceeded
+11-17 15:33:02.056   521  2990 D CompatibilityChangeReporter: Compat change id reported: 168419799; UID 10132; state: DISABLED
+11-17 15:33:02.056   521  2990 D CompatibilityChangeReporter: Compat change id reported: 273564678; UID 10132; state: DISABLED
+11-17 15:33:02.058  1759  1759 W PhoneWindow: Previously focused view reported id 2131435089 during save, but can't be found during restore.
+11-17 15:33:02.059   334  5754 I resolv  : res_nsend: used send_dg 161 terrno: 0
+11-17 15:33:02.059   334  5754 I resolv  : doQuery: rcode=0, ancount=2, return value=161
+11-17 15:33:02.065   334  5755 I resolv  : res_nsend: used send_dg 209 terrno: 0
+11-17 15:33:02.066   334  5755 I resolv  : doQuery: rcode=0, ancount=5, return value=209
+11-17 15:33:02.070   334  5757 I resolv  : res_nmkquery: (QUERY, IN, AAAA)
+11-17 15:33:02.070   334  5758 I resolv  : res_nmkquery: (QUERY, IN, A)
+11-17 15:33:02.070   334  5758 I resolv  : resolv_cache_lookup: FOUND IN CACHE entry=0x719154562710
+11-17 15:33:02.070   334  5758 I resolv  : doQuery: rcode=0, ancount=5, return value=209
+11-17 15:33:02.070   334  5757 I resolv  : resolv_cache_lookup: FOUND IN CACHE entry=0x719154561110
+11-17 15:33:02.070   334  5757 I resolv  : doQuery: rcode=0, ancount=2, return value=161
+11-17 15:33:02.072  1759  1759 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@c241b5c
+11-17 15:33:02.073   521  1623 W InputManager-JNI: Input channel object 'a781c35 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity (client)' was disposed without first being removed with the input manager!
