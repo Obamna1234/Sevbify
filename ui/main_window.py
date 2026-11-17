@@ -5187,6 +5187,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.player.set_media(media)
             self._opened_media, self._opened_at = media, time.monotonic()
             self._start_levelling(location, headers)
+            QTimer.singleShot(4000, lambda: self.smart_downloads_check() if not getattr(self, "_shut_down", False) else None)
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
             self._apply_volume()
@@ -5230,6 +5231,40 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._apply_volume()
         run_async(self, loudness.measure, location, ffmpeg_path(), headers, on_done=done,
                   on_error=lambda _e: busy.discard(key), lane="songs")
+
+    def smart_downloads_check(self, force=False):
+        """Settings → Smart downloads: songs you keep playing are downloaded for you (at most 20 a day)."""
+        from core import smart_downloads
+        u = self.user_data
+        if not u.smart_downloads or not self.online_enabled or not u.download_notice_accepted:
+            return []
+        now = time.monotonic()
+        if not force and now - getattr(self, "_smart_dl_at", -1e9) < 600:
+            return []
+        self._smart_dl_at = now
+        today = time.strftime("%Y%m%d")
+        day, _, n = (u.smart_dl_day or "").partition(":")
+        done = int(n) if day == today and n.isdigit() else 0
+        pool, seen = [], set()
+        for p in self.playlists:
+            for s in p.songs:
+                if getattr(s, "is_remote", False) and id(s) not in seen:
+                    seen.add(id(s))
+                    pool.append(s)
+
+        def have(s):
+            return self.downloads.state(s.track.key)[0] in ("queued", "downloading", "done")
+        picks = smart_downloads.pick(self.taste_listens(), pool, have, done_today=done)
+        if not picks:
+            return []
+        added = self.downloads.request([s.track for s in picks], self.music_download_folder(), u.download_source)
+        if added:
+            u.smart_dl_day = f"{today}:{done + added}"
+            self.schedule_save()
+            alog("download", f"smart downloads: {added} song(s) you keep playing")
+            self.show_status(f"⬇ Smart downloads: downloading {added} song{'s' if added != 1 else ''} you keep playing",
+                             kind="info", timeout_ms=5000)
+        return picks
 
     def _stream_full_song(self, song):
         """Find the full song online (in the background) and stream it; if it can't be found, skip it."""
@@ -7586,7 +7621,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             from core import canvas_loops
             canvas_loops.trim(self.storage.data_dir, u.canvas_cache_mb)
         simple = ("online_enabled", "phone_remote", "spotify_full", "canvas_auto", "canvas_keep_downloads", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
-                  "autoplay", "fade_seconds", "normalize", "mono", "np_on_play", "notify_track", "zoom", "proxy_mode",
+                  "autoplay", "fade_seconds", "normalize", "mono", "smart_downloads", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
                   "language", "save_space", "ad_free_podcasts")
         for key in simple:

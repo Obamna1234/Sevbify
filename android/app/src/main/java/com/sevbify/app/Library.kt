@@ -58,6 +58,8 @@ data class Settings(
     var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom
     var levelOn: Boolean = false,              // Volume levelling (Eq.kt)
     var monoOn: Boolean = false,               // Mono audio (MonoAudio in Eq.kt)
+    var smartDownloads: Boolean = false,       // SmartDownloads.kt
+    var smartDay: String = "",                 // "yyyyMMdd:n" smart downloads today
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -77,6 +79,7 @@ data class Settings(
         put("hide_note_seen", hideNoteSeen); put("canvas_on", canvasOn); put("fade_seconds", fadeSeconds); put("canvas_cache_mb", canvasCacheMb)
         put("canvas_keep_downloads", canvasKeepDownloads); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
         put("level_on", levelOn); put("mono_on", monoOn)
+        put("smart_downloads", smartDownloads); put("smart_day", smartDay)
     }
 
     companion object {
@@ -117,6 +120,7 @@ data class Settings(
             s.canvasCacheMb = o.optInt("canvas_cache_mb", 200).coerceIn(0, 5000)
             s.canvasKeepDownloads = o.optBoolean("canvas_keep_downloads", true); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
             s.levelOn = o.optBoolean("level_on"); s.monoOn = o.optBoolean("mono_on")
+            s.smartDownloads = o.optBoolean("smart_downloads"); s.smartDay = o.optString("smart_day").take(20)
             o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }
             return s
         }

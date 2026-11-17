@@ -291,6 +291,14 @@ fun SettingsPageScreen(key: String) {
         "offline" -> {
         item { Toggle(tr("Data saver"), "Smaller song downloads and 360p video podcasts.", dataSaverOn()) { setDataSaver(it) } }
         item {
+            var smart by remember { mutableStateOf(s.smartDownloads) }
+            Toggle(tr("Smart downloads"), "Songs in your playlists that you keep playing (3 times in a month) are downloaded " +
+                   "for you on Wi-Fi, so they play offline too. At most 20 a day.", smart) {
+                smart = it; s.smartDownloads = it; Library.changed()
+                if (it) com.sevbify.app.SmartDownloads.check(com.sevbify.app.SevbifyApp.instance, force = true)
+            }
+        }
+        item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(tr("Download and stream from"), style = MaterialTheme.typography.bodyLarge)
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

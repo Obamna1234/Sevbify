@@ -138,6 +138,8 @@ class UserData:
     normalize: bool = False   # Settings: Volume levelling (core/loudness.py)
     mono: bool = False        # Settings: Mono audio (needs restart)
     speed: float = 1.0        # podcast / audiobook playback speed
+    smart_downloads: bool = False   # Settings: download songs you keep playing (core/smart_downloads.py)
+    smart_dl_day: str = ""     # "YYYYMMDD:n": how many smart downloads today
     eq_enabled: bool = False   # Settings: equaliser on
     eq_preset: str = 'Flat'   # equaliser preset name (or 'Custom')
     eq_bands: List[float] = field(default_factory=lambda: [0.0] * 10)   # 10 values in dB (-20..20)
@@ -192,7 +194,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
-    "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "mono", "eq_enabled", "eq_preset", "eq_bands",
+    "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "mono", "smart_downloads", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders", "language", "save_space", "phone_link")
 
@@ -300,6 +302,8 @@ class Storage:
                 "normalize": data.normalize,
                 "mono": bool(data.mono),
                 "speed": float(data.speed),
+                "smart_downloads": bool(data.smart_downloads),
+                "smart_dl_day": str(data.smart_dl_day)[:20],
                 "eq_enabled": data.eq_enabled,
                 "eq_preset": data.eq_preset,
                 "eq_bands": list(data.eq_bands),
@@ -424,6 +428,8 @@ class Storage:
         try:
             data.normalize = bool(settings.get('normalize', False))
             data.mono = settings.get('mono') is True
+            data.smart_downloads = settings.get('smart_downloads') is True
+            data.smart_dl_day = str(settings.get('smart_dl_day') or "")[:20]
             sp = settings.get('speed', 1.0)
             data.speed = max(0.5, min(3.0, float(sp))) if isinstance(sp, (int, float)) else 1.0
         except (TypeError, ValueError):

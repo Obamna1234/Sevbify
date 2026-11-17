@@ -252,6 +252,7 @@ final class Player: ObservableObject {
         guard let t = current else { return }
         let line = "\(t.artist) - \(t.title)"
         Task { _ = try? await Bridge.call("log_event", ["play", line]) }     // the debug log, on this iPhone only
+        Task { try? await Task.sleep(nanoseconds: 5_000_000_000); await MainActor.run { SmartDownloads.shared.check() } }
         CanvasLoop.shared.songChanged(t)
         player.defaultRate = t.isItem ? speed : 1              // podcasts and audiobooks keep your speed
         if retriedKey != t.matchKey + ":retry" { retriedKey = "" }

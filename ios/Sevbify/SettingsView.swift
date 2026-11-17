@@ -31,6 +31,7 @@ struct SettingsView: View {
             }
             HiddenSection()
             CanvasSettingsSection()
+            SmartDownloadsSection()
             Section("Playback") {
                 Toggle("Autoplay similar songs when your music ends", isOn: $lib.settings.autoplay)
             }

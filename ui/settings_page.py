@@ -337,6 +337,8 @@ class SettingsPage(QWidget):
                     f"{u.fade_seconds} seconds")
         self._toggle("normalize", "Volume levelling", "Plays every song at a similar loudness (each song is "
                      "measured once on this computer).", u.normalize)
+        self._toggle("smart_downloads", "Smart downloads", "Songs you keep playing (3 times in a month) are "
+                     "downloaded for you, so they play offline too. At most 20 a day.", getattr(u, "smart_downloads", False))
         self._toggle("mono", "Mono audio", "The same sound in both ears. Applies after a restart. Left/right balance "
                      "is in your computer's sound settings.", getattr(u, "mono", False))
         self._toggle("eq_enabled", "Equalizer", "Drag the dots: up makes those sounds louder, down quieter.",

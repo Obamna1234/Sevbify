@@ -650,6 +650,7 @@ object Player {
         if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
         fileLog("play", "${t.artist} - ${t.title} (${t.source.ifEmpty { "file" }})")
+        SevbifyApp.instance.scope.launch { kotlinx.coroutines.delay(5000); SmartDownloads.check(SevbifyApp.instance) }
         CanvasLoop.songChanged(t)
         controller?.setPlaybackSpeed(if (t.isItem) speed else 1f)
         handledEnd = false
