@@ -42,7 +42,9 @@ class MainActivity : ComponentActivity() {
         PairLink.init(this)
         PairLink.onReceived = { rescan(cloud = false) }
         PairLink.start()
-        android.util.Log.i("Sevbify", "pair self-test: ${if (PairCrypto.selfTest()) "ok" else "FAILED"}")
+        if (SevbifyApp.debuggable) Thread {
+            android.util.Log.i("Sevbify", "pair self-test: ${if (PairCrypto.selfTest()) "ok" else "FAILED"}")
+        }.start()
         handleIncoming(intent)
     }
 
@@ -115,6 +117,9 @@ class MainActivity : ComponentActivity() {
                     // A pairing QR code scanned with the phone's camera: ask first ("Pair with <computer>?").
                     val code = PairLink.parse(uri.toString())
                     if (code != null) { PairLink.pendingCode = code } else com.sevbify.app.ui.Nav.say("That pairing code isn't valid")
+                } else if (uri.scheme == "file" && (uri.path ?: "").let { p ->
+                        p.startsWith(applicationInfo.dataDir) || p.contains("/data/data/") || p.contains("/Android/data/$packageName") }) {
+                    // Another app asking Sevbify to open one of Sevbify's own private files: never.
                 } else playUri(uri)
             }
             Intent.ACTION_SEND -> {

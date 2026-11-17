@@ -77,7 +77,9 @@ fun PairDialogs() {
         AlertDialog(onDismissRequest = { PairLink.pendingCode = null },
             title = { Text("Pair with ${code.name}?") },
             text = { Text("Sevbify on this phone and on ${code.name} (${code.addresses.first()}) will be able to send each " +
-                          "other music, on your Wi-Fi only. You'll be asked before anything is saved.") },
+                          "other music, on your Wi-Fi only. You'll be asked before anything is saved." +
+                          (PairLink.computer?.let { "\n\nThis replaces ${it.name}." } ?: "") +
+                          "\n\nOnly pair with a code you scanned from your own computer's screen.") },
             confirmButton = { TextButton(onClick = { PairLink.pair(code) }) { Text("Pair", color = C.Green) } },
             dismissButton = { TextButton(onClick = { PairLink.pendingCode = null }) { Text("Cancel", color = C.Text) } },
             containerColor = C.Elevated)

@@ -16,6 +16,11 @@ enum PairCrypto {
     }
     static func sha256(_ d: Data) -> Data { Data(SHA256.hash(data: d)) }
 
+    /// Which paired phone is calling, without a fixed id in the open (core/pair_crypto.device_tag).
+    static func deviceTag(_ ltk: Data, _ cNonce: Data) -> String {
+        toHex(hmac(ltk, Data("sevbify-dev-tag".utf8) + cNonce).prefix(16))
+    }
+
     static func deriveKeys(secret: Data, psk: Data, mode: String, dev: String, cNonce: Data, sNonce: Data,
                            cEpk: Data, sEpk: Data, cHello: Data, sHello: Data) -> (Data, Data) {
         var salt = Data("sevbify-pair-v1".utf8) + Data(mode.utf8) + Data("|".utf8) + Data(dev.utf8) + Data("|".utf8)
@@ -49,7 +54,8 @@ enum PairCrypto {
                                     cHello: hex("000000027b7d"), sHello: hex("000000035b315d"))
         let frame = (try? PairChannel(send: c2s, recv: s2c).seal(kindJSON, Data("{\"t\":\"ping\"}".utf8))) ?? Data()
         return toHex(c2s) == "8638dfdad0487dfde8d45c9487939f51f72828040e0c707ec4dfc5bdb4725b52" &&
-            toHex(frame) == "0000001d66d891584379f9cd9fcd93c63311ea622004319f5c86f7e1c96a625ae2"
+            toHex(frame) == "0000001d66d891584379f9cd9fcd93c63311ea622004319f5c86f7e1c96a625ae2" &&
+            deviceTag(Data((0..<32).map { UInt8($0) }), Data(repeating: 1, count: 32)) == "e256933f5648bc68335c15bef8c47324"
     }
 }
 
@@ -123,10 +129,18 @@ private final class PairSocket {
             }
         }
     }
+    /// Reads must finish by this time (the handshake: 10 s in all; afterwards the computer's replies to our
+    /// pings keep it moving); a computer that goes quiet is dropped instead of hanging the connection forever.
+    var deadline = Date().addingTimeInterval(10)
     func read(_ count: Int) throws -> Data {
         var d = Data(capacity: count)
         var buf = [UInt8](repeating: 0, count: min(count, 65536))
         while d.count < count {
+            while !input.hasBytesAvailable {
+                if Date() > deadline || input.streamStatus == .error || input.streamStatus == .atEnd ||
+                    input.streamStatus == .closed { throw PairError.unreachable }
+                Thread.sleep(forTimeInterval: 0.02)
+            }
             let n = input.read(&buf, maxLength: min(buf.count, count - d.count))
             if n <= 0 { throw PairError.unreachable }
             d.append(buf, count: n)
@@ -156,6 +170,9 @@ final class PairLink: ObservableObject {
     private nonisolated(unsafe) var sock: PairSocket?
     private nonisolated(unsafe) var channel: PairChannel?
     private nonisolated(unsafe) var stopFlag = false
+    private nonisolated(unsafe) var gen = 0           // the current connection; older threads leave everything alone
+    private nonisolated(unsafe) var declines: [Date] = []
+    private let sendLock = NSLock()                    // sealing + writing together, never on the main thread
     private nonisolated(unsafe) var receiving: [String: Receiving] = [:]
     private nonisolated(unsafe) var usedIds = Set<String>()
     private nonisolated(unsafe) var answers: [String: (Bool) -> Void] = [:]
@@ -166,16 +183,27 @@ final class PairLink: ObservableObject {
     private let lock = NSLock()
 
     init() {
-        computer = try? JSONDecoder().decode(PairedComputer.self, from: Data(contentsOf: file))
+        if var c = try? JSONDecoder().decode(PairedComputer.self, from: Data(contentsOf: file)) {
+            c.addresses = c.addresses.filter { PairLink.isLocal($0) }
+            computer = c
+        }
         knownCopy = computer
     }
 
     // MARK: the QR code
+    /// Four plain decimal numbers (no names, no leading zeros, which the system would read as octal) on a home
+    /// network: 10.x, 172.16-31.x, 192.168.x or 169.254.x. Never the internet, never a DNS lookup.
     nonisolated static func isLocal(_ a: String) -> Bool {
-        let p = a.split(separator: ".").compactMap { Int($0) }
-        guard p.count == 4, p.allSatisfy({ (0...255).contains($0) }) else { return false }
+        let parts = a.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 4 else { return false }
+        var p: [Int] = []
+        for x in parts {
+            guard !x.isEmpty, x.count <= 3, x.allSatisfy({ $0 >= "0" && $0 <= "9" }), x == "0" || !x.hasPrefix("0"),
+                  let n = Int(x), n <= 255 else { return false }
+            p.append(n)
+        }
         return p[0] == 10 || (p[0] == 172 && (16...31).contains(p[1])) || (p[0] == 192 && p[1] == 168) ||
-            (p[0] == 169 && p[1] == 254) || p[0] == 127 || (p[0] == 100 && (64...127).contains(p[1]))
+            (p[0] == 169 && p[1] == 254)
     }
 
     nonisolated static func parse(_ link: String) -> PairCode? {
@@ -203,7 +231,8 @@ final class PairLink: ObservableObject {
         guard computer != nil, worker == nil else { return }
         deviceName = PairLink.cleanName(UIDevice.current.name, "iPhone")
         stopFlag = false
-        let t = Thread { [weak self] in self?.loop(code: nil) }
+        gen += 1; let my = gen
+        let t = Thread { [weak self] in self?.loop(code: nil, my: my) }
         t.name = "sevbify-pair"; worker = t; t.start()
     }
 
@@ -213,11 +242,12 @@ final class PairLink: ObservableObject {
         stopAll()
         status = "Connecting…"
         stopFlag = false
-        let t = Thread { [weak self] in self?.loop(code: code) }
+        gen += 1; let my = gen
+        let t = Thread { [weak self] in self?.loop(code: code, my: my) }
         t.name = "sevbify-pair"; worker = t; t.start()
     }
 
-    func stopAll() { stopFlag = true; sock?.close(); worker = nil }
+    func stopAll() { stopFlag = true; gen += 1; sock?.close(); worker = nil }
 
     func forget() {
         stopAll()
@@ -227,30 +257,38 @@ final class PairLink: ObservableObject {
 
     private func save(_ c: PairedComputer) {
         computer = c; knownCopy = c
-        if let d = try? JSONEncoder().encode(c) { try? d.write(to: file, options: [.atomic, .completeFileProtection]) }
+        // Only on this iPhone: never in iCloud or computer backups (the key there could be restored elsewhere).
+        if let d = try? JSONEncoder().encode(c) {
+            try? d.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            var f = file
+            var v = URLResourceValues(); v.isExcludedFromBackup = true
+            try? f.setResourceValues(v)
+        }
     }
 
     private nonisolated func setStatus(_ s: String) { Task { @MainActor in self.status = s } }
 
-    private nonisolated func loop(code: PairCode?) {
+    private nonisolated func loop(code: PairCode?, my: Int) {
         var code = code
-        while !stopFlag {
-            let known = knownCopy
+        while !stopFlag && my == gen {
+            let known = code == nil ? knownCopy : nil
             if code == nil && known == nil { break }
-            do { try connect(code: code, known: known) } catch {
-                if code != nil {
-                    setStatus(known == nil ? "Couldn't pair: scan a new code on the computer" : "Can't reach \(code!.name)")
-                } else if let k = known { setStatus("Can't reach \(k.name)") }
+            do { try connect(code: code, known: known, my: my) } catch {
+                if my == gen {
+                    if let c = code { setStatus("Couldn't pair with \(c.name): scan a new code on the computer") }
+                    else if let k = known { setStatus("Can't reach \(k.name)") }
+                }
             }
             code = nil
-            close()
-            for _ in 0..<60 where !stopFlag { Thread.sleep(forTimeInterval: 0.5) }
+            close(my)
+            for _ in 0..<60 where !stopFlag && my == gen { Thread.sleep(forTimeInterval: 0.5) }
         }
     }
 
-    private nonisolated func close() {
+    private nonisolated func close(_ my: Int) {
+        guard my == gen else { return }                // an older connection: the current one isn't its business
         sock?.close(); sock = nil; channel = nil
-        lock.lock(); receiving.values.forEach { $0.abort() }; receiving = [:]; let a = answers; answers = [:]; lock.unlock()
+        lock.lock(); receiving.values.forEach { $0.abort() }; receiving = [:]; let a = answers; answers = [:]; usedIds = []; lock.unlock()
         a.values.forEach { $0(false) }
         offerOpen = false
         Task { @MainActor in self.offer = nil; if self.status == "Connected" { self.status = "" } }
@@ -264,34 +302,35 @@ final class PairLink: ObservableObject {
 
     nonisolated func sendJSON(_ o: [String: Any]) throws {
         guard let ch = channel, let s = sock else { throw PairError.unreachable }
-        let data = try ch.seal(PairCrypto.kindJSON, JSONSerialization.data(withJSONObject: o))
-        lock.lock(); defer { lock.unlock() }
-        try s.write(data)
+        let payload = try JSONSerialization.data(withJSONObject: o)
+        sendLock.lock(); defer { sendLock.unlock() }      // frames leave in the order they were sealed
+        try s.write(ch.seal(PairCrypto.kindJSON, payload))
     }
 
     private nonisolated func sendData(_ d: Data) throws {
         guard let ch = channel, let s = sock else { throw PairError.unreachable }
-        let data = try ch.seal(PairCrypto.kindData, d)
-        lock.lock(); defer { lock.unlock() }
-        try s.write(data)
+        sendLock.lock(); defer { sendLock.unlock() }
+        try s.write(ch.seal(PairCrypto.kindData, d))
     }
 
-    private nonisolated func connect(code: PairCode?, known: PairedComputer?) throws {
+    private nonisolated func connect(code: PairCode?, known: PairedComputer?, my: Int) throws {
         let addrs = code?.addresses ?? known?.addresses ?? []
         let port = code?.port ?? known?.port ?? 0
         var s: PairSocket?
         outer: for a in addrs where PairLink.isLocal(a) {
             for p in [port] + (1...5).map({ port + $0 }) { if let x = PairSocket(host: a, port: p) { s = x; break outer } }
         }
-        guard let s else { throw PairError.unreachable }
+        guard let s, my == gen else { s?.close(); throw PairError.unreachable }
         sock = s
         let mode = code != nil ? "pair" : "resume"
-        let dev = code != nil ? "" : (known?.dev ?? "")
+        let dev = code != nil ? "" : (known?.dev ?? "")       // never sent: only a one-time tag of it is
         let priv = P256.KeyAgreement.PrivateKey()
         let cEpk = priv.publicKey.x963Representation
         var cNonce = Data(count: 32); _ = cNonce.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
-        let cHello = plainFrame(["t": "hello", "v": [1], "mode": mode, "dev": dev, "epk": cEpk.base64EncodedString(),
-                                 "nonce": cNonce.base64EncodedString()])
+        var hello: [String: Any] = ["t": "hello", "v": [1], "mode": mode, "dev": "", "epk": cEpk.base64EncodedString(),
+                                    "nonce": cNonce.base64EncodedString()]
+        if let k = known, code == nil { hello["tag"] = PairCrypto.deviceTag(k.ltk, cNonce) }
+        let cHello = plainFrame(hello)
         try s.write(cHello)
         let n = try s.readInt()
         guard (1...1024).contains(n) else { throw PairError.protocolError }
@@ -316,7 +355,9 @@ final class PairLink: ObservableObject {
         else { throw PairError.protocolError }
         let name = PairLink.cleanName(info["name"] as? String ?? "", code?.name ?? known?.name ?? "Computer")
         let newPort = (info["port"] as? Int).flatMap { (1024...65535).contains($0) ? $0 : nil } ?? port
-        switch info["t"] as? String {
+        let t = info["t"] as? String
+        guard (code != nil && t == "paired") || (code == nil && t == "welcome"), my == gen else { throw PairError.protocolError }
+        switch t {
         case "paired":
             guard let ltk = Data(base64Encoded: info["ltk"] as? String ?? ""), ltk.count == 32,
                   let devId = info["dev"] as? String, devId.count == 32, let code else { throw PairError.protocolError }
@@ -334,12 +375,18 @@ final class PairLink: ObservableObject {
         default: throw PairError.protocolError
         }
         setStatus("Connected")
+        s.deadline = .distantFuture
         let pinger = Thread { [weak self] in
-            while let self, !self.stopFlag, self.sock === s { Thread.sleep(forTimeInterval: 60); try? self.sendJSON(["t": "ping"]) }
+            while let self, !self.stopFlag, self.sock === s {
+                Thread.sleep(forTimeInterval: 60)
+                s.deadline = Date().addingTimeInterval(45)      // the pong (or anything) must come back
+                try? self.sendJSON(["t": "ping"])
+            }
         }
         pinger.start()
-        while !stopFlag {
+        while !stopFlag && my == gen {
             let (k, p) = try recvFrame(s, ch)
+            s.deadline = .distantFuture
             if k == PairCrypto.kindData { try onData(p) } else if k == PairCrypto.kindJSON,
                 let m = try JSONSerialization.jsonObject(with: p) as? [String: Any] { try handle(m) }
         }
@@ -391,9 +438,14 @@ final class PairLink: ObservableObject {
         case "offer":
             var items: [(String, Int64)] = [], seen = Set<String>()
             let arr = m["items"] as? [[String: Any]] ?? []
-            lock.lock(); let reused = id.map { usedIds.contains($0) } ?? true; if let id { usedIds.insert(id) }; lock.unlock()
+            lock.lock()
+            let reused = id.map { usedIds.contains($0) } ?? true || usedIds.count >= 1000
+            if let id { usedIds.insert(id) }
+            declines = declines.filter { Date().timeIntervalSince($0) < 600 }
+            let paused = declines.count >= 3                 // declined 3 times in 10 minutes: no more questions for now
+            lock.unlock()
             let busy = offerOpen
-            if !reused, !busy, (1...3000).contains(arr.count) {
+            if !reused, !busy, !paused, (1...3000).contains(arr.count) {
                 for it in arr {
                     guard let num = it["size"] as? NSNumber, CFGetTypeID(num) != CFBooleanGetTypeID(),
                           case let size = num.int64Value,
@@ -449,6 +501,7 @@ final class PairLink: ObservableObject {
     func answer(_ accept: Bool) {
         guard let o = offer else { return }
         offer = nil; offerOpen = false
+        if !accept { lock.lock(); declines.append(Date()); lock.unlock() }
         var ok = accept
         if ok {
             let free = (try? Library.documents.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
@@ -604,7 +657,7 @@ struct PairSettingsSection: View {
 /// "Pair with <computer>?" and "Receive music?" (attached to the app's root view).
 struct PairDialogs: ViewModifier {
     @ObservedObject var link = PairLink.shared
-    @State private var ready = false
+    @State private var readyFor = ""
 
     func body(content: Content) -> some View {
         content
@@ -613,7 +666,7 @@ struct PairDialogs: ViewModifier {
                 Button("Pair") { if let c = link.pendingCode { link.pair(c) } }
                 Button("Cancel", role: .cancel) { link.pendingCode = nil }
             } message: {
-                Text("Sevbify on this iPhone and on \(link.pendingCode?.name ?? "the computer") will be able to send each other music, on your Wi-Fi only. You'll be asked before anything is saved.")
+                Text("Sevbify on this iPhone and on \(link.pendingCode?.name ?? "the computer") will be able to send each other music, on your Wi-Fi only. You'll be asked before anything is saved." + (link.computer.map { "\n\nThis replaces \($0.name)." } ?? "") + "\n\nOnly pair with a code you scanned from your own computer's screen.")
             }
             .sheet(item: $link.offer) { offer in
                 VStack(alignment: .leading, spacing: 14) {
@@ -625,13 +678,19 @@ struct PairDialogs: ViewModifier {
                     HStack {
                         Button("Decline") { link.answer(false) }.buttonStyle(.bordered)
                         Spacer()
-                        Button("Accept") { link.answer(true) }.buttonStyle(.borderedProminent).disabled(!ready)
+                        Button("Accept") { link.answer(true) }.buttonStyle(.borderedProminent).disabled(readyFor != offer.id)
                     }
+                    Button("Remove this computer", role: .destructive) { link.answer(false); link.forget() }
+                        .font(.caption)
                 }
                 .padding(24)
                 .presentationDetents([.medium])
-                .interactiveDismissDisabled()
-                .onAppear { ready = false; DispatchQueue.main.asyncAfter(deadline: .now() + 1) { ready = true } }
+                .onDisappear { if link.offer?.id == offer.id { link.answer(false) } }     // swiped away = Decline
+                .task(id: offer.id) {
+                    readyFor = ""
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    readyFor = offer.id
+                }
             }
             .onOpenURL { url in
                 if url.scheme == "sevbify", let code = PairLink.parse(url.absoluteString) { link.pendingCode = code }

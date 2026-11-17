@@ -94,6 +94,10 @@ object PairCrypto {
 
     fun sha256(b: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(b)
 
+    /** Which paired phone is calling, without a fixed id in the open (core/pair_crypto.device_tag). */
+    fun deviceTag(ltk: ByteArray, cNonce: ByteArray): String =
+        hmac(ltk, "sevbify-dev-tag".toByteArray() + cNonce).copyOf(16).toHex()
+
     private fun hkdfExpand(prk: ByteArray, info: ByteArray, length: Int): ByteArray {
         var out = ByteArray(0); var block = ByteArray(0); var i = 1
         while (out.size < length) { block = hmac(prk, block + info + byteArrayOf(i.toByte())); out += block; i++ }
@@ -122,7 +126,8 @@ object PairCrypto {
         val (c2s, s2c) = deriveKeys(secret, ByteArray(32) { it.toByte() }, "pair", "", ByteArray(32) { 1 },
             ByteArray(32) { 2 }, cEpk, sEpk, hex("000000027b7d"), hex("000000035b315d"))
         val frame = PairChannel(c2s, s2c).seal(KIND_JSON, "{\"t\":\"ping\"}".toByteArray())
-        c2s.toHex() == V_C2S && frame.toHex() == V_FRAME && publicBytes(loadPublic(cEpk, like)).toHex() == V_C_EPK
+        c2s.toHex() == V_C2S && frame.toHex() == V_FRAME && publicBytes(loadPublic(cEpk, like)).toHex() == V_C_EPK &&
+            deviceTag(ByteArray(32) { it.toByte() }, ByteArray(32) { 1 }) == "e256933f5648bc68335c15bef8c47324"
     } catch (e: Exception) { false }
 
     private const val V_C2S = "8638dfdad0487dfde8d45c9487939f51f72828040e0c707ec4dfc5bdb4725b52"
@@ -197,15 +202,34 @@ object PairLink {
     private val usedIds = HashSet<String>()
     private val waiting = HashMap<String, java.util.concurrent.CompletableFuture<Boolean>>()
     @Volatile private var stop = false
+    @Volatile private var gen = 0            // which connection is the current one (an older thread leaves everything alone)
     private var loop: Thread? = null
+    private val declines = ArrayList<Long>()
 
     // --- the QR code --------------------------------------------------------------------------------------------
+    /** Four plain decimal numbers (no leading zeros: "010" would be read as octal by Android's resolver), on a
+     *  home network: 10.x, 172.16-31.x, 192.168.x or 169.254.x. Never a name (no DNS), never the internet. */
+    fun octets(addr: String): ByteArray? {
+        val parts = addr.split(".")
+        if (parts.size != 4) return null
+        val out = ByteArray(4)
+        for ((i, p) in parts.withIndex()) {
+            if (!Regex("0|[1-9][0-9]{0,2}").matches(p)) return null
+            val n = p.toInt(); if (n > 255) return null
+            out[i] = n.toByte()
+        }
+        return out
+    }
+
     fun isLocal(addr: String): Boolean {
-        val m = Regex("""^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$""").find(addr) ?: return false
-        val (a, b) = m.destructured.toList().take(2).map { it.toInt() }
-        if (m.destructured.toList().any { it.toInt() > 255 }) return false
-        return a == 10 || (a == 172 && b in 16..31) || (a == 192 && b == 168) || (a == 169 && b == 254) || a == 127 ||
-            (a == 100 && b in 64..127)
+        val o = octets(addr) ?: return false
+        return isLocalBytes(o)
+    }
+
+    private fun isLocalBytes(o: ByteArray): Boolean {
+        if (o.size != 4) return false
+        val a = o[0].toInt() and 255; val b = o[1].toInt() and 255
+        return a == 10 || (a == 172 && b in 16..31) || (a == 192 && b == 168) || (a == 169 && b == 254)
     }
 
     fun parse(link: String): PairCode? = try {
@@ -238,7 +262,7 @@ object PairLink {
 
     private fun load(): PairedComputer? = try {
         val o = JSONObject(File(app.filesDir, FILE).readText())
-        PairedComputer(o.getString("name"), o.optString("pc_id"), o.getJSONArray("addresses").let { a -> List(a.length()) { a.getString(it) } },
+        PairedComputer(o.getString("name"), o.optString("pc_id"), o.getJSONArray("addresses").let { a -> List(a.length()) { a.getString(it) } }.filter { isLocal(it) },
                        o.getInt("port"), o.getString("dev"), android.util.Base64.decode(o.getString("ltk"), android.util.Base64.NO_WRAP))
     } catch (e: Exception) { null }
 
@@ -256,41 +280,41 @@ object PairLink {
     fun start() {
         if (loop?.isAlive == true || computer == null) return
         stop = false
+        val my = ++gen
         loop = Thread({
-            while (!stop && computer != null) {
+            while (!stop && my == gen && computer != null) {
                 val c = computer ?: break
                 try {
-                    connect(c.addresses, c.port, null, c)
+                    connect(c.addresses, c.port, null, c, my)
                 } catch (e: Exception) {
                     if (SevbifyApp.debuggable) android.util.Log.w("Sevbify", "pair link: ${e.message}")
                 }
-                close()
-                if (!stop && computer != null) status = "Can't reach ${c.name}"
+                close(my)
+                if (!stop && my == gen && computer != null) status = "Can't reach ${c.name}"
                 var waited = 0
-                while (!stop && waited < 30_000) { Thread.sleep(500); waited += 500 }
+                while (!stop && my == gen && waited < 30_000) { Thread.sleep(500); waited += 500 }
             }
         }, "sevbify-pair").apply { isDaemon = true; start() }
     }
 
-    fun stopAll() { stop = true; close() }
+    fun stopAll() { stop = true; gen++; closeCurrent() }
 
     /** Pair with a scanned code (after you tapped Pair). Runs the connection from then on. */
     fun pair(code: PairCode) {
         pendingCode = null
         status = "Connecting…"
-        val old = loop
-        stopAll()
+        stopAll()                                   // the old connection (if any) stops touching anything
+        stop = false
+        val my = ++gen
         loop = Thread({
-            try { old?.join(3000) } catch (_: Exception) {}
-            stop = false
-            status = "Connecting…"
             try {
-                connect(code.addresses, code.port, code, null)
+                connect(code.addresses, code.port, code, null, my)
             } catch (e: Exception) {
-                status = if (computer == null) "Couldn't pair: scan a new code on the computer" else "Can't reach ${code.name}"
+                if (my == gen) status = if (computer == null || pairedNow != my) "Couldn't pair: scan a new code on the computer"
+                                        else "Can't reach ${code.name}"
             }
-            close()
-            if (computer != null && !stop) { loop = null; start() }
+            close(my)
+            if (my == gen && computer != null && !stop) { loop = null; start() }
         }, "sevbify-pair").apply { isDaemon = true; start() }
     }
 
@@ -301,12 +325,20 @@ object PairLink {
         status = ""
     }
 
-    private fun close() {
+    @Volatile private var pairedNow = 0
+
+    private fun closeCurrent() {
+        try { socket?.close() } catch (_: Exception) {}
+    }
+
+    private fun close(my: Int) {
+        if (my != gen) return                       // an older connection: the current one isn't its business
         try { socket?.close() } catch (_: Exception) {}
         socket = null; channel = null
         synchronized(accepted) { accepted.values.forEach { it.abort() }; accepted.clear() }
         synchronized(waiting) { waiting.values.forEach { it.complete(false) }; waiting.clear() }
         offer = null
+        synchronized(usedIds) { usedIds.clear() }
         if (status == "Connected") status = ""
     }
 
@@ -340,27 +372,33 @@ object PairLink {
         synchronized(sendLock) { socket?.getOutputStream()?.apply { write(ch.seal(PairCrypto.KIND_DATA, b)) } }
     }
 
-    private fun connect(addresses: List<String>, port: Int, code: PairCode?, known: PairedComputer?) {
+    private fun connect(addresses: List<String>, port: Int, code: PairCode?, known: PairedComputer?, my: Int) {
         var sock: Socket? = null
         for (a in addresses) {
-            if (!isLocal(a)) continue
+            val bytes = octets(a) ?: continue
+            if (!isLocalBytes(bytes)) continue
+            val ip = java.net.InetAddress.getByAddress(bytes)        // a number, never looked up
             for (p in listOf(port) + (1..5).map { port + it }) {
-                try { sock = Socket().apply { connect(InetSocketAddress(a, p), 4000); soTimeout = 10_000 }; break } catch (_: Exception) {}
+                if (my != gen) return
+                try { sock = Socket().apply { connect(InetSocketAddress(ip, p), 4000); soTimeout = 10_000 }; break } catch (_: Exception) {}
             }
             if (sock != null) break
         }
         val s = sock ?: throw java.io.IOException("can't reach")
+        if (my != gen || !isLocalBytes(s.inetAddress.address)) { s.close(); throw java.io.IOException("not local") }
         socket = s
         val inp = DataInputStream(s.getInputStream().buffered())
         val out = s.getOutputStream()
         val mode = if (code != null) "pair" else "resume"
-        val dev = if (code != null) "" else known!!.dev
+        val dev = if (code != null) "" else known!!.dev       // never sent: only a one-time tag of it is
         val kp = PairCrypto.newKeyPair()
         val cEpk = PairCrypto.publicBytes(kp.public)
         val cNonce = ByteArray(32).also { PairCrypto.rng.nextBytes(it) }
         val b64 = { b: ByteArray -> android.util.Base64.encodeToString(b, android.util.Base64.NO_WRAP) }
-        val cHello = frame(JSONObject().put("t", "hello").put("v", JSONArray(listOf(1))).put("mode", mode).put("dev", dev)
-            .put("epk", b64(cEpk)).put("nonce", b64(cNonce)))
+        val hello = JSONObject().put("t", "hello").put("v", JSONArray(listOf(1))).put("mode", mode).put("dev", "")
+            .put("epk", b64(cEpk)).put("nonce", b64(cNonce))
+        if (code == null) hello.put("tag", PairCrypto.deviceTag(known!!.ltk, cNonce))
+        val cHello = frame(hello)
         out.write(cHello); out.flush()
         val (reply, sHello) = readPlain(inp)
         if (reply.optString("t") == "error") throw java.io.IOException(reply.optString("code"))   // shown only; never forgets the pairing
@@ -380,13 +418,14 @@ object PairLink {
         val info = JSONObject(String(payload))
         val name = cleanName(info.optString("name"), code?.name ?: known?.name ?: "Computer")
         val portNow = info.optInt("port", port).takeIf { it in 1024..65535 } ?: port
-        when (info.optString("t")) {
+        when (if (code != null) (if (info.optString("t") == "paired") "paired" else "") else
+              (if (info.optString("t") == "welcome") "welcome" else "")) {
             "paired" -> {
                 val ltk = android.util.Base64.decode(info.getString("ltk"), android.util.Base64.DEFAULT)
                 val devId = info.getString("dev")
                 require(ltk.size == 32 && Regex("[0-9a-f]{32}").matches(devId)) { "bad reply" }
                 val c = PairedComputer(name, info.optString("pc_id").take(32), code!!.addresses, portNow, devId, ltk)
-                computer = c; save(c)
+                computer = c; save(c); pairedNow = my
             }
             "welcome" -> {
                 val c = known!!.copy(name = name, port = portNow, addresses = listOf(s.inetAddress.hostAddress ?: "") +
@@ -395,13 +434,14 @@ object PairLink {
             }
             else -> throw java.io.IOException("unexpected reply")
         }
+        if (my != gen) throw java.io.IOException("replaced")
         status = "Connected"
         s.soTimeout = 90_000
         val pinger = Thread({
             try { while (socket === s && !s.isClosed) { Thread.sleep(60_000); sendJson(JSONObject().put("t", "ping")) } } catch (_: Exception) {}
         }, "sevbify-pair-ping").apply { isDaemon = true; start() }
         try {
-            while (!stop) {
+            while (!stop && my == gen) {
                 val (k, p) = recv(inp, ch)
                 if (k == PairCrypto.KIND_DATA) onData(p) else if (k == PairCrypto.KIND_JSON) handle(JSONObject(String(p)))
             }
@@ -452,8 +492,10 @@ object PairLink {
                 val items = ArrayList<Pair<String, Long>>()
                 val seen = HashSet<String>()
                 val arr = m.optJSONArray("items")
-                var ok = id != null && arr != null && arr.length() in 1..MAX_FILES && offer == null && id !in usedIds
-                if (id != null) usedIds.add(id)
+                val now = System.currentTimeMillis()
+                val paused = synchronized(declines) { declines.removeAll { now - it > 600_000 }; declines.size >= 3 }
+                val fresh = synchronized(usedIds) { id != null && usedIds.size < 1000 && usedIds.add(id) }
+                var ok = id != null && arr != null && arr.length() in 1..MAX_FILES && offer == null && fresh && !paused
                 if (ok) for (i in 0 until arr!!.length()) {
                     val it = arr.optJSONObject(i) ?: continue
                     val sizeAny = it.opt("size")
@@ -506,13 +548,14 @@ object PairLink {
     fun answer(accept: Boolean) {
         val o = offer ?: return
         offer = null
+        if (!accept) synchronized(declines) { declines.add(System.currentTimeMillis()) }
         var ok = accept
         if (ok) {
             val free = try { StatFs(app.getExternalFilesDir(null)?.path ?: app.filesDir.path).availableBytes } catch (_: Exception) { 0L }
             ok = free >= o.total + (200L shl 20)
             if (!ok) Nav.toast = "Not enough space on your phone"
         }
-        if (ok) synchronized(accepted) { accepted[o.id] = Receiving(o.id, o.items, cleanName("From ${computer?.name ?: "computer"}")) }
+        if (ok) synchronized(accepted) { accepted[o.id] = Receiving(o.id, o.items, safePart("From ${computer?.name ?: "computer"}")) }
         Thread { try { sendJson(JSONObject().put("t", "answer").put("id", o.id).put("accept", ok)) } catch (_: Exception) {} }.start()
     }
 

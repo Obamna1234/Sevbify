@@ -2,7 +2,9 @@
 
 Handshake (version 1). The phone ("client") connects to the computer ("server"):
 
-  client -> server   hello  {"t": "hello", "v": [1], "mode": "pair" | "resume", "dev": <device id, resume only>,
+  client -> server   hello  {"t": "hello", "v": [1], "mode": "pair" | "resume", "dev": "",
+                              "tag": <resume only: device_tag(its long-term key, nonce): which phone, without
+                                      saying a fixed id in the open>,
                               "epk": <client's one-time P-256 public key, SEC1 uncompressed, base64>,
                               "nonce": <32 random bytes, base64>}
   server -> client   hello  {"t": "hello", "v": 1, "epk": ..., "nonce": ...}
@@ -154,6 +156,12 @@ def test_vector():
     return {"c_hello": c_hello.hex(), "s_hello": s_hello.hex(), "c_epk": c_epk.hex(), "s_epk": s_epk.hex(), "secret": secret.hex(), "psk": psk.hex(),
             "c_nonce": c_nonce.hex(), "s_nonce": s_nonce.hex(), "c2s": c2s.hex(), "s2c": s2c.hex(),
             "first_frame": frame.hex()}
+
+
+def device_tag(ltk, c_nonce):
+    """A one-time tag that tells the computer which paired phone is calling, without a fixed id anyone on the
+    network could follow: HMAC-SHA256(long-term key, "sevbify-dev-tag" | nonce), first 16 bytes, hex."""
+    return hmac.new(ltk, b"sevbify-dev-tag" + c_nonce, hashlib.sha256).digest()[:16].hex()
 
 
 def random_bytes(n):

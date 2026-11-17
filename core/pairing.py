@@ -241,6 +241,21 @@ class DeviceStore:
             return [dict(id=k, name=v.get("name", "Phone"), platform=v.get("platform", ""), added=v.get("added", 0),
                          last_seen=v.get("last_seen", 0)) for k, v in self.devices.items()]
 
+    def find_by_tag(self, tag, c_nonce):
+        """Which paired phone made this one-time tag (None if none)."""
+        if not isinstance(tag, str) or not re.fullmatch(r"[0-9a-f]{32}", tag):
+            return None
+        with self.lock:
+            found = None
+            for dev, d in self.devices.items():
+                try:
+                    ltk = pc.b64d(d["ltk"], 32)
+                except (pc.LinkError, KeyError):
+                    continue
+                if secrets.compare_digest(pc.device_tag(ltk, c_nonce), tag):
+                    found = dev                        # (no early exit: the same time whichever phone it is)
+            return found
+
     def name(self, dev):
         with self.lock:
             return (self.devices.get(dev) or {}).get("name", "Phone")
@@ -889,8 +904,12 @@ class PairServer:
             conn.sendall(_plain_frame({"t": "error", "code": "version", "supported": list(pc.SUPPORTED)}))
             return None
         mode = hello.get("mode")
-        dev = hello.get("dev") or ""
+        dev = ""
         pairing = None
+        try:
+            c_nonce = pc.b64d(hello.get("nonce"), 32)
+        except pc.LinkError:
+            return None
         if mode == "pair":
             with self.lock:
                 pairing = self._pairing
@@ -900,15 +919,15 @@ class PairServer:
             if not ok:
                 return self._refuse(conn)
             psk, dev = pairing["code"], ""
-        elif mode == "resume" and isinstance(dev, str) and re.fullmatch(r"[0-9a-f]{32}", dev):
-            psk = self.store.key(dev)
+        elif mode == "resume":
+            dev = self.store.find_by_tag(hello.get("tag"), c_nonce) or ""
+            psk = self.store.key(dev) if dev else None
             if psk is None:
                 return self._refuse(conn)
         else:
             return None
         try:
             c_epk = pc.b64d(hello.get("epk"), 65)
-            c_nonce = pc.b64d(hello.get("nonce"), 32)
             peer = pc.load_public(c_epk)
         except pc.LinkError:
             return None
@@ -977,8 +996,11 @@ def connect(address, port, *, code=None, dev=None, ltk=None, name="Phone", platf
         dev_field = (dev or "") if mode == "resume" else ""
         mine = pc.new_keypair()
         c_epk, c_nonce = pc.public_bytes(mine), pc.random_bytes(32)
-        c_hello = _plain_frame({"t": "hello", "v": list(pc.SUPPORTED), "mode": mode, "dev": dev_field,
-                                "epk": pc.b64e(c_epk), "nonce": pc.b64e(c_nonce)})
+        hello = {"t": "hello", "v": list(pc.SUPPORTED), "mode": mode, "dev": "",
+                 "epk": pc.b64e(c_epk), "nonce": pc.b64e(c_nonce)}
+        if mode == "resume":
+            hello["tag"] = pc.device_tag(ltk, c_nonce)
+        c_hello = _plain_frame(hello)
         sock.sendall(c_hello)
         reply, s_hello = _plain_recv(sock, deadline)
         if reply.get("t") == "error":

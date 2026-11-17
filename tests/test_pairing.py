@@ -432,3 +432,30 @@ def test_a_taken_port_falls_back_and_is_kept(tmp_path):
         srv.stop()
         for b in blockers:
             b.close()
+
+
+def test_reconnects_dont_say_a_fixed_id_in_the_open(server):
+    srv, _ev = server
+    sess, info = _pair(srv)
+    sess.link.close()
+    seen = []
+    real = pr._plain_frame
+
+    def spy(msg):
+        if msg.get("t") == "hello" and msg.get("mode") == "resume":
+            seen.append(dict(msg))
+        return real(msg)
+    pr._plain_frame = spy
+    try:
+        for _ in range(2):
+            s, _ = pr.connect("127.0.0.1", srv.port, dev=info["dev"], ltk=info["ltk"], **RF)
+            s.link.close()
+    finally:
+        pr._plain_frame = real
+    assert len(seen) == 2 and all(h["dev"] == "" for h in seen)
+    assert seen[0]["tag"] != seen[1]["tag"] and info["dev"] not in str(seen)
+
+
+def test_device_tag_vector():
+    # Pinned: the phone apps compute the same.
+    assert pc.device_tag(bytes(range(32)), b"\x01" * 32) == "e256933f5648bc68335c15bef8c47324"

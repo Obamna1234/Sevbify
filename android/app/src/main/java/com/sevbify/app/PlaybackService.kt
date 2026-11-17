@@ -32,6 +32,28 @@ import java.util.concurrent.ConcurrentHashMap
  * Sevbify's (see Player): songs you don't have are looked up just before they play, so the session only
  * ever holds the current song; Next / Previous on the lock screen go back to Sevbify's queue.
  */
+/** Picks the connection per request: one carrying a sign-in (Authorization) never follows cross-protocol redirects. */
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
+class SignInAwareDataSource(
+    private val normal: androidx.media3.datasource.DataSource.Factory,
+    private val signedIn: androidx.media3.datasource.DataSource.Factory,
+) : androidx.media3.datasource.DataSource {
+    private var current: androidx.media3.datasource.DataSource? = null
+    private val listeners = ArrayList<androidx.media3.datasource.TransferListener>()
+    override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) { listeners.add(transferListener) }
+    override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+        val auth = dataSpec.httpRequestHeaders.keys.any { it.equals("Authorization", ignoreCase = true) }
+        val src = (if (auth) signedIn else normal).createDataSource()
+        listeners.forEach { src.addTransferListener(it) }
+        current = src
+        return src.open(dataSpec)
+    }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int = current!!.read(buffer, offset, length)
+    override fun getUri(): android.net.Uri? = current?.uri
+    override fun getResponseHeaders(): Map<String, List<String>> = current?.responseHeaders ?: emptyMap()
+    override fun close() { try { current?.close() } finally { current = null } }
+}
+
 @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 class PlaybackService : MediaLibraryService() {
     private var session: MediaLibrarySession? = null
@@ -53,7 +75,13 @@ class PlaybackService : MediaLibraryService() {
         val network = androidx.media3.datasource.DataSource.Factory {
             if (Library.settings.audioCache) cachedFactory.createDataSource() else http.createDataSource()
         }
-        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, network)) { spec ->
+        // Songs from your own music server carry its sign-in. Those use a connection that never follows a redirect
+        // to http or another host itself (Android's own redirect handling then drops the sign-in when the host
+        // changes), so the sign-in can't leak to another server.
+        val signedIn = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(false)
+            .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36")
+        val chooser = androidx.media3.datasource.DataSource.Factory { SignInAwareDataSource(network, signedIn) }
+        val withHeaders = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, chooser)) { spec ->
             val extra = headers[spec.uri.toString()]
             if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
         }

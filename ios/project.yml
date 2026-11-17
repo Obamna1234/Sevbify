@@ -31,6 +31,9 @@ targets:
         embed: true
         codeSign: true
     settings:
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.obamna1234.sevbify
         PRODUCT_NAME: Sevbify
@@ -39,7 +42,6 @@ targets:
         SWIFT_OBJC_BRIDGING_HEADER: Sevbify/Sevbify-Bridging-Header.h
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        ENABLE_TESTABILITY: YES
         FRAMEWORK_SEARCH_PATHS: "$(PROJECT_DIR)"
         HEADER_SEARCH_PATHS: "\"$(BUILT_PRODUCTS_DIR)/Python.framework/Headers\""
         CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER: NO
