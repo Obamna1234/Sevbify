@@ -257,7 +257,6 @@ def main():
     def pair_with_computer():
         """The real thing both ways: this computer runs Sevbify's pairing listener (core/pairing.py), the phone opens
         its QR link (as the camera app would), taps Pair, then receives a song the computer sends and accepts it."""
-        import subprocess
         import tempfile
         import threading
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -298,9 +297,16 @@ def main():
                 return "fail", "the phone didn't pair (nothing reached the computer)"
             if not srv.connected():
                 return "fail", f"paired as {ev.paired[0]} but the phone didn't stay connected"
-            song = os.path.join(base, "CI tone.mp3")
-            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=5", "-metadata",
-                            "title=CI tone", "-metadata", "artist=Sevbify CI", song], check=True, timeout=60)
+            song = os.path.join(base, "CI tone.wav")             # a 5-second tone made here (no ffmpeg needed)
+            import math
+            import struct
+            import wave
+            with wave.open(song, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(22050)
+                wf.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * i / 22050)))
+                                        for i in range(22050 * 5)))
             srv.connected()[0].send_paths([song], "CI")
             time.sleep(4)
             ui.shot("pair_receive_question", wait=0.5)
@@ -311,9 +317,9 @@ def main():
                 return "fail", "the song didn't arrive"
             time.sleep(3)
             files = ui.sh("ls -R /sdcard/Music/Sevbify")
-            if "CI tone.mp3" not in files:
+            if "CI tone.wav" not in files:
                 return "fail", "sent, but the file isn't in Music/Sevbify: " + files[-300:]
-            return "pass", f"paired as “{ev.paired[0]}” over the network, received “CI tone.mp3” in Music/Sevbify " \
+            return "pass", f"paired as “{ev.paired[0]}” over the network, received “CI tone.wav” in Music/Sevbify " \
                            f"({'self-test ok' if selftest else 'no self-test line'})"
         finally:
             srv.stop()
