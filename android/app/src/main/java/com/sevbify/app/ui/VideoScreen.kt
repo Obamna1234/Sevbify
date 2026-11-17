@@ -347,3 +347,19 @@ private fun SmallButton(icon: androidx.compose.ui.graphics.vector.ImageVector, l
         Icon(icon, label, tint = Color.White, modifier = Modifier.size(20.dp))
     }
 }
+
+/** The Canvas loop in Now playing (CanvasLoop.kt): the middle of the music-video clip, filling a tall frame like
+ *  Spotify's Canvas. Silent; the song plays from the main player. */
+@androidx.annotation.OptIn(markerClass = [androidx.media3.common.util.UnstableApi::class])
+@Composable
+fun CanvasView(modifier: Modifier) {
+    val context = LocalContext.current
+    AndroidView(
+        factory = { PlayerView(it).apply {
+            player = com.sevbify.app.CanvasLoop.player(context); useController = false
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+        } },
+        modifier = modifier,
+    )
+}

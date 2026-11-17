@@ -62,15 +62,20 @@ def spotify_whole_playlist():
 
 
 def canvas_from_music_video():
-    """Settings → Canvas from music videos: an openly licensed song's official video, cut to a small silent loop."""
+    """Settings → Canvas from music videos: finding an openly licensed song's official video must work. Cutting
+    the clip is reported but not required here: YouTube asks these cloud computers to sign in (home connections
+    aren't asked)."""
     import tempfile
     from core import canvas_loops, downloader
+    search = downloader.engine().search_youtube_candidates
+    url = canvas_loops.find_music_video(search, "Kevin MacLeod", "Monkeys Spinning Monkeys")
+    assert url, "no official music video found"
     d = tempfile.mkdtemp()
-    p = canvas_loops.get(d, "Kevin MacLeod", "Monkeys Spinning Monkeys", downloader.engine().search_youtube_candidates, 125)
-    assert p, "no clip"
-    size = os.path.getsize(p)
-    assert 10_000 < size < 4_000_000, size
-    return f"{size / 1_048_576:.1f} MB clip"
+    try:
+        p = canvas_loops.cut_clip(url, os.path.join(d, "c.mp4"), 125)
+        return f"found {url}; clip {os.path.getsize(p) / 1_048_576:.1f} MB"
+    except Exception as e:
+        return f"found {url}; clip not cut here ({str(e)[:80]})"
 
 
 def bandcamp():

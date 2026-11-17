@@ -87,3 +87,13 @@ def test_health_list_has_a_canvas_check():
     src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools", "health_check.py"),
                encoding="utf-8").read()
     assert "canvas_from_music_video" in src
+
+
+def test_phone_source_gives_a_video_link_and_start(monkeypatch):
+    monkeypatch.setattr(C, "_misses", {})
+    src = C.phone_source("Kevin MacLeod", "Monkeys Spinning Monkeys", lambda q, n: RESULTS, 126,
+                         streams=lambda url, h: {"video": "https://rr1.googlevideo.com/v", "audio": "https://a",
+                                                 "headers": {"User-Agent": "x"}})
+    assert src["url"] == "https://rr1.googlevideo.com/v" and src["start"] >= 10 and src["seconds"] == C.CLIP_SECONDS
+    assert not src["has_audio"]
+    assert C.phone_source("Kevin MacLeod", "Something Else", lambda q, n: RESULTS) is None

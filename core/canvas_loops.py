@@ -161,6 +161,31 @@ def get(data_dir, artist, title, search, duration_s=0, limit_mb=DEFAULT_LIMIT_MB
     return out if os.path.isfile(out) else ""
 
 
+def phone_source(artist, title, search, duration_s=0, streams=None):
+    """For the phones (which cut the clip themselves with Android's / iOS's own video tools, no ffmpeg): the music
+    video's video-only link, its headers, and where the loop starts. None if the song has no music video."""
+    if not artist or not title or artist == "Unknown Artist":
+        return None
+    k = key(artist, title)
+    with _lock:
+        if time.time() - _misses.get(k, 0) < 86400:
+            return None
+    url = find_music_video(search, artist, title)
+    if not url:
+        with _lock:
+            _misses[k] = time.time()
+        return None
+    if streams is None:
+        from core import podcasts
+        streams = podcasts.youtube_video_streams
+    s = streams(url, 720)
+    video = s.get("video") or ""
+    if not video.startswith("https://"):
+        return None
+    return {"key": k, "url": video, "headers": s.get("headers") or {}, "start": max(10.0, (duration_s or 180) * 0.33),
+            "seconds": CLIP_SECONDS, "has_audio": not s.get("audio")}
+
+
 def size_mb(data_dir):
     folder = cache_dir(data_dir)
     if not os.path.isdir(folder):

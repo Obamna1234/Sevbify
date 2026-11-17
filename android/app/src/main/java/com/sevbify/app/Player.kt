@@ -604,6 +604,7 @@ object Player {
         // Like Spotify: the old sound stops the moment you pick something else, not after the new song is found.
         if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
+        CanvasLoop.songChanged(t)
         handledEnd = false
         resumeDone = false
         position = 0; duration = t.durationMs

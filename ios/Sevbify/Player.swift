@@ -219,6 +219,7 @@ final class Player: ObservableObject {
 
     private func startCurrent() {
         guard let t = current else { return }
+        CanvasLoop.shared.songChanged(t)
         if retriedKey != t.matchKey + ":retry" { retriedKey = "" }
         generation += 1
         let gen = generation

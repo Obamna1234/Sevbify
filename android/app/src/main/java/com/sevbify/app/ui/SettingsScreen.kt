@@ -223,6 +223,27 @@ fun SettingsPageScreen(key: String) {
         "playback" -> {
         item { EqualiserSection() }
         item { HiddenSection() }
+        item {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            var mb by remember { mutableStateOf(com.sevbify.app.CanvasLoop.sizeMb(ctx)) }
+            Column {
+                Toggle(tr("Canvas from music videos"), "When a song has an official music video on YouTube, a silent " +
+                       "8-second loop of it plays in Now playing (about 1 MB; only those seconds are fetched). Found with " +
+                       "the same YouTube search Sevbify uses for songs.", s.canvasOn) {
+                    s.canvasOn = it; Library.changed(); com.sevbify.app.CanvasLoop.songChanged(com.sevbify.app.Player.current)
+                }
+                Toggle(tr("Keep Canvas with downloaded songs"), "So it loops offline too.", s.canvasKeepDownloads) {
+                    s.canvasKeepDownloads = it; Library.changed()
+                }
+                Choice(tr("Canvas storage limit"), "Using ${"%.0f".format(mb)} MB. The loops played longest ago go first.",
+                       listOf(50, 100, 200, 500).map { "$it" to "$it MB" }, "${s.canvasCacheMb}") {
+                    s.canvasCacheMb = it.toInt(); Library.changed(); com.sevbify.app.CanvasLoop.trim(ctx, s.canvasCacheMb)
+                    mb = com.sevbify.app.CanvasLoop.sizeMb(ctx)
+                }
+                androidx.compose.material3.OutlinedButton(onClick = { com.sevbify.app.CanvasLoop.clear(ctx); mb = 0.0 },
+                    modifier = Modifier.padding(horizontal = 16.dp)) { Text(tr("Clear Canvas storage"), color = C.Text) }
+            }
+        }
         item { Toggle(tr("Autoplay"), "When your music ends, keep playing similar songs.", s.autoplay) { s.autoplay = it; Library.changed() } }
         item {
             Toggle(tr("Lyrics"), "Show lyrics under Now playing: from a .lrc file next to your song, or from LRCLIB (a free lyrics " +

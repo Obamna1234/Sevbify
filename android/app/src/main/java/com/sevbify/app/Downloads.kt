@@ -155,6 +155,7 @@ object Downloads {
         val saved = publish(context, file, t)
         Library.offline[t.matchKey] = saved
         Library.save()
+        CanvasLoop.keep(context, t)                          // its Canvas loop (if one was made) stays for offline
     }
 
     private suspend fun downloadItem(context: Context, t: Track) {

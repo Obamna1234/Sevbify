@@ -50,7 +50,10 @@ final class Downloads: ObservableObject {
             do {
                 let o = try await Bridge.object("download_song", [t.artist, t.title, t.durationMs,
                                                                    Library.musicFolder.path, quality])
-                if o["path"] is String { await Library.shared.scan() }      // shows up in Your Songs
+                if o["path"] is String {
+                    await Library.shared.scan()                                 // shows up in Your Songs
+                    await MainActor.run { CanvasLoop.shared.keep(t) }           // its Canvas loop stays for offline
+                }
             } catch {
                 result = "Failed: \(error.localizedDescription)"
             }

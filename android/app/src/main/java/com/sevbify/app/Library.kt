@@ -48,7 +48,10 @@ data class Settings(
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
     var tourSeen: Boolean = false,
     var spotifyFull: Boolean = false,
-    var hideNoteSeen: Boolean = false,         // the "undo in Settings" note after the first Hide song
+    var hideNoteSeen: Boolean = false,
+    var canvasOn: Boolean = true,              // Canvas loops from official music videos (CanvasLoop.kt)
+    var canvasCacheMb: Int = 200,
+    var canvasKeepDownloads: Boolean = true,         // the "undo in Settings" note after the first Hide song
     var eqOn: Boolean = false,                 // equaliser (Eq.kt)
     var eqPreset: String = "",                 // one of the phone's presets, or "" = Custom (eqBands)
     var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom          // read whole Spotify playlists the web player's way (anonymous; off by default)             // the feature tour was closed with "Don't show this again"
@@ -68,7 +71,8 @@ data class Settings(
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen); put("spotify_full", spotifyFull)
-        put("hide_note_seen", hideNoteSeen); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
+        put("hide_note_seen", hideNoteSeen); put("canvas_on", canvasOn); put("canvas_cache_mb", canvasCacheMb)
+        put("canvas_keep_downloads", canvasKeepDownloads); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
     }
 
     companion object {
@@ -104,7 +108,9 @@ data class Settings(
             s.betaUpdates = o.optBoolean("beta_updates", true)
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             s.tourSeen = o.optBoolean("tour_seen"); s.spotifyFull = o.optBoolean("spotify_full")
-            s.hideNoteSeen = o.optBoolean("hide_note_seen"); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
+            s.hideNoteSeen = o.optBoolean("hide_note_seen"); s.canvasOn = o.optBoolean("canvas_on", true)
+            s.canvasCacheMb = o.optInt("canvas_cache_mb", 200).coerceIn(0, 5000)
+            s.canvasKeepDownloads = o.optBoolean("canvas_keep_downloads", true); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
             o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }
             return s
         }

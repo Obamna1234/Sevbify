@@ -415,6 +415,17 @@ def youtube_stream(page_url, video=False):
 
 
 @_call
+def canvas_source(artist, title, duration_ms=0):
+    """Canvas from the song's official music video (core/canvas_loops.py): the video link and where the 8-second
+    loop starts. The phone cuts and keeps the clip itself. None if the song has no music video."""
+    from core import canvas_loops, downloader
+    if not _state["online_on"]:
+        return None
+    return canvas_loops.phone_source(artist, title, downloader.engine().search_youtube_candidates,
+                                     int(duration_ms or 0) / 1000)
+
+
+@_call
 def download_youtube(page_url, out_without_ext, quality="best"):
     from core import streamer
     os.makedirs(os.path.dirname(out_without_ext), exist_ok=True)

@@ -116,6 +116,8 @@ fun NowPlayingScreen() {
                          (v.height.takeIf { it > 0 }?.let { " Playing ${it}p." } ?: "") },
                      style = MaterialTheme.typography.bodySmall.copy(color = if (v.error.isNotEmpty()) C.Red else C.Sub),
                      textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+            } else if (com.sevbify.app.CanvasLoop.current != null) {
+                CanvasView(Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)))   // tall, like Spotify's
             } else {
                 Cover(t.art, 340.dp, RoundedCornerShape(8.dp), Modifier.aspectRatio(1f))
             }

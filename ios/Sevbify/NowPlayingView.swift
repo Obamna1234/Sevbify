@@ -2,6 +2,7 @@ import SwiftUI
 import AVKit
 
 struct NowPlayingView: View {
+    @ObservedObject private var canvas = CanvasLoop.shared
     @EnvironmentObject var player: Player
     @EnvironmentObject var lib: Library
     @EnvironmentObject var nav: Nav
@@ -29,9 +30,15 @@ struct NowPlayingView: View {
             Spacer(minLength: 12)
             GeometryReader { g in
                 let side = min(g.size.width - 48, g.size.height)
-                Cover(url: t?.art ?? "", size: side, corner: 8)
-                    .shadow(radius: 20)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if canvas.current != nil {
+                        CanvasLoopView().frame(width: side * 0.75, height: side).clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        Cover(url: t?.art ?? "", size: side, corner: 8)
+                    }
+                }
+                .shadow(radius: 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Spacer(minLength: 12)
 
