@@ -32,3 +32,16 @@ def test_tour_seen_is_saved(window):
     window.user_data.tour_seen = True
     window.storage.save(window.user_data)
     assert window.storage.load().tour_seen is True
+
+
+def test_app_startup_code_has_no_local_name_clash():
+    """Regression: a `from ... import QTimer` inside app.main() made QTimer local there and crashed the packaged app
+    at start ("cannot access local variable 'QTimer'"). pyflakes finds such clashes."""
+    import ast
+    import os
+    src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py"), encoding="utf-8").read()
+    main = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == "main")
+    module_names = {a.asname or a.name for n in ast.parse(src).body if isinstance(n, (ast.Import, ast.ImportFrom))
+                    for a in n.names}
+    local = {a.asname or a.name for n in ast.walk(main) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
+    assert not (module_names & local), module_names & local

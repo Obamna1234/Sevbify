@@ -30,7 +30,7 @@ final class Tour: ObservableObject {
              text: "••• → Support the artist to buy their music straight from them: their own Bandcamp page or official shop. You can open this tour again from Settings → About."),
     ]
 
-    func showOnFirstStart() { if !Library.shared.settings.tourSeen { fromSettings = false; open = true } }
+    @MainActor func showOnFirstStart() { if !Library.shared.settings.tourSeen { fromSettings = false; open = true } }
     func showAgain() { fromSettings = true; open = true }
 }
 
@@ -39,7 +39,7 @@ struct FeatureTourView: View {
     @State private var index = 0
     @State private var never = true
 
-    private func close() {
+    @MainActor private func close() {
         if !tour.fromSettings && never { Library.shared.settings.tourSeen = true }
         tour.open = false
     }

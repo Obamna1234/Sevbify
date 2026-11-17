@@ -136,10 +136,10 @@ struct RootView: View {
         .fullScreenCover(isPresented: Binding(get: { tour.open && lib.settings.noticeAccepted && !nav.nowPlaying },
                                               set: { if !$0 { tour.open = false } })) { FeatureTourView() }
         .onChange(of: lib.settings.noticeAccepted) { ok in
-            if ok { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { Tour.shared.showOnFirstStart() } }
+            if ok { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { Task { @MainActor in Tour.shared.showOnFirstStart() } } }
         }
         .onAppear {
-            if lib.settings.noticeAccepted { DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { Tour.shared.showOnFirstStart() } }
+            if lib.settings.noticeAccepted { DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { Task { @MainActor in Tour.shared.showOnFirstStart() } } }
         }
     }
 }

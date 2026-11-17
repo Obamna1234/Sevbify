@@ -121,14 +121,14 @@ final class EqualiserTap {
                     }
                 }
             })
-        var tap: Unmanaged<MTAudioProcessingTap>?
+        var tap: MTAudioProcessingTap?
         guard MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PostEffects, &tap) == noErr,
               let made = tap else {
             Unmanaged<State>.fromOpaque(callbacks.clientInfo!).release()
             return nil
         }
         let params = AVMutableAudioMixInputParameters(track: track)
-        params.audioTapProcessor = made.takeRetainedValue()
+        params.audioTapProcessor = made
         let mix = AVMutableAudioMix()
         mix.inputParameters = [params]
         return mix

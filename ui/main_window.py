@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
     QLabel, QScrollArea, QPushButton, QFrame, QGridLayout,
     QDialog, QLineEdit, QListWidget, QAbstractItemView,
-    QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog, QSizePolicy
+    QDialogButtonBox, QMessageBox, QSlider, QMenu, QInputDialog, QFileDialog, QSizePolicy, QApplication
 )
 from PyQt6.QtGui import QPixmap, QIcon, QPainter, QBrush, QPolygon, QColor, QKeySequence, QShortcut, QDesktopServices
 from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal, QPoint, QThread, QEvent, QUrl, QFileSystemWatcher, QRectF

@@ -396,8 +396,7 @@ def main():
         if _note:
             _T.singleShot(2500, lambda: window.show_status(_note, timeout_ms=15000))
         if not SMOKE_TEST and not JOURNEY and not window.user_data.tour_seen:
-            from PyQt6.QtCore import QTimer
-            QTimer.singleShot(1200, window.show_feature_tour)      # first start: what Sevbify can do
+            _T.singleShot(1200, window.show_feature_tour)          # first start: what Sevbify can do
 
     if SMOKE_TEST:
         def loaded():

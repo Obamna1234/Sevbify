@@ -12,3 +12,4 @@ imageio-ffmpeg    # provides ffmpeg for downloads, so nothing else has to be ins
 
 # Development / tests
 pytest>=8.0
+pyflakes>=3.2         # tests: finds names used but never defined (crash before it ships)
