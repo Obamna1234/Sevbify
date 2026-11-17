@@ -171,6 +171,7 @@ struct TrackMenu: View {
     @Environment(\.dismiss) var dismiss
     @State private var choosing = false
     @State private var previewing = false
+    @State private var supporting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -200,6 +201,9 @@ struct TrackMenu: View {
                         item("play.circle", "Preview (30 s)") { previewing = true }
                         item("person", "Go to artist") { dismiss(); nav.go(.artist(track.artist)) }
                         item("square.and.arrow.up", "Share") { share(); dismiss() }
+                        if !track.isItem && !track.artist.isEmpty && track.artist != "Unknown Artist" {
+                            item("heart", "Support the artist") { supporting = true }
+                        }
                         if PairLink.shared.connected && track.isLocal {
                             item("desktopcomputer", "Send to \(PairLink.shared.computer?.name ?? "computer")") {
                                 PairLink.shared.send([track]); dismiss()
@@ -212,6 +216,7 @@ struct TrackMenu: View {
         .background(C.elevated.ignoresSafeArea())
         .foregroundColor(C.text)
         .sheet(isPresented: $choosing) { AddToPlaylistSheet(tracks: [track]) { dismiss() } }
+        .sheet(isPresented: $supporting) { SupportSheet(track: track).presentationDetents([.medium, .large]) }
         .sheet(isPresented: $previewing) { PreviewView(track: track) }
     }
 

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Cancel
@@ -129,6 +130,8 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
+            if (!t.isItem && t.artist.isNotBlank() && t.artist != "Unknown Artist")
+                SheetItem(Icons.Filled.Favorite, "Support the artist") { close(); Nav.supportFor = t }
             if (com.sevbify.app.PairLink.connected && t.localUri.isNotEmpty())
                 SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}") {
                     close(); com.sevbify.app.PairLink.send(listOf(t))

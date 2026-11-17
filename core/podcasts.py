@@ -31,6 +31,7 @@ def _web(url):
     a device on your own network such as your router)."""
     return url.strip() if is_outside_link(url) else ""
 
+PODCAST_NS = "{https://podcastindex.org/namespace/1.0}"
 ITUNES_NS = "{http://www.itunes.com/dtds/podcast-1.0.dtd}"
 MEDIA_NS = "{http://search.yahoo.com/mrss/}"
 MAX_EPISODES = 300
@@ -51,6 +52,8 @@ class Show:
     verified: bool = False      # YouTube: the channel has YouTube's verified tick
     followers: int = 0          # YouTube: subscribers
     channel: str = ""           # YouTube: the channel that uploads the videos (for playlists too)
+    funding: str = ""           # the show's own "support us" link (Podcasting 2.0 <podcast:funding>), https only
+    funding_label: str = ""
 
     @property
     def key(self):
@@ -536,6 +539,10 @@ def parse_feed(xml_text, feed_url=""):
                 feed_url=feed_url, image_url=image,
                 description=clean_text(text(channel, "description") or text(channel, f"{ITUNES_NS}summary"), 600),
                 link=_web(text(channel, "link")))
+    fund = channel.find(f"{PODCAST_NS}funding")
+    if fund is not None and str(fund.get("url", "")).startswith("https://"):
+        show.funding = _web(fund.get("url", ""))
+        show.funding_label = " ".join((fund.text or "").split())[:60]
     episodes = []
     for item in channel.findall("item")[:MAX_EPISODES]:
         enc = item.find("enclosure")

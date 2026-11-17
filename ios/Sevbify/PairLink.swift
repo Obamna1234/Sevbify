@@ -694,3 +694,46 @@ struct QRScanner: UIViewControllerRepresentable {
         }
     }
 }
+
+/// "Support the artist": where to buy this music straight from the artist (core/support.py). Each link shows its
+/// website; nothing opens until you tap it; no link is guessed.
+struct SupportSheet: View {
+    let track: Track
+    @State private var links: [[String: Any]]? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Support \(track.artist)").font(.title2.bold())
+            Text("Buy their music straight from them, or from the closest thing.").font(.caption).foregroundColor(C.dim)
+            if let links {
+                if links.isEmpty {
+                    Text("No links from the artist themselves were found, so none are shown (Sevbify never guesses).")
+                        .font(.callout).foregroundColor(C.dim)
+                }
+                ForEach(Array(links.enumerated()), id: \.offset) { _, l in
+                    if let s = l["url"] as? String, s.hasPrefix("https://"), let url = URL(string: s) {
+                        Button { UIApplication.shared.open(url) } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(l["label"] as? String ?? "").font(.body.bold())
+                                Text("Opens \(l["site"] as? String ?? "")").font(.caption).foregroundColor(C.dim)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color(white: 0.16)).cornerRadius(8)
+                        }.buttonStyle(.plain)
+                    }
+                }
+            } else {
+                ProgressView("Looking for the artist's own links…")
+            }
+            Text("Enjoying this? Support the artists and podcasters you love: buy their music, go to their shows, or back their show directly.")
+                .font(.caption).foregroundColor(C.dim).padding(.top, 8)
+            Spacer()
+        }
+        .padding(24)
+        .task {
+            let r = try? await Bridge.call("support_links", [track.artist, track.title, track.pageUrl, track.source])
+            links = (r as? [[String: Any]]) ?? []
+        }
+    }
+}

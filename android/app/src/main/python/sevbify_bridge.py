@@ -510,6 +510,19 @@ def share_links(artist, title, page_url="", duration_ms=0):
 
 
 @_call
+def support_links(artist, title, page_url="", source=""):
+    """Where to buy this music straight from the artist (core/support.py): the song's own Bandcamp page, then the
+    artist's own links from MusicBrainz. https only; [] when none can be trusted (never guessed)."""
+    from core import support, streamer
+    if not _state["online_on"]:
+        return []
+    page = page_url or ""
+    if "bandcamp.com" not in page:
+        page = streamer.remembered_page(artist, title, "Bandcamp") or page
+    return support.for_song(_net(), artist, title, page, source)
+
+
+@_call
 def update_ytdlp():
     """Fetch the newest official yt-dlp (checksum-checked); it's used from the next start."""
     from core import updates

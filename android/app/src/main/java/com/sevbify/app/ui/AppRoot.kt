@@ -126,6 +126,7 @@ fun AppRoot() {
         if (Player.videoMode && com.sevbify.app.VideoPlayer.fullscreen) FullscreenVideo()
         AnimatedVisibility(Nav.lyricsOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) { LyricsScreen() }
         Nav.shareFor?.let { ShareSheet(it) }
+        Nav.supportFor?.let { SupportSheet(it) }
         if (Nav.connectOpen) ConnectSheet()
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         Sheets()

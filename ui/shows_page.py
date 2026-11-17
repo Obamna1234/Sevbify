@@ -355,6 +355,7 @@ class ShowPage(QWidget):
     filter_changed = pyqtSignal(str)        # "all" / "unplayed" / "in_progress"
     search_changed = pyqtSignal(str)        # "Find in this show"
     video_clicked = pyqtSignal()            # "Watch video": the show's video version, played inside Sevbify
+    support_clicked = pyqtSignal()          # "Support": the show's own support link
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -369,7 +370,7 @@ class ShowPage(QWidget):
         self.rows = []
 
     def build(self, kind, title, author, description, followed, rows, top_colour="#3a3a3a", can_download_all=False,
-              follow_text=("Follow", "Following"), message="", sort=None, count_text="", video_button=False,
+              follow_text=("Follow", "Following"), message="", sort=None, count_text="", video_button=False, support_button=False,
               filter_mode="all", query=""):
         content = QWidget()
         content.setObjectName("showPage")
@@ -443,6 +444,14 @@ class ShowPage(QWidget):
             vid.setCursor(Qt.CursorShape.PointingHandCursor)
             vid.clicked.connect(self.video_clicked.emit)
             actions.addWidget(vid)
+        if support_button:
+            sup = QPushButton("Support")
+            sup.setToolTip("Back this show directly (its own link)")
+            sup.setStyleSheet(theme.PILL)
+            sup.setFixedHeight(32)
+            sup.setCursor(Qt.CursorShape.PointingHandCursor)
+            sup.clicked.connect(self.support_clicked.emit)
+            actions.addWidget(sup)
         actions.addStretch()
         hv.addLayout(actions)
         if count_text:

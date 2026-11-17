@@ -77,6 +77,8 @@ class ShowsMixin:
         self._show_search_timer.timeout.connect(self._render_show_keep_search)
         self.genre_page = GenrePage()
         self.show_page.video_clicked.connect(self.open_video_version)
+        self.show_page.support_clicked.connect(
+            lambda: self._show_ctx and self.support_show(self._show_ctx["obj"]))
         self.video_page = VideoPage()
         self.video_page.audio_only_requested.connect(self._video_to_audio)
         self.video_page.error.connect(lambda msg: self.show_status(f"⚠ Video: {msg}", 10000))
@@ -346,6 +348,7 @@ class ShowsMixin:
                              can_download_all=kind == "book" and bool(rows), follow_text=follow_text, message=message,
                              sort=ctx.get("sort", "newest") if kind != "book" and len(ctx["episodes"]) > 1 else None,
                              count_text=count, video_button=kind != "book" and obj.kind != "youtube",
+                             support_button=kind != "book" and bool(getattr(obj, "funding", "")),
                              filter_mode=ctx.get("filter", "all"), query=ctx.get("query", ""))
         self._with_image(image, self.show_page.set_cover)
         if kind == "book":
@@ -1004,6 +1007,16 @@ class ShowsMixin:
                                 " QPushButton#artistRadio:pressed { border-color: #b3b3b3; color: #b3b3b3; }")
             radio.clicked.connect(lambda: self.start_radio(radio_seed))
             row.addWidget(radio)
+            artist = source or getattr(radio_seed, "artist", "") or ""
+            if artist:
+                sup = QPushButton("Support")
+                sup.setObjectName("artistRadio")
+                sup.setStyleSheet(radio.styleSheet())
+                sup.setCursor(Qt.CursorShape.PointingHandCursor)
+                sup.setFixedHeight(32)
+                sup.setToolTip("Buy their music straight from the artist")
+                sup.clicked.connect(lambda: self.support_artist(artist))
+                row.addWidget(sup)
         row.addStretch()
         v.addLayout(row)
         rows = songs[:shown] if shown else songs

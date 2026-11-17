@@ -1,6 +1,10 @@
 package com.sevbify.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -96,5 +100,49 @@ fun PairDialogs() {
             },
             dismissButton = { TextButton(onClick = { PairLink.answer(false) }) { Text("Decline", color = C.Text) } },
             containerColor = C.Elevated)
+    }
+}
+
+/** "Support the artist": where to buy this music straight from the artist (core/support.py). Each link shows its
+ *  website; nothing opens until you tap it; no link is guessed. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SupportSheet(t: com.sevbify.app.Track) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var links by remember(t.matchKey) { mutableStateOf<org.json.JSONArray?>(null) }
+    LaunchedEffect(t.matchKey) {
+        links = try { com.sevbify.app.Bridge.arr("support_links", t.artist, t.title, t.pageUrl, t.source) }
+                catch (e: Exception) { org.json.JSONArray() }
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { Nav.supportFor = null }, containerColor = C.Elevated) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text("Support ${t.artist}", style = MaterialTheme.typography.titleLarge)
+            Text("Buy their music straight from them, or from the closest thing.", style = MaterialTheme.typography.bodySmall,
+                 modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+            val l = links
+            when {
+                l == null -> Text("Looking for the artist's own links…", style = MaterialTheme.typography.bodyMedium)
+                l.length() == 0 -> Text(if (com.sevbify.app.Library.settings.online)
+                    "No links from the artist themselves were found, so none are shown (Sevbify never guesses)."
+                    else "Go online to find where to buy this artist's music.", style = MaterialTheme.typography.bodyMedium)
+                else -> { for (i in 0 until l.length()) {
+                    val o = l.getJSONObject(i)
+                    val url = o.optString("url")
+                    if (!url.startsWith("https://")) continue
+                    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color(0xFF2A2A2A))
+                        .clickable {
+                            Nav.supportFor = null
+                            try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                            catch (_: Exception) {}
+                        }.padding(14.dp)) {
+                        Text(o.optString("label"), style = MaterialTheme.typography.bodyLarge)
+                        Text("Opens " + o.optString("site"), style = MaterialTheme.typography.bodySmall)
+                    }
+                } }
+            }
+            Text("Enjoying this? Support the artists and podcasters you love: buy their music, go to their shows, or back their show directly.",
+                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 14.dp))
+        }
     }
 }

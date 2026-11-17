@@ -1258,6 +1258,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             menu.addAction("♡  Add to Liked Songs").triggered.connect(lambda: self.toggle_like(song))
         menu.addAction("≡  Add to queue").triggered.connect(lambda: self.add_to_queue(song))
         self._add_send_to_phone(menu, [song])
+        if has_artist and getattr(getattr(song, "track", None), "source", "") not in ("podcast", "audiobook", "youtube"):
+            menu.addAction("♥  Support the artist").triggered.connect(lambda: self.support_artist(song.artist, song))
         if is_remote:
             state, _note = self.downloads.state(song.track.key)
             if state in ("queued", "downloading"):
@@ -4085,6 +4087,42 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.right_panel.hide()
         else:
             self.set_right_panel(self.user_data.right_panel, save=False)
+
+    def support_artist(self, artist, song=None):
+        """Where to buy this music straight from the artist (core/support.py): the song's own Bandcamp page, then
+        the artist's own links from MusicBrainz. Nothing opens until you click a link."""
+        from core import streamer, support
+        from .support_dialog import SupportDialog
+        title = getattr(song, "title", "") if song is not None else ""
+        track = getattr(song, "track", None)
+        page = getattr(track, "page_url", "") or ""
+        if "bandcamp.com" not in page and song is not None:
+            page = streamer.remembered_page(song.artist, song.title, "Bandcamp") or page
+        d = SupportDialog(self, f"Support {artist}", "Buy their music straight from them, or from the closest thing.")
+        empty = ("No links from the artist themselves were found, so none are shown (Sevbify never guesses). "
+                 "Their Bandcamp or official website is usually the best place to buy.")
+        if not self.online_enabled:
+            d.show_links([], "Go online to find where to buy this artist's music.")
+        else:
+            self.online_call(support.for_song, self.net, artist, title, page, getattr(track, "source", ""),
+                             on_done=lambda links: d.show_links(links, empty),
+                             on_error=lambda _e: d.show_links([], empty))
+        if getattr(self, "_auto_answer_dialogs", None) is not None:      # tests
+            d.show()
+            return d
+        d.exec()
+        return d
+
+    def support_show(self, show):
+        from core import support
+        from .support_dialog import SupportDialog
+        d = SupportDialog(self, f"Support {show.title}", "Back the podcast directly.")
+        d.show_links(support.for_show(show), "This show hasn't listed a way to support it in its feed.")
+        if getattr(self, "_auto_answer_dialogs", None) is not None:
+            d.show()
+            return d
+        d.exec()
+        return d
 
     def _add_send_to_phone(self, menu, songs, title=""):
         """'Send to <phone>' for each paired phone that's connected now (songs on this computer only)."""
