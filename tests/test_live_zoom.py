@@ -5,7 +5,7 @@ from ui import live_zoom
 
 
 def test_live_zoom_redraws_bigger_and_keeps_the_window_size(qapp):
-    assert live_zoom.available()        # found in Qt on Windows, macOS and Linux
+    assert live_zoom.available(), live_zoom.why        # found in Qt on Windows, macOS and Linux
     w = QWidget()
     w.setGeometry(100, 100, 800, 600)
     w.show()

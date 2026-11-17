@@ -18,29 +18,40 @@ _looked = False
 current = None        # the factor set while running (None: still the one Sevbify started with)
 
 
-def _qt_gui_library():
+why = ""              # why it isn't available (shown in the tests' output)
+
+
+def _qt_gui_libraries():
+    """Places Qt's GUI library may be found, most likely first."""
+    import glob
     import PyQt6
     base = os.path.join(os.path.dirname(PyQt6.__file__), "Qt6")
     if sys.platform == "win32":
-        try:
-            return ctypes.WinDLL("Qt6Gui.dll")                 # already loaded by PyQt6
-        except OSError:
-            return ctypes.WinDLL(os.path.join(base, "bin", "Qt6Gui.dll"))
+        yield lambda: ctypes.WinDLL("Qt6Gui.dll")                     # already loaded by PyQt6
+        yield lambda: ctypes.WinDLL(os.path.join(base, "bin", "Qt6Gui.dll"))
+        return
     if sys.platform == "darwin":
-        return ctypes.CDLL(os.path.join(base, "lib", "QtGui.framework", "QtGui"))
-    try:
-        return ctypes.CDLL("libQt6Gui.so.6")
-    except OSError:
-        return ctypes.CDLL(os.path.join(base, "lib", "libQt6Gui.so.6"))
+        for path in [os.path.join(base, "lib", "QtGui.framework", "QtGui")] + sorted(
+                glob.glob(os.path.join(base, "lib", "QtGui.framework", "Versions", "*", "QtGui"))):
+            yield lambda path=path: ctypes.CDLL(path)
+    else:
+        yield lambda: ctypes.CDLL("libQt6Gui.so.6")
+        yield lambda: ctypes.CDLL(os.path.join(base, "lib", "libQt6Gui.so.6"))
+    yield lambda: ctypes.CDLL(None)                                  # everything already loaded
 
 
 def _set_global_factor():
-    global _func, _looked
+    global _func, _looked, why
     if _looked:
         return _func
     _looked = True
-    try:
-        lib = _qt_gui_library()
+    problems = []
+    for open_lib in _qt_gui_libraries():
+        try:
+            lib = open_lib()
+        except OSError as e:
+            problems.append(str(e)[:160])
+            continue
         for name in ("?setGlobalFactor@QHighDpiScaling@@SAXN@Z",        # Windows (MSVC)
                      "_ZN15QHighDpiScaling15setGlobalFactorEd"):        # Linux, macOS
             try:
@@ -50,9 +61,9 @@ def _set_global_factor():
             f.argtypes = [ctypes.c_double]
             f.restype = None
             _func = f
-            break
-    except Exception:
-        _func = None
+            return _func
+        problems.append(f"{getattr(lib, '_name', lib)}: no setGlobalFactor")
+    why = "; ".join(problems)
     return _func
 
 
