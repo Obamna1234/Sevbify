@@ -176,8 +176,10 @@ def test_hover_shows_play_and_clicking_it_plays(window, qapp):
     t._set_hover(-1)
     assert t.item(1, 0).text() == "2"                        # the number comes back
     rect = t.visualItemRect(t.item(1, 0))
+    window.pq.repeat = "one"                  # the test songs are 1 second long: don't let it move on before we look
+    want = t.song_at(1)
     QTest.mouseClick(t.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
-    assert wait_until(qapp, lambda: window.current_song is t.song_at(1))
+    assert wait_until(qapp, lambda: window.current_song is want)
 
 
 def test_clicking_empty_space_clears_the_selection(window, qapp):

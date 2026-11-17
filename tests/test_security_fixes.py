@@ -44,7 +44,7 @@ def test_installed_copies_can_update_and_pkill_pattern_is_literal(tmp_path):
     os.makedirs(target)
     cmd = app_update.restart_command(str(tmp_path / "new"), target, 1, str(tmp_path / "s"), platform="linux")
     script = open(cmd[-1]).read()
-    assert "Apps \\(x86\\)/Sevbify\\.v2\\+/" in script
+    assert "Apps \\(x86\\)" in script and "Sevbify\\.v2\\+" in script     # (any path separator)
 
 
 def test_loudness_reads_only_a_plain_file(monkeypatch):
