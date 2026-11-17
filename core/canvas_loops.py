@@ -143,6 +143,12 @@ def get(data_dir, artist, title, search, duration_s=0, limit_mb=DEFAULT_LIMIT_MB
     with _lock:
         if time.time() - _misses.get(k, 0) < 86400:
             return ""
+    try:                                   # disk almost full: no new loops (the ones kept still play)
+        import shutil
+        if shutil.disk_usage(data_dir).free < 500 * 1024 * 1024:
+            return ""
+    except OSError:
+        pass
     url = find_music_video(search, artist, title)
     if not url:
         with _lock:

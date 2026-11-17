@@ -54,6 +54,8 @@ object CanvasLoop {
         clipFile(c, t)?.let { show(it); return }
         stop()
         if (!s.online || t.artist.isBlank() || t.artist == "Unknown Artist") return
+        // Phone almost full: no new loops (the ones already kept still play). Under 500 MB free.
+        if (runCatching { c.cacheDir.usableSpace }.getOrDefault(0L) < 500L * 1024 * 1024) return
         val k = key(t.artist, t.title)
         if (!busy.add(k)) return
         SevbifyApp.instance.scope.launch {

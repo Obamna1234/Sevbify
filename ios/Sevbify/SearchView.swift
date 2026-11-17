@@ -112,6 +112,7 @@ struct SearchView: View {
                 if Task.isCancelled { return }
                 songs = lib.settings.explicitOk ? foundSongs : foundSongs.filter { !$0.explicit }
                 artists = foundArtists
+                player.warmUp(songs)
                 if lib.settings.source == "Bandcamp + YouTube" {
                     // Music that's only on SoundCloud joins the end of the songs (like the PC and Android).
                     let known = songs.map { [$0.artist, $0.title] }

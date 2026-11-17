@@ -57,6 +57,10 @@ final class CanvasLoop: ObservableObject {
         if let f = clip(for: t) { show(f); return }
         stop()
         guard Library.shared.settings.online, !t.artist.isEmpty, t.artist != "Unknown Artist" else { return }
+        // iPhone almost full: no new loops (the ones already kept still play). Under 500 MB free.
+        let free = (try? cacheDir.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? Int64.max
+        guard free > 500 * 1_048_576 else { return }
         let k = Self.key(t.artist, t.title)
         guard !busy.contains(k) else { return }
         busy.insert(k)

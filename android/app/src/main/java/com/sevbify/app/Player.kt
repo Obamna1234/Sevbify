@@ -707,6 +707,7 @@ object Player {
         loadJob?.cancel()
         warmJob?.cancel()                       // you chose something: stop looking up the others
         prefetchJob?.cancel(); queuedKey = ""
+        prefetchNext()                          // the songs around it, straight away (so skipping quickly is quick too)
         loading = false
         // Watching? Keep watching: the next episode opens as video too (listening if it has no video).
         if (preferVideo && canWatch(t) && Library.settings.online) {
@@ -839,7 +840,8 @@ object Player {
             }
             return
         }
-        val todo = ahead.filter { streamable(it) }
+        // The three ahead and the one before (for Previous), like the computer and iPhone.
+        val todo = (ahead + listOfNotNull(context.getOrNull(index - 1))).filter { streamable(it) }
         val local = Library.localFor(nxt)
         if (todo.isEmpty() && local == null) return
         prefetchJob = SevbifyApp.instance.scope.launch {
@@ -847,11 +849,11 @@ object Player {
                 val uri = if (local.localUri.startsWith("content:")) local.localUri else Uri.fromFile(File(local.localUri)).toString()
                 queueBehind(nxt, uri, null)
             }
-            delay(4000)
+            delay(300)
             for (t in todo) {
                 val r = resolveQuietly(t)
                 if (t === nxt && r != null) queueBehind(t, r.getString("url"), headersOf(r))
-                delay(500)
+                delay(150)
             }
         }
     }

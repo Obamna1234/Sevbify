@@ -201,7 +201,7 @@ struct SongsPage: View {
         }
         .background(C.bg.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: tracks.count) { await loadRecs() }
+        .task(id: tracks.count) { player.warmUp(tracks); await loadRecs() }
         .confirmationDialog("Download", isPresented: $askDownload) {
             let pending = tracks.filter { !lib.isDownloaded($0) && !$0.isItem }
             Button("Download all \(pending.count) songs") { downloads.download(pending) }

@@ -289,6 +289,7 @@ final class Player: ObservableObject {
         let line = "\(t.artist) - \(t.title)"
         Task { _ = try? await Bridge.call("log_event", ["play", line]) }     // the debug log, on this iPhone only
         Task { try? await Task.sleep(nanoseconds: 5_000_000_000); await MainActor.run { SmartDownloads.shared.check() } }
+        prefetchAround()
         CanvasLoop.shared.songChanged(t)
         player.defaultRate = t.isItem ? speed : 1              // podcasts and audiobooks keep your speed
         if retriedKey != t.matchKey + ":retry" { retriedKey = "" }
@@ -353,6 +354,46 @@ final class Player: ObservableObject {
 
     private struct NoSource: LocalizedError {
         let errorDescription: String?
+    }
+
+    /// While a song plays, find the next three songs (and the one before) online in the background, like Spotify
+    /// loading the next song early: the shared core remembers each result for 30 minutes, so Next / Previous start
+    /// straight away instead of after the search. Only the lookup; no audio is downloaded. A tap on Next while a
+    /// lookup is still running joins it instead of starting again.
+    /// A page of songs is open (a playlist, an album, search results): look up the first few streamed songs while
+    /// you look, so tapping one starts at once (like the computer and Android). A newer page or a play replaces it.
+    private var warmGen = 0
+    func warmUp(_ songs: [Track]) {
+        let lib = Library.shared
+        guard lib.settings.online, lib.settings.streamFull else { return }
+        let todo = songs.filter { !$0.isItem && $0.streamUrl.isEmpty && lib.localFor($0) == nil }.prefix(3)
+        guard !todo.isEmpty else { return }
+        warmGen += 1
+        let gen = warmGen
+        Task.detached(priority: .utility) { [weak self] in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            for t in todo {
+                guard let self, await self.warmGen == gen else { return }
+                _ = try? await Bridge.object("resolve", [t.artist, t.title, t.durationMs, ""])
+            }
+        }
+    }
+
+    private func prefetchAround() {
+        warmGen += 1                                   // you played something: the page's warm-up stops
+        let lib = Library.shared
+        guard lib.settings.online, lib.settings.streamFull else { return }
+        let ahead = Array((userQueue + upcoming).prefix(3)) + (index > 0 && context.indices.contains(index - 1) ? [context[index - 1]] : [])
+        let todo = ahead.filter { !$0.isItem && $0.streamUrl.isEmpty && lib.localFor($0) == nil }
+        guard !todo.isEmpty else { return }
+        let gen = generation
+        Task.detached(priority: .utility) { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            for t in todo {
+                guard let self, await self.generation == gen else { return }      // a new song: its own prefetch runs
+                _ = try? await Bridge.object("resolve", [t.artist, t.title, t.durationMs, ""])
+            }
+        }
     }
 
     /// (what to play, is it only a preview)

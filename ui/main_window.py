@@ -3360,6 +3360,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self.search_web_status.setText(f"No web results for \"{query}\".")
             self.fetch_covers(items, limit=len(items))
             self._search_soundcloud(query)
+            self.warm_up(items)
             if not self._search_memory.isActive():          # the search had already settled
                 self._check_spelling(query)
 
@@ -3570,6 +3571,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._collection_name = ""
 
     def _show_collection(self, kind, title, songs, cover_path, meta_text, nav, extra_buttons=()):
+        self.warm_up(list(songs))
         while self._collection_header_box.count():
             item = self._collection_header_box.takeAt(0)
             if item.widget():
@@ -4861,6 +4863,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.refresh_playlist_page()
         self.stack.setCurrentWidget(self.playlist_page)
         self._set_nav("playlist", playlist)
+        self.warm_up(list(playlist.songs))
         # Songs saved without artwork (e.g. imported before this version): look their covers up now.
         remote = [s for s in playlist.songs if getattr(s, "is_remote", False)]
         if remote and self.online_enabled:
@@ -5279,6 +5282,10 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._set_now_playing_text(song.title, song.artist, "Finding the full song…")
         token = object()
         self._stream_token = token
+        self._warm_token = None                       # a page's warm-up gives way to what you actually played
+        # Look up the songs around this one straight away too (not only once it plays), so skipping quickly
+        # through several songs finds each one already looked up or on its way.
+        QTimer.singleShot(0, self._prefetch_neighbours)
 
         def still_wanted():
             return getattr(self, "_stream_token", None) is token and self.current_song is song \
@@ -5329,6 +5336,23 @@ class MainWindow(ShowsMixin, QMainWindow):
                 and not song.track.stream_url
         return not song.exists and bool(song.artist) and song.artist != "Unknown Artist"
 
+    def warm_up(self, songs, n=3):
+        """A page of songs is open (a playlist, an album, search results): look up the first few streamed songs
+        while you look, so tapping one starts at once. Only the lookup (no audio); a newer page replaces it."""
+        if not self.online_enabled or not self.user_data.download_notice_accepted or getattr(self, "_shut_down", False):
+            return
+        todo = [s for s in songs if s is not None and self._needs_lookup(s)][:n]
+        token = object()
+        self._warm_token = token
+
+        def go():
+            if getattr(self, "_warm_token", None) is not token or getattr(self, "_shut_down", False):
+                return
+            for s in todo:
+                run_async(self, streamer.find_full_song, s.artist, s.title, s.duration, self.user_data.download_source,
+                          on_done=lambda _r: None, on_error=lambda _e: None, lane="songs")
+        QTimer.singleShot(800, go)
+
     def _prefetch_neighbours(self):
         """While a song plays, quietly find the next and previous songs online too, so Next and Previous start
         straight away instead of after the 5-10 s search (like Spotify loading the next song early). Only the
@@ -5337,14 +5361,14 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not self.online_enabled or not self.user_data.download_notice_accepted or getattr(self, "_shut_down", False):
             return
         pq = self.pq
-        wanted = []
-        if pq.user_queue:
-            wanted.append(pq.user_queue[0])
-        elif pq.items:
-            if pq.index + 1 < len(pq.items):
-                wanted.append(pq.items[pq.index + 1])
-            elif pq.repeat == "all":
-                wanted.append(pq.items[0])
+        # The next three (your queue first) and the one before: skipping forward a few at a time starts at once.
+        wanted = list(pq.user_queue[:3])
+        i = pq.index + 1
+        while len(wanted) < 3 and pq.items and i < len(pq.items):
+            wanted.append(pq.items[i])
+            i += 1
+        if len(wanted) < 3 and pq.items and pq.repeat == "all":
+            wanted.append(pq.items[0])
         if pq.items and pq.index > 0:
             wanted.append(pq.items[pq.index - 1])
         source = self.user_data.download_source
