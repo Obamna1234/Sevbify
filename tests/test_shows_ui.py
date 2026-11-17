@@ -267,3 +267,25 @@ def test_episodes_filter_search_and_sort_like_spotify(win, qapp):
     assert wait_until(qapp, lambda: len(win.show_page.rows) == 2)
     win.show_page.sort_changed.emit("oldest")
     assert win.show_page.sort_btn.text().startswith("Oldest to Newest") and win._show_ctx["items"][0] is second
+
+
+def test_your_episodes_save_open_remove_and_keep(win, qapp):
+    from core import podcasts
+    from core.storage import Storage
+    win.open_show(podcasts.Show("Fin vs History", feed_url="https://feeds.example.com/fvh"))
+    assert wait_until(qapp, lambda: len(win._show_ctx["items"]) == 2)
+    ep = win._show_ctx["items"][1]
+    assert not win.is_saved_episode(ep)
+    win.save_episode(ep)
+    assert win.is_saved_episode(ep) and win.user_data.saved_episodes[0]["source_id"] == "ep-1"
+    rows = [e for e in win.library_panel.entries() if e["title"] == "Your Episodes"]
+    assert rows and rows[0]["subtitle"].endswith("1")                       # in Your Library
+    win.open_library_show(rows[0]["obj"])
+    assert win.stack.currentWidget() is win.collection_page
+    assert [s.title for s in win.collection_table.songs_in_view()] == [ep.title]
+    win.save_episode(ep, False)                                            # removed: the page updates
+    assert not win.user_data.saved_episodes and not win.collection_table.songs_in_view()
+    assert not any(e["title"] == "Your Episodes" for e in win.library_panel.entries())
+    win.save_episode(ep)
+    win.storage.save(win.user_data)
+    assert Storage(win.storage.data_dir).load().saved_episodes[0]["title"] == ep.title   # kept after a restart

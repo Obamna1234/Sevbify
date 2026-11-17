@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -156,6 +157,17 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
+            if (t.source == "podcast") {
+                val saved = com.sevbify.app.Library.isSavedEpisode(t)
+                SheetItem(if (saved) Icons.Filled.RemoveCircleOutline else Icons.Filled.AddCircleOutline,
+                          if (saved) "Remove from Your Episodes" else "Save to Your Episodes") {
+                    close(); com.sevbify.app.Library.saveEpisode(t, !saved)
+                }
+                val played = t.itemKey in com.sevbify.app.Library.finished
+                SheetItem(Icons.Filled.CheckCircle, if (played) "Mark as not played" else "Mark as played") {
+                    close(); com.sevbify.app.Library.markPlayed(t, !played)
+                }
+            }
             if (com.sevbify.app.Player.current?.matchKey == t.matchKey) {
                 val p = com.sevbify.app.Player
                 SheetItem(Icons.Filled.Bedtime, if (p.sleepAt != null || p.sleepAtEnd) "Sleep timer (on)" else "Sleep timer") {

@@ -146,6 +146,21 @@ object Library {
     val plainHttpHosts = mutableSetOf<String>()
     val resume = mutableMapOf<String, Long>()           // episode / chapter key -> where you stopped (ms)
     val finished = mutableSetOf<String>()
+    /** Your Episodes: episodes saved for later, newest first (like Spotify's). */
+    val savedEpisodes = mutableStateListOf<Track>()
+    fun isSavedEpisode(t: Track) = t.isItem && savedEpisodes.any { it.itemKey == t.itemKey }
+    fun saveEpisode(t: Track, on: Boolean = true) {
+        if (!t.isItem) return
+        savedEpisodes.removeAll { it.itemKey == t.itemKey }
+        if (on) savedEpisodes.add(0, t)
+        while (savedEpisodes.size > 500) savedEpisodes.removeAt(savedEpisodes.size - 1)
+        changed()
+    }
+    fun markPlayed(t: Track, played: Boolean) {
+        if (!t.isItem) return
+        if (played) { finished.add(t.itemKey); resume.remove(t.itemKey) } else finished.remove(t.itemKey)
+        changed()
+    }
     var localSongs by mutableStateOf<List<Track>>(emptyList())
     var privateSession by mutableStateOf(false)
     /** Bumped on every change, so screens that read it redraw. */
@@ -208,6 +223,11 @@ object Library {
         o.optJSONObject("resume")?.let { m -> m.keys().forEach { k -> resume[k] = m.getLong(k) } }
         finished.clear()
         o.optJSONArray("finished")?.let { a -> for (i in 0 until a.length()) finished.add(a.getString(i)) }
+        savedEpisodes.clear()
+        o.optJSONArray("saved_episodes")?.let { a ->
+            for (i in 0 until minOf(a.length(), 500)) a.optJSONObject(i)?.let { runCatching { Track.fromJson(it) }.getOrNull() }
+                ?.takeIf { it.isItem }?.let { savedEpisodes.add(it) }
+        }
         Hidden.load(o.optJSONObject("hidden"))
         listens.clear()
         o.optJSONArray("listens")?.let { a ->
@@ -253,6 +273,7 @@ object Library {
             put("plain_http_hosts", JSONArray(plainHttpHosts.toList().takeLast(200)))
             put("sponsor_cache", JSONObject(sponsorCache.entries.toList().takeLast(300).associate { it.key to it.value }))
             put("finished", JSONArray(finished.toList().takeLast(2000)))
+            put("saved_episodes", JSONArray(savedEpisodes.take(500).map { it.toJson() }))
             put("hidden", Hidden.toJson())
             put("listens", JSONArray(listensJson()))
         }

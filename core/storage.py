@@ -171,6 +171,7 @@ class UserData:
     books: List[dict] = field(default_factory=list)       # audiobooks in Your Library (Book dicts)
     resume: Dict[str, dict] = field(default_factory=dict) # episode / chapter key -> {"ms", "t", "track", "show"}
     finished: List[str] = field(default_factory=list)     # episode / chapter keys listened to the end
+    saved_episodes: List[dict] = field(default_factory=list)  # Your Episodes: episode track dicts (newest first)
     offline: Dict[str, str] = field(default_factory=dict) # episode / chapter key -> downloaded file
     offline_info: Dict[str, dict] = field(default_factory=dict)  # same keys -> {"track", "show", "book", "t"}
     # Song file in a playlist -> {"title", "artist", "album", "ms"}, so a moved or deleted file still shows what it
@@ -336,6 +337,7 @@ class Storage:
             "books": data.books,
             "resume": data.resume,
             "finished": data.finished[-2000:],
+            "saved_episodes": data.saved_episodes[:500],
             "offline": {k: to_stored_path(v) for k, v in data.offline.items()},
             "offline_info": {k: v for k, v in data.offline_info.items() if k in data.offline},
             "song_info": {to_stored_path(k): v for k, v in data.song_info.items()},
@@ -501,6 +503,8 @@ class Storage:
         data.resume = {str(k): v for k, v in resume.items() if isinstance(v, dict) and "ms" in v} \
             if isinstance(resume, dict) else {}
         data.finished = [str(k) for k in raw.get("finished", []) or []]
+        data.saved_episodes = [d for d in raw.get("saved_episodes", []) or []
+                               if isinstance(d, dict) and d.get("title") and d.get("source_id")][:500]
         offline = raw.get("offline", {}) or {}
         data.offline = {str(k): from_stored_path(str(v)) for k, v in offline.items()} if isinstance(offline, dict) else {}
         info = raw.get("offline_info", {}) or {}

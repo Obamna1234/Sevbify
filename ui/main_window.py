@@ -1281,6 +1281,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._add_send_to_phone(menu, [song])
         if has_artist and getattr(getattr(song, "track", None), "source", "") not in ("podcast", "audiobook", "youtube"):
             menu.addAction("♥  Support the artist").triggered.connect(lambda: self.support_artist(song.artist, song))
+        if is_remote and song.track.source == "podcast" and hasattr(self, "save_episode"):
+            if self.is_saved_episode(song):
+                menu.addAction("Remove from Your Episodes").triggered.connect(lambda: self.save_episode(song, False))
+            else:
+                menu.addAction("⊕  Save to Your Episodes").triggered.connect(lambda: self.save_episode(song, True))
         if song.title and getattr(getattr(song, "track", None), "source", "") not in ("podcast", "audiobook"):
             if self.hidden.song_hidden(song.artist, song.title):
                 menu.addAction("⊘  Show this song again").triggered.connect(lambda: self.hide_song(song, False))
@@ -7767,6 +7772,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                  "genre": lambda: self.show_genre(next(g for g in (self._genres or []) if g["id"] == arg))
                  if any(g["id"] == arg for g in (self._genres or [])) else self.show_home(),
                  "webcollection": self.show_home,
+                 "yourepisodes": self.open_your_episodes,
                  "web_artist": lambda: self.show_web_artist(arg, local=self.find_artist(arg)),
                  "preview": lambda: self.show_playlist(arg) if arg in self.playlists else self.show_home(),
                  "video": self.show_home,

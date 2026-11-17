@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.OndemandVideo
@@ -295,7 +296,10 @@ private fun EpisodeRow(e: Episode, all: List<Track>, show: Show) {
     val downloaded = Library.offline[t.itemKey]?.let { java.io.File(it).exists() } == true
     val state = Downloads.stateOf(t)
     val left = Library.resume[t.itemKey]?.let { t.durationMs - it }?.takeIf { it > 0 && t.durationMs > 0 }
-    Column(Modifier.fillMaxWidth().clickable { Player.play(t, all, show.title) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    val played = t.itemKey in Library.finished
+    Column(Modifier.fillMaxWidth().combinedClickableCompat(onClick = { Player.play(t, all, show.title) }, onLongClick = {
+        Library.markPlayed(t, !played); Nav.say(if (played) "Marked as not played" else "Marked as played")
+    }).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(t.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
              style = MaterialTheme.typography.titleSmall.copy(color = if (playing) C.Green else C.Text))
         if (e.description.isNotEmpty()) {
@@ -306,6 +310,15 @@ private fun EpisodeRow(e: Episode, all: List<Track>, show: Show) {
                                      left?.let { "${it / 60000} min left" } ?: t.durationMs.takeIf { it > 0 }?.let { "${it / 60000} min" },
                                      if (t.itemKey in Library.finished) "Played" else null)
             Text(bits.joinToString(" • "), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            val saved = Library.changes.let { Library.isSavedEpisode(t) }
+            IconButton(onClick = {
+                Library.saveEpisode(t, !saved)
+                Nav.say(if (saved) "Removed from Your Episodes" else "Saved to Your Episodes")
+            }) {
+                Icon(if (saved) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
+                     if (saved) "Remove from Your Episodes" else "Save to Your Episodes",
+                     tint = if (saved) C.Green else C.Sub)
+            }
             IconButton(onClick = {
                 if (!downloaded) { Downloads.request(listOf(t)); Nav.say("Downloading ${t.title}") }
             }) {

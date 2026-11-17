@@ -462,6 +462,10 @@ class ShowsMixin:
             menu.addAction("Mark as not played").triggered.connect(lambda: self._mark_finished(song, False))
         else:
             menu.addAction("✓  Mark as played").triggered.connect(lambda: self._mark_finished(song, True))
+        if self.is_saved_episode(song):
+            menu.addAction("Remove from Your Episodes").triggered.connect(lambda: self.save_episode(song, False))
+        else:
+            menu.addAction("⊕  Save to Your Episodes").triggered.connect(lambda: self.save_episode(song, True))
         from core.online.net import is_web_url
         if is_web_url(song.track.page_url):          # never file: or other local links from a feed
             from PyQt6.QtGui import QDesktopServices
@@ -508,6 +512,42 @@ class ShowsMixin:
             queue = ctx["items"][ctx["items"].index(song):]   # podcasts: this episode, then older ones
         title = ctx["obj"].title if ctx else song.album
         self.play_song(song, queue=queue, source=title)
+
+    # --- Your Episodes (episodes saved for later, like Spotify's) -------------------------------------------
+    def is_saved_episode(self, song):
+        key = item_key(song)
+        return bool(key) and any(f"{d.get('source')}:{d.get('source_id')}" == key for d in self.user_data.saved_episodes)
+
+    def save_episode(self, song, on=True):
+        key = item_key(song)
+        if not key:
+            return
+        eps = [d for d in self.user_data.saved_episodes if f"{d.get('source')}:{d.get('source_id')}" != key]
+        if on:
+            eps.insert(0, song.track.to_dict())
+            self.show_status("Saved to Your Episodes", kind="info", timeout_ms=3000)
+        self.user_data.saved_episodes = eps[:500]
+        self.schedule_save()
+        self._refresh_library_panel()
+        hist = getattr(self, "_history", [])
+        pos = getattr(self, "_history_pos", -1)
+        if not on and 0 <= pos < len(hist) and hist[pos][0] == "yourepisodes":
+            self.open_your_episodes()
+
+    def open_your_episodes(self):
+        from core.online.models import OnlineTrack
+        tracks = []
+        for d in self.user_data.saved_episodes:
+            try:
+                tracks.append(OnlineTrack.from_dict(d))
+            except Exception:
+                pass
+        songs = self.radio_items(tracks)
+        self._show_collection("Playlist", "Your Episodes", songs, PLACEHOLDER_IMAGE,
+                              f"{len(songs)} episode{'s' if len(songs) != 1 else ''}  •  saved for later"
+                              if songs else "Save episodes here: right-click an episode ▸ Save to Your Episodes",
+                              ("yourepisodes", ""))
+        self.fetch_covers(songs)
 
     def _mark_finished(self, song, done):
         key = item_key(song)
@@ -1223,6 +1263,11 @@ class ShowsMixin:
                 extra[info["show_key"]] = info
         followed = self.followed_shows()
         books = self.saved_books()
+        n_eps = len(self.user_data.saved_episodes)
+        if n_eps:
+            out.append(dict(kind="podcast", key="your-episodes", title="Your Episodes",
+                            subtitle=f"Saved episodes • {n_eps}", cover_path=PLACEHOLDER_IMAGE, obj=None,
+                            downloaded=0, followed=True))
         known = {x.key for x in followed} | {x.key for x in books}
         for key, info in extra.items():                # downloaded from a show you don't follow: still listed
             if key in known:
@@ -1251,7 +1296,9 @@ class ShowsMixin:
         return out
 
     def open_library_show(self, entry):
-        if entry["kind"] == "audiobook":
+        if entry.get("key") == "your-episodes":
+            self.open_your_episodes()
+        elif entry["kind"] == "audiobook":
             self.open_book(entry["obj"])
         else:
             self.open_show(entry["obj"])

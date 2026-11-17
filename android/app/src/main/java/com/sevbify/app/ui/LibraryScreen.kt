@@ -196,6 +196,13 @@ fun LibraryScreen() {
         }
         }
         if (chip == "" || chip == "podcasts" || chip == "audiobooks") {
+            val eps = Library.savedEpisodes.toList()
+            if (chip != "audiobooks" && eps.isNotEmpty() && (q.isEmpty() || q in "your episodes")) item(key = "your-episodes") {
+                LibRow("Your Episodes", "Saved episodes • ${eps.size}", null,
+                       Brush.linearGradient(listOf(Color(0xFF006450), Color(0xFF1ED760))), "⊕") {
+                    Nav.go(Screen.Collection("Playlist", "Your Episodes", eps, "", saveable = false))
+                }
+            }
             val shows = Library.shows.filter { (chip == "" || (chip == "audiobooks") == it.isBook) && (q.isEmpty() || q in it.title.lowercase()) }
             items(shows, key = { "s" + it.key }) { s ->
                 LibRow(s.title, (if (s.isBook) "Audiobook" else "Podcast") + " • ${s.author}", s.image) { Nav.go(Screen.ShowPage(s)) }
