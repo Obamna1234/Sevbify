@@ -124,3 +124,18 @@ def test_bridge_soundcloud_search_skips_known_songs(bridge, monkeypatch):
     assert call(bridge, "search_soundcloud", "si") == []
     call(bridge, "set_source", "YouTube only")
     assert call(bridge, "search_soundcloud", "siesta") == []
+
+
+def test_bridge_recommend_skips_songs_already_there(bridge, monkeypatch):
+    from core.online.models import OnlineTrack
+    monkeypatch.setattr(bridge._state["music"], "radio", lambda a, t="", limit=50, **k: [
+        OnlineTrack("Siesta", "Jahzzar"), OnlineTrack("New One", "Someone"), OnlineTrack("New Two", "Other")])
+    got = call(bridge, "recommend", json.dumps([{"artist": "Jahzzar", "title": "Siesta"}]), 10)
+    assert sorted(t["title"] for t in got) == ["New One", "New Two"]
+    assert call(bridge, "recommend", "[]") == []
+
+
+def test_bridge_credits(bridge, monkeypatch):
+    from core import credits as C
+    monkeypatch.setattr(C, "for_song", lambda net, a, t: [{"name": "Jahzzar", "roles": ["performer", "composer"]}])
+    assert call(bridge, "credits", "Jahzzar", "Siesta")[0]["roles"] == ["performer", "composer"]

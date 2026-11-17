@@ -74,7 +74,7 @@ struct NowPlayingView: View {
 
             HStack {
                 Button { player.toggleShuffle() } label: {
-                    Image(systemName: "shuffle").font(.title3).foregroundColor(player.shuffle ? C.green : .white)
+                    Image(systemName: player.smartShuffle ? "sparkles" : "shuffle").font(.title3).foregroundColor(player.shuffle ? C.green : .white)
                 }.accessibilityLabel("Shuffle")
                 Spacer()
                 Button { player.previous() } label: { Image(systemName: "backward.end.fill").font(.title) }.accessibilityLabel("Previous")

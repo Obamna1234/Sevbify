@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.outlined.ArrowCircleDown
@@ -158,7 +159,7 @@ fun NowPlayingScreen() {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { Player.toggleShuffle() }) {
-                Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Text)
+                Icon(if (Player.smartShuffle) Icons.Filled.AutoAwesome else Icons.Filled.Shuffle, if (Player.smartShuffle) "Smart Shuffle" else "Shuffle", tint = if (Player.shuffle) C.Green else C.Text)
             }
             IconButton(onClick = { Player.previous() }) { Icon(Icons.Filled.SkipPrevious, "Previous", Modifier.size(40.dp), tint = C.Text) }
             Surface(onClick = { Player.playPause() }, shape = CircleShape, color = Color.White, modifier = Modifier.size(68.dp)) {

@@ -1,5 +1,7 @@
 package com.sevbify.app.ui
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.AddCircleOutline
 import com.sevbify.app.tr
 
 import androidx.compose.foundation.background
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowCircleDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -152,7 +155,7 @@ fun SongsPage(title: String, kind: String, cover: String, tracks: List<Track>, s
                     if (onMore != null) IconButton(onClick = onMore) { Icon(Icons.Filled.MoreVert, "More", tint = C.Sub) }
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { Player.toggleShuffle() }) {
-                        Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
+                        Icon(if (Player.smartShuffle) Icons.Filled.AutoAwesome else Icons.Filled.Shuffle, if (Player.smartShuffle) "Smart Shuffle" else "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     GreenPlay(onClick = {
@@ -232,7 +235,43 @@ fun PlaylistScreen(id: String) {
     }
     val check = com.sevbify.app.ImportCheck
     val subtitle = if (check.checking == pl.name) "Checking the songs… ${check.done} of ${check.total}" else pl.description.ifEmpty { "Playlist" }
-    SongsPage(pl.name, subtitle, playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl)
+    // Recommended songs, like Spotify's: song radio from a few of this playlist's songs, none already in it.
+    var recs by remember(pl.id) { mutableStateOf<List<Track>>(emptyList()) }
+    var recsFor by remember(pl.id) { mutableStateOf(-1) }
+    LaunchedEffect(pl.id, pl.tracks.size, Library.settings.online) {
+        if (!Library.settings.online || pl.tracks.isEmpty() || recsFor == pl.tracks.size) return@LaunchedEffect
+        recsFor = pl.tracks.size
+        val json = org.json.JSONArray().also { a -> pl.tracks.forEach { a.put(it.toJson()) } }
+        recs = try { Bridge.tracks("recommend", json.toString(), 10).filter { Library.settings.explicitOk || !it.explicit } }
+               catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() }
+    }
+    SongsPage(pl.name, subtitle, playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl,
+              bottom = {
+                  if (recs.isNotEmpty()) {
+                      item {
+                          Text("Recommended songs", style = MaterialTheme.typography.titleMedium,
+                               modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 4.dp))
+                          Text("Based on what's in this playlist", style = MaterialTheme.typography.bodySmall,
+                               modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+                      }
+                      items(recs.size) { i ->
+                          val t = recs[i]
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                              Box(Modifier.weight(1f)) {
+                                  TrackRow(t, onClick = { Player.play(t, recs, "Recommended") }, onMore = { Nav.songMenu = SongMenu(t) })
+                              }
+                              IconButton(onClick = {
+                                  Library.add(pl, listOf(t)); recs = recs - t; Nav.say("Added to ${pl.name}")
+                              }) { Icon(Icons.Filled.AddCircleOutline, "Add to this playlist", tint = C.Text) }
+                          }
+                      }
+                      item {
+                          TextButton(onClick = { recsFor = -1; recs = emptyList() }, modifier = Modifier.padding(start = 8.dp)) {
+                              Text("Refresh", color = C.Text)
+                          }
+                      }
+                  }
+              })
 }
 
 @Composable
@@ -405,7 +444,7 @@ fun GenreScreen(g: Screen.Genre) {
                 Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { Player.toggleShuffle() }) {
-                        Icon(Icons.Filled.Shuffle, "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
+                        Icon(if (Player.smartShuffle) Icons.Filled.AutoAwesome else Icons.Filled.Shuffle, if (Player.smartShuffle) "Smart Shuffle" else "Shuffle", tint = if (Player.shuffle) C.Green else C.Sub, modifier = Modifier.size(28.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     GreenPlay(onClick = {

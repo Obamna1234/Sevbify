@@ -176,6 +176,8 @@ struct TrackMenu: View {
     @State private var supporting = false
     @State private var hideNote = false
     @State private var sleeping = false
+    @State private var credits: [[String: Any]]? = nil
+    @State private var showCredits = false
 
     /** Hide, then (the first time) say where to undo it. */
     private func hide(_ action: () -> Void) {
@@ -197,6 +199,12 @@ struct TrackMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     item("plus.circle", "Add to playlist") { choosing = true }
+                    if !track.isItem && !track.artist.isEmpty && track.artist != "Unknown Artist" {
+                        item("person.2", "View credits") {
+                            showCredits = true
+                            Task { credits = (try? await Bridge.list("credits", [track.artist, track.title])) ?? [] }
+                        }
+                    }
                     if !track.isItem {
                         let liked = lib.isLiked(track)
                         item(liked ? "checkmark.circle.fill" : "heart", liked ? "Remove from Liked Songs" : "Add to Liked Songs") {
@@ -265,6 +273,26 @@ struct TrackMenu: View {
         .foregroundColor(C.text)
         .sheet(isPresented: $choosing) { AddToPlaylistSheet(tracks: [track]) { dismiss() } }
         .sheet(isPresented: $supporting) { SupportSheet(track: track).presentationDetents([.medium, .large]) }
+        .sheet(isPresented: $showCredits) {
+            NavigationStack {
+                List {
+                    Text("\(track.title) · \(track.artist)").font(.caption).foregroundColor(C.dim)
+                    if let c = credits {
+                        if c.isEmpty { Text("No credits found for this song.") }
+                        ForEach(Array(c.prefix(30).enumerated()), id: \.offset) { _, r in
+                            VStack(alignment: .leading) {
+                                Text(r["name"] as? String ?? "")
+                                Text((r["roles"] as? [String] ?? []).joined(separator: ", ")).font(.caption).foregroundColor(C.dim)
+                            }
+                        }
+                    } else { ProgressView() }
+                    Text("From MusicBrainz, the open music encyclopedia.").font(.caption2).foregroundColor(C.dim)
+                }
+                .navigationTitle("Credits").navigationBarTitleDisplayMode(.inline)
+                .toolbar { Button("Close") { showCredits = false } }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .confirmationDialog("Sleep timer", isPresented: $sleeping) {
             ForEach([5, 15, 30, 45, 60], id: \.self) { m in Button("\(m) minutes") { player.setSleep(minutes: m); dismiss() } }
             Button("End of this song") { player.setSleep(minutes: -1); dismiss() }

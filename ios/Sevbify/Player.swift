@@ -150,7 +150,43 @@ final class Player: ObservableObject {
         updateNowPlaying()
     }
 
+    /// Smart Shuffle, like Spotify's: shuffle → smart shuffle → off. Smart adds a recommended song after every few of
+    /// yours (song radio from a few of them, via the shared core); turning it off takes them out again.
+    @Published private(set) var smartShuffle = false
+    private var smartIDs = Set<UUID>()
+
+    private func addSmartSongs() {
+        let mine = context.filter { !smartIDs.contains($0.uid) && !$0.isItem }
+        guard !mine.isEmpty else { return }
+        Task {
+            guard let recs = try? await Bridge.tracks("recommend", [Bridge.json(mine.prefix(500).map(\.dict)), 20]),
+                  smartShuffle, !recs.isEmpty else { return }
+            let ok = Library.shared.settings.explicitOk ? recs : recs.filter { !$0.explicit }
+            let head = Array(context.prefix(index + 1)), rest = Array(context.dropFirst(index + 1))
+            var out: [Track] = [], r = 0
+            for (i, t) in rest.enumerated() {
+                out.append(t)
+                if i % 3 == 2, r < ok.count { smartIDs.insert(ok[r].uid); out.append(ok[r]); r += 1 }
+            }
+            while r < ok.count && out.count < 3 { smartIDs.insert(ok[r].uid); out.append(ok[r]); r += 1 }
+            context = head + out
+        }
+    }
+
     func toggleShuffle() {
+        if shuffle && !smartShuffle && Library.shared.settings.online && !context.allSatisfy({ $0.isItem }) {
+            smartShuffle = true
+            status = "Smart Shuffle: recommendations mixed in"
+            addSmartSongs()
+            return
+        }
+        if smartShuffle {
+            smartShuffle = false
+            let cur = current
+            context.removeAll { smartIDs.contains($0.uid) && $0.uid != cur?.uid }
+            index = context.firstIndex { $0.uid == cur?.uid } ?? 0
+            smartIDs.removeAll()
+        }
         Library.shared.settings.shuffle.toggle()
         guard let cur = current else { return }
         if shuffle && !context.allSatisfy({ $0.isItem }) {

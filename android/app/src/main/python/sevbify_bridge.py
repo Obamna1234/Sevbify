@@ -194,6 +194,42 @@ def search_artists(query, limit=10):
 
 
 @_call
+def credits(artist, title):
+    """Who wrote, produced and performed a song (MusicBrainz, the open music encyclopedia): [{"name", "roles"}]."""
+    from core import credits as C
+    if not _state["online_on"]:
+        return []
+    return C.for_song(_net(), str(artist)[:200], str(title)[:300])
+
+
+@_call
+def recommend(tracks_json, limit=10):
+    """Songs like these (song radio from up to 3 of them), none already in the list: for Recommended songs under a
+    playlist and for Smart Shuffle (like the PC's). Same Deezer requests as song radio."""
+    import random
+    try:
+        tracks = [t for t in json.loads(tracks_json or "[]") if isinstance(t, dict)][:5000]
+    except ValueError:
+        tracks = []
+    seeds = [t for t in tracks if t.get("artist") and t.get("artist") != "Unknown Artist" and t.get("title")]
+    seeds = random.sample(seeds, min(3, len(seeds)))
+    seen = {(str(t.get("artist", "")).casefold(), str(t.get("title", "")).casefold()) for t in tracks}
+    out = []
+    for s in seeds:
+        try:
+            found = _state["music"].radio(str(s["artist"]), str(s["title"]), 20)
+        except Exception:
+            continue
+        for t in found:
+            k = (t.artist.casefold(), t.title.casefold())
+            if k not in seen:
+                seen.add(k)
+                out.append(t)
+    random.shuffle(out)
+    return _tracks(out[:max(1, min(int(limit), 50))])
+
+
+@_call
 def radio(artist, title="", limit=50):
     return _tracks(_state["music"].radio(artist, title, int(limit)))
 

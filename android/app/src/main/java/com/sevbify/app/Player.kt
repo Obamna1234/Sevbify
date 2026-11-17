@@ -525,7 +525,49 @@ object Player {
         if (position in context.indices) { index = position; start() }
     }
 
+    /** Smart Shuffle, like Spotify's: shuffle → smart shuffle → off. Smart adds a recommended song after every few
+     *  of yours (song radio from a few of them); turning it off takes them out again. */
+    var smartShuffle by mutableStateOf(false)
+        private set
+    private val smartSongs: MutableSet<Track> = java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
+
+    private fun addSmartSongs() {
+        val mine = context.filter { it !in smartSongs && !it.isItem }
+        if (mine.isEmpty()) return
+        SevbifyApp.instance.scope.launch {
+            val json = org.json.JSONArray().also { a -> mine.forEach { a.put(it.toJson()) } }
+            val recs = try { Bridge.tracks("recommend", json.toString(), 20).filter { Library.settings.explicitOk || !it.explicit } }
+                       catch (e: Exception) { emptyList() }
+            if (!smartShuffle || recs.isEmpty()) return@launch
+            val head = context.take(index + 1)
+            val rest = context.drop(index + 1)
+            val out = ArrayList<Track>(rest.size + recs.size)
+            var r = 0
+            rest.forEachIndexed { i, t ->
+                out.add(t)
+                if (i % 3 == 2 && r < recs.size) { smartSongs.add(recs[r]); out.add(recs[r++]) }
+            }
+            while (r < recs.size && out.size < 3) { smartSongs.add(recs[r]); out.add(recs[r++]) }
+            context.clear(); context.addAll(head + out)
+            upcomingChanged()
+        }
+    }
+
+    private fun removeSmartSongs() {
+        val cur = current
+        context.removeAll { it in smartSongs && it !== cur }
+        index = context.indexOfFirst { it === cur }.coerceAtLeast(0)
+        smartSongs.clear()
+    }
+
     fun toggleShuffle() {
+        if (shuffle && !smartShuffle && Library.settings.online && !context.all { it.isItem }) {
+            smartShuffle = true
+            com.sevbify.app.ui.Nav.say("Smart Shuffle: recommendations mixed in")
+            addSmartSongs()
+            return
+        }
+        if (smartShuffle) { smartShuffle = false; removeSmartSongs() }
         shuffle = !shuffle
         val cur = current
         if (shuffle && !context.all { it.isItem }) {

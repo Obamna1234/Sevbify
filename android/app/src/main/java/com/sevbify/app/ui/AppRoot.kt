@@ -79,6 +79,7 @@ fun AppRoot() {
     }
     BackHandler(enabled = true) { if (!Nav.back()) Nav.tab = Tab.HOME }
     CoverPicker()
+    Nav.creditsFor?.let { CreditsDialog(it) }
 
     if (com.sevbify.app.VideoPlayer.inPip) {
         // The picture-in-picture mini player: only the video.
@@ -392,4 +393,42 @@ private fun CoverPicker() {
         if (Nav.coverFor != null) pick.launch(androidx.activity.result.PickVisualMediaRequest(
             androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
+}
+
+/** View credits, like Spotify's: who performed, wrote and produced the song (from MusicBrainz). */
+@Composable
+private fun CreditsDialog(t: com.sevbify.app.Track) {
+    var rows by remember(t.matchKey) { mutableStateOf<List<Pair<String, String>>?>(null) }
+    LaunchedEffect(t.matchKey) {
+        rows = try {
+            val a = com.sevbify.app.Bridge.arr("credits", t.artist, t.title)
+            (0 until a.length()).map { i ->
+                val o = a.getJSONObject(i)
+                val roles = o.optJSONArray("roles")?.let { r -> (0 until r.length()).joinToString(", ") { r.getString(it) } } ?: ""
+                o.optString("name") to roles
+            }
+        } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { Nav.creditsFor = null },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { Nav.creditsFor = null }) { Text("Close", color = C.Text) } },
+        title = { Text("Credits") },
+        text = {
+            Column {
+                Text("${t.title} · ${t.artist}", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+                when {
+                    rows == null -> Text("Looking it up…")
+                    rows!!.isEmpty() -> Text("No credits found for this song.")
+                    else -> rows!!.take(30).forEach { (name, roles) ->
+                        Text(name, style = MaterialTheme.typography.bodyLarge)
+                        if (roles.isNotEmpty()) Text(roles, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(6.dp))
+                    }
+                }
+                Text("From MusicBrainz, the open music encyclopedia.", style = MaterialTheme.typography.labelSmall,
+                     modifier = Modifier.padding(top = 8.dp))
+            }
+        },
+        containerColor = C.Elevated)
 }

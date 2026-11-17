@@ -124,6 +124,8 @@ struct SongsPage: View {
     @EnvironmentObject var lib: Library
     @EnvironmentObject var downloads: Downloads
     @State private var askDownload = false
+    @State private var recs: [Track] = []
+    @State private var recsFor = -1
 
     var body: some View {
         ScrollView {
@@ -159,11 +161,27 @@ struct SongsPage: View {
                     Text(playlist != nil ? "Let's find something for your playlist: search for songs and use ••• ▸ Add to playlist."
                          : "Nothing here yet.").foregroundColor(C.dim).padding(16)
                 }
+                if let pl = playlist, !recs.isEmpty {
+                    // Recommended songs, like Spotify's: song radio from a few of this playlist's songs.
+                    Text("Recommended songs").font(.title3.bold()).padding(.horizontal, 16).padding(.top, 24)
+                    Text("Based on what's in this playlist").font(.caption).foregroundColor(C.dim).padding(.horizontal, 16).padding(.bottom, 8)
+                    ForEach(recs) { t in
+                        HStack(spacing: 0) {
+                            TrackRow(track: t) { player.play(t, in: recs, source: "Recommended") }
+                            Button { lib.add([t], to: pl.id); recs.removeAll { $0.uid == t.uid } } label: {
+                                Image(systemName: "plus.circle").font(.title3).frame(width: 44, height: 44)
+                            }.buttonStyle(.plain).accessibilityLabel("Add to this playlist")
+                        }
+                    }
+                    Button("Refresh") { recsFor = -1; recs = []; Task { await loadRecs() } }
+                        .foregroundColor(.white).padding(16)
+                }
                 Spacer(minLength: 24)
             }
         }
         .background(C.bg.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: tracks.count) { await loadRecs() }
         .confirmationDialog("Download", isPresented: $askDownload) {
             let pending = tracks.filter { !lib.isDownloaded($0) && !$0.isItem }
             Button("Download all \(pending.count) songs") { downloads.download(pending) }
@@ -438,5 +456,14 @@ struct RadioCover: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+extension SongsPage {
+    func loadRecs() async {
+        guard playlist != nil, lib.settings.online, !tracks.isEmpty, recsFor != tracks.count else { return }
+        recsFor = tracks.count
+        let got = (try? await Bridge.tracks("recommend", [Bridge.json(tracks.prefix(500).map(\.dict)), 10])) ?? []
+        recs = lib.settings.explicitOk ? got : got.filter { !$0.explicit }
     }
 }
