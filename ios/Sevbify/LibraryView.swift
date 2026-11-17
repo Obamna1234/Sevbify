@@ -26,6 +26,8 @@ struct LibraryView: View {
                 }
                 row(icon: AnyView(LinearGradient(colors: [Color(red: 0.27, green: 0.04, blue: 0.96), Color(red: 0.77, green: 0.94, blue: 0.85)], startPoint: .topLeading, endPoint: .bottomTrailing).overlay(Image(systemName: "heart.fill").foregroundColor(.white))),
                     title: "Your Songs", subtitle: "\(lib.localSongs.count) songs on this iPhone") { nav.go(.yourSongs) }
+                row(icon: AnyView(LinearGradient(colors: [Color(red: 0.0, green: 0.39, blue: 0.31), C.green], startPoint: .topLeading, endPoint: .bottomTrailing).overlay(Image(systemName: "mic.fill").foregroundColor(.white))),
+                    title: "Podcasts", subtitle: Shows.shared.followed.isEmpty ? "Browse and search podcasts" : "\(Shows.shared.followed.count) followed") { nav.go(.podcasts) }
                 if downloads.active > 0 || !downloads.jobs.isEmpty {
                     row(icon: AnyView(C.card.overlay(Image(systemName: "arrow.down.circle").foregroundColor(C.green))),
                         title: "Downloads", subtitle: downloads.active > 0 ? "\(downloads.active) waiting or downloading" : "Finished") { nav.go(.downloads) }

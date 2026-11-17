@@ -22,6 +22,8 @@ enum Route: Hashable {
     case settings
     case importLink
     case downloads
+    case podcasts
+    case show(ShowRef)
 }
 
 struct AlbumRef: Hashable {

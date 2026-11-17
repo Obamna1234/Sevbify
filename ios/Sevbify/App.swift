@@ -217,6 +217,8 @@ extension View {
                 case .settings: SettingsView()
                 case .importLink: ImportView()
                 case .downloads: DownloadsPage()
+                case .podcasts: PodcastsPage()
+                case .show(let s): ShowPage(show: s)
                 }
             }
             .background(C.bg.ignoresSafeArea())

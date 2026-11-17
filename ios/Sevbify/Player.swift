@@ -58,7 +58,7 @@ final class Player: ObservableObject {
         observers.append(nc.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: .main) { [weak self] note in
             Task { @MainActor in
                 guard let self, (note.object as? AVPlayerItem) === self.player.currentItem else { return }
-                if let t = self.current, t.isItem { Library.shared.resume[t.itemKey] = nil }
+                if let t = self.current, t.isItem { Library.shared.resume[t.itemKey] = nil; Shows.shared.setPlayed(t, true) }
                 self.advance(auto: true)
             }
         })
