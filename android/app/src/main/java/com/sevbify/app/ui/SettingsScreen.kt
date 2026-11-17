@@ -545,6 +545,26 @@ private fun EqualiserSection() {
                 levels.clear(); levels.addAll(com.sevbify.app.Eq.levels())
                 Library.changed()
             }
+            EqBands(levels, s) { preset = it }
+        }
+        var level by remember { mutableStateOf(s.levelOn) }
+        Toggle(tr("Volume levelling"), if (com.sevbify.app.Eq.levelAvailable) "Plays songs at a similar loudness."
+               else "Needs Android 9 or later.", level) {
+            level = it; s.levelOn = it; Library.changed(); com.sevbify.app.Eq.applyLevel()
+        }
+        var mono by remember { mutableStateOf(s.monoOn) }
+        Toggle(tr("Mono audio"), "The same sound in both ears. Starts from the next song. Left/right balance is in " +
+               "Android Settings ▸ Accessibility ▸ Audio.", mono) {
+            mono = it; s.monoOn = it; Library.changed()
+        }
+    }
+}
+
+@Composable
+private fun EqBands(levels: androidx.compose.runtime.snapshots.SnapshotStateList<Int>, s: com.sevbify.app.Settings,
+                    clearPreset: (String) -> Unit) {
+    run {
+        run {
             com.sevbify.app.Eq.bands.forEachIndexed { b, band ->
                 Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(band.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(64.dp))
@@ -553,7 +573,7 @@ private fun EqualiserSection() {
                         onValueChange = { v ->
                             while (levels.size <= b) levels.add(0)
                             levels[b] = v.toInt()
-                            preset = ""; s.eqPreset = ""
+                            clearPreset(""); s.eqPreset = ""
                             s.eqBands = levels.toMutableList()
                             com.sevbify.app.Eq.apply()
                         },

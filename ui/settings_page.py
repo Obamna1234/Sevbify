@@ -1,7 +1,7 @@
 """Settings, as a page in the middle like Spotify's (opened with ⚙ or Ctrl+P).
 
 Every change is applied at once and saved (no Save button). A few need a restart (zoom, graphics, proxy,
-volume normalising); the page then shows "Restart to apply" with a button.
+mono audio); the page then shows "Restart to apply" with a button.
 """
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QScrollArea, QFrame, QSlider,
@@ -13,7 +13,7 @@ from . import theme
 from .widgets import ToggleSwitch, EqualizerCurve, ZoomPreview
 from core.audio_settings import BAND_LABELS, band_labels
 
-RESTART_KEYS = ("zoom", "normalize", "proxy_mode", "proxy_url", "hw_accel", "language")
+RESTART_KEYS = ("zoom", "mono", "proxy_mode", "proxy_url", "hw_accel", "language")
 SOURCES = ("Bandcamp + YouTube", "Bandcamp only", "YouTube only")
 
 STYLE = f"""
@@ -335,8 +335,10 @@ class SettingsPage(QWidget):
                     "Fades the end of each song out and the next one in.",
                     ["Off"] + [f"{n} seconds" for n in range(1, 13)], "Off" if not u.fade_seconds else
                     f"{u.fade_seconds} seconds")
-        self._toggle("normalize", "Normalize volume", "Sets the same loudness for every song. Applies after a "
-                     "restart.", u.normalize)
+        self._toggle("normalize", "Volume levelling", "Plays every song at a similar loudness (each song is "
+                     "measured once on this computer).", u.normalize)
+        self._toggle("mono", "Mono audio", "The same sound in both ears. Applies after a restart. Left/right balance "
+                     "is in your computer's sound settings.", getattr(u, "mono", False))
         self._toggle("eq_enabled", "Equalizer", "Drag the dots: up makes those sounds louder, down quieter.",
                      u.eq_enabled)
         self.controls["eq_enabled"].toggled.connect(lambda on: self.eq_curve.setEnabled(on))

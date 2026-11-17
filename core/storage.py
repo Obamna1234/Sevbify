@@ -135,7 +135,8 @@ class UserData:
     explicit_ok: bool = True   # Settings: allow songs marked explicit (online results)
     autoplay: bool = True   # Settings: keep playing similar songs when the queue ends
     fade_seconds: int = 0   # Settings: fade out/in between songs (0 = off)
-    normalize: bool = False   # Settings: same loudness for every song (needs restart)
+    normalize: bool = False   # Settings: Volume levelling (core/loudness.py)
+    mono: bool = False        # Settings: Mono audio (needs restart)
     eq_enabled: bool = False   # Settings: equaliser on
     eq_preset: str = 'Flat'   # equaliser preset name (or 'Custom')
     eq_bands: List[float] = field(default_factory=lambda: [0.0] * 10)   # 10 values in dB (-20..20)
@@ -173,6 +174,7 @@ class UserData:
     resume: Dict[str, dict] = field(default_factory=dict) # episode / chapter key -> {"ms", "t", "track", "show"}
     finished: List[str] = field(default_factory=list)     # episode / chapter keys listened to the end
     saved_episodes: List[dict] = field(default_factory=list)  # Your Episodes: episode track dicts (newest first)
+    loudness: Dict[str, float] = field(default_factory=dict)  # song key -> measured LUFS (Volume levelling)
     offline: Dict[str, str] = field(default_factory=dict) # episode / chapter key -> downloaded file
     offline_info: Dict[str, dict] = field(default_factory=dict)  # same keys -> {"track", "show", "book", "t"}
     # Song file in a playlist -> {"title", "artist", "album", "ms"}, so a moved or deleted file still shows what it
@@ -189,7 +191,7 @@ APPEARANCE_SETTINGS = ("zoom", "library_view", "library_sort", "library_collapse
 ALL_SETTINGS = APPEARANCE_SETTINGS + (
     "volume", "muted", "shuffle", "repeat", "online_enabled", "download_source", "stream_full", "use_browser_cookies",
     "download_quality", "audiobook_quality", "video_quality", "lyrics_enabled", "show_playlist_origin", "skip_sponsors",
-    "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "eq_enabled", "eq_preset", "eq_bands",
+    "ad_free_podcasts", "playlist_files", "explicit_ok", "autoplay", "fade_seconds", "normalize", "mono", "eq_enabled", "eq_preset", "eq_bands",
     "notify_track", "startup", "close_to_tray", "proxy_mode", "proxy_url", "hw_accel", "auto_update_check",
     "disabled_folders", "language", "save_space", "phone_link")
 
@@ -295,6 +297,7 @@ class Storage:
                 "autoplay": data.autoplay,
                 "fade_seconds": data.fade_seconds,
                 "normalize": data.normalize,
+                "mono": bool(data.mono),
                 "eq_enabled": data.eq_enabled,
                 "eq_preset": data.eq_preset,
                 "eq_bands": list(data.eq_bands),
@@ -340,6 +343,7 @@ class Storage:
             "resume": data.resume,
             "finished": data.finished[-2000:],
             "saved_episodes": data.saved_episodes[:500],
+            "loudness": dict(list(data.loudness.items())[-5000:]),
             "offline": {k: to_stored_path(v) for k, v in data.offline.items()},
             "offline_info": {k: v for k, v in data.offline_info.items() if k in data.offline},
             "song_info": {to_stored_path(k): v for k, v in data.song_info.items()},
@@ -417,6 +421,7 @@ class Storage:
             pass
         try:
             data.normalize = bool(settings.get('normalize', False))
+            data.mono = settings.get('mono') is True
         except (TypeError, ValueError):
             pass
         try:
@@ -505,6 +510,9 @@ class Storage:
         data.resume = {str(k): v for k, v in resume.items() if isinstance(v, dict) and "ms" in v} \
             if isinstance(resume, dict) else {}
         data.finished = [str(k) for k in raw.get("finished", []) or []]
+        lo = raw.get("loudness") or {}
+        data.loudness = {str(k)[:600]: float(v) for k, v in (lo.items() if isinstance(lo, dict) else [])
+                         if isinstance(v, (int, float)) and -70 < v < 10}
         data.saved_episodes = [d for d in raw.get("saved_episodes", []) or []
                                if isinstance(d, dict) and d.get("title") and d.get("source_id")][:500]
         offline = raw.get("offline", {}) or {}

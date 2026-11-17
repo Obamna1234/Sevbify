@@ -9,17 +9,29 @@ struct LibraryView: View {
     @State private var newName = ""
     @State private var pickingFolder = false
     @State private var filter = ""
+    @State private var downloadedOnly = false
 
     var body: some View {
         List {
             Section {
+                HStack(spacing: 8) {
+                    Button { downloadedOnly.toggle() } label: {
+                        Text("Downloaded").font(.subheadline)
+                            .padding(.horizontal, 14).padding(.vertical, 6)
+                            .background(Capsule().fill(downloadedOnly ? C.green : C.card))
+                            .foregroundColor(downloadedOnly ? .black : .white)
+                    }.buttonStyle(.plain)
+                    Spacer()
+                }
                 row(icon: AnyView(LinearGradient(colors: [Color(red: 0.27, green: 0.04, blue: 0.96), Color(red: 0.77, green: 0.94, blue: 0.85)], startPoint: .topLeading, endPoint: .bottomTrailing).overlay(Image(systemName: "heart.fill").foregroundColor(.white))),
                     title: "Your Songs", subtitle: "\(lib.localSongs.count) songs on this iPhone") { nav.go(.yourSongs) }
                 if downloads.active > 0 || !downloads.jobs.isEmpty {
                     row(icon: AnyView(C.card.overlay(Image(systemName: "arrow.down.circle").foregroundColor(C.green))),
                         title: "Downloads", subtitle: downloads.active > 0 ? "\(downloads.active) waiting or downloading" : "Finished") { nav.go(.downloads) }
                 }
-                ForEach(lib.playlists.filter { filter.isEmpty || $0.name.lowercased().contains(filter.lowercased()) }) { pl in
+                ForEach(lib.playlists.filter { (filter.isEmpty || $0.name.lowercased().contains(filter.lowercased()))
+                        && (!downloadedOnly || (!$0.tracks.isEmpty && $0.tracks.allSatisfy({ lib.isDownloaded($0) }))) }
+                        .sorted { $0.pinned && !$1.pinned }) { pl in
                     Button { nav.go(.playlist(pl.id)) } label: {
                         HStack(spacing: 12) {
                             PlaylistCover(playlist: pl, size: 64)

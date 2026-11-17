@@ -55,7 +55,9 @@ data class Settings(
     var canvasKeepDownloads: Boolean = true,         // the "undo in Settings" note after the first Hide song
     var eqOn: Boolean = false,                 // equaliser (Eq.kt)
     var eqPreset: String = "",                 // one of the phone's presets, or "" = Custom (eqBands)
-    var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom          // read whole Spotify playlists the web player's way (anonymous; off by default)             // the feature tour was closed with "Don't show this again"
+    var eqBands: MutableList<Int> = mutableListOf(),   // millibels per band, Custom
+    var levelOn: Boolean = false,              // Volume levelling (Eq.kt)
+    var monoOn: Boolean = false,               // Mono audio (MonoAudio in Eq.kt)
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -74,6 +76,7 @@ data class Settings(
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen); put("spotify_full", spotifyFull)
         put("hide_note_seen", hideNoteSeen); put("canvas_on", canvasOn); put("fade_seconds", fadeSeconds); put("canvas_cache_mb", canvasCacheMb)
         put("canvas_keep_downloads", canvasKeepDownloads); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
+        put("level_on", levelOn); put("mono_on", monoOn)
     }
 
     companion object {
@@ -113,6 +116,7 @@ data class Settings(
             s.fadeSeconds = o.optInt("fade_seconds", 0).coerceIn(0, 12)
             s.canvasCacheMb = o.optInt("canvas_cache_mb", 200).coerceIn(0, 5000)
             s.canvasKeepDownloads = o.optBoolean("canvas_keep_downloads", true); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
+            s.levelOn = o.optBoolean("level_on"); s.monoOn = o.optBoolean("mono_on")
             o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }
             return s
         }

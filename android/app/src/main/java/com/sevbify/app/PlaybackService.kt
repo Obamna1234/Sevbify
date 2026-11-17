@@ -85,7 +85,17 @@ class PlaybackService : MediaLibraryService() {
             val extra = headers[spec.uri.toString()]
             if (extra.isNullOrEmpty()) spec else spec.withAdditionalHeaders(extra)
         }
-        val exo = ExoPlayer.Builder(this)
+        // Mono audio (Settings → Playback) runs inside the player's own sound path.
+        val renderers = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+            override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean,
+                                        enableAudioTrackPlaybackParams: Boolean): androidx.media3.exoplayer.audio.AudioSink =
+                androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                    .setAudioProcessors(arrayOf<androidx.media3.common.audio.AudioProcessor>(MonoAudio()))
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .build()
+        }
+        val exo = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(withHeaders))
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
                                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)

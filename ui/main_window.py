@@ -319,8 +319,9 @@ class MainWindow(ShowsMixin, QMainWindow):
             QApplication.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
         # Audio only: VLC never opens a video window (canvas loops use Qt's own video player).
-        # Settings → Normalize volume adds VLC's volume normaliser (applies after a restart).
-        extra = ["--audio-filter=normvol"] if self.user_data.normalize else []
+        # Settings → Mono audio: VLC's own stereo mode 7 (both ears get the average; applies after a restart).
+        # (Volume levelling is core/loudness.py: VLC ignores --audio-filter when it's used as a library.)
+        extra = ["--stereo-mode=7"] if self.user_data.mono else []
         if os.environ.get("SEVBIFY_VLC_DEBUG"):
             extra.append("--verbose=2")          # VLC explains what it's doing (used by the automatic build)
         else:
@@ -1887,7 +1888,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         if self.user_data.muted:
             return 0
         g = max(0.0, min(1.0, gain)) ** (1 / 3)
-        return int(round(self.user_data.volume * g))
+        level = getattr(self, "_level_factor", 1.0) if self.user_data.normalize else 1.0
+        return int(round(min(200, self.user_data.volume * g * level)))
 
     def _apply_volume(self):
         if getattr(self, "_shut_down", False):
@@ -5145,6 +5147,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                     media.add_option(f":{option}={value}")
             self.player.set_media(media)
             self._opened_media, self._opened_at = media, time.monotonic()
+            self._start_levelling(location, headers)
             if self.player.play() == -1:
                 raise RuntimeError("VLC refused to start playback")
             self._apply_volume()
@@ -5156,6 +5159,37 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.is_playing = True
         self._set_play_icon(True)
         return True
+
+    def _start_levelling(self, location, headers=None):
+        """Volume levelling: the gain for this song, from what was measured before, or measured now (ffmpeg, in
+        the background, first minute) and applied as soon as it's known."""
+        from core import loudness
+        self._level_factor = 1.0
+        song = self.current_song
+        key = str(getattr(song, "key", "") or "") if song is not None else ""
+        if not self.user_data.normalize or not key:
+            return
+        known = self.user_data.loudness.get(key)
+        if known is not None:
+            self._level_factor = loudness.volume_factor(loudness.gain_db(known))
+            return
+        busy = self.__dict__.setdefault("_level_busy", set())
+        if key in busy or ("://" in str(location) and not self.online_enabled):
+            return
+        busy.add(key)
+        from core.sevby_engine import ffmpeg_path
+
+        def done(lufs):
+            busy.discard(key)
+            if lufs is None:
+                return
+            loudness.remember(self.user_data.loudness, key, lufs)
+            self.schedule_save()
+            if self.current_song is not None and str(getattr(self.current_song, "key", "")) == key:
+                self._level_factor = loudness.volume_factor(loudness.gain_db(lufs))
+                self._apply_volume()
+        run_async(self, loudness.measure, location, ffmpeg_path(), headers, on_done=done,
+                  on_error=lambda _e: busy.discard(key), lane="songs")
 
     def _stream_full_song(self, song):
         """Find the full song online (in the background) and stream it; if it can't be found, skip it."""
@@ -7506,12 +7540,15 @@ class MainWindow(ShowsMixin, QMainWindow):
             from core import canvas_loops
             canvas_loops.trim(self.storage.data_dir, u.canvas_cache_mb)
         simple = ("online_enabled", "phone_remote", "spotify_full", "canvas_auto", "canvas_keep_downloads", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
-                  "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
+                  "autoplay", "fade_seconds", "normalize", "mono", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
                   "language", "save_space", "ad_free_podcasts")
         for key in simple:
             if key in values:
                 setattr(u, key, values[key])
+        if "normalize" in values:
+            self._level_factor = 1.0
+            self._apply_volume()
         for key in ("volume", "muted", "library_view", "library_sort", "library_collapsed", "right_panel"):
             if key in values:
                 setattr(u, key, values[key])
