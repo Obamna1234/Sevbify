@@ -44,6 +44,13 @@ final class Player: ObservableObject {
                 if let d = self.player.currentItem?.duration.seconds, d.isFinite, d > 0 { self.duration = d }
                 self.isPlaying = self.player.timeControlStatus == .playing
                 if let t = self.current, t.isItem, self.position > 5 { Library.shared.resume[t.itemKey] = self.position }
+                if let at = self.sleepAt, Date() >= at { self.sleepAt = nil; self.pause(); self.status = "☾ Sleep timer: music stopped" }
+                // Fade between songs (Settings): the end fades out and the next song fades in.
+                let fade = Double(UserDefaults.standard.integer(forKey: "sevbify.fade"))
+                if fade > 0, let t = self.current, !t.isItem, self.duration > fade * 3 {
+                    let left = self.duration - self.position
+                    self.player.volume = Float(self.position < fade ? max(0.05, self.position / fade) : (left < fade ? max(0, left / fade) : 1))
+                } else if self.player.volume != 1 { self.player.volume = 1 }
             }
         }
         observers.append(tick)
@@ -110,6 +117,24 @@ final class Player: ObservableObject {
     }
 
     func pause() { player.pause(); isPlaying = false; updateNowPlaying() }
+
+    // --- Sleep timer and speed (podcasts and audiobooks) ---------------------------------------------------
+    @Published var sleepAt: Date?
+    @Published var sleepAtEnd = false
+    @Published var speed: Float = 1
+
+    func setSleep(minutes: Int?) {
+        sleepAtEnd = minutes == -1
+        sleepAt = (minutes ?? 0) > 0 ? Date().addingTimeInterval(Double(minutes!) * 60) : nil
+        status = minutes == nil ? "Sleep timer off" : minutes == -1 ? "☾ Music stops at the end of this one"
+            : "☾ Music stops in \(minutes!) minutes"
+    }
+
+    func setSpeed(_ s: Float) {
+        speed = min(3, max(0.5, s))
+        player.defaultRate = current?.isItem == true ? speed : 1       // play() uses it from now on
+        if current?.isItem == true, isPlaying { player.rate = speed }
+    }
 
     func next() { radioSkipFeedback(); advance(auto: false) }
 
@@ -179,6 +204,12 @@ final class Player: ObservableObject {
 
     // --- moving through the queue ---------------------------------------------------------------------------
     private func advance(auto: Bool, failed: Bool = false) {
+        if auto && !failed && sleepAtEnd {
+            sleepAtEnd = false
+            pause()
+            status = "☾ Sleep timer: music stopped"
+            return
+        }
         if failed {
             failuresInARow += 1
             if failuresInARow >= max(1, context.count + userQueue.count) {
@@ -220,6 +251,7 @@ final class Player: ObservableObject {
     private func startCurrent() {
         guard let t = current else { return }
         CanvasLoop.shared.songChanged(t)
+        player.defaultRate = t.isItem ? speed : 1              // podcasts and audiobooks keep your speed
         if retriedKey != t.matchKey + ":retry" { retriedKey = "" }
         generation += 1
         let gen = generation

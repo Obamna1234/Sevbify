@@ -22,6 +22,13 @@ struct SettingsView: View {
             }
             if Smoke.value("-SEVRoute") == "pair" { PairSettingsSection() }    // screenshot for the feature tour
             EqualiserSection()
+            Section("Fade between songs") {
+                Picker("Fade", selection: Binding(get: { UserDefaults.standard.integer(forKey: "sevbify.fade") },
+                                                  set: { UserDefaults.standard.set($0, forKey: "sevbify.fade") })) {
+                    ForEach([0, 3, 6, 9, 12], id: \.self) { Text($0 == 0 ? "Off" : "\($0) s") }
+                }
+                Text("The end of a song fades out and the next fades in.").font(.caption).foregroundColor(C.dim)
+            }
             HiddenSection()
             CanvasSettingsSection()
             Section("Playback") {

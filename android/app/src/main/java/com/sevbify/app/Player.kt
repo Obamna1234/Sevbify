@@ -231,6 +231,18 @@ object Player {
                         if (c.isPlaying) skipSponsor(position)?.let { c.seekTo(it); position = it }
                         // The real length, once known (before that the length from the search result is used).
                         if (c.duration > 0 && c.playbackState == MediaPlayer.STATE_READY) duration = c.duration
+                        // Sleep timer, and fading between songs (Settings → Playback → Fade between songs).
+                        sleepAt?.let { at -> if (System.currentTimeMillis() >= at) { sleepAt = null; c.pause()
+                            status = "☾ Sleep timer: music stopped" } }
+                        val fade = Library.settings.fadeSeconds * 1000L
+                        if (fade > 0 && t != null && !t.isItem && duration > fade * 3) {
+                            val left = duration - position
+                            c.volume = when {
+                                position < fade -> (position.toFloat() / fade).coerceIn(0.05f, 1f)
+                                left < fade -> (left.toFloat() / fade).coerceIn(0f, 1f)
+                                else -> 1f
+                            }
+                        } else if (c.volume != 1f) c.volume = 1f
                         if (t != null && t.isItem && c.isPlaying && !Library.privateSession &&
                             System.currentTimeMillis() - lastResumeSave > 5000) {
                             Library.resume[t.itemKey] = position
@@ -525,7 +537,34 @@ object Player {
         upcomingChanged()
     }
 
+    // --- Sleep timer (Now playing → ⋮ → Sleep timer) and speed for podcasts and audiobooks -------------------
+    var sleepAt by androidx.compose.runtime.mutableStateOf<Long?>(null)      // stop at this time
+    var sleepAtEnd by androidx.compose.runtime.mutableStateOf(false)         // stop when this song/episode ends
+    var speed by androidx.compose.runtime.mutableStateOf(1f)
+
+    fun setSleep(minutes: Int?) {
+        sleepAtEnd = minutes == -1
+        sleepAt = if (minutes != null && minutes > 0) System.currentTimeMillis() + minutes * 60_000L else null
+        status = when {
+            minutes == null -> "Sleep timer off"
+            minutes == -1 -> "☾ Music stops at the end of this ${if (current?.isItem == true) "episode" else "song"}"
+            else -> "☾ Music stops in $minutes minutes"
+        }
+    }
+
+    /** Podcasts and audiobooks only (songs always play at normal speed, like Spotify). */
+    fun setSpeed(s: Float) {
+        speed = s.coerceIn(0.5f, 3f)
+        controller?.setPlaybackSpeed(if (current?.isItem == true) speed else 1f)
+    }
+
     private fun advance(auto: Boolean, failed: Boolean = false) {
+        if (auto && !failed && sleepAtEnd) {
+            sleepAtEnd = false
+            controller?.pause(); loading = false
+            status = "☾ Sleep timer: music stopped"
+            return
+        }
         if (failed) {
             failuresInARow++
             // Stop after a few failures in a row instead of racing through the whole queue (which looks like
@@ -605,6 +644,7 @@ object Player {
         if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
         CanvasLoop.songChanged(t)
+        controller?.setPlaybackSpeed(if (t.isItem) speed else 1f)
         handledEnd = false
         resumeDone = false
         position = 0; duration = t.durationMs

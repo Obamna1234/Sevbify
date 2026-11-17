@@ -49,6 +49,7 @@ data class Settings(
     var tourSeen: Boolean = false,
     var spotifyFull: Boolean = false,
     var hideNoteSeen: Boolean = false,
+    var fadeSeconds: Int = 0,                  // fade out / in between songs (0 = off)
     var canvasOn: Boolean = true,              // Canvas loops from official music videos (CanvasLoop.kt)
     var canvasCacheMb: Int = 200,
     var canvasKeepDownloads: Boolean = true,         // the "undo in Settings" note after the first Hide song
@@ -71,7 +72,7 @@ data class Settings(
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
         put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen); put("spotify_full", spotifyFull)
-        put("hide_note_seen", hideNoteSeen); put("canvas_on", canvasOn); put("canvas_cache_mb", canvasCacheMb)
+        put("hide_note_seen", hideNoteSeen); put("canvas_on", canvasOn); put("fade_seconds", fadeSeconds); put("canvas_cache_mb", canvasCacheMb)
         put("canvas_keep_downloads", canvasKeepDownloads); put("eq_on", eqOn); put("eq_preset", eqPreset); put("eq_bands", JSONArray(eqBands))
     }
 
@@ -109,6 +110,7 @@ data class Settings(
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
             s.tourSeen = o.optBoolean("tour_seen"); s.spotifyFull = o.optBoolean("spotify_full")
             s.hideNoteSeen = o.optBoolean("hide_note_seen"); s.canvasOn = o.optBoolean("canvas_on", true)
+            s.fadeSeconds = o.optInt("fade_seconds", 0).coerceIn(0, 12)
             s.canvasCacheMb = o.optInt("canvas_cache_mb", 200).coerceIn(0, 5000)
             s.canvasKeepDownloads = o.optBoolean("canvas_keep_downloads", true); s.eqOn = o.optBoolean("eq_on"); s.eqPreset = o.optString("eq_preset").take(40)
             o.optJSONArray("eq_bands")?.let { a -> s.eqBands = (0 until minOf(a.length(), 32)).map { a.optInt(it).coerceIn(-3000, 3000) }.toMutableList() }

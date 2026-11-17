@@ -275,6 +275,18 @@ private fun Dialogs() {
     PairDialogs()
     FeatureTourDialog()
     if (Nav.wrappedOpen) WrappedDialog { Nav.wrappedOpen = false }
+    if (Nav.sleepOpen) AlertDialog(onDismissRequest = { Nav.sleepOpen = false }, containerColor = C.Elevated,
+        title = { Text("Sleep timer") },
+        text = { Column {
+            listOf(5, 15, 30, 45, 60).forEach { m ->
+                TextButton(onClick = { com.sevbify.app.Player.setSleep(m); Nav.sleepOpen = false }) { Text("$m minutes", color = C.Text) }
+            }
+            TextButton(onClick = { com.sevbify.app.Player.setSleep(-1); Nav.sleepOpen = false }) {
+                Text("End of this ${if (com.sevbify.app.Player.current?.isItem == true) "episode" else "song"}", color = C.Text) }
+            if (com.sevbify.app.Player.sleepAt != null || com.sevbify.app.Player.sleepAtEnd)
+                TextButton(onClick = { com.sevbify.app.Player.setSleep(null); Nav.sleepOpen = false }) { Text("Turn off timer", color = C.Green) }
+        } },
+        confirmButton = {})
     if (Nav.hideNoteOpen) {
         var never by remember { mutableStateOf(true) }
         AlertDialog(onDismissRequest = { Nav.hideNoteOpen = false },

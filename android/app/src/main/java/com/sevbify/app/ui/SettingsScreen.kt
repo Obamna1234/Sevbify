@@ -222,6 +222,12 @@ fun SettingsPageScreen(key: String) {
         }
         "playback" -> {
         item { EqualiserSection() }
+        item {
+            Choice(tr("Fade between songs"), "The end of a song fades out and the next fades in (like the PC's).",
+                   listOf(0, 3, 6, 9, 12).map { "$it" to if (it == 0) "Off" else "$it s" }, "${s.fadeSeconds}") {
+                s.fadeSeconds = it.toInt(); Library.changed()
+            }
+        }
         item { HiddenSection() }
         item {
             val ctx = androidx.compose.ui.platform.LocalContext.current

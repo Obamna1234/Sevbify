@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Favorite
@@ -154,6 +156,16 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
+            if (com.sevbify.app.Player.current?.matchKey == t.matchKey) {
+                val p = com.sevbify.app.Player
+                SheetItem(Icons.Filled.Bedtime, if (p.sleepAt != null || p.sleepAtEnd) "Sleep timer (on)" else "Sleep timer") {
+                    close(); Nav.sleepOpen = true
+                }
+                if (t.isItem) SheetItem(Icons.Filled.Speed, "Playback speed: ${p.speed.toString().removeSuffix(".0")}×") {
+                    val steps = listOf(0.8f, 1f, 1.2f, 1.5f, 1.75f, 2f)
+                    p.setSpeed(steps[(steps.indexOf(p.speed).let { if (it < 0) 0 else it } + 1) % steps.size])
+                }
+            }
             if (!t.isItem && t.artist.isNotBlank() && t.artist != "Unknown Artist")
                 SheetItem(Icons.Filled.Favorite, "Support the artist") { close(); Nav.supportFor = t }
             if (!t.isItem) {

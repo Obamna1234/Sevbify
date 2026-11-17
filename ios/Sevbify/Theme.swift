@@ -173,6 +173,7 @@ struct TrackMenu: View {
     @State private var previewing = false
     @State private var supporting = false
     @State private var hideNote = false
+    @State private var sleeping = false
 
     /** Hide, then (the first time) say where to undo it. */
     private func hide(_ action: () -> Void) {
@@ -209,6 +210,15 @@ struct TrackMenu: View {
                         item("play.circle", "Preview (30 s)") { previewing = true }
                         item("person", "Go to artist") { dismiss(); nav.go(.artist(track.artist)) }
                         item("square.and.arrow.up", "Share") { share(); dismiss() }
+                        if player.current?.matchKey == track.matchKey {
+                            item("moon.zzz", player.sleepAt != nil || player.sleepAtEnd ? "Sleep timer (on)" : "Sleep timer") { sleeping = true }
+                            if track.isItem {
+                                item("gauge.with.dots.needle.33percent", "Speed: \(String(format: "%g", player.speed))×") {
+                                    let steps: [Float] = [0.8, 1, 1.2, 1.5, 1.75, 2]
+                                    player.setSpeed(steps[((steps.firstIndex(of: player.speed) ?? 0) + 1) % steps.count])
+                                }
+                            }
+                        }
                         if !track.isItem && !track.artist.isEmpty && track.artist != "Unknown Artist" {
                             item("heart", "Support the artist") { supporting = true }
                         }
@@ -242,6 +252,11 @@ struct TrackMenu: View {
         .foregroundColor(C.text)
         .sheet(isPresented: $choosing) { AddToPlaylistSheet(tracks: [track]) { dismiss() } }
         .sheet(isPresented: $supporting) { SupportSheet(track: track).presentationDetents([.medium, .large]) }
+        .confirmationDialog("Sleep timer", isPresented: $sleeping) {
+            ForEach([5, 15, 30, 45, 60], id: \.self) { m in Button("\(m) minutes") { player.setSleep(minutes: m); dismiss() } }
+            Button("End of this song") { player.setSleep(minutes: -1); dismiss() }
+            if player.sleepAt != nil || player.sleepAtEnd { Button("Turn off timer", role: .destructive) { player.setSleep(minutes: nil); dismiss() } }
+        }
         .alert("Hidden", isPresented: $hideNote) {
             Button("OK") { dismiss() }
             Button("Don't show this again") { Hidden.shared.noteSeen = true; dismiss() }
