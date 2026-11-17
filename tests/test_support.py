@@ -33,7 +33,8 @@ def test_bandcamp_page_of_the_song_comes_first_then_the_artists_own_links():
                              "https://chriszabriskie.bandcamp.com/track/candlepower", "bandcamp")
     urls = [l["url"] for l in links]
     assert urls[0] == "https://chriszabriskie.bandcamp.com/track/candlepower"
-    assert "https://chriszabriskie.bandcamp.com/" in urls and "https://chriszabriskie.com/" in urls
+    assert "https://chriszabriskie.bandcamp.com/" not in urls          # the same store once (its song page)
+    assert "https://chriszabriskie.com/" in urls
     assert "https://store.example.org/zab" in urls                                        # upgraded to https
     assert not any("bit.ly" in u or "bandcamp-music-free" in u or "old.example" in u for u in urls)
     assert links[0]["site"] == "chriszabriskie.bandcamp.com"

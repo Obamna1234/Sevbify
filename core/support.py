@@ -109,7 +109,8 @@ def for_song(net, artist, title, page_url="", source=""):
         out.append({"label": "Buy this on Bandcamp", "url": bc, "site": domain(bc)})
     try:
         for link in artist_links(net, artist, title):
-            if link["url"].rstrip("/") not in {o["url"].rstrip("/") for o in out}:
+            same_store = bc and link["site"] == domain(bc) and link["label"] == KINDS["bandcamp"]
+            if not same_store and link["url"].rstrip("/") not in {o["url"].rstrip("/") for o in out}:
                 out.append(link)
     except Exception:
         pass                                              # offline / MusicBrainz busy: what we have
