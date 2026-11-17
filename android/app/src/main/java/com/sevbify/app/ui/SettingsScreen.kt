@@ -384,6 +384,7 @@ fun SettingsPageScreen(key: String) {
         }
         "computer" -> {
         item { PairSection() }
+        item { RemoteControl() }
         }
         "quality" -> {
         item {

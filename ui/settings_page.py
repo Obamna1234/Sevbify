@@ -215,6 +215,10 @@ class SettingsPage(QWidget):
         pair_row.addWidget(pb)
         pair_row.addStretch()
         self._v.addLayout(pair_row)
+        self._toggle("phone_remote", "Let paired phones control music here",
+                     "Your paired phone can play, pause, skip and change the volume here, and add songs to the queue "
+                     "(Jam: everyone whose phone you've paired can add songs in the same room). Only on your Wi-Fi.",
+                     getattr(u, "phone_remote", True))
         self._toggle("phone_link", "Let paired phones connect",
                      "When off, this computer doesn't listen for your phone.", getattr(u, "phone_link", True))
 

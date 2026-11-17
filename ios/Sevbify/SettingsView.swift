@@ -81,6 +81,7 @@ struct SettingsView: View {
                 Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
             if Smoke.value("-SEVRoute") != "pair" { PairSettingsSection() }
+            RemoteControlSection()
             Section("Car") {
                 Text(CarPlayInfo.text).font(.footnote).foregroundColor(C.dim)
             }

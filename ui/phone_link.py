@@ -55,6 +55,7 @@ class _Bridge(QObject):
     progress = pyqtSignal(object, str, object, object)
     received = pyqtSignal(object, str, object)
     sent = pyqtSignal(object, str, bool)
+    remote = pyqtSignal(object, str, object)
 
     # the core's callbacks (called on network threads)
     def on_paired(self, dev, name):
@@ -68,6 +69,9 @@ class _Bridge(QObject):
 
     def on_offer(self, sess, oid, title, items):
         self.offer.emit(sess, oid, title, items)
+
+    def on_remote(self, sess, cmd, args):
+        self.remote.emit(sess, cmd, args)
 
     def on_progress(self, sess, oid, done, total):
         self.progress.emit(sess, oid, done, total)
@@ -94,8 +98,77 @@ class PhoneLink(QObject):
         self.bridge.progress.connect(self._progress)
         self.bridge.received.connect(self._received)
         self.bridge.sent.connect(self._sent)
+        self.bridge.remote.connect(self._remote)
+        self.bridge.connected.connect(lambda _s: self.push_state())
         self._dialog = None
         self._last_pct = {}
+        from PyQt6.QtCore import QTimer
+        self._state_timer = QTimer(self)
+        self._state_timer.setInterval(1000)
+        self._state_timer.timeout.connect(self.push_state)
+        self._state_timer.start()
+        self._last_state = None
+
+    # --- remote control and Jam from a paired phone --------------------------------------------------------
+    def state(self):
+        w = self.win
+        s = w.current_song
+        try:
+            pos = max(0, int(w.player.get_time()))
+            length = max(0, int(w.player.get_length()))
+        except Exception:
+            pos = length = 0
+        up_user, up_ctx = w.pq.upcoming(3) if hasattr(w, "pq") else ([], [])
+        return {"title": getattr(s, "title", "")[:200], "artist": getattr(s, "artist", "")[:200],
+                "playing": bool(getattr(w, "is_playing", False)), "pos": pos, "dur": length,
+                "volume": int(w.volume_slider.value()) if hasattr(w, "volume_slider") else 0,
+                "source": (w.pq.source_name or "")[:100] if hasattr(w, "pq") else "",
+                "next": [f"{x.title} · {x.artist}"[:120] for x in (up_user + up_ctx)[:3]]}
+
+    def push_state(self):
+        """Send what's playing to connected phones when it changes (and every few seconds while playing)."""
+        if self.server is None or not getattr(self.win.user_data, "phone_remote", True):
+            return
+        st = self.state()
+        key = (st["title"], st["artist"], st["playing"], st["volume"], st["pos"] // 5000, tuple(st["next"]))
+        if key == self._last_state:
+            return
+        self._last_state = key
+        try:
+            self.server.broadcast_state(st)
+        except Exception:
+            pass
+
+    def _remote(self, sess, cmd, args):
+        """A paired phone controls the music here (Settings → Your phone → Let paired phones control music)."""
+        w = self.win
+        if not getattr(w.user_data, "phone_remote", True):
+            return
+        if cmd == "play_pause":
+            w.play_pause_song()
+        elif cmd == "next":
+            w.next_song()
+        elif cmd == "previous":
+            w.prev_song()
+        elif cmd == "seek":
+            try:
+                w.player.set_time(int(args["ms"]))
+            except Exception:
+                pass
+        elif cmd == "volume":
+            w.volume_slider.setValue(int(args["v"]))
+        elif cmd == "queue_add":
+            # Jam: a song added to the queue here, as if you'd picked it (it streams like any search result).
+            from core.online.models import OnlineTrack
+            from core.online.remote_song import RemoteSong
+            s = args["song"]
+            t = OnlineTrack(title=s["title"], artist=s["artist"], album=s["album"], duration_ms=s["duration_ms"],
+                            source=s["source"], page_url=s["page_url"])
+            w.add_to_queue(RemoteSong(t))
+            w.show_status(f"{getattr(sess, 'name', 'A phone')} added “{s['title']}” to the queue", kind="info",
+                          timeout_ms=5000)
+        self._last_state = None
+        self.push_state()
 
     # --- running ---------------------------------------------------------------------------------------------
     def _receive_folder(self):

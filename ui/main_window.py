@@ -7456,7 +7456,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             u.canvas_cache_mb = max(0, min(5000, int(values["canvas_cache_mb"])))
             from core import canvas_loops
             canvas_loops.trim(self.storage.data_dir, u.canvas_cache_mb)
-        simple = ("online_enabled", "spotify_full", "canvas_auto", "canvas_keep_downloads", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
+        simple = ("online_enabled", "phone_remote", "spotify_full", "canvas_auto", "canvas_keep_downloads", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
                   "language", "save_space", "ad_free_podcasts")

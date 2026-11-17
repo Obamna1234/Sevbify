@@ -180,6 +180,11 @@ private fun SongMenuSheet(m: SongMenu) {
                     }
                 }
             }
+            if (com.sevbify.app.PairLink.connected && !t.isItem)
+                SheetItem(Icons.Filled.Computer, "Add to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}'s queue") {
+                    close(); com.sevbify.app.PairLink.addToComputerQueue(t)
+                    Nav.say("Added to ${com.sevbify.app.PairLink.computer?.name ?: "the computer"}'s queue")
+                }
             if (com.sevbify.app.PairLink.connected && t.localUri.isNotEmpty())
                 SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}") {
                     close(); com.sevbify.app.PairLink.send(listOf(t))

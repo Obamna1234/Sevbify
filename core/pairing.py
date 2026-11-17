@@ -526,6 +526,27 @@ def offer_from_paths(paths):
     return items[:MAX_FILES]
 
 
+REMOTE_COMMANDS = ("play_pause", "next", "previous", "seek", "volume", "queue_add", "hello")
+REMOTE_PER_10S = 40
+
+
+def check_remote(cmd, msg):
+    """The checked arguments of a remote-control / Jam command, or None if it isn't one we accept."""
+    if cmd not in REMOTE_COMMANDS:
+        return None
+    if cmd == "seek":
+        ms = msg.get("ms")
+        return {"ms": int(ms)} if isinstance(ms, int) and not isinstance(ms, bool) and 0 <= ms <= 24 * 3600 * 1000 else None
+    if cmd == "volume":
+        v = msg.get("v")
+        return {"v": int(v)} if isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= 100 else None
+    if cmd == "queue_add":
+        from core.share_playlist import _song
+        song = _song(msg.get("song"))
+        return {"song": song} if song else None
+    return {}
+
+
 class Session:
     """A connected, trusted phone (or computer). Runs its reader on its own thread; `events` gets callbacks:
     on_offer(session, offer_id, title, items) -> call session.answer(...) later; on_progress(session, id, done,
@@ -721,7 +742,26 @@ class Session:
                 st["cancel"] = True
                 st["answer"].set()
             self._event("on_cancelled", oid)
+        elif t == "remote":
+            # Remote control and Jam from a paired phone: a short, fixed list of commands, checked here.
+            cmd = msg.get("cmd")
+            args = check_remote(cmd, msg)
+            if args is None:
+                return
+            now = time.time()
+            with self.lock:
+                self.remote_times = [x for x in getattr(self, "remote_times", []) if now - x < 10] + [now]
+                flood = len(self.remote_times) > REMOTE_PER_10S
+            if not flood:
+                self._event("on_remote", cmd, args)
         # anything else: a newer version's message; ignored
+
+    def send_state(self, state):
+        """What's playing on this computer, for the phone's remote control (title, artist, position…)."""
+        try:
+            self.link.send_json({"t": "state", **state})
+        except Exception:
+            pass
 
     def run(self):
         try:
@@ -763,6 +803,14 @@ class PairServer:
         self._stop = threading.Event()
 
     # pairing window
+    def broadcast_state(self, state):
+        """Send what's playing to every connected phone (their remote control shows it)."""
+        with self.lock:
+            sessions = list(self.sessions.values())
+        for sess in sessions:
+            sess.send_state(state)
+        return len(sessions)
+
     def open_pairing(self):
         """A fresh one-time code -> the QR link. Valid for 5 minutes, once."""
         code = secrets.token_bytes(32)

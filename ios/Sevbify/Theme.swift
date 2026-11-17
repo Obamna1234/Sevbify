@@ -222,6 +222,11 @@ struct TrackMenu: View {
                         if !track.isItem && !track.artist.isEmpty && track.artist != "Unknown Artist" {
                             item("heart", "Support the artist") { supporting = true }
                         }
+                        if PairLink.shared.connected && !track.isItem {
+                            item("text.badge.plus", "Add to \(PairLink.shared.computer?.name ?? "computer")'s queue") {
+                                PairLink.shared.addToComputerQueue(track); dismiss()
+                            }
+                        }
                         if PairLink.shared.connected && track.isLocal {
                             item("desktopcomputer", "Send to \(PairLink.shared.computer?.name ?? "computer")") {
                                 PairLink.shared.send([track]); dismiss()

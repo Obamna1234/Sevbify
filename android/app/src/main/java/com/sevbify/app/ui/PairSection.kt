@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -164,5 +165,38 @@ private fun SupportLinksSheet(key: String, title: String, subtitle: String, empt
             Text("Enjoying this? Support the artists and podcasters you love: buy their music, go to their shows, or back their show directly.",
                  style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 14.dp))
         }
+    }
+}
+
+
+/** Control the music on the paired computer (it must be on the same Wi-Fi, with Sevbify open): what's playing there,
+ *  previous / play-pause / next and its volume. Songs can be added to its queue from any song's ⋮ menu (Jam). */
+@Composable
+fun RemoteControl() {
+    val link = com.sevbify.app.PairLink
+    if (!link.connected) return
+    val st = link.remoteState
+    Column(Modifier.padding(16.dp)) {
+        Text("Control ${link.computer?.name ?: "your computer"}", style = MaterialTheme.typography.titleMedium)
+        if (st == null || st.optString("title").isEmpty()) {
+            Text("Nothing playing there right now.", style = MaterialTheme.typography.bodySmall, color = C.Sub)
+        } else {
+            Text(st.optString("title"), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 6.dp))
+            Text(st.optString("artist"), style = MaterialTheme.typography.bodySmall, color = C.Sub)
+        }
+        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.IconButton(onClick = { link.remote("previous") }) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.SkipPrevious, "Previous") }
+            androidx.compose.material3.IconButton(onClick = { link.remote("play_pause") }) {
+                androidx.compose.material3.Icon(if (st?.optBoolean("playing") == true) androidx.compose.material.icons.Icons.Filled.Pause
+                     else androidx.compose.material.icons.Icons.Filled.PlayArrow, "Play or pause", modifier = Modifier.size(36.dp)) }
+            androidx.compose.material3.IconButton(onClick = { link.remote("next") }) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.SkipNext, "Next") }
+        }
+        var vol by remember(st?.optInt("volume")) { mutableStateOf((st?.optInt("volume") ?: 50).toFloat()) }
+        androidx.compose.material3.Slider(value = vol, onValueChange = { vol = it }, valueRange = 0f..100f,
+            onValueChangeFinished = { link.remote("volume") { put("v", vol.toInt()) } })
+        Text("Add songs to its queue from any song's ⋮ menu: Add to ${link.computer?.name ?: "computer"}'s queue. " +
+             "Friends whose phones are paired can add songs too (Jam).", style = MaterialTheme.typography.bodySmall, color = C.Sub)
     }
 }

@@ -155,6 +155,25 @@ private final class PairSocket {
 final class PairLink: ObservableObject {
     static let shared = PairLink()
     @Published var computer: PairedComputer?
+    @Published var remoteState: RemoteState?
+
+    struct RemoteState: Equatable { var title: String; var artist: String; var playing: Bool; var volume: Int }
+
+    /// Remote control / Jam: play_pause, next, previous, volume (v 0-100), queue_add (song).
+    func remote(_ cmd: String, _ extra: [String: Any] = [:]) {
+        var msg: [String: Any] = ["t": "remote", "cmd": cmd]
+        for (k, v) in extra { msg[k] = v }
+        let name = computer?.name ?? "the computer"
+        Task.detached { [weak self] in
+            do { try self?.sendJSON(msg) } catch { await MainActor.run { Player.shared.status = "Couldn't reach \(name)" } }
+        }
+    }
+
+    func addToComputerQueue(_ t: Track) {
+        remote("queue_add", ["song": ["title": t.title, "artist": t.artist, "album": t.album, "duration_ms": t.durationMs,
+                                      "source": t.source, "page_url": t.pageUrl]])
+        Player.shared.status = "Added to \(computer?.name ?? "the computer")'s queue"
+    }
     @Published var status = ""
     @Published var offer: IncomingOffer?
     @Published var pendingCode: PairCode?
@@ -434,6 +453,12 @@ final class PairLink: ObservableObject {
             id = s
         }
         switch m["t"] as? String {
+        case "state":                                   // what's playing on the computer (only shown)
+            let st = RemoteState(title: String((m["title"] as? String ?? "").prefix(200)),
+                                 artist: String((m["artist"] as? String ?? "").prefix(200)),
+                                 playing: m["playing"] as? Bool ?? false,
+                                 volume: min(100, max(0, m["volume"] as? Int ?? 0)))
+            Task { @MainActor in self.remoteState = st }
         case "ping": try sendJSON(["t": "pong"])
         case "offer":
             var items: [(String, Int64)] = [], seen = Set<String>()
@@ -794,6 +819,42 @@ struct SupportSheet: View {
         .task {
             let r = try? await Bridge.call("support_links", [track.artist, track.title, track.pageUrl, track.source])
             links = (r as? [[String: Any]]) ?? []
+        }
+    }
+}
+
+/// Control the music on the paired computer (same Wi-Fi, Sevbify open there): what's playing, previous / play-pause /
+/// next and its volume. Songs can be added to its queue from any song's ••• menu (Jam).
+struct RemoteControlSection: View {
+    @ObservedObject var link = PairLink.shared
+    @State private var volume: Double = 50
+    var body: some View {
+        if link.connected {
+            Section("Control \(link.computer?.name ?? "your computer")") {
+                if let st = link.remoteState, !st.title.isEmpty {
+                    VStack(alignment: .leading) {
+                        Text(st.title).font(.headline)
+                        Text(st.artist).font(.caption).foregroundColor(C.dim)
+                    }
+                } else {
+                    Text("Nothing playing there right now.").font(.caption).foregroundColor(C.dim)
+                }
+                HStack(spacing: 36) {
+                    Spacer()
+                    Button { link.remote("previous") } label: { Image(systemName: "backward.fill") }
+                    Button { link.remote("play_pause") } label: {
+                        Image(systemName: link.remoteState?.playing == true ? "pause.circle.fill" : "play.circle.fill").font(.largeTitle)
+                    }
+                    Button { link.remote("next") } label: { Image(systemName: "forward.fill") }
+                    Spacer()
+                }.buttonStyle(.plain)
+                Slider(value: $volume, in: 0...100, step: 1) { editing in
+                    if !editing { link.remote("volume", ["v": Int(volume)]) }
+                }.tint(C.green)
+                .onAppear { volume = Double(link.remoteState?.volume ?? 50) }
+                Text("Add songs to its queue from any song's ••• menu. Friends whose phones are paired can add songs too (Jam).")
+                    .font(.caption).foregroundColor(C.dim)
+            }
         }
     }
 }

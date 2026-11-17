@@ -362,6 +362,23 @@ object PairLink {
         return ch.open(body)
     }
 
+    /** What's playing on the paired computer (it sends this while connected); null until it does. */
+    var remoteState by mutableStateOf<JSONObject?>(null)
+
+    /** Remote control / Jam: play_pause, next, previous, seek (ms), volume (v 0-100), queue_add (song). */
+    fun remote(cmd: String, extra: JSONObject.() -> Unit = {}) {
+        val msg = JSONObject().put("t", "remote").put("cmd", cmd).apply(extra)
+        Thread {
+            try { sendJson(msg) }
+            catch (e: Exception) { com.sevbify.app.ui.Nav.say("⚠ Couldn't reach ${computer?.name ?: "the computer"}") }
+        }.start()
+    }
+
+    fun addToComputerQueue(t: Track) = remote("queue_add") {
+        put("song", JSONObject().put("title", t.title).put("artist", t.artist).put("album", t.album)
+            .put("duration_ms", t.durationMs).put("source", t.source).put("page_url", t.pageUrl))
+    }
+
     fun sendJson(o: JSONObject) {
         val ch = channel ?: throw IllegalStateException("not connected")
         synchronized(sendLock) { socket?.getOutputStream()?.apply { write(ch.seal(PairCrypto.KIND_JSON, o.toString().toByteArray())); flush() } }
@@ -487,6 +504,12 @@ object PairLink {
         val t = m.optString("t")
         val id = if (m.has("id")) m.get("id").let { if (it is String && OFFER_ID.matches(it)) it else throw java.io.IOException("bad id") } else null
         when (t) {
+            "state" -> remoteState = JSONObject().apply {        // what's playing on the computer (only shown)
+                put("title", m.optString("title").take(200)); put("artist", m.optString("artist").take(200))
+                put("playing", m.optBoolean("playing")); put("pos", m.optLong("pos")); put("dur", m.optLong("dur"))
+                put("volume", m.optInt("volume").coerceIn(0, 100)); put("source", m.optString("source").take(100))
+                put("next", m.optJSONArray("next") ?: org.json.JSONArray())
+            }
             "ping" -> sendJson(JSONObject().put("t", "pong"))
             "offer" -> {
                 val items = ArrayList<Pair<String, Long>>()

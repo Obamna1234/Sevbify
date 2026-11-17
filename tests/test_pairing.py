@@ -474,3 +474,16 @@ def test_unproven_connections_from_many_addresses_dont_lock_out_a_phone(server, 
     sess.link.close()
     for s in hold:
         s.close()
+
+
+def test_remote_commands_are_checked_before_they_reach_the_app():
+    from core import pairing as pr
+    assert pr.check_remote("play_pause", {}) == {}
+    assert pr.check_remote("seek", {"ms": 5000}) == {"ms": 5000}
+    assert pr.check_remote("seek", {"ms": -1}) is None and pr.check_remote("seek", {"ms": True}) is None
+    assert pr.check_remote("volume", {"v": 101}) is None
+    assert pr.check_remote("delete_everything", {}) is None and pr.check_remote(None, {}) is None
+    got = pr.check_remote("queue_add", {"song": {"title": "Siesta‮", "artist": "Jahzzar",
+                                                 "page_url": "file:///etc/passwd"}})
+    assert got["song"]["title"] == "Siesta" and got["song"]["page_url"] == ""
+    assert pr.check_remote("queue_add", {"song": "not a song"}) is None
