@@ -422,8 +422,9 @@ class TrackTable(QTableWidget):
                 continue
             current = song.key == self._current_key
             pending = getattr(song, "is_remote", False) or not song.exists
-            if pending and not self.online() and not current:
-                # Not on this computer and you're offline: can't play now, so greyed out.
+            hidden = getattr(getattr(self.window(), "hidden", None), "is_hidden", None)
+            if (pending and not self.online() and not current) or (hidden and not current and hidden(song)):
+                # Offline and not on this computer (can't play now), or hidden (skipped): greyed out, like Spotify.
                 for col in range(5):
                     self.item(row, col).setForeground(QBrush(DIM))
                 continue

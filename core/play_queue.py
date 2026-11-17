@@ -30,6 +30,7 @@ class PlayQueue:
         self.repeat = "off"
         self.recent = deque(maxlen=RECENT_LIMIT)
         self._rng = rng or random.Random()
+        self.is_hidden = None    # song -> True if hidden (core/hidden.py): skipped when the queue moves on
 
     # ------------------------------------------------------------------
     @property
@@ -101,21 +102,26 @@ class PlayQueue:
         if auto and self.repeat == "one" and self.current is not None:
             return self.current
         if self.user_queue:
-            song = self.user_queue.pop(0)
+            song = self.user_queue.pop(0)        # picked by you: plays even if hidden
             self.items.insert(self.index + 1, song)
             self.index += 1
             return song
-        if self.index + 1 < len(self.items):
-            self.index += 1
-        elif self.repeat == "all" or not auto:
-            if self.shuffle and len(self.items) > 1:
-                # New random order for the next round, like Spotify.
-                self.items = self._shuffled_with_first(self.items[0])
-                self._rng.shuffle(self.items)
-            self.index = 0
-        else:
-            return None
-        return self.current
+        start = self.index
+        for _ in range(max(1, len(self.items))):
+            if self.index + 1 < len(self.items):
+                self.index += 1
+            elif self.repeat == "all" or not auto:
+                if self.shuffle and len(self.items) > 1:
+                    # New random order for the next round, like Spotify.
+                    self.items = self._shuffled_with_first(self.items[0])
+                    self._rng.shuffle(self.items)
+                self.index = 0
+            else:
+                return None
+            if not (self.is_hidden and self.current is not None and self.is_hidden(self.current)):
+                return self.current
+        self.index = start                       # everything left is hidden
+        return None
 
     def previous(self):
         if not self.items:

@@ -86,6 +86,40 @@ def confirm(parent, title, text, ok_text="Delete", cancel_text="Cancel", safe_de
     return d.exec() == QDialog.DialogCode.Accepted
 
 
+def info_with_never_again(parent, title, text):
+    """A short note with OK and "Don't show this again" (ticked). Returns True if it shouldn't show again."""
+    from PyQt6.QtWidgets import QCheckBox
+    if getattr(parent, "_auto_answer_dialogs", None) is not None:      # tests
+        return True
+    d = _Card(parent, light=True)
+    d.setMinimumWidth(440)
+    h = QLabel(title)
+    h.setStyleSheet("font-size: 22px; font-weight: 800;")
+    d.body.addWidget(h)
+    t = QLabel(text)
+    t.setWordWrap(True)
+    t.setTextFormat(Qt.TextFormat.PlainText)
+    t.setStyleSheet("font-size: 14px; color: #000000;")
+    d.body.addWidget(t)
+    row = QHBoxLayout()
+    d.body.addLayout(row)
+    never = QCheckBox("Don't show this again")
+    never.setChecked(True)
+    never.setStyleSheet("QCheckBox { color: #000000; font-size: 13px; }")
+    row.addWidget(never)
+    row.addStretch()
+    ok = QPushButton("OK")
+    ok.setCursor(Qt.CursorShape.PointingHandCursor)
+    ok.setDefault(True)
+    ok.setFixedHeight(44)
+    ok.setStyleSheet("QPushButton { color: #000000; background: #1ed760; border: none; border-radius: 22px;"
+                     " font-size: 15px; font-weight: 700; padding: 0 28px; } QPushButton:hover { background: #3be477; }")
+    ok.clicked.connect(d.accept)
+    row.addWidget(ok)
+    d.exec()
+    return never.isChecked()
+
+
 class _CoverButton(QPushButton):
     """The cover in Edit details. On hover, like Spotify: the picture darkens and shows a pencil and
     "Choose photo"."""

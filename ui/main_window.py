@@ -377,6 +377,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         # (library, playlist, search results, radio), "Add to queue" songs,
         # shuffle, repeat and recently played.
         self.pq = PlayQueue()
+        from core.hidden import Hidden
+        self.hidden = Hidden(self.user_data)          # Hide song / Don't play this artist (core/hidden.py)
+        self.pq.is_hidden = self.hidden.is_hidden
         self.pq.shuffle = self.user_data.shuffle
         self.pq.repeat = self.user_data.repeat
         self.current_song = None
@@ -546,6 +549,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         QTimer.singleShot(1500, lambda: not getattr(self, "_shut_down", False) and self.phone_link.start_if_paired())
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.go_back_requested.connect(self.go_back_to_previous_version)
+        self.settings_page.hidden_changed.connect(
+            lambda kind, key, on: (self.set_hidden(kind, key, on), on is None and self.open_settings()))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
         self.settings_page.reset_requested.connect(self.reset_settings)
         self.stack.addWidget(self.settings_page)
@@ -1262,6 +1267,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._add_send_to_phone(menu, [song])
         if has_artist and getattr(getattr(song, "track", None), "source", "") not in ("podcast", "audiobook", "youtube"):
             menu.addAction("♥  Support the artist").triggered.connect(lambda: self.support_artist(song.artist, song))
+        if song.title and getattr(getattr(song, "track", None), "source", "") not in ("podcast", "audiobook"):
+            if self.hidden.song_hidden(song.artist, song.title):
+                menu.addAction("⊘  Show this song again").triggered.connect(lambda: self.hide_song(song, False))
+            else:
+                menu.addAction("⊘  Hide song").triggered.connect(lambda: self.hide_song(song))
+            if has_artist:
+                if self.hidden.artist_hidden(song.artist):
+                    menu.addAction(f"⊘  Play {song.artist} again").triggered.connect(
+                        lambda: self.hide_artist(song.artist, False))
+                else:
+                    menu.addAction("⊘  Don't play this artist").triggered.connect(lambda: self.hide_artist(song.artist))
         if is_remote:
             state, _note = self.downloads.state(song.track.key)
             if state in ("queued", "downloading"):
@@ -3647,8 +3663,11 @@ class MainWindow(ShowsMixin, QMainWindow):
                 d.done(2)
                 self.import_from_file(path, ask_name=True)
         file_btn.clicked.connect(pick)
-        if d.exec() == 1 and (link.text().strip() or songs_box.toPlainText().strip()):
-            self.import_from_link(link.text().strip(), songs_box.toPlainText())
+        result = d.exec()
+        text, songs_text = link.text().strip(), songs_box.toPlainText()
+        d.deleteLater()                          # not left for Python's garbage collector (pick() holds it in a cycle)
+        if result == 1 and (text or songs_text.strip()):
+            self.import_from_link(text, songs_text)
 
     def import_from_link(self, text, song_links=""):
         """A playlist / album link, and/or Spotify song links copied from the Spotify app (all songs, in order)."""
@@ -6422,10 +6441,54 @@ class MainWindow(ShowsMixin, QMainWindow):
         return pl
 
     def _allowed(self, tracks):
-        """Settings → Allow explicit content off: leave out online songs marked explicit."""
+        """Settings → Allow explicit content off: leave out online songs marked explicit. Hidden songs and artists
+        (core/hidden.py) are always left out of radio and mixes."""
+        tracks = self.hidden.keep(tracks) if getattr(self, "hidden", None) else list(tracks)
         if self.user_data.explicit_ok:
             return list(tracks)
         return [t for t in tracks if not getattr(t, "explicit", False)]
+
+    # --- Hide song / Don't play this artist ---------------------------------------------------------------
+    def hide_song(self, song, on=True):
+        self.hidden.hide_song(song.artist, song.title, on)
+        self._after_hide(f"Hidden “{song.title}”" if on else f"“{song.title}” will play again", on)
+
+    def hide_artist(self, artist, on=True):
+        self.hidden.hide_artist(artist, on)
+        self._after_hide(f"Won't play {artist}" if on else f"{artist} will play again", on)
+
+    def _after_hide(self, text, on):
+        self.save_now()
+        for t in self.findChildren(TrackTable):
+            t._apply_highlight()
+        if self.stack.currentWidget() is self.settings_page:
+            self.open_settings()
+        if on and not self.user_data.hide_note_seen:
+            from .dialogs import info_with_never_again
+            if info_with_never_again(self, "Hidden",
+                                     "It won't play by itself any more: playlists, albums, radio and mixes skip it. "
+                                     "You can still play it by picking it yourself.\n\nChanged your mind? "
+                                     "Settings → Hidden songs and artists lists everything you've hidden, with a "
+                                     "switch to bring each one back."):
+                self.user_data.hide_note_seen = True
+                self.save_now()
+        self.show_status(text + (" · Undo in Settings → Hidden songs and artists" if on else ""), kind="info",
+                         timeout_ms=6000)
+
+    def set_hidden(self, kind, key, on):
+        """Settings: switch one hidden song or artist on/off (or remove it with on=None)."""
+        for e in (self.user_data.hidden_songs if kind == "song" else self.user_data.hidden_artists):
+            if e["key"] == key:
+                if on is None:
+                    self.hidden.remove(kind, key)
+                elif kind == "song":
+                    self.hidden.hide_song(e["artist"], e["title"], on)
+                else:
+                    self.hidden.hide_artist(e["artist"], on)
+                break
+        self.save_now()
+        for t in self.findChildren(TrackTable):
+            t._apply_highlight()
 
     def save_queue_as_playlist(self):
         """Keep the current Radio (or any queue source) as a normal playlist. Songs you don't have yet
@@ -6582,6 +6645,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                     phones_available=bool(getattr(self, "phone_link", None) and self.phone_link.available()),
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
+                    hidden=self.hidden.entries(),
                     has_previous=__import__("core.app_update", fromlist=["x"]).can_install()
                     and __import__("core.app_update", fromlist=["x"]).has_previous(),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),

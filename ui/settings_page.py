@@ -70,6 +70,7 @@ class SettingsPage(QWidget):
     profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
     go_back_requested = pyqtSignal()
+    hidden_changed = pyqtSignal(str, str, object)      # kind ("song" | "artist"), key, on (True / False / None = remove)
     update_ytdlp_requested = pyqtSignal()
     server_add_requested = pyqtSignal(str)          # "jellyfin" | "webdav"
     server_refresh_requested = pyqtSignal(str)      # server id
@@ -333,6 +334,34 @@ class SettingsPage(QWidget):
                      u.eq_enabled)
         self.controls["eq_enabled"].toggled.connect(lambda on: self.eq_curve.setEnabled(on))
         self._equalizer(u)
+
+        self._section("Hidden songs and artists")
+        entries = list(info.get("hidden") or [])
+        if not entries:
+            self._text("Nothing hidden. A song's ••• menu has Hide song and Don't play this artist: they're then "
+                       "skipped in playlists, albums, radio and mixes, and come back here with one switch.")
+        else:
+            self._text("Switched on = skipped when music plays by itself (you can still pick it yourself). Switch "
+                       "one off to let it play again, or remove it from the list.")
+            for kind, e in entries[:300]:
+                name = (f"{e['title']} · {e['artist']}" if kind == "song" else f"{e['artist']} (artist)")
+                row = QHBoxLayout()
+                row.setSpacing(12)
+                lbl = QLabel(name)
+                lbl.setTextFormat(Qt.TextFormat.PlainText)
+                lbl.setObjectName("name")
+                lbl.setWordWrap(True)
+                row.addWidget(lbl, 1)
+                switch = ToggleSwitch(bool(e.get("on", True)))
+                switch.setToolTip("Hidden" if e.get("on", True) else "Plays again")
+                switch.toggled.connect(lambda on, k=kind, key=e["key"]: self.hidden_changed.emit(k, key, on))
+                row.addWidget(switch, 0, Qt.AlignmentFlag.AlignVCenter)
+                rm = QPushButton("Remove")
+                rm.setToolTip("Take it off this list (it plays again)")
+                rm.clicked.connect(lambda _c=False, k=kind, key=e["key"]: self.hidden_changed.emit(k, key, None))
+                row.addWidget(rm)
+                self._v.addLayout(row)
+                self.controls[f"hidden:{kind}:{e['key']}"] = switch
 
         self._section("Display")
         self._toggle("np_on_play", "Show the now-playing panel on click of play", "", u.np_on_play)

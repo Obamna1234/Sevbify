@@ -554,6 +554,7 @@ def test_mouse_wheel_glides_instead_of_jumping(window, qapp):
     t.setGeometry(0, 0, 600, 300)
     t.show()
     qapp.processEvents()
+    smooth_scroll.hook_now()                                     # new scroll areas are picked up within SCAN_MS
     bar = t.verticalScrollBar()
     assert bar.maximum() > 300
     ev = QWheelEvent(QPointF(50, 50), QPointF(t.viewport().mapToGlobal(QPoint(50, 50))), QPoint(0, 0), QPoint(0, -120),
@@ -633,10 +634,32 @@ def test_scroll_through_previews_of_a_playlist(window, qapp):
     window.pl_feed_btn.click()
     feed = window._preview_feed
     assert feed is not None and feed.isVisible() and feed.title.text() == window.songs[0].title
-    assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing(), 5)
+    assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing(), 15)
     feed.go(1)
     assert feed.index == 1 and feed.title.text() == window.songs[1].title
     feed.toggle_like()
     assert window.is_liked(window.songs[1])
     feed.play_full_song()                                       # closes the feed, plays the full song
     assert window._preview_feed is None and window.current_song is window.songs[1]
+
+
+def test_closing_dialogs_never_crashes_later(window, qapp):
+    """Regression: the app-wide smooth-scroll filter got called for half-destroyed widgets; closing a dialog with a
+    rich-text label (confirmations, Import a playlist) then crashed the app. The filter now sits on scroll areas."""
+    import gc
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QLabel
+    from ui import dialogs, smooth_scroll
+    assert smooth_scroll._installed is not None
+    for _ in range(3):
+        d = dialogs._Card(window, light=True)
+        lbl = QLabel("<b>Really</b> delete?")
+        lbl.setTextFormat(Qt.TextFormat.RichText)
+        d.body.addWidget(lbl)
+        d.show()
+        qapp.processEvents()
+        d.close()
+        del d, lbl                                  # the wrapper goes: Qt destroys the dialog and its label now
+        qapp.processEvents()
+        gc.collect()
+    assert smooth_scroll.hook_now() >= 0

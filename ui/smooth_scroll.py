@@ -2,7 +2,10 @@
 second (eased), and quick notches add up so a flick keeps going smoothly. Touchpads and trackpads already send
 smooth pixel steps, so those are left as they are.
 
-Installed once on the application (`install(app)`); every scroll area, list and table gets it.
+Installed once (`install(app)`): every scroll area, list and table gets it. The filter sits on each scroll area's
+viewport, never on the whole application: an app-wide Python event filter is also called for widgets that are
+half-destroyed, and wrapping those crashed the app (closing a dialog with a rich-text label, and on exit on
+Windows). New scroll areas are picked up within SCAN_MS (`hook_now()` does it at once).
 """
 from PyQt6.QtCore import QObject, QEvent, QVariantAnimation, QEasingCurve, Qt
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication
@@ -51,28 +54,50 @@ class _Smoother(QObject):
 
 
 _installed = None
+_timer = None
+SCAN_MS = 700
+_HOOKED = "_sevbifySmooth"
+
+
+def hook_now():
+    """Put the smoother on every scroll area that doesn't have it yet."""
+    if _installed is None:
+        return 0
+    n = 0
+    for w in QApplication.allWidgets():
+        if isinstance(w, QAbstractScrollArea) and not w.property(_HOOKED):
+            vp = w.viewport()
+            if vp is None:
+                continue
+            vp.installEventFilter(_installed)
+            w.setProperty(_HOOKED, True)
+            n += 1
+    return n
 
 
 def install(app=None):
     """Turn smooth wheel scrolling on for the whole app (once)."""
-    global _installed
+    global _installed, _timer
+    from PyQt6.QtCore import QTimer
     app = app or QApplication.instance()
     if app is None or _installed is not None:
         return _installed
     _installed = _Smoother(app)
-    app.installEventFilter(_installed)
-    # Taken off again before Python starts tearing things down: an app-wide filter still being called while the
-    # interpreter exits crashed the Windows build on closing (access violation in the smoke test).
+    _timer = QTimer(_installed)
+    _timer.setInterval(SCAN_MS)
+    _timer.timeout.connect(hook_now)
+    _timer.start()
+    hook_now()
     app.aboutToQuit.connect(uninstall)
     return _installed
 
 
 def uninstall():
-    global _installed
-    app = QApplication.instance()
-    if app is not None and _installed is not None:
+    global _installed, _timer
+    if _timer is not None:
         try:
-            app.removeEventFilter(_installed)
+            _timer.stop()
         except RuntimeError:
             pass
+    _timer = None
     _installed = None
