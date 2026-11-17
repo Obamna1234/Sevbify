@@ -1,7 +1,7 @@
 name: Showcase screenshots
 
 # Started by hand (Actions -> Showcase screenshots -> Run workflow): runs the desktop app on a Linux test computer
-# with real online data, takes a screenshot of each feature and records the screen, for a showcase video.
+# with real online data, takes a screenshot of each feature, for a showcase video.
 # Nothing is published: the pictures are kept as a download on the run for 7 days.
 on:
   workflow_dispatch:
@@ -35,14 +35,9 @@ jobs:
       - name: Run the app, take screenshots and record the screen
         run: |
           mkdir -p showcase
-          Xvfb :99 -screen 0 1600x960x24 &
-          sleep 3
-          export DISPLAY=:99 QT_QPA_PLATFORM=xcb
-          ffmpeg -loglevel error -f x11grab -framerate 30 -video_size 1600x960 -i :99 \
-            -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p showcase/desktop.mp4 &
-          FF=$!
+          sudo locale-gen en_AU.UTF-8 >/dev/null || true
+          export QT_QPA_PLATFORM=offscreen
           timeout 1800 python -X faulthandler tools/showcase.py showcase || echo "::warning::showcase exited with $?"
-          kill -INT $FF; wait $FF || true
           ls -la showcase
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
