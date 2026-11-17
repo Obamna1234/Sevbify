@@ -154,6 +154,7 @@ def song_link():
 
 def support_links():
     from core import support
+    support.artist_links(net, "Chris Zabriskie", "Candlepower")     # raises when MusicBrainz refuses
     links = support.for_song(net, "Chris Zabriskie", "Candlepower",
                              "https://chriszabriskie.bandcamp.com/track/candlepower", "bandcamp")
     assert len(links) >= 2 and all(l["url"].startswith("https://") for l in links), links
