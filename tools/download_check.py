@@ -57,7 +57,7 @@ def main():
 def stream_check():
     """Can the full-song finder get a playable link? (Bandcamp first, then YouTube.)"""
     from core import streamer
-    for artist, title in (("Kevin MacLeod", "Monkeys Spinning Monkeys"), ("Perturbator", "Future Club")):
+    for artist, title in (("Kevin MacLeod", "Monkeys Spinning Monkeys"), ("Chris Zabriskie", "Candlepower")):
         try:
             res = streamer.find_full_song(artist, title)
             print(f"::notice title=Stream OK::{artist} - {title}: {res['source']} {res['page']}")

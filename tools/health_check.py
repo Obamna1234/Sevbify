@@ -56,7 +56,7 @@ def spotify_import():
 def bandcamp():
     from core import downloader
     e = downloader.engine()
-    r = e.search_bandcamp("Perturbator - Future Club")
+    r = e.search_bandcamp("Chris Zabriskie - Candlepower")
     assert r.get("found") and r.get("url"), r
     from core import streamer
     url, _h, secs = streamer._extract(e, r["url"])
@@ -68,7 +68,7 @@ def bandcamp_app_api():
     """Bandcamp's app API (what the app tries first, so the website's Client Challenge page isn't hit)."""
     from core import downloader, bandcamp as bc
     e = downloader.engine()
-    r = e.search_bandcamp("Perturbator - Future Club")
+    r = e.search_bandcamp("Chris Zabriskie - Candlepower")
     assert r.get("found") and r.get("url"), r
     info = bc._mobile_info(r["url"])
     assert info and info["url"].startswith("https://"), f"no ids from the search for {r['url']}"
@@ -77,7 +77,7 @@ def bandcamp_app_api():
 
 def soundcloud():
     from core import streamer
-    found = streamer.search_soundcloud("Perturbator Future Club", 5)
+    found = streamer.search_soundcloud("Chris Zabriskie Candlepower", 5)
     assert found, "no SoundCloud results"
     url, _h, secs = streamer._extract(__import__("core.downloader", fromlist=["x"]).engine(), found[0].page_url)
     assert url.startswith("http"), url
@@ -86,7 +86,7 @@ def soundcloud():
 
 def soundcloud_albums():
     from core import streamer
-    albums = streamer.soundcloud_albums("Perturbator", 5)
+    albums = streamer.soundcloud_albums("Chris Zabriskie", 5)
     assert albums, "no albums found"
     tracks = streamer.soundcloud_album_tracks(albums[0])
     assert tracks, f"no songs in {albums[0]['url']}"
@@ -112,8 +112,8 @@ def bandcamp_download():
     e = downloader.engine()
     out = tempfile.mkdtemp()
     log = []
-    r = e.search_bandcamp("Perturbator - Future Club")
-    ok = e.download_bandcamp_mp3(r["url"], "Perturbator - Future Club", out, log.append)
+    r = e.search_bandcamp("Chris Zabriskie - Candlepower")
+    ok = e.download_bandcamp_mp3(r["url"], "Chris Zabriskie - Candlepower", out, log.append)
     files = [f for f in os.listdir(out) if f.endswith((".mp3", ".m4a"))]
     assert ok and files, " | ".join(map(str, log))[-600:]
     return f"{files[0]} {os.path.getsize(os.path.join(out, files[0])) // 1024} KB"
@@ -142,7 +142,7 @@ def lyrics():
 
 def song_link():
     from core import share
-    t = om.search("Daft Punk Get Lucky", limit=1)[0]
+    t = om.search("Chris Zabriskie Candlepower", limit=1)[0]
     try:
         net.get_json(share.ODESLI, {"url": t.page_url, "userCountry": "US"}, use_cache=False)
     except Exception as e:
@@ -153,7 +153,7 @@ def song_link():
 
 
 def deezer():
-    r = om.search("Mega Drive NARC", limit=5)
+    r = om.search("Chris Zabriskie Divider", limit=5)
     assert r and r[0].preview_url
     return f"{len(r)} results"
 

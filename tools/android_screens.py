@@ -236,7 +236,7 @@ def main():
 
     def artist():
         tap("Search")
-        if tap("Daft Punk", tries=2):
+        if tap("Chris Zabriskie", tries=2):
             shot("artist_page", 8)
             back()
     step("artist", artist)
@@ -395,7 +395,7 @@ def main():
         # Song radio page (••• → Go to song radio)
         tap("Search"); tap("Clear", tries=1)
         tap("What do you want to listen to?", tries=2)
-        sh("input text perturbator"); time.sleep(8); hide_keyboard()
+        sh("input text zabriskie"); time.sleep(8); hide_keyboard()
         mores = [nd for nd in nodes() if nd[1] == "More" and nd[4] > 400]
         if mores:
             sh(f"input tap {mores[0][2]} {mores[0][3]}")
@@ -409,8 +409,8 @@ def main():
         shot("recent_searches", 3)
         # Artist page with releases
         tap("What do you want to listen to?", tries=2)
-        sh("input text perturbator"); time.sleep(8); hide_keyboard()
-        if tap("Perturbator", tries=2):
+        sh("input text zabriskie"); time.sleep(8); hide_keyboard()
+        if tap("Chris Zabriskie", tries=2):
             shot("artist_top", 10)
             tap("See more", tries=1) and shot("artist_see_more", 3)
             for i in range(4):

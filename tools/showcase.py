@@ -25,7 +25,7 @@ app = QApplication(sys.argv)
 from ui.main_window import MainWindow  # noqa: E402
 
 W, H = 1600, 960
-FAV_ARTISTS = ["Daft Punk", "The Weeknd", "Tame Impala", "Arctic Monkeys", "Billie Eilish", "Gorillaz"]
+FAV_ARTISTS = ["Chris Zabriskie", "Kevin MacLeod", "Kai Engel", "Broke For Free", "Jahzzar", "Lee Rosevere"]   # all openly licensed
 log = open(os.path.join(OUT, "showcase.log"), "w", encoding="utf-8")
 
 
@@ -105,7 +105,7 @@ def home():
 
 def search():
     w.show_search()
-    w.search_input.setText("Daft Punk")
+    w.search_input.setText("Chris Zabriskie")
     wait(lambda: w.web_table.isVisible() and len(w.web_table.songs_in_view()) >= 5, 60)
     pump(12)
     state["songs"] = w.web_table.songs_in_view()
@@ -114,10 +114,10 @@ def search():
 
 def play():
     songs = state.get("songs") or []
-    hits = [s for s in songs if "get lucky" in s.title.lower() or "one more time" in s.title.lower()] or songs
+    hits = [s for s in songs if "candlepower" in s.title.lower()] or songs
     song = hits[0]
     w.set_right_panel("nowplaying")
-    w.play_song(song, queue=songs[:20], source="Daft Punk")
+    w.play_song(song, queue=songs[:20], source="Chris Zabriskie")
     wait(lambda: w._reached_playing, 120)
     pump(10)
     for s in songs[1:6]:
@@ -128,15 +128,15 @@ def play():
 
 
 def artist():
-    w.show_web_artist("Daft Punk")
+    w.show_web_artist("Chris Zabriskie")
     pump(20)
     shot("artist")
 
 
 def album():
-    a = w.online.deezer.find_artist("Daft Punk")
+    a = w.online.deezer.find_artist("Chris Zabriskie")
     albums = w.online.deezer.artist_albums(a.get("id")).get("albums") or []
-    pick = next((x for x in albums if "random access" in (x.get("title") or "").lower()), albums[0])
+    pick = albums[0]
     w.open_web_album(pick)
     pump(15)
     shot("album")
@@ -191,7 +191,7 @@ def radio():
 
 def preview_feed():
     songs = state.get("songs") or []
-    w.open_preview_feed(songs[:10], "Daft Punk")
+    w.open_preview_feed(songs[:10], "Chris Zabriskie")
     pump(10)
     shot("preview-feed")
     feed = getattr(w, "_preview_feed", None)

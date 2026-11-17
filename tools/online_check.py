@@ -33,20 +33,20 @@ om = OnlineMusic(net, os.environ.get("LASTFM_API_KEY", ""))
 
 
 def deezer_search():
-    r = om.search("Mega Drive NARC", limit=5)
+    r = om.search("Chris Zabriskie Divider", limit=5)
     t = r[0]
     assert t.title and t.artist and t.preview_url and t.cover_url, t
     return f"{len(r)} results; first='{t.artist} - {t.title}' {t.duration_ms // 1000}s preview={bool(t.preview_url)}"
 
 
 def deezer_artist_card():
-    c = om.artist_card("Perturbator")
+    c = om.artist_card("Chris Zabriskie")
     assert c.get("picture_url") and c.get("fans"), c
     return f"fans={c['fans']} bio_source={c.get('bio_source', '-')} bio_len={len(c.get('bio', ''))}"
 
 
 def deezer_radio():
-    r = om.radio("Perturbator", "Raining Steel", limit=30)
+    r = om.radio("Chris Zabriskie", "Candlepower", limit=30)
     assert len(r) >= 10, len(r)
     return f"{len(r)} songs, {len({t.artist for t in r})} artists, e.g. " + "; ".join(f"{t.artist} - {t.title}" for t in r[:3])
 
@@ -59,7 +59,7 @@ def deezer_genre():
 
 
 def wikipedia():
-    w = om.wiki.artist_summary("Perturbator")
+    w = om.wiki.artist_summary("Kevin MacLeod")
     assert w.get("bio"), w
     return w["bio"][:80]
 

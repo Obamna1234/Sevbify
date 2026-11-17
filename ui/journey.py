@@ -29,10 +29,10 @@ BOT_WORDS = ("not a bot", "confirm you", "sign in to confirm", "http error 429",
 
 # Songs picked because they are reliably online: one Bandcamp has (Bandcamp works from cloud computers), and one
 # only on YouTube (tells us whether YouTube refuses this computer).
-BANDCAMP_SONG = ("Perturbator", "Future Club")
+BANDCAMP_SONG = ("Chris Zabriskie", "Candlepower")   # openly licensed (CC BY)
 YOUTUBE_SONG = ("Kevin MacLeod", "Monkeys Spinning Monkeys")
 PODCAST_SEARCH = "NPR News Now"
-OWN_SONG = ("Perturbator", "Future Club")      # a song file of "your own" (a tone, tagged like this song)
+OWN_SONG = ("Chris Zabriskie", "Candlepower")      # a song file of "your own" (a tone, tagged like this song)
 
 
 def _make_tagged_wav(path, artist_title, seconds=20):

@@ -208,7 +208,7 @@ def main():
         labels = [n[0] or n[1] for n in ui.nodes() if n[0] or n[1]][:25]
         return "pass", "on screen: " + ", ".join(labels)
     run("App opens", opens)
-    run("Stream a song (Bandcamp)", lambda: stream("perturbator future club", "Future Club"), needs=["App opens"])
+    run("Stream a song (Bandcamp)", lambda: stream("chris zabriskie candlepower", "Candlepower"), needs=["App opens"])
     run("Stream a song (YouTube)", lambda: stream("kevin macleod monkeys spinning monkeys", "Monkeys"),
         needs=["App opens"])
     playing = next((s for s in ("Stream a song (YouTube)", "Stream a song (Bandcamp)") if status_of(s) == "pass"),
