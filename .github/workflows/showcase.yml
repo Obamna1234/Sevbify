@@ -50,3 +50,27 @@ jobs:
           name: showcase
           path: showcase
           retention-days: 7
+
+  # Saves the pictures to the "showcase" branch. Only this small job has a write token, and it runs no third-party
+  # code: it downloads the pictures and pushes them.
+  push:
+    needs: showcase
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: showcase
+          path: /tmp/s
+      - name: Save to the showcase branch
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd /tmp/s
+          git init -q -b showcase
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "Showcase ${GITHUB_SHA::7}"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:showcase
