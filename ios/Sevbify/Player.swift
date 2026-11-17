@@ -335,7 +335,7 @@ final class Player: ObservableObject {
         }
         // Always the full song: a 30-second clip only plays from the song menu's Preview, never in its place.
         do {
-            let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs])
+            let o = try await Bridge.object("resolve", [t.artist, t.title, t.durationMs, t.source == "soundcloud" ? t.pageUrl : ""])
             streamedURL = (o["url"] as? String) ?? ""
             return (try asset(o), false)
         } catch {

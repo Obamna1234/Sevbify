@@ -60,6 +60,7 @@ import com.sevbify.app.Player
 import com.sevbify.app.Show
 import com.sevbify.app.Track
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 val TileColours = listOf(0xFFE13300, 0xFF1E3264, 0xFF8400E7, 0xFF148A08, 0xFFE8115B, 0xFF477D95, 0xFFBA5D07,
@@ -137,6 +138,16 @@ fun SearchScreen() {
         note = "Searching…"
         try {
             if (chip == "all" || chip == "songs") web = Bridge.tracks("search", q, 30).filter { Library.settings.explicitOk || !it.explicit }
+            if ((chip == "all" || chip == "songs") && Library.settings.source == "Bandcamp + YouTube") {
+                // Music that's only on SoundCloud joins the end of the songs (like the PC).
+                val known = org.json.JSONArray().also { a -> web.forEach { a.put(org.json.JSONArray(listOf(it.artist, it.title))) } }
+                val before = web
+                launch {                              // cancelled with this search when you type on
+                    val sc = try { Bridge.tracks("search_soundcloud", q, known.toString(), 10) }
+                             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; emptyList() }
+                    if (sc.isNotEmpty() && query.trim() == q && web === before) web = before + sc
+                }
+            }
             if (chip == "all" || chip == "artists") {
                 val a = Bridge.arr("search_artists", q, 10); artists = (0 until a.length()).map { a.getJSONObject(it) }
             }

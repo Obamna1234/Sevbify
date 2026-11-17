@@ -111,3 +111,16 @@ def test_bridge_made_for_you(bridge, monkeypatch):
     listens = json.dumps([["Jahzzar", "Siesta", 1700000000 + i] for i in range(10)])
     got = call(bridge, "made_for_you", listens, json.dumps([["Jahzzar", "Siesta"]]))
     assert [m["title"] for m in got] == ["Discover Weekly", "Daily Mix 1"] and got[0]["tracks"][0]["title"] == "Song 0"
+
+
+def test_bridge_soundcloud_search_skips_known_songs(bridge, monkeypatch):
+    from core import streamer
+    from core.online.models import OnlineTrack
+    monkeypatch.setattr(streamer, "search_soundcloud", lambda q, n: [
+        OnlineTrack("Siesta", "Jahzzar", source="soundcloud", page_url="https://soundcloud.com/a/b"),
+        OnlineTrack("Only Here", "Someone", source="soundcloud", page_url="https://soundcloud.com/a/c")])
+    got = call(bridge, "search_soundcloud", "siesta", json.dumps([["jahzzar", "siesta"]]))
+    assert [t["title"] for t in got] == ["Only Here"]
+    assert call(bridge, "search_soundcloud", "si") == []
+    call(bridge, "set_source", "YouTube only")
+    assert call(bridge, "search_soundcloud", "siesta") == []

@@ -716,7 +716,7 @@ object Player {
     }
 
     private suspend fun resolveQuietly(t: Track): org.json.JSONObject? =
-        try { Bridge.obj("resolve", t.artist, t.title, t.durationMs) }
+        try { Bridge.obj("resolve", t.artist, t.title, t.durationMs, if (t.source == "soundcloud") t.pageUrl else "") }
         catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; null }
 
     // --- gapless: the next song is handed to the player while this one plays, so there's no pause between them ---
@@ -890,7 +890,7 @@ object Player {
         if (!Library.settings.onlineNoticeAccepted) { noticeFor = t; return null }
         status = "Finding the full song…"
         try {
-            val r = Bridge.obj("resolve", t.artist, t.title, t.durationMs)
+            val r = Bridge.obj("resolve", t.artist, t.title, t.durationMs, if (t.source == "soundcloud") t.pageUrl else "")
             diagLog("found '${t.title}': ${r.optJSONObject("timings")?.toString() ?: "?"} (seconds)")
             return Triple(r.getString("url"), headersOf(r), "Full song · ${r.optString("source")} · not downloaded")
         } catch (e: CoreError) {

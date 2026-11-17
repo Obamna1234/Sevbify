@@ -172,6 +172,23 @@ def search(query, limit=30):
 
 
 @_call
+def search_soundcloud(query, known_json="[]", limit=10):
+    """Songs only on SoundCloud for a search (like the PC's): ones not already in the results (known_json:
+    [[artist, title], ...]). Only with "Bandcamp + YouTube" chosen, as on the PC."""
+    from core import downloader, streamer
+    if _state.get("source", downloader.SOURCE_BOTH) != downloader.SOURCE_BOTH or len(str(query).strip()) < 3:
+        return []
+    try:
+        known = {(" ".join(str(a).lower().split()), " ".join(str(t).lower().split()))
+                 for a, t in json.loads(known_json or "[]")[:500]}
+    except (ValueError, TypeError):
+        known = set()
+    out = [t for t in streamer.search_soundcloud(str(query)[:200], int(limit))
+           if (" ".join(t.artist.lower().split()), " ".join(t.title.lower().split())) not in known]
+    return _tracks(out)
+
+
+@_call
 def search_artists(query, limit=10):
     return _state["music"].deezer.search_artists(query, int(limit))
 
@@ -286,9 +303,12 @@ def preview_url(artist, title):
 
 
 @_call
-def resolve(artist, title, duration_ms=0):
-    """Full-length stream for a song you don't have: {"url", "headers", "page", "source", "duration_ms"}."""
+def resolve(artist, title, duration_ms=0, soundcloud_page=""):
+    """Full-length stream for a song you don't have: {"url", "headers", "page", "source", "duration_ms"}.
+    soundcloud_page: a SoundCloud search result is played from exactly that track (like the PC)."""
     from core import streamer
+    if soundcloud_page and streamer.is_soundcloud_track(soundcloud_page):
+        streamer.remember_page(artist, title, "SoundCloud", soundcloud_page)
     return streamer.find_full_song(artist, title, int(duration_ms or 0), _state["source"])
 
 
