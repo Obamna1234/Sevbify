@@ -150,8 +150,12 @@ jobs:
               for t in d.get("dialogs", []):
                   rows.append(f"| A box popped up by itself | ⚠ note | {t.replace('|', '/')} |")
           if os.path.exists(os.path.join(out, "errors.txt")):
-              rows.append("| Unexpected errors | ❌ FAIL | see errors.txt in the artifact |")
+              rows.append("| Unexpected errors | ❌ FAIL | see errors.txt in the artifact (and below) |")
               failed += 1
+              err = open(os.path.join(out, "errors.txt"), encoding="utf-8", errors="replace").read()
+              print("::group::errors.txt")
+              print(err[-6000:])
+              print("::endgroup::")
           text = f"### {name}\n\n| Step | Result | Details |\n|---|---|---|\n" + "\n".join(rows) + \
                  f"\n\n{info.get('system', '')}\n"
           open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write(text)
