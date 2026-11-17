@@ -7,6 +7,7 @@ Short notes for each version. The newest release's page has the install steps.
 **Next (beta.48, not released yet)**
 - Pair your phone with your computer by scanning a QR code and send songs and folders either way, over your own
   Wi-Fi only, encrypted, with your OK for each transfer.
+- Support the artist: where to buy a song straight from the artist (its Bandcamp page, the artist's own links).
 - Zoom applies instantly (Ctrl + / Ctrl − / Ctrl 0).
 - The equaliser's sliders now match the frequencies they change.
 - Taskbar buttons on Windows (Like, Previous, Play/Pause, Next); a floating mini video player for video podcasts;

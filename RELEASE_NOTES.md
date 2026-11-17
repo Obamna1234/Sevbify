@@ -1,8 +1,11 @@
 ## What's new in beta.48
 
 - **Pair your phone with your computer.** On the computer: Settings → Your phone → Pair a phone, then scan the QR
-  code with Sevbify on your phone. Send songs, albums and folders either way. It only works on your own Wi-Fi,
+  code with Sevbify on your phone. Send songs, albums and folders either way, on computers, Android and iPhone. It only works on your own Wi-Fi,
   nothing goes through the internet, everything is encrypted, and you say yes to each transfer.
+- **Support the artist:** a song's menu (and artist and podcast pages) shows where to buy the music straight from
+  the artist: the song's own Bandcamp page and the artist's own links. Each link shows its website first, and none
+  are guessed.
 - **Instant zoom:** Ctrl + / Ctrl − / Ctrl 0 change the size straight away.
 - **Equaliser fixed:** each slider now changes the frequency it shows.
 - **Windows taskbar buttons:** hover over Sevbify in the taskbar for Like, Previous, Play/Pause and Next.
