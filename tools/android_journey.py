@@ -227,23 +227,38 @@ def main():
     run("Pause and resume", pause_resume, needs=[playing])
 
     def podcast():
+        """Open a show from Home → Podcasts and play its latest episode. The list is live (today's charts), so a
+        heading such as "Top in Comedy" is skipped, and if one show's episode won't play (its host busy, an ad
+        server slow) the next show is tried: up to three."""
         back_to_home()
         if not ui.tap("Podcasts", tries=3):
             return "fail", "no Podcasts button on Home"
         time.sleep(6)
         found = ui.nodes()
-        shows = [n for n in found if n[0] and n[4] > 500 and n[0] not in ("Podcasts", "All", "Music", "Audiobooks")]
+        skip = ("Podcasts", "All", "Music", "Audiobooks", "Settings", "Home", "Search", "Your Library", "Create")
+        shows = [n for n in found if n[0] and n[4] > 500 and n[0] not in skip
+                 and not re.match(r"(Top|Explore|Browse|Popular|Categories|See all)\b", n[0])]
         if not shows:
             return "fail", "no podcasts listed"
-        ui.sh(f"input tap {shows[0][2]} {shows[0][3]}")
-        time.sleep(8)
-        ui.adb("logcat", "-c")
-        if not (ui.tap("Play", tries=2) or ui.tap("Play latest episode", exact=False, tries=1)):
-            return "fail", f"opened “{shows[0][0]}” but found no Play button"
-        ok, how = plays()
-        if ok:
-            return "pass", f"{shows[0][0]}: {how}"
-        return ("blocked" if blocked_in_log() else "fail"), f"{shows[0][0]}: {how} | " + " / ".join(app_log(6))
+        tried = []
+        for show in shows[:3]:
+            ui.sh(f"input tap {show[2]} {show[3]}")
+            time.sleep(8)
+            ui.adb("logcat", "-c")
+            if not (ui.tap("Play", tries=2) or ui.tap("Play latest episode", exact=False, tries=1)):
+                tried.append(f"“{show[0]}”: no Play button")
+            else:
+                ok, how = plays()
+                if ok:
+                    return "pass", f"{show[0]}: {how}" + (f" (after {'; '.join(tried)})" if tried else "")
+                if blocked_in_log():
+                    return "blocked", f"{show[0]}: {how}"
+                tried.append(f"“{show[0]}”: {how}")
+                ui.sh("input keyevent 127")                     # pause before trying the next show
+            back_to_home()
+            ui.tap("Podcasts", tries=2)
+            time.sleep(4)
+        return "fail", " / ".join(tried) + " | " + " / ".join(app_log(6))
     run("Play a podcast episode", podcast, needs=["App opens"])
 
     def settings():
