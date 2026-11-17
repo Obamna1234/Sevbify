@@ -1,5 +1,8 @@
 ## What's new in beta.48
 
+> **Windows and Linux: please download this update by hand once** (from this page). Beta.47's updater can't install
+> it by itself; from beta.48 on, updates install automatically again. macOS, Android and iPhone update as usual.
+
 - **Pair your phone with your computer.** On the computer: Settings → Your phone → Pair a phone, then scan the QR
   code with Sevbify on your phone. Send songs, albums and folders either way, on computers, Android and iPhone. It only works on your own Wi-Fi,
   nothing goes through the internet, everything is encrypted, and you say yes to each transfer.
