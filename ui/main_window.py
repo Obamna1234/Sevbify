@@ -3790,12 +3790,25 @@ class MainWindow(ShowsMixin, QMainWindow):
         box = QMessageBox(self)
         box.setWindowTitle("Sevbify")
         box.setText(f"Spotify only shared the first {len(pl.songs)} songs of “{pl.name}”.")
-        box.setInformativeText("Get all of them with Chosic's free Spotify Playlist Exporter: it opens in your "
-                               "browser with the link copied. Paste it there, press Export (CSV), and Sevbify adds "
-                               "the downloaded file to this playlist by itself.")
+        box.setInformativeText("Two ways to get all of them, without signing in to anything:\n\n"
+                               "1. In the Spotify app on this computer, open the playlist, click any song, press "
+                               "Ctrl+A then Ctrl+C, and click “Paste copied songs”.\n\n"
+                               "2. Chosic's free exporter: it opens in your browser with the link copied. Paste it "
+                               "there, press Export (CSV), and Sevbify adds the downloaded file to this playlist.")
+        paste = box.addButton("Paste copied songs", QMessageBox.ButtonRole.ActionRole)
         go = box.addButton("Open Chosic", QMessageBox.ButtonRole.AcceptRole)
         box.addButton(f"Keep the first {len(pl.songs)}", QMessageBox.ButtonRole.RejectRole)
         box.exec()
+        if box.clickedButton() is paste:
+            from core import importers
+            copied = QApplication.clipboard().text()
+            if not importers.parse_track_links(copied):
+                self.show_status("No Spotify songs were copied: in the Spotify app, click a song in the playlist, "
+                                 "press Ctrl+A then Ctrl+C, and try again.", 10000)
+                return
+            self.delete_playlist(pl)                     # the full playlist replaces the first 100
+            self.import_from_link(link, copied)
+            return
         if box.clickedButton() is not go:
             return
         QApplication.clipboard().setText(link.strip())
