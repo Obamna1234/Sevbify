@@ -57,10 +57,13 @@ FAQ = [
         ("How do I uninstall it?",
          "Sevbify is portable: delete its folder. Your playlists and settings are in its data folder "
          "(Help → Open Sevbify's data folder); delete that too to remove everything."),
-        ("Why isn't Spotify's song video (Canvas) shown?",
-         "Spotify only gives Canvas videos to signed-in Spotify accounts, and Sevbify never asks for your Spotify "
-         "sign-in (it could get the account banned). You can add your own looping video to a song: its ••• menu → "
-         "Canvas video (turn Canvas on in Settings)."),
+        ("Can a song have a looping video behind it?",
+         "Yes: add your own short video to a song with its ••• menu → Canvas video (turn Canvas on in Settings). "
+         "Sevbify never asks for any streaming-service sign-in."),
+        ("How do I pair my phone?",
+         "On the computer: Settings → Your phone → Pair a phone. On the phone: Settings → Your computer → Pair with "
+         "a computer, and scan the code. Both need to be on the same Wi-Fi. If the computer asks whether Sevbify may "
+         "use the network, choose Allow (private networks are enough)."),
         ("Something went wrong. What do I send?",
          "Help → Save a problem report… makes one text file with the activity and error logs (no passwords, "
          "your user folder's name hidden). Send that file."),

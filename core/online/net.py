@@ -19,7 +19,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-USER_AGENT = "Sevbify/5.0 (desktop music player; +https://github.com/Obamna1234/Sevbify)"
+# Just the app name: no link or anything else that points back to the project or to you.
+USER_AGENT = "Sevbify/5.0"
 
 
 # Only web addresses are ever opened. Links come from outside (podcast feeds, imported playlists), and a

@@ -1,295 +1,120 @@
 <img src="assets/branding/sevbify_logo_1024.png" alt="Sevbify logo" width="160">
 
-# Sevbify — a private music player
+# Sevbify
 
-Sevbify is an ad-free music player for **Windows, macOS, Linux, Android and iPhone**, with a familiar
-streaming-app-style design. Play your own music, stream or download full songs you don't have yet, follow
-podcasts, listen to free audiobooks, import playlists from Spotify, Apple Music, Deezer or a file, and use your own
-Jellyfin or Nextcloud server. No account, no ads, no tracking, nothing sold.
+Sevbify is a free, private music player for **Windows, macOS, Linux, Android and iPhone**. Play your own music,
+find songs and podcasts online, make playlists, and take it all with you. No account, no ads, no tracking, nothing
+sold.
 
-> **Pre-release.** Sevbify 5.0 is in public beta: everything works, but expect rough edges. Please report problems on
-> the [Issues](https://github.com/Obamna1234/Sevbify/issues) page.
+> **Beta.** Sevbify 5.0 is in public beta. Please report problems on the
+> [Issues](https://github.com/Obamna1234/Sevbify/issues) page (please leave out personal details).
 
-**Download:** [latest release](https://github.com/Obamna1234/Sevbify/releases) (every platform; the install steps are
-on the release page). Sevbify updates itself after that.
+**Download:** the [latest release](https://github.com/Obamna1234/Sevbify/releases) has every platform, with install
+steps on the release page. Sevbify updates itself after that.
 
-<p>
-  <img src="docs/screenshots/desktop-playlist.jpg" alt="Sevbify on a computer: a playlist with the now-playing panel" width="100%">
-</p>
+## What it does
 
-<p>
-  <img src="docs/screenshots/android-home.jpg" alt="Android: Home" width="19%">
-  <img src="docs/screenshots/android-library.jpg" alt="Android: Your Library" width="19%">
-  <img src="docs/screenshots/android-menu.jpg" alt="Android: the profile menu" width="19%">
-  <img src="docs/screenshots/android-settings.jpg" alt="Android: Settings" width="19%">
-  <img src="docs/screenshots/iphone-search.jpg" alt="iPhone: Search" width="19%">
-</p>
+- **Your music:** folders on your computer or phone, SD cards, cloud folders through the phone's file picker, or your
+  own **Jellyfin / Nextcloud** server.
+- **Find music online:** search songs, artists, albums and genres; artist pages, song radio, charts for your country
+  and "Made for you" mixes built on your own device from what you play.
+- **Play and keep:** songs found online can be played and saved for offline listening, from Bandcamp, SoundCloud,
+  YouTube and openly licensed music libraries (Jamendo, the Internet Archive). See *Using online music responsibly*.
+- **Playlists:** Liked Songs, folders, drag-and-drop, and import from a playlist link (Spotify, Apple Music, Deezer,
+  Jamendo) or a .csv / .txt / .m3u file.
+- **Podcasts and audiobooks:** follow shows (video podcasts too) and listen to free public-domain audiobooks from
+  LibriVox.
+- **Phone and computer together:** pair your phone with your computer by scanning a QR code and send songs and
+  folders either way, over your own Wi-Fi only.
+- **And:** lyrics, equaliser, crossfade, sleep timer, private sessions, instant zoom, mini player, 20 languages,
+  Bluetooth and car support, and automatic updates.
 
-### What it does
+## Using online music responsibly
 
-- **Your music**: folders on your computer or phone, SD cards, cloud folders (Nextcloud, OneDrive, Dropbox… through
-  the phone's file picker), or your own **Jellyfin / Nextcloud** server.
-- **Full songs you don't have yet**: found on Bandcamp, then YouTube; stream them or download them to keep.
-  A 30-second preview only plays when you ask for one.
-- **Search** in any language, with "Did you mean…" for typos. **Song radio**, artist pages, genres, lyrics.
-- **Import playlists** from Spotify, Apple Music, Deezer or Jamendo links, or from .csv / .txt / .m3u files, with a
-  spelling check for each song.
-- **Podcasts** (including video podcasts, with sponsor segments skipped) and **free audiobooks** (LibriVox).
-- **20 languages**, a **profile file** to move your playlists between devices, **in-app updates**, **Save space**
-  downloads, Bluetooth and **Android Auto**.
+Sevbify is a player and organiser. It doesn't host or share any music, and it isn't affiliated with Bandcamp,
+SoundCloud, YouTube, Deezer, Apple, Spotify or any other service it can work with.
 
-**Privacy:** Sevbify only contacts what a feature needs (listed in Settings → Privacy), never signs in to Spotify or
-YouTube, and keeps everything on your devices. See *Privacy* below.
+- **Only download music you have the right to download**, for example songs you've bought, that the artist offers
+  for free, or that are openly licensed (Creative Commons, public domain).
+- Using some sites' music outside their own apps may not be allowed by those sites' terms. Sevbify shows a notice
+  about this before the first stream or download, and you decide.
+- Sevbify never uses file-sharing networks or torrents, and never signs in to anyone's streaming account.
+- Support the artists you listen to: buy their music (Bandcamp makes this easy), go to their shows.
 
-Built with AI help (Anthropic's Claude writes and tests most of the code; the owner decides what it does and tests it).
-
-## Requirements
-
-| What | Version | Notes |
-|---|---|---|
-| Operating system | Windows 10/11 (64-bit), macOS, or Linux | Ready-made downloads for all three on the Releases page |
-| Python | 3.10 – 3.13, **64-bit** | https://www.python.org/downloads/ — tick "Add python.exe to PATH" |
-| VLC media player | 3.0.x, **64-bit** | **Only when running from source.** The ready-made Windows app has VLC's engine (libVLC) built in. From source: https://www.videolan.org/vlc/ (must match Python's 64-bit) |
-| Python packages | see `requirements.txt` | PyQt6, python-vlc, mutagen, Pillow, certifi, yt-dlp, pytest |
-| ffmpeg | nothing to install | Needed for downloading songs. Comes with the `imageio-ffmpeg` package (copied once into `%APPDATA%\Sevbify\ffmpeg` when running from source); the ready-made app has it built in. |
-
-## Quick start (recommended)
-
-**One-time setup**
-1. Install **64-bit Python 3.12** (https://www.python.org/downloads/, tick *Add python.exe to PATH*)
-   and **64-bit VLC** (https://www.videolan.org/vlc/).
-2. In GitHub Desktop: **File → Clone repository → Sevbify**.
-3. Optional: copy your music into the clone's `audio` folder (it stays on your PC and is never
-   uploaded), or skip this and use **Your Library → Add folder…** in the app.
-   With no `audio` folder, the app uses your Windows *Music* folder.
-
-**Every time there's an update**
-1. GitHub Desktop → **Fetch origin** → **Pull origin**.
-2. Double-click **`Run Sevbify.bat`**.
-
-The first run sets up a private Python environment (about a minute). After that it starts
-straight away, and re-installs packages automatically only when an update needs it.
-`Run Tests.bat` runs the automated tests.
-
-**Ready-made app (no Python, no GitHub Desktop needed):** open the repo's **Releases** page (right-hand side of the
-repo's main page) → newest version → under **Assets** download **Sevbify-Windows.zip** → Extract All → run
-**Sevbify.exe**. To open it like any other app, use **Settings → Add to Desktop and Start menu**. It's all in one: VLC's playback engine, the downloader and ffmpeg are inside, so nothing else needs
-installing. The install steps are on each release page.
-
-How releases are made: every push is built and tested on a real Windows machine by GitHub Actions (macOS and Linux
-builds are set up but switched off until later). When a version is ready, the version number in the `VERSION` file
-is changed (e.g. `5.0.0-beta.1`). If every test and check passes, that build is published as a Release tagged
-`v5.0.0-beta.1` automatically, with `RELEASE_NOTES.md` as its description. Versions with a dash are marked
-*Pre-release*. In-between builds are also downloadable from the **Actions** tab → latest *Build & test*
-run → **Sevbify-Windows** (kept for 30 days).
-- **macOS:** the app isn't signed by Apple yet, so the first time, right-click `Sevbify.app` → **Open** → **Open**.
-- **Linux:** extract with `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager (e.g. `sudo apt install vlc`).
-
-## Manual setup (Windows, PowerShell)
-
-Open PowerShell **in the project folder** (in File Explorer: Shift + right-click the folder → "Open in Terminal"), then:
-
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-If PowerShell refuses to run `Activate.ps1`, run this once and then try again:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-## Running the app
-
-```powershell
-.\.venv\Scripts\Activate.ps1      # if not already active
-python app.py
-```
-
-You can also launch it from any folder, e.g. `python "C:\path\to\Sevbify\app.py"` —
-music and artwork are found relative to the project folder.
-
-## Using the app
-
-| Where | What you can do |
-|---|---|
-| **Home** | Chips **All / Music / Podcasts / Audiobooks**. Click a cover to play. Right-click for *Add to playlist*. |
-| **Search** | Type to search your songs and the web. With the box empty (or the ▦ button in the search bar) it shows **Browse all**: Podcasts, Audiobooks and music genres (popular songs right now). |
-| **Your Library** (left) | Chips **Playlists / Podcasts / Audiobooks / Albums / Artists / Downloaded / To download**; 🔍 to filter; **Recents ▾** to sort (Recents, Recently added, Alphabetical) and view (Compact, List, Grid); folders; click *Your Library* to shrink it to covers, ⤢ to fill the window. **+ Create** → Playlist, Folder, or **Import a playlist**. |
-| **Your Songs** | Every song in your music folders. Click a column header to sort. **Add folder…** / **✕** / **Rescan**. |
-| **Playlists** | Click to open, double-click to play. Change the cover from the playlist page. |
-| **Import a playlist** | Paste a public **Spotify** or **Apple Music** playlist/album link, or choose a file (Exportify **CSV**, **TXT** in any language/encoding, **M3U**). Same order and cover; songs already in your music folders play from your files, the rest stream and wait under To download. Your Spotify account is never signed in to. **More than 100 songs:** Spotify only shares 100 per link without signing in, so in Spotify click a song in the playlist, press **Ctrl+A** then **Ctrl+C**, and paste into the second box. |
-| **Podcasts** | Search Apple's podcast directory, follow shows, stream or download episodes, continue where you left off. Paste a **YouTube channel** link for video podcasts: **Watch** the video or play the audio only. |
-| **Audiobooks** | Free public-domain audiobooks read by LibriVox volunteers (via the Internet Archive): stream chapters, download whole books, carry on where you stopped. |
-| **Settings** (⚙ or Ctrl+P) | Online & privacy, music folders on/off, downloads, playback (equaliser, normalise, fade, autoplay), display, Canvas, zoom, start-up and tray, storage, proxy, updates. |
-| **A playlist** | ▶ Play, **Preview** (the little cover: flick through the songs one at a time), shuffle, download (green when every song is downloaded), **•••** (Edit details, Delete, Move to folder, Add to other playlist, Share and export). 🔍 searches inside it, **Custom order ▾** sorts the view. **Shift+click** selects a range of songs, **Ctrl+click** adds one; right-click acts on all selected; **Delete** removes them. |
-| **Share and export** | **Export playlist file (.m3u8)** writes a list of your music files (it doesn't contain the music). **Copy songs to a folder or phone** copies the actual files, in order ("01 - Artist - Title.mp3") with a playlist file, skipping ones already there. |
-| **Player bar** | Play/pause, previous (restarts the song if > 3 s in), next, seek, volume and mute, **Miniplayer** and **Full screen** (F11). |
-| **Zoom** | **Ctrl +**, **Ctrl −**, **Ctrl 0** (or View → Zoom, or Settings). Sevbify restarts to show the new size. **Settings → Reset** puts settings back (your music, playlists and downloads are kept). |
-| **Private session** | File → Private Session: nothing you play is remembered (Recently played, Recents, podcast positions) until you close Sevbify or 6 hours pass. |
-| **Online / Offline** | Click **● Online** at the top right to go offline: Sevbify then contacts nothing at all. |
-| **Songs you don't have yet** | Greyed out with **⬇** everywhere (web search results, playlists, To download). While online they **stream in full**; right-click → **Download** to keep them for offline. |
-| **Radio** | In the queue panel, **Save as playlist** keeps a Radio as a playlist; songs you don't have stay in their place as ⬇ slots. |
-| **To download** (left panel) | Every song waiting to be downloaded: all ⬇ slots in your playlists plus songs you chose *Save for later* on, with **⬇ Download all**. |
-| **⬇ pill in the top bar** | Shows download progress ("⬇ 2 of 5 · Song"). Click it for **Pause after this song / Resume**, **Stop all** (stopped songs can be resumed), and each song with **Cancel** or **Try again**. If the internet or the download drive goes away, downloads wait and try again every minute. |
-
-**Keyboard (same as Spotify):** Space = play/pause · Ctrl+→ / Ctrl+← = next / previous · Shift+→ / Shift+← = seek 5 s ·
-Ctrl+↑ / Ctrl+↓ = volume · Ctrl+S = shuffle · Ctrl+R = repeat · Ctrl+L = search · Ctrl+F = filter Your Library ·
-Ctrl+N = new playlist · Ctrl+P = settings · Ctrl+Shift+R = rescan · F1 = about. All are also in the **•••** menu (top left).
-
-## Adding music
-
-Either put `.mp3`, `.wav`, `.flac`, `.ogg` or `.m4a` files in the bundled `audio` folder and
-press **Rescan**, or use **Your Library → Add folder…** to add any folder on your PC.
-Artwork comes from (in order): an image in `assets` with the same name as the audio file,
-art embedded in the file's tags, or a placeholder.
-
-## Streaming and downloading songs you don't have yet
-
-Songs you find with **Search** or **Radio** can be played and added to playlists before you have them. They sit in
-their place greyed out with ⬇, and the playlist header says how many still need downloading to play offline.
-Each one is also listed under **To download** on the left.
-
-**While online they stream in full:** when one plays, Sevbify finds the full song (Bandcamp first, then
-YouTube, using the song's real length to pick the right recording) and plays it straight away without saving it;
-the player shows *Full song · YouTube · not downloaded*. If no full version is found it plays Deezer's 30-second
-preview instead. **Settings → Play full songs you don't have yet** switches this off (previews only).
-Offline, these songs can't play until they're downloaded.
-
-Right-click such a song → **Download**, use **⬇ Download** on a playlist, or **⬇ Download all** on the
-**To download** page. Sevbify then, in the background while your music keeps playing:
-
-1. looks for the song on **Bandcamp** first, then **YouTube** (Settings → Downloads lets you pick
-   *Bandcamp + YouTube*, *Bandcamp only* or *YouTube only*);
-2. saves it as a tagged **MP3** with cover art in a **`Sevbify downloads`** folder inside your first
-   music folder;
-3. puts it in the exact place (#) of every playlist it was added to, even if more songs were added after it.
-
-If a download fails, the row says *Download failed*; right-click → **Retry download**, or click the red
-⬇ pill at the top. Closing Sevbify stops the current download; finished songs are kept.
-
-The download engine (`core/sevby_engine.py`) is copied from the SEVBY app
-(https://github.com/Obamna1234/sevby, MIT) with its window code removed; Sevbify doesn't need SEVBY
-installed. To update it after SEVBY changes, run
-`python tools/make_engine.py <path to sevby_app.py> core/sevby_engine.py`. Don't edit it by hand.
-
-**Only download music you have the right to download**, for example songs you've bought or that the
-artist offers for free. Streaming or downloading YouTube audio outside YouTube's own player (which also skips
-its ads) goes against YouTube's terms of service; Sevbify shows this notice once, before the first full stream or
-download, and you decide. Sevbify never downloads from file-sharing
-networks, torrents or "ripping groups": those mostly share music without the artists' permission.
-Sevbify is not affiliated with YouTube, Bandcamp, Apple, Spotify, Deezer, or **Sevby LLC (sevby.com)**.
-
-**What is tested:** the download queue, stopping, failures, retry, the one-time notice, slots filling
-in their exact place, and Radio → playlist → Download all are covered by automated tests that use a
-*fake* downloader (no internet). The real Bandcamp/YouTube download is checked on GitHub's Windows
-machine on every push (reports only: cloud servers are often blocked by YouTube), but it **has not yet
-been tried from inside Sevbify on a home PC**. The same engine works in SEVBY on Windows.
-
-## Where your playlists and settings are saved
-
-`%APPDATA%\Sevbify\library.json` (paste that into File Explorer's address bar). Playlists saved
-under the app's earlier names (`%APPDATA%\Aurvo` or `%APPDATA%\Custom Spotify Replica`) are copied across automatically on first launch.
-Playlists, volume and music folders are saved automatically. Songs inside the project folder are
-saved with relative paths, so moving the project folder doesn't break playlists. If a song's
-file goes missing, it stays in the playlist greyed out as "(file missing)" instead of being
-removed. If the save file is ever damaged, the app keeps a copy (`library.corrupt-<date>.json`)
-and starts fresh rather than crashing. Delete `library.json` to reset to first-run state.
-
-## Running the automated tests
-
-```powershell
-python -m pytest tests -v
-```
-
-The tests generate short WAV tones and play them through VLC's silent dummy output in a
-hidden window, so they make no sound and don't touch your music. They need VLC installed.
+If you're a rights holder with a concern about this project, please open an issue on GitHub.
 
 ## Privacy
 
-No account, no ads, no tracking, nothing sold. With online features on, Sevbify contacts only what each feature
-needs: Deezer (search, radio, genres, previews), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple iTunes (song names, the podcast
-directory), the podcasts' own feeds, the Internet Archive (audiobooks), Bandcamp and YouTube (full songs, downloads,
-video podcasts), Spotify / Apple Music only when you import a playlist link, LRCLIB (lyrics: the song's name and
-length; can be switched off), song.link (only when you share a song) and GitHub (update checks; can be switched
-off). Those sites see your IP address and what you look up, like a web browser would. Sevbify only looks
-at the music folders you add; it never searches the rest of your computer. Settings → Online features off: nothing
-is contacted at all.
+- **No account, no ads, no tracking, nothing sold.** Your library, playlists and listening history stay on your
+  devices. "Made for you" mixes are worked out on your device.
+- **Online features only contact what they need:** music catalogues for search (Deezer, Apple), the music sites a
+  song plays from, Wikipedia (artist info), LRCLIB (lyrics), podcast feeds, the Internet Archive (audiobooks) and
+  GitHub (update checks). Those sites see your IP address and what you look up, as with any website. Requests carry
+  only the app's name, nothing about you.
+- **Offline mode:** click **● Online** in the top bar (or turn online features off in Settings) and Sevbify contacts
+  nothing at all. A proxy/VPN can be set in Settings.
+- **Private session:** nothing you play is remembered until you end it or close Sevbify.
+- **Pairing a phone** works only on your own network, is encrypted, and needs your OK for every transfer. Nothing goes
+  through the internet. See [SECURITY.md](SECURITY.md).
+
+## Install
+
+- **Windows:** download `Sevbify-Windows.zip`, extract it, run `Sevbify.exe`. Settings → *Add to Desktop and Start
+  menu* makes shortcuts.
+- **macOS:** download `Sevbify-macOS.zip`, open it and move Sevbify to Applications. The first time, right-click it →
+  **Open** → **Open** (the app isn't signed by Apple yet).
+- **Linux:** `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager
+  (for example `sudo apt install vlc`).
+- **Android:** install `Sevbify-Android.apk` (allow installing from your browser or file manager when asked).
+- **iPhone:** install `Sevbify-iOS.ipa` with SideStore or AltStore (steps on the release page); after that, Settings →
+  Sevbify updates adds the update source.
+
+The first time you pair a phone, your computer may ask whether Sevbify may use the network (Windows firewall, macOS)
+and your iPhone asks about the local network: choose **Allow**.
+
+## Running from source
+
+Needs **64-bit Python 3.10–3.13** and **64-bit VLC 3.0** (the ready-made apps include VLC's engine).
+
+```
+python -m venv .venv
+.venv\Scripts\activate          (Windows)   |   source .venv/bin/activate   (macOS / Linux)
+pip install -r requirements.txt
+python app.py
+```
+
+On Windows you can also double-click `Run Sevbify.bat`, which sets everything up the first time.
+
+Tests: `python -m pytest tests`. They play generated test tones through VLC's silent output and never touch your
+music.
+
+## How releases are made
+
+Every change is built and tested automatically on Windows, macOS, Linux, an Android emulator and an iPhone
+simulator. Automated tests and demos use only openly licensed music. When the version number in `VERSION` changes and
+everything passes, the build is published as a release, with `RELEASE_NOTES.md` as its description. Each update is
+checked against its SHA-256 before it's installed. The Android signing key isn't in this repository.
 
 ## Project layout
 
-| Path | Purpose |
+| Path | What's there |
 |---|---|
-| `Run Sevbify.bat` | One-click launcher (sets up Python packages automatically) |
-| `Run Tests.bat` | Runs the automated tests |
-| `.github/workflows/build.yml` | Automatic tests + app builds for Windows, macOS and Linux on every push |
-| `app.py` | Entry point. Shows a clear message if VLC is missing. `--smoke-test` starts, loads the library and exits (used by the automatic build). |
-| `core/` | Data and logic with no UI code: `paths.py`, `models.py` (Song, Playlist), `library.py` (folder scanning), `storage.py` (save file), `downloader.py` (runs songs through the download engine) |
-| `core/sevby_engine.py` | SEVBY's download engine, **generated** by `tools/make_engine.py`; never edit by hand |
-| `ui/download_manager.py` | Background download queue (one song at a time, in its own thread) |
-| `tools/download_check.py` | Live download check run on GitHub (one Creative Commons song) |
-| `ui/main_window.py` | Main window: pages, player bar, playback, playlist actions |
-| `ui/track_table.py` | Song list used by Search, Your Library and playlist pages |
-| `ui/theme.py`, `ui/top_bar.py`, `ui/library_panel.py`, `ui/cards.py` | Spotify-style look: colours/fonts, top bar, Your Library panel, Home cards |
-| `core/streamer.py` | Finds a full-length stream for a song you don't have (Bandcamp, then YouTube) |
-| `core/importers.py` | Playlist import: Spotify / Apple Music links, CSV, TXT (any encoding), M3U |
-| `core/podcasts.py`, `core/audiobooks.py` | Podcast directory + RSS feeds + YouTube channels; LibriVox audiobooks via archive.org |
-| `core/library_index.py` | Albums and artists built from your files |
-| `core/updates.py` | Update checks for Sevbify and yt-dlp |
-| `ui/library_panel.py`, `ui/settings_page.py` | Your Library panel; the Settings page |
-| `ui/shows_page.py`, `ui/shows_controller.py`, `ui/video_page.py` | Podcasts, audiobooks, Browse and the video player |
-| `tests/` | Automated playback regression tests |
-| `audio/` | Your music (optional; kept on your PC only, not uploaded to GitHub) |
-| `assets/` | Artwork images + `album_covers/placeholder.png` |
-| `album_covers/` | Generated cache (extracted art, playlist collages) — safe to delete; not uploaded |
+| `app.py` | Starts the desktop app |
+| `core/` | Everything that isn't screens: library, playlists, search, playback helpers, podcasts, downloads, pairing (shared with the phone apps) |
+| `ui/` | The desktop app's windows (PyQt6) |
+| `android/` | The Android app (Kotlin + Jetpack Compose; runs `core/` through Chaquopy) |
+| `ios/` | The iPhone app (SwiftUI; runs `core/` with an embedded Python) |
+| `tests/` | Automated tests |
+| `tools/` | Build, check and maintenance scripts |
 
 ## Credits and licences
 
 - Sevbify's own code: MIT.
-- Download engine: from SEVBY (MIT). Uses **yt-dlp** (Unlicense) and **ffmpeg** (the ready-made app
-  bundles an ffmpeg build from the `imageio-ffmpeg` package, which is GPL-licensed; see https://ffmpeg.org).
-- Logo and icons: original artwork for Sevbify, drawn by `tools/make_logo.py` (files in `assets/branding`).
-- Playback: VLC's engine, libVLC (LGPL 2.1+; some plugins GPL) by VideoLAN, via python-vlc. The ready-made Windows
-  app includes libVLC and its plugins in `_internal\vlc`, with VLC's licence as `VLC-COPYING.txt`; VLC's source code
-  is at https://www.videolan.org. Font: Figtree (SIL Open Font License).
-- Podcasts: Apple's public podcast directory and each show's own RSS feed. Audiobooks: LibriVox recordings (public
-  domain) hosted by the Internet Archive.
+- Playback: libVLC by VideoLAN (LGPL 2.1+; some plugins GPL), via python-vlc. The ready-made apps include it, with
+  VLC's licence. Source: https://www.videolan.org.
+- Downloads use yt-dlp (Unlicense) and ffmpeg (GPL; from the `imageio-ffmpeg` package, see https://ffmpeg.org).
+- QR codes: segno (BSD). Encryption: PyCryptodome (BSD / public domain), and the phones' own system libraries.
+- Font: Figtree (SIL Open Font License). Logo and icons: original artwork for Sevbify.
+- Audiobooks: LibriVox recordings (public domain), hosted by the Internet Archive.
 
-## Android app
-
-`android/` holds the Android app (Kotlin + Jetpack Compose, Android 13 or newer). It runs this repository's
-`core/` Python code through Chaquopy, so the Windows app and the phone app share search, matching, downloads,
-importing, podcasts and audiobooks; only the screens differ (modelled on Spotify's phone app). GitHub builds
-it on every push (`gradle -p android assembleRelease`) and each release carries `Sevbify-Android.apk`.
-Install steps are in the release notes. The release signing key is not in the repository: GitHub's build reads it
-from the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets (building it yourself without them gives
-a debug-signed APK).
-
-## Updates
-
-Once a day, when online, every version asks GitHub for the newest release and offers it once (or whenever you
-press Check for updates):
-
-- **Windows, macOS, Linux:** Download, then restart. The file comes only from this repository's releases and is
-  checked against GitHub's SHA-256 before it's unpacked; a small script swaps the old app for the new one after
-  Sevbify closes and opens it again. Playlists, settings and music are kept (they're stored elsewhere).
-- **Android:** the APK is downloaded (checksum-checked) and Android's installer opens. It's signed with the same
-  key, so it installs over the old one and keeps everything.
-- **iPhone:** add this source to SideStore or AltStore once (Settings → Sevbify updates has buttons for it):
-  `https://raw.githubusercontent.com/Obamna1234/Sevbify/altstore/source.json`. Each release updates it, and they
-  offer the new version like an App Store update.
-
-## Known limitations
-
-- The library is re-read from the files on every launch (fine for hundreds of songs; a cache will be needed for very large libraries).
-- Video podcasts (YouTube) and full songs from YouTube depend on yt-dlp keeping up with YouTube's changes: use
-  Settings → Update yt-dlp if they stop working.
-- A Spotify playlist link brings in 100 songs; paste the songs copied in Spotify (Ctrl+A, Ctrl+C) to get them all.
-- Spotify's own Canvas loops can't be fetched without signing in to a Spotify account, so Sevbify doesn't; add
-  your own loop with a song's ••• → Canvas video.
-- Zoom needs a restart to apply (Sevbify is drawn at one size when it starts).
-- Full streaming of songs you don't have depends on Bandcamp/YouTube being reachable (not in mainland China
-  without a VPN, for example) and can break when YouTube changes; then the 30-second preview is used.
+Built with AI help: Anthropic's Claude writes and tests most of the code; the owner decides what it does and tests it.

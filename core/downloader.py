@@ -27,6 +27,7 @@ def engine():
     if _engine is None:
         from core import sevby_engine
         _engine = sevby_engine
+        _engine._FREE_UA = "Sevbify/5.0"          # the engine's own label carries a link; just the app name instead
         try:
             _ensure_ffmpeg(_engine)
         except Exception as exc:  # never stop the app over this; check_tools() will report it
