@@ -37,7 +37,7 @@ def _arrow_head(p, tip: QPointF, direction: str, size: float, color):
     p.drawPolygon(QPolygonF(pts))
 
 
-def shuffle(color=GREY, size=20, dot=False):
+def shuffle(color=GREY, size=20, dot=False, smart=False):
     pm, p = _canvas(size)
     s = size
     p.setPen(_pen(color, s * 0.09))
@@ -51,6 +51,11 @@ def shuffle(color=GREY, size=20, dot=False):
     p.drawPath(path2)
     _arrow_head(p, QPointF(s * 0.92, s * 0.28), "right", s * 0.14, color)
     _arrow_head(p, QPointF(s * 0.92, s * 0.68), "right", s * 0.14, color)
+    if smart:                                          # Smart Shuffle: a little sparkle, like Spotify's
+        p.setPen(_pen(color, s * 0.06))
+        cx, cy, r = s * 0.2, s * 0.1, s * 0.09
+        p.drawLine(QPointF(cx - r, cy), QPointF(cx + r, cy))
+        p.drawLine(QPointF(cx, cy - r), QPointF(cx, cy + r))
     if dot:
         p.setBrush(QColor(color)); p.setPen(Qt.PenStyle.NoPen)
         p.drawEllipse(QPointF(s * 0.5, s * 0.95), s * 0.05, s * 0.05)

@@ -4752,6 +4752,36 @@ class MainWindow(ShowsMixin, QMainWindow):
         tw.addWidget(self.pl_table)
         layout.addWidget(table_wrap, 1)
 
+        # Recommended (like Spotify, under a playlist): songs like the ones in it; ⊕ adds one, ↻ shows others.
+        self.pl_recs = QWidget()
+        rv = QVBoxLayout(self.pl_recs)
+        rv.setContentsMargins(24, 8, 24, 16)
+        rh = QHBoxLayout()
+        rt = QLabel("Recommended")
+        rt.setStyleSheet("color: white; font-size: 22px; font-weight: 800;")
+        rh.addWidget(rt)
+        rs = QLabel("Based on what's in this playlist")
+        rs.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px;")
+        rh.addWidget(rs)
+        rh.addStretch()
+        self.pl_recs_refresh = QPushButton("Refresh")
+        self.pl_recs_refresh.setStyleSheet(PILL_BUTTON)
+        self.pl_recs_refresh.clicked.connect(lambda: self._load_recommendations(self.open_playlist, fresh=True))
+        rh.addWidget(self.pl_recs_refresh)
+        rv.addLayout(rh)
+        self.pl_recs_table = TrackTable(sortable=False)
+        self.pl_recs_table.set_two_line_titles(True)
+        self.pl_recs_table.mark_pending = True
+        self.pl_recs_table.setMinimumHeight(330)
+        self.pl_recs_table.play_requested.connect(
+            lambda s, view: self.play_song(s, queue=self.pl_recs_table.songs_in_view(), source="Recommended"))
+        self.pl_recs_table.context_requested.connect(
+            lambda s, row, pos: self._show_song_menu(s, pos, queue=self.pl_recs_table.songs_in_view(),
+                                                     source="Recommended"))
+        rv.addWidget(self.pl_recs_table)
+        self.pl_recs.hide()
+        layout.addWidget(self.pl_recs)
+
     def show_playlist(self, playlist):
         self.open_playlist = playlist
         self.refresh_playlist_page()
@@ -4808,6 +4838,52 @@ class MainWindow(ShowsMixin, QMainWindow):
         size = 56 if len(pl.name) <= 16 else (44 if len(pl.name) <= 24 else (34 if len(pl.name) <= 36 else 26))
         self.pl_title.setStyleSheet(f"color: white; font-size: {size}px; font-weight: 800; background: transparent;")
         self.pl_empty.setVisible(not pl.songs)
+        self._load_recommendations(pl)
+
+    def _load_recommendations(self, pl, fresh=False):
+        """Songs like this playlist's (song radio from a few of its songs), not already in it, not hidden."""
+        if pl is None or not pl.songs or not self.online_enabled:
+            self.pl_recs.hide()
+            return
+        cache = self.__dict__.setdefault("_recs", {})
+        key = (id(pl), len(pl.songs))
+        if not fresh and key in cache:
+            self._show_recommendations(pl, cache[key])
+            return
+        import random as _r
+        seeds = [s for s in pl.songs if s.artist and s.artist != "Unknown Artist"]
+        seeds = _r.sample(seeds, min(3, len(seeds)))
+        if not seeds:
+            self.pl_recs.hide()
+            return
+        have = {(s.artist.casefold(), s.title.casefold()) for s in pl.songs}
+
+        def work():
+            out, seen = [], set(have)
+            for s in seeds:
+                for t in self.online.radio(s.artist, s.title, limit=20):
+                    k = (t.artist.casefold(), t.title.casefold())
+                    if k not in seen:
+                        seen.add(k)
+                        out.append(t)
+            _r.shuffle(out)
+            return out[:30]
+
+        def done(tracks, playlist=pl, k=key):
+            tracks = self._allowed(tracks)[:10]
+            cache[k] = tracks
+            if self.open_playlist is playlist:
+                self._show_recommendations(playlist, tracks)
+        self.online_call(work, on_done=done, on_error=lambda _e: self.pl_recs.hide())
+
+    def _show_recommendations(self, pl, tracks):
+        if not tracks:
+            self.pl_recs.hide()
+            return
+        items = self.radio_items(tracks)
+        self.pl_recs_table.set_songs(items)
+        self.fetch_covers([s for s in items if getattr(s, "is_remote", False)])
+        self.pl_recs.show()
 
     def _rename_playlist_dialog(self, pl):
         self.edit_playlist_details(pl)
@@ -5654,8 +5730,11 @@ class MainWindow(ShowsMixin, QMainWindow):
         # Tooltips like Spotify's, naming what's playing: "Enable shuffle for Rock".
         ctx = self.pq.source_name if self.current_song is not None and self.pq.source_name else ""
         for_ctx = f" for {ctx}" if ctx else ""
-        self.shuffle_btn.setIcon(icons.shuffle(icons.GREEN if on else icons.GREY, dot=on))
-        self.shuffle_btn.setToolTip(("Disable shuffle" if on else f"Enable shuffle{for_ctx}") + " (Ctrl+S)")
+        smart = on and getattr(self, "_smart_shuffle", False)
+        self.shuffle_btn.setIcon(icons.shuffle(icons.GREEN if on else icons.GREY, dot=on, smart=smart))
+        self.shuffle_btn.setToolTip(("Disable Smart Shuffle" if smart else
+                                     ("Enable Smart Shuffle" if on and self.online_enabled else "Disable shuffle")
+                                     if on else f"Enable shuffle{for_ctx}") + " (Ctrl+S)")
         mode = self.pq.repeat
         self.repeat_btn.setIcon(icons.repeat(icons.GREY if mode == "off" else icons.GREEN,
                                              one=(mode == "one"), dot=(mode != "off")))
@@ -5669,11 +5748,72 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.nowplaying_btn.setIcon(icons.now_playing(icons.GREEN if n else icons.GREY, dot=n))
 
     def toggle_shuffle(self):
-        self.pq.set_shuffle(not self.pq.shuffle)
+        """Off → Shuffle → Smart Shuffle (adds recommended songs to what you're playing, like Spotify) → off.
+        Smart Shuffle is offered when online; its songs are only in the queue, never saved to your playlist."""
+        smart_ok = self.online_enabled and self.pq.toggle_allowed()
+        if not self.pq.shuffle:
+            self.pq.set_shuffle(True)
+        elif not getattr(self, "_smart_shuffle", False) and smart_ok:
+            self._smart_shuffle = True
+            self._add_smart_songs()
+        else:
+            self._smart_shuffle = False
+            self._remove_smart_songs()
+            self.pq.set_shuffle(False)
         self.user_data.shuffle = self.pq.shuffle
         self._update_mode_buttons()
         self._queue_changed()
         self.schedule_save()
+
+    def _add_smart_songs(self):
+        """Smart Shuffle: one recommended song after every few of yours (song radio from a few of them)."""
+        import random as _r
+        ctx = [s for s in self.pq.items if not getattr(s, "_smart", False)]
+        seeds = [s for s in ctx if s.artist and s.artist != "Unknown Artist"]
+        seeds = _r.sample(seeds, min(3, len(seeds)))
+        if not seeds:
+            return
+        have = {(s.artist.casefold(), s.title.casefold()) for s in ctx}
+
+        def work():
+            out, seen = [], set(have)
+            for s in seeds:
+                for t in self.online.radio(s.artist, s.title, limit=15):
+                    k = (t.artist.casefold(), t.title.casefold())
+                    if k not in seen:
+                        seen.add(k)
+                        out.append(t)
+            _r.shuffle(out)
+            return out
+
+        def done(tracks):
+            if not getattr(self, "_smart_shuffle", False):
+                return
+            items = self.radio_items(self._allowed(tracks))
+            for s in items:
+                try:
+                    s._smart = True
+                except AttributeError:
+                    pass
+            upcoming = self.pq.items[self.pq.index + 1:]
+            mixed, it = [], iter(items)
+            for n, s in enumerate(upcoming, 1):
+                mixed.append(s)
+                if n % 3 == 0:
+                    nxt = next(it, None)
+                    if nxt is not None:
+                        mixed.append(nxt)
+            self.pq.items = self.pq.items[: self.pq.index + 1] + mixed
+            self._queue_changed()
+            self.show_status("Smart Shuffle: recommended songs added to what you're playing (not to your playlist)",
+                             kind="info", timeout_ms=5000)
+        self.online_call(work, on_done=done, on_error=lambda _e: None)
+
+    def _remove_smart_songs(self):
+        cur = self.pq.current
+        keep = [s for s in self.pq.items if not getattr(s, "_smart", False) or s is cur]
+        self.pq.index = keep.index(cur) if cur in keep else 0
+        self.pq.items = keep
 
     def cycle_repeat(self):
         self.user_data.repeat = self.pq.cycle_repeat()
