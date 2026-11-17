@@ -64,7 +64,7 @@ MAX_REL_PATH = 200
 DISK_MARGIN = 200 * 1024 ** 2
 DECLINES_BEFORE_PAUSE = 3
 DECLINE_PAUSE_SECONDS = 600
-DEFAULT_PORT_RANGE = (49200, 49900)
+DEFAULT_PORT_RANGE = (28100, 28900)   # below the ports Windows/Hyper-V often reserve (49152+)
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wav", ".wma", ".aiff", ".aif", ".alac", ".ape",
              ".mka", ".webm"}
 EXTRA_EXT = {".jpg": 30 * 1024 ** 2, ".jpeg": 30 * 1024 ** 2, ".png": 30 * 1024 ** 2, ".lrc": 1024 ** 2,
@@ -764,13 +764,17 @@ class PairServer:
 
     # listening
     def start(self):
+        """Listen on the kept port (so paired phones find this computer again); if Windows or another program has
+        it, a few nearby ones, then other ports in the range (the one that works is kept)."""
         last = None
-        for port in ([self.port] + [self.port + k for k in range(1, 6)]) if self.port else [0]:
+        tries = [self.port + k for k in range(6)] if self.port else []
+        tries += [secrets.randbelow(DEFAULT_PORT_RANGE[1] - DEFAULT_PORT_RANGE[0]) + DEFAULT_PORT_RANGE[0]
+                  for _ in range(20)]
+        for port in tries + [0]:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if os.name == "nt":
-                s.setsockopt(socket.SOL_SOCKET, getattr(socket, "SO_EXCLUSIVEADDRUSE", 0) or socket.SO_REUSEADDR, 1) \
-                    if hasattr(socket, "SO_EXCLUSIVEADDRUSE") else None
-            else:
+            if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            elif os.name != "nt":
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("0.0.0.0", port))
@@ -781,6 +785,10 @@ class PairServer:
             s.listen(16)
             self.sock = s
             self.port = s.getsockname()[1]
+            if self.port != self.store.port and DEFAULT_PORT_RANGE[0] <= self.port <= DEFAULT_PORT_RANGE[1]:
+                with self.store.lock:
+                    self.store.port = self.port
+                    self.store._save()
             threading.Thread(target=self._accept_loop, daemon=True, name="sevbify-pair-listen").start()
             return self.port
         raise last or OSError("no free port")

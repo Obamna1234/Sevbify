@@ -410,3 +410,25 @@ def test_crypto_test_vector_is_stable():
 EXPECTED = {"c2s": "8638dfdad0487dfde8d45c9487939f51f72828040e0c707ec4dfc5bdb4725b52",
             "s2c": "12fb672e706357a42565dacd9cb252aa46de1e3101aa2d1a9018c942128aa67e",
             "first_frame": "0000001d66d891584379f9cd9fcd93c63311ea622004319f5c86f7e1c96a625ae2"}
+
+
+def test_a_taken_port_falls_back_and_is_kept(tmp_path):
+    store = pr.DeviceStore(str(tmp_path))
+    blockers = []
+    for k in range(6):                                  # the kept port and its neighbours are taken
+        b = socket.socket()
+        try:
+            b.bind(("0.0.0.0", store.port + k))
+            b.listen(1)
+            blockers.append(b)
+        except OSError:
+            b.close()
+    srv = pr.PairServer(str(tmp_path), str(tmp_path / "m"), "PC", "1", Events())
+    try:
+        port = srv.start()
+        assert port not in [b.getsockname()[1] for b in blockers]
+        assert pr.DeviceStore(str(tmp_path)).port in (port, store.port)
+    finally:
+        srv.stop()
+        for b in blockers:
+            b.close()
