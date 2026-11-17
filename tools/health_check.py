@@ -135,7 +135,7 @@ def podcasts():
 
 def lyrics():
     from core import lyrics as L
-    lyr = L.find(net, "Rick Astley", "Never Gonna Give You Up", "", 213000)
+    lyr = L.find(net, "Josh Woodward", "Let It In", "", 242000)          # openly licensed (CC BY)
     assert lyr is not None and lyr.plain.strip()
     return f"{len(lyr.plain.splitlines())} lines"
 

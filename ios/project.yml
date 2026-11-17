@@ -20,6 +20,10 @@ targets:
       - path: Sevbify
         excludes:
           - "Info.plist"
+          - "Tour/**"
+      - path: Sevbify/Tour
+        type: folder
+        buildPhase: resources
       - path: app
         type: folder
         buildPhase: resources

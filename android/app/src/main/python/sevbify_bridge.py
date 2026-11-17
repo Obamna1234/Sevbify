@@ -523,6 +523,13 @@ def support_links(artist, title, page_url="", source=""):
 
 
 @_call
+def show_support_links(show_json):
+    """A podcast's own support links (its <podcast:funding> link and website), https only. Nothing is fetched."""
+    from core import podcasts, support
+    return support.for_show(podcasts.Show.from_dict(json.loads(show_json)))
+
+
+@_call
 def update_ytdlp():
     """Fetch the newest official yt-dlp (checksum-checked); it's used from the next start."""
     from core import updates

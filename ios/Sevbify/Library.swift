@@ -16,11 +16,12 @@ struct Settings: Codable {
     var noticeAccepted = false
     var lastAppCheck: Double = 0          // last daily check for a new Sevbify
     var updateAsked = ""                  // newest version already offered (asked once per version)
+    var tourSeen = false                  // the feature tour was closed with "Don't show this again"
 
     init() {}
     enum CodingKeys: String, CodingKey {
         case online, streamFull, source, autoplay, explicitOk, songQuality, shuffle, repeatMode, showPlaylistOrigin,
-             lastfmKey, jamendoId, noticeAccepted, lastAppCheck, updateAsked
+             lastfmKey, jamendoId, noticeAccepted, lastAppCheck, updateAsked, tourSeen
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -31,6 +32,7 @@ struct Settings: Codable {
         shuffle = b(.shuffle, false); repeatMode = s(.repeatMode, "off"); showPlaylistOrigin = b(.showPlaylistOrigin, false)
         lastfmKey = s(.lastfmKey, ""); jamendoId = s(.jamendoId, ""); noticeAccepted = b(.noticeAccepted, false)
         lastAppCheck = (try? c.decode(Double.self, forKey: .lastAppCheck)) ?? 0; updateAsked = s(.updateAsked, "")
+        tourSeen = b(.tourSeen, false)
     }
 }
 

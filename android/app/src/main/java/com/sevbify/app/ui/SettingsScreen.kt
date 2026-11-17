@@ -380,6 +380,11 @@ fun SettingsPageScreen(key: String) {
                   "Bandcamp, Apple, Deezer or Sevby LLC.")
         }
         item {
+            OutlinedButton(onClick = { Tour.showAgain() }, modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(tr("Feature tour"), color = C.Text)
+            }
+        }
+        item {
             Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = {
                     scope.launch {

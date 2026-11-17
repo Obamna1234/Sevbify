@@ -37,3 +37,6 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: python tools/cc_probe.py || true
+      - name: Spotify over-100-songs probe (information only)
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: python tools/spotify_probe.py || true

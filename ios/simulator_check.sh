@@ -37,6 +37,8 @@ run 03_search 25 -SEVTab search -SEVQuery "chris zabriskie"
 run 04_library 8 -SEVTab library
 run 05_now_playing 30 -SEVTab home -SEVQuery "chris zabriskie" -SEVPlay open
 run 06_first_run_notice 10
+run 07_tour 12 -SEVTab home -SEVTour
+run 08_settings_computer 15 -SEVTab home -SEVRoute pair
 
 # What's inside the app, and any crash reports.
 { echo "== Frameworks"; ls "$APP/Frameworks" | head -50; echo "== top"; ls "$APP" | head -50

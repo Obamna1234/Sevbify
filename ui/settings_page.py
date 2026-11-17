@@ -63,6 +63,7 @@ class SettingsPage(QWidget):
     open_folder_requested = pyqtSignal(str)
     shortcuts_requested = pyqtSignal()
     import_requested = pyqtSignal()
+    tour_requested = pyqtSignal()
     pair_requested = pyqtSignal()
     phone_remove_requested = pyqtSignal(str)
     profile_export_requested = pyqtSignal()
@@ -385,6 +386,11 @@ class SettingsPage(QWidget):
         row.addStretch()
         v.addLayout(row)
         self.controls["check_updates"] = check
+        tour = QPushButton("Feature tour")
+        tour.setToolTip("Shows what Sevbify can do, with pictures")
+        tour.clicked.connect(self.tour_requested.emit)
+        row.insertWidget(1, tour)
+        self.controls["feature_tour"] = tour
         self.app_update_label = QLabel(info.get("app_update", ""))
         self.app_update_label.setObjectName("desc")
         self.app_update_label.setWordWrap(True)

@@ -20,6 +20,7 @@ struct SettingsView: View {
             } footer: {
                 Text("No account, no ads, no tracking, nothing sold. Online, Sevbify only contacts what each feature needs: Deezer (search, radio, genres), Wikipedia (artist info), DuckDuckGo (only a finished search whose results look wrong, for “Did you mean”), Apple (podcast directory), Bandcamp and YouTube (full songs, downloads), Spotify, Apple Music or Deezer only when you import a link, song.link when you share, and GitHub for updates.")
             }
+            if Smoke.value("-SEVRoute") == "pair" { PairSettingsSection() }    // screenshot for the feature tour
             Section("Playback") {
                 Toggle("Autoplay similar songs when your music ends", isOn: $lib.settings.autoplay)
             }
@@ -66,7 +67,7 @@ struct SettingsView: View {
             } header: { Text("Sevbify updates") } footer: {
                 Text("Once Sevbify's source is added, SideStore or AltStore offer each new version like an App Store update. Sevbify also tells you once when a new version is out.")
             }
-            PairSettingsSection()
+            if Smoke.value("-SEVRoute") != "pair" { PairSettingsSection() }
             Section("Car") {
                 Text(CarPlayInfo.text).font(.footnote).foregroundColor(C.dim)
             }
@@ -80,6 +81,7 @@ struct SettingsView: View {
             Section("About") {
                 LabeledContent("Sevbify", value: Bundle.main.object(forInfoDictionaryKey: "SevbifyVersion") as? String ?? "")
                 LabeledContent("Python", value: python)
+                Button("Feature tour") { Tour.shared.showAgain() }.foregroundColor(C.green)
                 Text("Built with AI help (Anthropic's Claude). Not affiliated with Spotify, YouTube, Bandcamp, Apple or Deezer.")
                     .font(.caption).foregroundColor(C.dim)
             }
@@ -109,7 +111,10 @@ enum Smoke {
     @MainActor static func runIfAsked() {
         if let tab = value("-SEVTab") {
             Library.shared.settings.noticeAccepted = true
+            Library.shared.settings.tourSeen = !args.contains("-SEVTour")     // screenshots: the tour only when asked
             Nav.current?.tab = tab == "search" ? .search : (tab == "library" ? .library : .home)
+            if args.contains("-SEVTour") { Tour.shared.showAgain() }
+            if let r = value("-SEVRoute"), r == "settings" || r == "pair" { Nav.current?.go(.settings) }
         }
         if value("-SEVPlay") != nil { Task { await playFirstSearchResult() } }
         guard args.contains("-SEVSmoke") else { return }

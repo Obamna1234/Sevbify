@@ -46,6 +46,7 @@ data class Settings(
     var audioCache: Boolean = false,           // experimental: keep up to 256 MB of streamed audio in a private cache
     var profileBackup: Boolean = false,        // keep "Sevbify profile.sevbify" in Download/Sevbify (survives uninstalling)
     var profileBackupUri: String = "",          // SponsorBlock for YouTube episodes (only a hash prefix is sent)   // coloured border: made in Sevbify / imported from a link / from a file
+    var tourSeen: Boolean = false,             // the feature tour was closed with "Don't show this again"
     var betaUpdates: Boolean = true,           // offer pre-release (beta) updates too; off = only official releases
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
@@ -61,7 +62,7 @@ data class Settings(
         put("gapless", gapless); put("audio_cache", audioCache)
         put("profile_backup", profileBackup); put("profile_backup_uri", profileBackupUri)
         put("last_app_check", lastAppCheck); put("update_asked", updateAsked); put("beta_updates", betaUpdates)
-        put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt)
+        put("car_tip_shown", carTipShown); put("car_tip_at", carTipAt); put("tour_seen", tourSeen)
     }
 
     companion object {
@@ -96,6 +97,7 @@ data class Settings(
             s.lastAppCheck = o.optLong("last_app_check"); s.updateAsked = o.optString("update_asked")
             s.betaUpdates = o.optBoolean("beta_updates", true)
             s.carTipShown = o.optBoolean("car_tip_shown"); s.carTipAt = o.optLong("car_tip_at")
+            s.tourSeen = o.optBoolean("tour_seen")
             return s
         }
     }

@@ -26,15 +26,24 @@ def _human(n):
         n /= 1024
 
 
-def qr_pixmap(text, size=280):
+def qr_pixmap(text, size=280, ratio=None):
+    """The QR code drawn with every square the same whole number of pixels (squares of uneven size are harder for
+    phone cameras to read), about `size` wide, sharp on high-DPI screens."""
     import segno
     import io
+    from PyQt6.QtWidgets import QApplication
+    if ratio is None:
+        app = QApplication.instance()
+        ratio = app.devicePixelRatio() if app is not None else 1.0
+    qr = segno.make(text, error="m", micro=False)
+    modules = qr.symbol_size(scale=1, border=2)[0]
+    scale = max(1, int(size * ratio) // modules)
     buf = io.BytesIO()
-    segno.make(text, error="m", micro=False).save(buf, kind="png", scale=10, border=2, dark="#000000",
-                                                   light="#ffffff")
+    qr.save(buf, kind="png", scale=scale, border=2, dark="#000000", light="#ffffff")
     pm = QPixmap()
     pm.loadFromData(buf.getvalue(), "PNG")
-    return pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pm.setDevicePixelRatio(ratio)
+    return pm
 
 
 class _Bridge(QObject):

@@ -525,6 +525,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.settings_page.add_folder_requested.connect(lambda: (self._choose_music_folder(), self.open_settings()))
         self.settings_page.remove_folder_requested.connect(lambda f: (self.remove_music_folder(f), self.open_settings()))
         self.settings_page.restart_requested.connect(self.restart_app)
+        self.settings_page.tour_requested.connect(lambda: self.show_feature_tour(again=True))
         self.settings_page.clear_cache_requested.connect(lambda: (self.net.clear_cache(), self._refresh_storage_sizes()))
         self.settings_page.open_folder_requested.connect(
             lambda _w: QDesktopServices.openUrl(QUrl.fromLocalFile(self.download_folder())))
@@ -1522,6 +1523,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         h = sub("Help")
         act(h, "Help and questions (FAQ)", lambda: __import__("ui.help_faq", fromlist=["x"]).show(self), "F1")
+        act(h, "Feature tour", lambda: self.show_feature_tour(again=True))
         act(h, "About Sevbify", self.show_about)
         act(h, "Open Sevbify's data folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.storage.data_dir)))
         log = os.path.join(self.storage.data_dir, "error.log")
@@ -5229,6 +5231,22 @@ class MainWindow(ShowsMixin, QMainWindow):
         saved = track.preview_url if track is not None else ""       # used if the fresh lookup fails
         self.online_call(self.online.deezer.fresh_preview, song.artist, song.title, did,
                          on_done=lambda u: show(u or saved), on_error=lambda _e: show(saved))
+
+    def show_feature_tour(self, again=False):
+        """The feature tour (ui/feature_tour.py). On the first start it opens by itself (app.py) unless it has been
+        closed with "Don't show this again"; again=True is from Settings / Help, which always opens it."""
+        if not again and self.user_data.tour_seen:
+            return None
+        from .feature_tour import FeatureTour
+        d = FeatureTour(self, show_again_box=not again)
+        if getattr(self, "_auto_answer_dialogs", None) is not None:      # tests
+            d.show()
+            return d
+        d.exec()
+        if not again and d.done_with_tour():
+            self.user_data.tour_seen = True
+            self.schedule_save()
+        return d
 
     def _accept_online_notice(self):
         """Show the one-time notice about downloading/streaming from Bandcamp and YouTube. True if accepted."""

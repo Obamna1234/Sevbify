@@ -245,6 +245,60 @@ def zoom():
     pump(2)
 
 
+def modal_shot(name, open_fn, prepare=None):
+    """Open a dialog that waits for an answer (exec), photograph it, then close it."""
+    from PyQt6.QtCore import QTimer
+
+    def grab():
+        d = QApplication.activeModalWidget()
+        if d is None:
+            note(f"no dialog for {name}")
+            return
+        if prepare:
+            prepare(d)
+        pump(2)
+        shot(name, d)
+        d.reject()
+    QTimer.singleShot(2500, grab)
+    open_fn()
+
+
+def import_dialog():
+    from PyQt6.QtWidgets import QLineEdit, QPlainTextEdit
+
+    def fill(d):
+        for e in d.findChildren(QLineEdit):
+            e.setText("https://open.spotify.com/playlist/1a2b3c4d5e6f7g8h9i0jKL")
+        for e in d.findChildren(QPlainTextEdit):
+            e.setPlainText("https://open.spotify.com/track/0aB1cD2eF3gH4iJ5kL6mN7\n"
+                           "https://open.spotify.com/track/8oP9qR0sT1uV2wX3yZ4aB5")
+    modal_shot("import", w.import_playlist_dialog, fill)
+
+
+def pair_dialog():
+    w._auto_answer_dialogs = []                       # dialogs open without waiting
+    try:
+        d = w.phone_link.open_pairing()
+        pump(4)
+        if d is not None:
+            shot("pair", d)
+            d.reject()
+    finally:
+        w._auto_answer_dialogs = None
+
+
+def support_dialog():
+    w._auto_answer_dialogs = []
+    try:
+        d = w.support_artist("Chris Zabriskie", (state.get("songs") or [None])[0])
+        wait(lambda: d.links or not d.status.text().startswith("Looking"), 40)
+        pump(2)
+        shot("support", d)
+        d.reject()
+    finally:
+        w._auto_answer_dialogs = None
+
+
 def mini():
     w.open_mini_player()
     mp = w.mini_player
@@ -259,7 +313,8 @@ for name, fn in [("home", home), ("search", search), ("play", play), ("artist", 
                  ("queue", queue), ("liked", liked), ("save picker", save_picker), ("made for you", made_for_you),
                  ("radio", radio), ("preview feed", preview_feed), ("podcast", podcast),
                  ("full screen", lyrics_or_full), ("mini player", mini), ("private", private), ("zoom", zoom),
-                 ("settings", settings)]:
+                 ("settings", settings), ("import", import_dialog), ("pair", pair_dialog),
+                 ("support", support_dialog)]:
     note(f"== {name}")
     step(name, fn)
 

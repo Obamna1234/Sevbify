@@ -107,25 +107,43 @@ fun PairDialogs() {
 
 /** "Support the artist": where to buy this music straight from the artist (core/support.py). Each link shows its
  *  website; nothing opens until you tap it; no link is guessed. */
+@Composable
+fun SupportSheet(t: com.sevbify.app.Track) = SupportLinksSheet(
+    key = t.matchKey, title = "Support ${t.artist}",
+    subtitle = "Buy their music straight from them, or from the closest thing.",
+    empty = "No links from the artist themselves were found, so none are shown (Sevbify never guesses).",
+    needsOnline = true, onClose = { Nav.supportFor = null },
+) { com.sevbify.app.Bridge.arr("support_links", t.artist, t.title, t.pageUrl, t.source) }
+
+/** A podcast's own support links, from its feed (<podcast:funding>) and its website. */
+@Composable
+fun ShowSupportSheet(s: com.sevbify.app.Show) = SupportLinksSheet(
+    key = s.key, title = "Support ${s.title}",
+    subtitle = "Back the show directly, through its own links.",
+    empty = "This show doesn't list a support link in its feed.",
+    needsOnline = false, onClose = { Nav.supportShow = null },
+) { com.sevbify.app.Bridge.arr("show_support_links", s.json.toString()) }
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun SupportSheet(t: com.sevbify.app.Track) {
+private fun SupportLinksSheet(key: String, title: String, subtitle: String, empty: String, needsOnline: Boolean,
+                              onClose: () -> Unit, load: suspend () -> org.json.JSONArray) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var links by remember(t.matchKey) { mutableStateOf<org.json.JSONArray?>(null) }
-    LaunchedEffect(t.matchKey) {
-        links = try { com.sevbify.app.Bridge.arr("support_links", t.artist, t.title, t.pageUrl, t.source) }
-                catch (e: Exception) { org.json.JSONArray() }
+    var links by remember(key) { mutableStateOf<org.json.JSONArray?>(null) }
+    LaunchedEffect(key) {
+        links = try { load() } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            org.json.JSONArray()
+        }
     }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { Nav.supportFor = null }, containerColor = C.Elevated) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onClose, containerColor = C.Elevated) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text("Support ${t.artist}", style = MaterialTheme.typography.titleLarge)
-            Text("Buy their music straight from them, or from the closest thing.", style = MaterialTheme.typography.bodySmall,
-                 modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
             val l = links
             when {
-                l == null -> Text("Looking for the artist's own links…", style = MaterialTheme.typography.bodyMedium)
-                l.length() == 0 -> Text(if (com.sevbify.app.Library.settings.online)
-                    "No links from the artist themselves were found, so none are shown (Sevbify never guesses)."
+                l == null -> Text("Looking for their own links…", style = MaterialTheme.typography.bodyMedium)
+                l.length() == 0 -> Text(if (!needsOnline || com.sevbify.app.Library.settings.online) empty
                     else "Go online to find where to buy this artist's music.", style = MaterialTheme.typography.bodyMedium)
                 else -> { for (i in 0 until l.length()) {
                     val o = l.getJSONObject(i)
@@ -134,7 +152,7 @@ fun SupportSheet(t: com.sevbify.app.Track) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color(0xFF2A2A2A))
                         .clickable {
-                            Nav.supportFor = null
+                            onClose()
                             try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
                             catch (_: Exception) {}
                         }.padding(14.dp)) {

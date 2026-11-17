@@ -387,6 +387,9 @@ def main():
         window.showMinimized()                 # started at login with "Minimized"
     else:
         window.show()
+        if not SMOKE_TEST and not JOURNEY and not window.user_data.tour_seen:
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(1200, window.show_feature_tour)      # first start: what Sevbify can do
 
     if SMOKE_TEST:
         def loaded():

@@ -67,6 +67,7 @@ import com.sevbify.app.Player
 @Composable
 fun AppRoot() {
     val snack = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(1200); Tour.showOnFirstStart() }   // first start: what Sevbify can do
     LaunchedEffect(Nav.toast) {
         if (Nav.toast.isNotEmpty()) { snack.showSnackbar(Nav.toast); Nav.toast = "" }
     }
@@ -127,6 +128,7 @@ fun AppRoot() {
         AnimatedVisibility(Nav.lyricsOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) { LyricsScreen() }
         Nav.shareFor?.let { ShareSheet(it) }
         Nav.supportFor?.let { SupportSheet(it) }
+        Nav.supportShow?.let { ShowSupportSheet(it) }
         if (Nav.connectOpen) ConnectSheet()
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp))
         Sheets()
@@ -271,6 +273,7 @@ private fun Dialogs() {
     Nav.chosicFor?.let { (id, link) -> ChosicDialog(id, link) }
     if (Nav.carTip) CarTipDialog()
     PairDialogs()
+    FeatureTourDialog()
     Nav.confirm?.let { (title, text, action) ->
         AlertDialog(onDismissRequest = { Nav.confirm = null },
                     title = { Text(title) }, text = { Text(text) },

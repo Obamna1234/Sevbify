@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.outlined.ArrowCircleDown
@@ -248,6 +249,12 @@ fun ShowScreen(start: Show) {
                                 } catch (e: Exception) { Nav.say("⚠ YouTube search didn't work: ${e.message}") }
                             }
                         }) { Text(tr("Watch video"), color = C.Text) }
+                    }
+                    if (!start.isBook && (show.json.optString("funding").startsWith("https://") ||
+                                          show.json.optString("link").startsWith("https://"))) {
+                        IconButton(onClick = { Nav.supportShow = show }) {
+                            Icon(Icons.Filled.Favorite, "Support this show", tint = C.Sub, modifier = Modifier.size(26.dp))
+                        }
                     }
                     if (start.isBook && items.isNotEmpty()) {
                         IconButton(onClick = { val n = Downloads.request(items); Nav.say("Downloading $n chapters") }) {

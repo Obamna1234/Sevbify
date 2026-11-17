@@ -74,6 +74,7 @@ struct RootView: View {
     @EnvironmentObject var nav: Nav
     @EnvironmentObject var player: Player
     @EnvironmentObject var lib: Library
+    @ObservedObject private var tour = Tour.shared
 
     @GestureState private var drag: CGFloat = 0
 
@@ -132,6 +133,14 @@ struct RootView: View {
         .fullScreenCover(isPresented: $nav.nowPlaying) { NowPlayingView() }
         .overlay(alignment: .top) { Toast() }
         .sheet(isPresented: Binding(get: { !lib.settings.noticeAccepted }, set: { _ in })) { FirstRunNotice() }
+        .fullScreenCover(isPresented: Binding(get: { tour.open && lib.settings.noticeAccepted && !nav.nowPlaying },
+                                              set: { if !$0 { tour.open = false } })) { FeatureTourView() }
+        .onChange(of: lib.settings.noticeAccepted) { ok in
+            if ok { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { Tour.shared.showOnFirstStart() } }
+        }
+        .onAppear {
+            if lib.settings.noticeAccepted { DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { Tour.shared.showOnFirstStart() } }
+        }
     }
 }
 

@@ -200,7 +200,7 @@ def main():
             if ui.clear_anr(found):
                 continue
             texts = {n[0] for n in found}
-            choice = next((t for t in ("Later", "Not now", "No thanks", "OK", "Got it") if t in texts), None)
+            choice = next((t for t in ("Skip", "Later", "Not now", "No thanks", "OK", "Got it") if t in texts), None)
             if not choice:
                 break
             ui.tap(choice, tries=1)

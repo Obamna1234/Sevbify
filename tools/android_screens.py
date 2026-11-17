@@ -169,6 +169,11 @@ def main():
     sh(f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
     time.sleep(15)                    # first start unpacks Python
     clear_anr()
+    if any(nd[0] == "Don't show this again" for nd in nodes()):    # the feature tour on the first start
+        shot("tour", 1)
+        tap("Next", tries=1)
+        shot("tour_2", 1)
+        tap("Skip", tries=2)
     shot("home", 4)
 
     def podcasts_chip():
@@ -467,6 +472,22 @@ def main():
         sh("settings put system user_rotation 0")
         time.sleep(2)
     step("rotate", rotate)
+
+    def tour_extras():
+        # Pictures for the feature tour: Support the artist, and pairing with a computer.
+        tap("Search")
+        found = nodes()
+        mores = [nd for nd in found if nd[1] == "More"]
+        if mores:
+            sh(f"input tap {mores[0][2]} {mores[0][3]}")
+            time.sleep(1.5)
+            if tap("Support the artist", tries=2):
+                shot("support_sheet", 10)
+            back()
+        open_settings("Your computer")
+        shot("settings_computer", 3)
+        back(); back()
+    step("tour_extras", tour_extras)
 
 
 if __name__ == "__main__":
