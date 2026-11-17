@@ -383,6 +383,25 @@ class Journey:
         ok = self.wait(lambda: w.stack.currentWidget() is getattr(w, "settings_page", None), 5)
         return ("pass" if ok else "fail"), "settings page shown" if ok else "settings page didn't open"
 
+    def step_zoom(self):
+        """Ctrl + then Ctrl 0: the size changes straight away (no restart), and the window keeps its size."""
+        w = self.w
+        before = w.frameGeometry().size()
+        w.change_zoom(+1)
+        self.wait(lambda: w.isVisible(), 5)
+        live = w._zoom_at_start == 110
+        dpr = round(w.devicePixelRatio(), 2)
+        self.shot("zoom-110")
+        w.change_zoom(0)
+        self.wait(lambda: w.isVisible(), 5)
+        back = w._zoom_at_start == 100 and w.isVisible()
+        after = w.frameGeometry().size()
+        if not (live and back):
+            return "fail", "zoom needed a restart (Qt's live zoom wasn't found here)"
+        same = abs(after.width() - before.width()) <= 4 and abs(after.height() - before.height()) <= 4
+        size = "kept" if same else f"{before.width()}x{before.height()} -> {after.width()}x{after.height()}"
+        return "pass", f"zoomed live to 110% (pixel ratio {dpr}) and back; window size {size}"
+
     def step_playlist(self):
         w = self.w
         before = len(w.playlists)
@@ -417,6 +436,7 @@ class Journey:
                       needs=["Find, follow and play a podcast"])
         self.run_step("Your own music plays", self.step_own_music, needs=["App opens"])
         self.run_step("Open Settings", self.step_settings, needs=["App opens"])
+        self.run_step("Zoom instantly", self.step_zoom, needs=["App opens"])
         self.run_step("Activity log is written", self.step_activity_log, needs=["App opens"])
         w.save_now()
         if self._status("Your own music plays") == "pass" and not self.delete_own_song():
