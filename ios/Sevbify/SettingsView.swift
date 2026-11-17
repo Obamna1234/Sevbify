@@ -96,6 +96,15 @@ struct SettingsView: View {
                 LabeledContent("Sevbify", value: Bundle.main.object(forInfoDictionaryKey: "SevbifyVersion") as? String ?? "")
                 LabeledContent("Python", value: python)
                 Button("Feature tour") { Tour.shared.showAgain() }.foregroundColor(C.green)
+                Button("Save debug log (.txt)") {
+                    Task {
+                        let f = FileManager.default.temporaryDirectory.appendingPathComponent("sevbify-debug-log.txt")
+                        if (try? await Bridge.call("problem_report", [f.path])) != nil { Share.present([f]) }
+                        else { Player.shared.status = "Couldn't make the debug log" }
+                    }
+                }.foregroundColor(C.green)
+                Text("A plain text diary of what the app did, kept only on this iPhone (links shortened, no email addresses). Save it to Files or send it yourself; nothing is uploaded.")
+                    .font(.caption).foregroundColor(C.dim)
                 Text("Built with AI help (Anthropic's Claude). Not affiliated with Spotify, YouTube, Bandcamp, Apple or Deezer.")
                     .font(.caption).foregroundColor(C.dim)
             }

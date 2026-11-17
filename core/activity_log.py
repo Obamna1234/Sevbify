@@ -8,7 +8,8 @@ is sent anywhere. Lines look like:
     2026-11-15 02:14:11  stream    found on YouTube in 3.8 s (search 2.1, link 1.7)
     2026-11-15 02:14:12  error     VLC couldn't open the stream -> trying a fresh link
 
-Web addresses are shortened to their site (no sign-ins or long links), and music-server passwords never appear.
+Web addresses are shortened to their site (no sign-ins or long links), email addresses are replaced with
+[email], and music-server passwords never appear.
 """
 import os
 import re
@@ -21,6 +22,7 @@ _lock = threading.Lock()
 _path = [""]
 
 _URL = re.compile(r"([a-z][a-z0-9+.-]*)://[^\s\"')]+", re.I)
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _private = [False]
 # While Private Session is on, these say what was played/searched, so only the kind of event is kept.
 PRIVATE_KINDS = {"play", "stream", "retry", "skip", "status", "player", "podcast", "download", "online", "error",
@@ -58,7 +60,7 @@ def _short(text):
             host = ""
         parts = host.split(".")
         return f"[{'.'.join(parts[-2:]) if len(parts) >= 2 else host} link]"
-    return _URL.sub(site, str(text))
+    return _EMAIL.sub("[email]", _URL.sub(site, str(text)))          # never an email address
 
 
 def log(kind, text):

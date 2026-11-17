@@ -33,6 +33,11 @@ def _readable(exc):
 
 
 def _fail(exc):
+    try:
+        from core import activity_log
+        activity_log.log("error", _readable(exc))
+    except Exception:
+        pass
     return json.dumps({"ok": False, "error": _readable(exc),
                        "trace": traceback.format_exc()[-1500:]}, ensure_ascii=False)
 
@@ -92,7 +97,33 @@ def setup(data_dir, cache_dir, online=True, lastfm_key="", version=""):
     from core.version import app_version
     from core import streamer
     streamer.set_page_store(os.path.join(data_dir, "song_pages.json"))     # songs found before skip the searches
+    from core import activity_log
+    activity_log.start(data_dir)                 # the phone's own debug log (a text file here; never sent)
     return {"version": app_version()}
+
+
+@_call
+def log_event(kind, text):
+    """A line in the debug log (activity.log in the app's data folder; only on this phone)."""
+    from core import activity_log
+    activity_log.log(str(kind)[:12], str(text)[:1000])
+    return True
+
+
+@_call
+def log_private(on):
+    from core import activity_log
+    activity_log.set_private(bool(on))
+    return True
+
+
+@_call
+def problem_report(dest):
+    """The debug log as one .txt file at dest (links shortened, no email addresses), to save or send yourself."""
+    from core import activity_log
+    if not activity_log.path():
+        raise RuntimeError("The debug log hasn't started yet.")
+    return activity_log.report(dest)
 
 
 @_call

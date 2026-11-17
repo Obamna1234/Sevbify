@@ -1,8 +1,9 @@
 """Volume levelling (core/loudness.py) and Mono audio on the PC."""
+import array
+import math
 import shutil
 import wave
 
-import numpy as np
 import pytest
 
 from conftest import wait_until
@@ -10,11 +11,13 @@ from core import loudness
 
 
 def _tone(path, amp, seconds=3.0, sr=44100):
-    t = np.arange(int(sr * seconds)) / sr
-    x = (np.sin(2 * np.pi * 440 * t) * amp * 32767).astype(np.int16)
+    frames = array.array("h")
+    for i in range(int(sr * seconds)):
+        v = int(math.sin(2 * math.pi * 440 * i / sr) * amp * 32767)
+        frames.extend((v, v))
     w = wave.open(str(path), "wb")
     w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
-    w.writeframes(np.column_stack([x, x]).tobytes())
+    w.writeframes(frames.tobytes())
     w.close()
 
 

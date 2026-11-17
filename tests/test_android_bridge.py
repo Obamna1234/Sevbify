@@ -83,3 +83,16 @@ def test_bridge_opens_shared_playlists_and_blends(bridge):
     assert call(bridge, "taste_link", json.dumps([["A", "B", 1]])).startswith("sevbify://taste#")
     bad = json.loads(bridge.import_link("sevbify://playlist#v1.%%%"))
     assert not bad["ok"]
+
+
+def test_bridge_debug_log_is_a_local_text_file_without_emails(bridge, tmp_path):
+    call(bridge, "log_event", "play", "Jahzzar - Siesta from https://cdn.example.com/a/b?token=secret")
+    call(bridge, "log_event", "note", "signed in as someone.private@example.org")
+    call(bridge, "log_private", True)
+    call(bridge, "log_event", "play", "Kevin MacLeod - Sneaky Snitch")
+    call(bridge, "log_private", False)
+    out = call(bridge, "problem_report", str(tmp_path / "report.txt"))
+    text = open(out, encoding="utf-8").read()
+    assert "Jahzzar - Siesta" in text and "[example.com link]" in text and "token=secret" not in text
+    assert "someone.private" not in text and "[email]" in text
+    assert "Sneaky Snitch" not in text and "Private Session" in text

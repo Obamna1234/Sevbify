@@ -419,6 +419,7 @@ fun SettingsPageScreen(key: String) {
                 Text(tr("Feature tour"), color = C.Text)
             }
         }
+        item { DebugLogRow() }
         item {
             Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = {
@@ -614,5 +615,37 @@ private fun Toggle(name: String, desc: String, value: Boolean, onChange: (Boolea
         }
         Spacer(Modifier.width(12.dp))
         Switch(value, onChange, colors = SwitchDefaults.colors(checkedThumbColor = C.Text, checkedTrackColor = C.Green))
+    }
+}
+
+/** The debug log: a text file on this phone. "Save debug log" writes a copy wherever you choose (links shortened,
+ *  no email addresses), to look at or send yourself if something goes wrong. Nothing is uploaded. */
+@Composable
+private fun DebugLogRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val save = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val tmp = java.io.File(ctx.cacheDir, "sevbify-debug-log.txt")
+                com.sevbify.app.Bridge.call("problem_report", tmp.absolutePath)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri)?.use { out -> tmp.inputStream().use { it.copyTo(out) } }
+                    tmp.delete()
+                }
+                Nav.say("Debug log saved")
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Nav.say("Couldn't save the debug log: ${e.message}")
+            }
+        }
+    }
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        OutlinedButton(onClick = { save.launch("sevbify-debug-log.txt") }) { Text(tr("Save debug log (.txt)"), color = C.Text) }
+        Text("A plain text diary of what the app did, kept only on this phone. Links are shortened and email " +
+             "addresses removed. Nothing is sent anywhere.", style = MaterialTheme.typography.bodySmall,
+             modifier = Modifier.padding(top = 6.dp))
     }
 }

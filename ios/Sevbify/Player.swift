@@ -250,6 +250,8 @@ final class Player: ObservableObject {
 
     private func startCurrent() {
         guard let t = current else { return }
+        let line = "\(t.artist) - \(t.title)"
+        Task { _ = try? await Bridge.call("log_event", ["play", line]) }     // the debug log, on this iPhone only
         CanvasLoop.shared.songChanged(t)
         player.defaultRate = t.isItem ? speed : 1              // podcasts and audiobooks keep your speed
         if retriedKey != t.matchKey + ":retry" { retriedKey = "" }

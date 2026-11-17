@@ -47,6 +47,12 @@ object Player {
     fun diagLog(s: String) {
         val stamp = android.text.format.DateFormat.format("HH:mm:ss", System.currentTimeMillis())
         diag = (diag.split("\n").filter { it.isNotBlank() } + "$stamp  $s").takeLast(24).joinToString("\n")
+        fileLog("player", s)
+    }
+
+    /** A line in the debug log file (Settings → About → Save debug log). Only on this phone. */
+    fun fileLog(kind: String, s: String) {
+        SevbifyApp.instance.scope.launch { runCatching { Bridge.call("log_private", Library.privateSession); Bridge.call("log_event", kind, s) } }
     }
 
     private var lastProbe = 0L
@@ -643,6 +649,7 @@ object Player {
         // Like Spotify: the old sound stops the moment you pick something else, not after the new song is found.
         if (c0 != null && c0.currentMediaItem?.mediaId != t.matchKey) c0.pause()
         current = t
+        fileLog("play", "${t.artist} - ${t.title} (${t.source.ifEmpty { "file" }})")
         CanvasLoop.songChanged(t)
         controller?.setPlaybackSpeed(if (t.isItem) speed else 1f)
         handledEnd = false
