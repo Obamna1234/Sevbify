@@ -15,7 +15,7 @@ enum Profile {
             "from": "iphone",
             "folders": lib.libraryFolders,
             "playlists": lib.playlists.map { p -> [String: Any] in
-                ["name": p.name, "folder": p.folder, "pinned": p.pinned, "origin": p.origin, "cover_url": p.coverUrl,
+                ["name": p.name, "folder": p.folder, "pinned": p.pinned, "origin": p.origin, "cover_url": p.coverUrl.hasPrefix("cover:") ? "" : p.coverUrl,
                  "created": Int(p.created), "tracks": p.tracks.map { $0.dict }]
             },
             "resume": lib.resume.mapValues { Int($0 * 1000) },
@@ -54,7 +54,8 @@ enum Profile {
                                      origin: p["origin"] as? String ?? "")
             lib.update(pl.id) {
                 $0.folder = p["folder"] as? String ?? ""; $0.pinned = p["pinned"] as? Bool ?? false
-                $0.coverUrl = p["cover_url"] as? String ?? ""
+                let cover = p["cover_url"] as? String ?? ""
+                $0.coverUrl = cover.hasPrefix("https://") ? cover : ""          // never a path on this phone
             }
             added += 1
         }

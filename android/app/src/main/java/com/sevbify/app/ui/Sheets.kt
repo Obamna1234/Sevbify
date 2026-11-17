@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
@@ -236,6 +237,15 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
                 }
             }
             SheetItem(Icons.Filled.Edit, tr("Edit details")) { close(); askName(pl.name) { Library.rename(pl, it) } }
+            SheetItem(Icons.Filled.Edit, if (pl.description.isEmpty()) "Add description" else "Edit description") {
+                close(); askName(pl.description, "Description") { pl.description = it.trim().take(300); Library.changed() }
+            }
+            SheetItem(Icons.Filled.Image, "Choose cover picture") { close(); Nav.coverFor = pl }
+            if (pl.coverUrl.startsWith("file:")) SheetItem(Icons.Filled.Image, "Remove cover picture") {
+                close()
+                runCatching { java.io.File(android.net.Uri.parse(pl.coverUrl).path ?: "").delete() }
+                pl.coverUrl = ""; Library.changed()
+            }
             SheetItem(Icons.Filled.Delete, tr("Delete playlist")) {
                 close()
                 confirmDelete(pl.name) {

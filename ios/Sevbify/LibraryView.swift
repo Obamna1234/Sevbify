@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -175,14 +176,26 @@ struct PlaylistPage: View {
     @EnvironmentObject var nav: Nav
     @State private var renaming = false
     @State private var newName = ""
+    @State private var describing = false
+    @State private var newDescription = ""
+    @State private var picking = false
+    @State private var picked: PhotosPickerItem?
 
     var body: some View {
         Group {
             if let pl = lib.playlist(id) {
-                SongsPage(title: pl.name, cover: pl.coverUrl, tracks: pl.tracks, source: pl.name, playlist: pl)
+                SongsPage(title: pl.name, cover: pl.covers.first ?? "", tracks: pl.tracks, source: pl.name,
+                          kind: pl.description.isEmpty ? "Playlist" : pl.description, playlist: pl)
                     .toolbar {
                         Menu {
                             Button { newName = pl.name; renaming = true } label: { Label("Rename", systemImage: "pencil") }
+                            Button { newDescription = pl.description; describing = true } label: {
+                                Label(pl.description.isEmpty ? "Add description" : "Edit description", systemImage: "text.alignleft")
+                            }
+                            Button { picking = true } label: { Label("Choose cover picture", systemImage: "photo") }
+                            if pl.coverUrl.hasPrefix("cover:") {
+                                Button { removeCover(pl) } label: { Label("Remove cover picture", systemImage: "photo.badge.minus") }
+                            }
                             Button { lib.update(id) { $0.pinned.toggle() } } label: {
                                 Label(pl.pinned ? "Unpin" : "Pin", systemImage: "pin")
                             }
@@ -204,6 +217,45 @@ struct PlaylistPage: View {
             Button("Save") { if !newName.trimmingCharacters(in: .whitespaces).isEmpty { lib.update(id) { $0.name = newName } } }
             Button("Cancel", role: .cancel) {}
         }
+        .alert("Description", isPresented: $describing) {
+            TextField("Description", text: $newDescription)
+            Button("Save") { let d = String(newDescription.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300)); lib.update(id) { $0.description = d } }
+            Button("Cancel", role: .cancel) {}
+        }
+        // Apple's photo picker: only the photo you pick is given to Sevbify (no access to your library).
+        .photosPicker(isPresented: $picking, selection: $picked, matching: .images)
+        .onChange(of: picked) { item in
+            guard let item else { return }
+            Task {
+                defer { picked = nil }
+                guard let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) else {
+                    Player.shared.status = "Couldn't use that picture"; return
+                }
+                let side = min(img.size.width, img.size.height)
+                let r = UIGraphicsImageRenderer(size: CGSize(width: 640, height: 640))
+                let square = r.jpegData(withCompressionQuality: 0.88) { _ in
+                    let scale = 640 / side
+                    img.draw(in: CGRect(x: -(img.size.width - side) / 2 * scale, y: -(img.size.height - side) / 2 * scale,
+                                        width: img.size.width * scale, height: img.size.height * scale))
+                }
+                let dir = Library.support.appendingPathComponent("covers")
+                try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                if let old = lib.playlist(id)?.coverUrl, old.hasPrefix("cover:") {
+                    try? FileManager.default.removeItem(at: dir.appendingPathComponent(String(old.dropFirst(6))))
+                }
+                let name = "\(id)-\(Int(Date().timeIntervalSince1970)).jpg"
+                do {
+                    try square.write(to: dir.appendingPathComponent(name))
+                    lib.update(id) { $0.coverUrl = "cover:" + name }
+                } catch { Player.shared.status = "Couldn't save that picture" }
+            }
+        }
+    }
+
+    private func removeCover(_ pl: Playlist) {
+        let name = String(pl.coverUrl.dropFirst(6)).replacingOccurrences(of: "/", with: "")
+        try? FileManager.default.removeItem(at: Library.support.appendingPathComponent("covers").appendingPathComponent(name))
+        lib.update(id) { $0.coverUrl = "" }
     }
 }
 

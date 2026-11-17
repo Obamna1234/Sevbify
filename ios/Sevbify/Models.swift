@@ -107,10 +107,11 @@ struct Playlist: Codable, Identifiable, Hashable {
     /// "" made in Sevbify, or imported: "spotify" | "apple" | "deezer" | "jamendo" | "file"
     var origin = ""
     var folder = ""                 // kept from a profile made on another device (Your Library folders)
+    var description = ""            // Edit description (shown under the name)
 
     init(name: String, tracks: [Track] = []) { self.name = name; self.tracks = tracks }
 
-    enum CodingKeys: String, CodingKey { case id, name, tracks, coverUrl, created, lastPlayed, pinned, origin, folder }
+    enum CodingKeys: String, CodingKey { case id, name, tracks, coverUrl, created, lastPlayed, pinned, origin, folder, description }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
@@ -122,6 +123,7 @@ struct Playlist: Codable, Identifiable, Hashable {
         pinned = (try? c.decode(Bool.self, forKey: .pinned)) ?? false
         origin = (try? c.decode(String.self, forKey: .origin)) ?? ""
         folder = (try? c.decode(String.self, forKey: .folder)) ?? ""
+        description = String(((try? c.decode(String.self, forKey: .description)) ?? "").prefix(300))
     }
 
     static func == (a: Playlist, b: Playlist) -> Bool { a.id == b.id }
@@ -130,6 +132,10 @@ struct Playlist: Codable, Identifiable, Hashable {
     /// Spotify's picture for a playlist without one (same rule as core/playlist_cover.py): the covers of the
     /// first 4 different albums as a 2x2 grid; fewer than 4 → the first song's cover alone.
     var covers: [String] {
+        if coverUrl.hasPrefix("cover:") {          // a picture you chose, kept in the app's own folder
+            let name = String(coverUrl.dropFirst(6)).replacingOccurrences(of: "/", with: "")
+            return [Library.support.appendingPathComponent("covers").appendingPathComponent(name).absoluteString]
+        }
         if !coverUrl.isEmpty { return [coverUrl] }
         var seen = Set<String>(), picks: [String] = [], first = ""
         for t in tracks {

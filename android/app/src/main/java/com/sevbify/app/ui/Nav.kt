@@ -58,6 +58,7 @@ object Nav {
     var hideNoteOpen by mutableStateOf(false)
     var wrappedOpen by mutableStateOf(false)
     var sleepOpen by mutableStateOf(false)                      // Sleep timer choices                    // Your Wrapped (listening stats)                   // first Hide song: where to undo it
+    var coverFor by mutableStateOf<com.sevbify.app.Playlist?>(null)    // Choose cover picture: waiting for the photo picker
     var supportShow by mutableStateOf<Show?>(null)              // a podcast's own support links
     var supportFor by mutableStateOf<Track?>(null)             // "Support the artist": where to buy from them
     var chosicFor by mutableStateOf<Pair<String, String>?>(null)   // (playlist id, Spotify link): get past 100 songs

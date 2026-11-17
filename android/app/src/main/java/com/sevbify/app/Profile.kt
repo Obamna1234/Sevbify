@@ -31,7 +31,7 @@ object Profile {
                 Library.playlists.forEach { p ->
                     a.put(JSONObject().apply {
                         put("name", p.name); put("folder", p.folder); put("pinned", p.pinned); put("origin", p.origin)
-                        put("cover_url", p.coverUrl); put("created", p.created / 1000)
+                        put("cover_url", if (p.coverUrl.startsWith("file:")) "" else p.coverUrl); put("created", p.created / 1000)
                         put("tracks", JSONArray().also { t -> p.tracks.forEach { t.put(it.toJson()) } })
                     })
                 }
@@ -88,7 +88,7 @@ object Profile {
             if (Library.playlists.any { it.name.equals(name, true) && it.tracks.map { t -> t.matchKey } == keys }) continue
             val pl = Library.newPlaylist(uniqueName(name), tracks)
             pl.folder = p.optString("folder").takeIf { it in Library.folders } ?: ""
-            pl.pinned = p.optBoolean("pinned"); pl.origin = p.optString("origin"); pl.coverUrl = p.optString("cover_url")
+            pl.pinned = p.optBoolean("pinned"); pl.origin = p.optString("origin"); pl.coverUrl = p.optString("cover_url").takeIf { it.startsWith("https://") } ?: ""
             added++
         }
         fun addShows(key: String) {

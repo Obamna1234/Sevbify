@@ -231,7 +231,7 @@ fun PlaylistScreen(id: String) {
         }
     }
     val check = com.sevbify.app.ImportCheck
-    val subtitle = if (check.checking == pl.name) "Checking the songs… ${check.done} of ${check.total}" else "Playlist"
+    val subtitle = if (check.checking == pl.name) "Checking the songs… ${check.done} of ${check.total}" else pl.description.ifEmpty { "Playlist" }
     SongsPage(pl.name, subtitle, playlistCover(pl), pl.tracks.toList(), pl.name, onMore = { Nav.playlistMenu = pl }, playlist = pl)
 }
 

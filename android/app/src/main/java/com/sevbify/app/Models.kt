@@ -79,11 +79,13 @@ data class Playlist(
     var lastPlayed: Long = 0,
     var pinned: Boolean = false,
     var origin: String = "",          // "" made in Sevbify, or imported: "spotify" | "apple" | "deezer" | "jamendo" | "file"
+    var description: String = "",     // Edit details → Description
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("name", name); put("tracks", tracks.toJsonArray()); put("folder", folder)
         put("cover_url", coverUrl); put("created", created); put("last_played", lastPlayed); put("pinned", pinned)
         put("origin", origin)
+        if (description.isNotEmpty()) put("description", description.take(300))
     }
 
     companion object {
@@ -94,6 +96,7 @@ data class Playlist(
             lastPlayed = o.optLong("last_played"), pinned = o.optBoolean("pinned"),
             origin = o.optString("origin").takeIf { it in listOf("spotify", "apple", "deezer", "jamendo", "youtube", "link", "file") ||
                                                    Regex("server:[0-9a-f]{12}").matches(it) } ?: "",
+            description = o.optString("description").take(300),
         )
     }
 }

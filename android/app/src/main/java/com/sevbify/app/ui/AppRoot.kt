@@ -76,6 +76,7 @@ fun AppRoot() {
         if (s.startsWith("⚠") || s.startsWith("Couldn't") || s.startsWith("You're offline")) Nav.toast = s
     }
     BackHandler(enabled = true) { if (!Nav.back()) Nav.tab = Tab.HOME }
+    CoverPicker()
 
     if (com.sevbify.app.VideoPlayer.inPip) {
         // The picture-in-picture mini player: only the video.
@@ -348,3 +349,38 @@ fun askNewFolder(then: (String) -> Unit = {}) {
 
 @Suppress("unused")
 private fun keepLibrary() = Library.changes
+
+/** Choose cover picture: Android's photo picker (no permission needed; only the photo you pick is shared with the
+ *  app), then a 640-pixel copy is kept in the app's own folder as the playlist's cover. */
+@Composable
+private fun CoverPicker() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        val pl = Nav.coverFor
+        Nav.coverFor = null
+        if (uri == null || pl == null) return@rememberLauncherForActivityResult
+        com.sevbify.app.SevbifyApp.instance.scope.launch {
+            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val src = ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) }
+                        ?: return@runCatching null
+                    val side = minOf(src.width, src.height)
+                    val square = android.graphics.Bitmap.createBitmap(src, (src.width - side) / 2, (src.height - side) / 2, side, side)
+                    val small = android.graphics.Bitmap.createScaledBitmap(square, 640, 640, true)
+                    val dir = java.io.File(ctx.filesDir, "covers").apply { mkdirs() }
+                    dir.listFiles { f -> f.name.startsWith(pl.id + "-") }?.forEach { it.delete() }
+                    val f = java.io.File(dir, "${pl.id}-${System.currentTimeMillis()}.jpg")
+                    f.outputStream().use { small.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }
+                    android.net.Uri.fromFile(f).toString()
+                }.getOrNull()
+            }
+            if (saved != null) { pl.coverUrl = saved; Library.changed(); Nav.say("Cover picture changed") }
+            else Nav.say("⚠ Couldn't use that picture")
+        }
+    }
+    LaunchedEffect(Nav.coverFor) {
+        if (Nav.coverFor != null) pick.launch(androidx.activity.result.PickVisualMediaRequest(
+            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+}
