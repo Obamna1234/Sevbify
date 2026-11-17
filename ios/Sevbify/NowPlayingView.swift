@@ -10,6 +10,7 @@ struct NowPlayingView: View {
     @State private var dragging: Double? = nil
     @State private var showQueue = false
     @State private var menu = false
+    @State private var lyrics = false
 
     var body: some View {
         let t = player.current
@@ -99,6 +100,9 @@ struct NowPlayingView: View {
                 RoutePicker().frame(width: 44, height: 44).accessibilityLabel("Connect to a device")
                 Spacer()
                 if let t, !t.isItem {
+                    Button { lyrics = true } label: { Image(systemName: "quote.bubble") }
+                        .accessibilityLabel("Lyrics")
+                        .padding(.trailing, 20)
                     Button { Share.song(t) } label: { Image(systemName: "square.and.arrow.up") }
                         .accessibilityLabel("Share")
                         .padding(.trailing, 20)
@@ -111,6 +115,7 @@ struct NowPlayingView: View {
             LinearGradient(colors: [Color(red: 0.25, green: 0.2, blue: 0.25), C.bg], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea())
         .sheet(isPresented: $showQueue) { QueueView() }
+        .fullScreenCover(isPresented: $lyrics) { LyricsView() }
         .sheet(isPresented: $menu) { if let t { TrackMenu(track: t).presentationDetents([.medium, .large]) } }
     }
 }
@@ -201,5 +206,95 @@ struct QueueRow: View {
                 Text(track.artist).font(.caption).foregroundColor(C.dim).lineLimit(1)
             }
         }.listRowBackground(C.elevated).contentShape(Rectangle())
+    }
+}
+
+/// Full-screen lyrics, like Spotify's (and the PC's and Android's): from LRCLIB, the open lyrics library. Synced
+/// lyrics follow the song and a tap on a line jumps there.
+struct LyricsView: View {
+    @EnvironmentObject var player: Player
+    @Environment(\.dismiss) var dismiss
+    @State private var lines: [(ms: Int, text: String)] = []
+    @State private var plain: [String] = []
+    @State private var state = "Loading lyrics…"
+    @State private var loadedFor = ""
+
+    private var current: Int {
+        let ms = Int(player.position * 1000)
+        return (lines.lastIndex { $0.ms <= ms + 300 }) ?? -1
+    }
+
+    var body: some View {
+        let t = player.current
+        VStack(spacing: 0) {
+            HStack {
+                Button { dismiss() } label: { Image(systemName: "chevron.down").font(.title3).frame(width: 44, height: 44) }
+                    .accessibilityLabel("Close")
+                Spacer()
+                VStack(spacing: 2) {
+                    Text(t?.title ?? "").font(.subheadline.bold()).lineLimit(1)
+                    Text(t?.artist ?? "").font(.caption).foregroundColor(.white.opacity(0.7)).lineLimit(1)
+                }
+                Spacer()
+                Color.clear.frame(width: 44, height: 44)
+            }.padding(.horizontal, 8)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if !lines.isEmpty {
+                            ForEach(Array(lines.enumerated()), id: \.offset) { i, l in
+                                Text(l.text.isEmpty ? "♪" : l.text)
+                                    .font(.system(size: 26, weight: .bold))
+                                    .foregroundColor(i == current ? .white : (i < current ? .white.opacity(0.6) : .black.opacity(0.45)))
+                                    .id(i)
+                                    .onTapGesture { player.seek(to: Double(l.ms) / 1000) }
+                            }
+                        } else if !plain.isEmpty {
+                            ForEach(Array(plain.enumerated()), id: \.offset) { _, l in
+                                Text(l.isEmpty ? " " : l).font(.system(size: 24, weight: .bold))
+                            }
+                        } else {
+                            Text(state).font(.title3.bold()).foregroundColor(.white.opacity(0.8)).padding(.top, 40)
+                        }
+                        Text("Lyrics from LRCLIB").font(.caption).foregroundColor(.white.opacity(0.6)).padding(.top, 24)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.vertical, 16)
+                }
+                .onChange(of: current) { i in
+                    if i > 1 { withAnimation(.easeInOut(duration: 0.4)) { proxy.scrollTo(i - 1, anchor: .top) } }
+                }
+            }
+            HStack {
+                Text(formatTime(Int(player.position * 1000))).font(.caption)
+                Spacer()
+                Button { player.toggle() } label: {
+                    ZStack {
+                        Circle().fill(Color.white).frame(width: 60, height: 60)
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").font(.title2).foregroundColor(.black)
+                    }
+                }.accessibilityLabel(player.isPlaying ? "Pause" : "Play")
+                Spacer()
+                Text(formatTime(Int(player.duration * 1000))).font(.caption)
+            }.padding(.horizontal, 24).padding(.vertical, 16)
+        }
+        .foregroundColor(.white)
+        .background(Color(red: 0.42, green: 0.32, blue: 0.36).ignoresSafeArea())
+        .task(id: t?.matchKey ?? "") { await load(t) }
+    }
+
+    private func load(_ t: Track?) async {
+        guard let t, t.matchKey != loadedFor else { return }
+        loadedFor = t.matchKey
+        lines = []; plain = []; state = "Loading lyrics…"
+        guard let o = try? await Bridge.object("lyrics", [t.artist, t.title, t.album, t.durationMs]), !o.isEmpty else {
+            state = "No lyrics found for this song."; return
+        }
+        lines = (o["lines"] as? [[Any]] ?? []).compactMap { r in
+            guard r.count >= 2, let ms = (r[0] as? NSNumber)?.intValue else { return nil }
+            return (ms, String(describing: r[1]))
+        }
+        if lines.isEmpty { plain = (o["plain"] as? String ?? "").components(separatedBy: "\n") }
+        if lines.isEmpty && plain.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+            plain = []; state = "No lyrics found for this song."
+        }
     }
 }
