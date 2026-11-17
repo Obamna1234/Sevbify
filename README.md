@@ -59,9 +59,9 @@ If you're a rights holder with a concern about this project, please open an issu
 
 ## Install
 
-- **Windows:** download `Sevbify-Windows.zip`, extract it, run `Sevbify.exe`. Settings → *Add to Desktop and Start
-  menu* makes shortcuts.
-- **macOS:** download `Sevbify-macOS.zip`, open it and move Sevbify to Applications. The first time, right-click it →
+- **Windows:** download `Sevbify-Windows-Setup.exe` and open it (no admin password needed; uninstall from Settings →
+  Apps). Or download `Sevbify-Windows.zip`, extract it and run `Sevbify.exe`.
+- **macOS:** download `Sevbify-macOS.dmg`, open it and drag Sevbify onto Applications. The first time, right-click it →
   **Open** → **Open** (the app isn't signed by Apple yet).
 - **Linux:** `tar xzf Sevbify-Linux.tar.gz`, then run `Sevbify/Sevbify`. Install VLC with your package manager
   (for example `sudo apt install vlc`).
