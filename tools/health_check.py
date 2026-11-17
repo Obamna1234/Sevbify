@@ -152,6 +152,14 @@ def song_link():
     return out["spotify"]
 
 
+def support_links():
+    from core import support
+    links = support.for_song(net, "Chris Zabriskie", "Candlepower",
+                             "https://chriszabriskie.bandcamp.com/track/candlepower", "bandcamp")
+    assert len(links) >= 2 and all(l["url"].startswith("https://") for l in links), links
+    return ", ".join(f"{l['label']} ({l['site']})" for l in links)
+
+
 def deezer():
     r = om.search("Chris Zabriskie Divider", limit=5)
     assert r and r[0].preview_url
@@ -175,6 +183,7 @@ check("SoundCloud albums (artist pages)", soundcloud_albums, blocked_ok=True)
 check("YouTube full song", youtube, blocked_ok=True)
 check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)
+check("Support the artist (MusicBrainz)", support_links)
 check("song.link (Share; now wants a key, Share uses search links)", song_link, info_only=True)
 check("yt-dlp", ytdlp_current)
 
