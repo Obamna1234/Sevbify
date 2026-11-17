@@ -139,6 +139,9 @@ class UserData:
     np_on_play: bool = True   # Settings: open the Now playing panel when you play
     notify_track: bool = False   # Settings: desktop notification when the song changes
     canvas_enabled: bool = True   # Settings: Canvas loop videos
+    canvas_auto: bool = True      # Settings: Canvas from music videos (core/canvas_loops.py)
+    canvas_cache_mb: int = 200    # its size limit
+    canvas_keep_downloads: bool = True   # a downloaded song keeps its clip (loops offline)
     phone_link: bool = True       # Settings → Your phone: listen for paired phones on the local network
     zoom: int = 100   # Settings: zoom level in % (applies after restart)
     startup: str = 'no'   # Settings: open after login (Windows)
@@ -292,6 +295,8 @@ class Storage:
                 "np_on_play": data.np_on_play,
                 "notify_track": data.notify_track,
                 "canvas_enabled": data.canvas_enabled,
+                "canvas_auto": bool(data.canvas_auto), "canvas_cache_mb": int(data.canvas_cache_mb),
+                "canvas_keep_downloads": bool(data.canvas_keep_downloads),
                 "phone_link": data.phone_link,
                 "zoom": data.zoom,
                 "startup": data.startup,
@@ -423,6 +428,12 @@ class Storage:
             pass
         try:
             data.canvas_enabled = bool(settings.get('canvas_enabled', True))
+            data.canvas_auto = bool(settings.get("canvas_auto", True))
+            try:
+                data.canvas_cache_mb = max(0, min(5000, int(settings.get("canvas_cache_mb", 200))))
+            except (TypeError, ValueError):
+                data.canvas_cache_mb = 200
+            data.canvas_keep_downloads = bool(settings.get("canvas_keep_downloads", True))
             data.phone_link = bool(settings.get('phone_link', True))
         except (TypeError, ValueError):
             pass

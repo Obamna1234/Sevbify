@@ -559,6 +559,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         QTimer.singleShot(1500, lambda: not getattr(self, "_shut_down", False) and self.phone_link.start_if_paired())
         self.settings_page.check_updates_requested.connect(lambda: self.check_for_updates(manual=True))
         self.settings_page.go_back_requested.connect(self.go_back_to_previous_version)
+        self.settings_page.clear_canvas_requested.connect(self.clear_canvas_storage)
         self.settings_page.hidden_changed.connect(
             lambda kind, key, on: (self.set_hidden(kind, key, on), on is None and self.open_settings()))
         self.settings_page.update_ytdlp_requested.connect(self.update_ytdlp)
@@ -5689,10 +5690,37 @@ class MainWindow(ShowsMixin, QMainWindow):
         canvas = (find_canvas(song, self.storage.data_dir)
                   if song is not None and self.user_data.canvas_enabled
                   else None)
+        if canvas is None and song is not None and self.user_data.canvas_enabled:
+            from core import canvas_loops
+            canvas = canvas_loops.cached(self.storage.data_dir, song.artist, song.title) or None
+            if canvas is None:
+                self._fetch_canvas(song)
+        self._canvas_now = canvas
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
         self._refresh_artist_card()
         if self.expanded_view.isVisible():
             self._fill_expanded_view()
+
+    def _fetch_canvas(self, song):
+        """Canvas from the song's official music video (core/canvas_loops.py), cut in the background."""
+        if not (self.user_data.canvas_auto and self.online_enabled and getattr(song, "artist", "")
+                and song.artist != "Unknown Artist" and getattr(getattr(song, "track", None), "source", "")
+                not in ("podcast", "audiobook", "youtube")):
+            return
+        from core import canvas_loops, downloader
+
+        def work():
+            return canvas_loops.get(self.storage.data_dir, song.artist, song.title,
+                                    downloader.engine().search_youtube_candidates,
+                                    int((getattr(song, "duration_ms", 0) or 0) / 1000), self.user_data.canvas_cache_mb)
+
+        def done(path):
+            if path and self.current_song is song and self.user_data.canvas_enabled:
+                self._canvas_now = path
+                self.now_playing_panel.set_canvas(path, playing=self.is_playing)
+                if self.expanded_view.isVisible():
+                    self._fill_expanded_view()
+        self.online_call(work, on_done=done, on_error=lambda _e: None)
 
     # --- Expanded Now playing view ------------------------------------------------------------------------
     def open_expanded_view(self):
@@ -5718,7 +5746,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         ev = self.expanded_view
         song = self.current_song
         canvas = (find_canvas(song, self.storage.data_dir)
-                  if song is not None and self.user_data.canvas_enabled else None)
+                  if song is not None and self.user_data.canvas_enabled else None) or getattr(self, "_canvas_now", None)
         cover = getattr(self.now_playing_panel.artwork, "_pixmap", None)
         ev.set_song(song, cover, canvas_path=canvas, has_lyrics=bool(getattr(self, "_lyrics_available", False)))
 
@@ -6306,6 +6334,18 @@ class MainWindow(ShowsMixin, QMainWindow):
     def _on_song_downloaded(self, key, path, title):
         if path:
             self._downloaded_paths[key] = normalise_path(path)
+            if self.user_data.canvas_keep_downloads:
+                # Its Canvas clip (if one was made) goes next to it, so it loops offline too.
+                from core import canvas_loops
+                for s in [self.current_song] + [x for pl in self.playlists for x in pl.songs]:
+                    t = getattr(s, "track", None)
+                    if t is not None and getattr(t, "key", None) == key:
+                        try:
+                            canvas_loops.keep_with_download(
+                                canvas_loops.cached(self.storage.data_dir, s.artist, s.title), path)
+                        except OSError:
+                            pass
+                        break
         self._download_rescan.start(400)
 
     def _on_downloads_finished(self, result):
@@ -6779,6 +6819,7 @@ class MainWindow(ShowsMixin, QMainWindow):
                     ytdlp=updates.ytdlp_version(), ytdlp_age=updates.ytdlp_age_days(),
                     app_update=getattr(self, "_app_update_text", ""),
                     hidden=self.hidden.entries(),
+                    canvas_cache_mb=__import__("core.canvas_loops", fromlist=["x"]).size_mb(self.storage.data_dir),
                     has_previous=__import__("core.app_update", fromlist=["x"]).can_install()
                     and __import__("core.app_update", fromlist=["x"]).has_previous(),
                     download_folder=self.user_data.download_folder or self._download_folder_preview(),
@@ -6901,6 +6942,13 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.close()
             QApplication.quit()
         return True
+
+    def clear_canvas_storage(self):
+        from core import canvas_loops
+        canvas_loops.clear(self.storage.data_dir)
+        self.show_status("Canvas storage cleared", kind="info")
+        if self.stack.currentWidget() is self.settings_page:
+            self.open_settings()
 
     def go_back_to_previous_version(self):
         """Settings → Go back to the previous version (kept by the updater next to the app)."""
@@ -7037,7 +7085,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             if not values:
                 return
         was_online = u.online_enabled
-        simple = ("online_enabled", "spotify_full", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
+        if "canvas_cache_mb" in values:
+            u.canvas_cache_mb = max(0, min(5000, int(values["canvas_cache_mb"])))
+            from core import canvas_loops
+            canvas_loops.trim(self.storage.data_dir, u.canvas_cache_mb)
+        simple = ("online_enabled", "spotify_full", "canvas_auto", "canvas_keep_downloads", "jamendo_client_id", "download_folder", "playlist_files", "explicit_ok",
                   "autoplay", "fade_seconds", "normalize", "np_on_play", "notify_track", "zoom", "proxy_mode",
                   "proxy_url", "hw_accel", "close_to_tray", "disabled_folders", "auto_update_check", "skip_sponsors",
                   "language", "save_space", "ad_free_podcasts")

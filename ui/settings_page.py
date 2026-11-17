@@ -70,6 +70,7 @@ class SettingsPage(QWidget):
     profile_import_requested = pyqtSignal()
     check_updates_requested = pyqtSignal()
     go_back_requested = pyqtSignal()
+    clear_canvas_requested = pyqtSignal()
     hidden_changed = pyqtSignal(str, str, object)      # kind ("song" | "artist"), key, on (True / False / None = remove)
     update_ytdlp_requested = pyqtSignal()
     server_add_requested = pyqtSignal(str)          # "jellyfin" | "webdav"
@@ -370,6 +371,24 @@ class SettingsPage(QWidget):
         self._toggle("notify_track", "Show desktop notifications when the song changes", "", u.notify_track)
         self._toggle("canvas_enabled", "Canvas", "Short looping videos in the Now Playing view, when a song has one "
                      "(also: a song's ••• menu → Hide Canvas / Show Canvas).", u.canvas_enabled)
+        self._toggle("canvas_auto", "Canvas from music videos",
+                     "When a song has an official music video on YouTube, a silent 8-second loop of it (at most 720p, "
+                     "about 1 MB) becomes its Canvas. Found with the same YouTube search Sevbify uses for songs. Your own "
+                     "Canvas videos always come first.", getattr(u, "canvas_auto", True))
+        self._toggle("canvas_keep_downloads", "Keep Canvas with downloaded songs",
+                     "A downloaded song keeps its loop next to it (in a \"canvas\" folder), so it loops offline too.",
+                     getattr(u, "canvas_keep_downloads", True))
+        mb = info.get("canvas_cache_mb", 0.0)
+        self._combo("canvas_cache_mb", "Canvas storage limit",
+                    f"Loops for songs you stream are kept up to this size; the ones played longest ago go first. "
+                    f"Using {mb:.0f} MB now.", ["50 MB", "100 MB", "200 MB", "500 MB", "1000 MB"],
+                    f"{getattr(u, 'canvas_cache_mb', 200)} MB")
+        row = QHBoxLayout()
+        clear = QPushButton("Clear Canvas storage")
+        clear.clicked.connect(self.clear_canvas_requested.emit)
+        row.addWidget(clear)
+        row.addStretch()
+        self._v.addLayout(row)
         self._zoom(u.zoom)
 
         self._section("Startup and window behaviour")
@@ -651,6 +670,8 @@ class SettingsPage(QWidget):
         if key == "language":
             from core import i18n
             self._emit({key: next((c for c, n in i18n.LANGUAGES if n == text), "")})
+        elif key == "canvas_cache_mb":
+            self._emit({key: int(text.split()[0])})
         elif key == "fade_seconds":
             self._emit({key: 0 if text == "Off" else int(text.split()[0])})
         elif key == "startup":

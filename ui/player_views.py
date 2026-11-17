@@ -241,10 +241,44 @@ class FullScreenView(QWidget):
         self.controls = _Controls(win, big=True)
         self.controls.setStyleSheet("background: transparent;")
         v.addWidget(self.controls)
+        # The Canvas loop fills the whole screen behind everything, whole and wide (frames are painted here, so the
+        # text and controls sit on top of it on every system).
+        self.frame = None
+        self._canvas = None
+        self.canvas_player = None
+        try:
+            from PyQt6.QtMultimedia import QMediaPlayer, QVideoSink
+            self.canvas_player = QMediaPlayer(self)
+            self._sink = QVideoSink(self)
+            self.canvas_player.setVideoSink(self._sink)               # no audio output: silent
+            self.canvas_player.setLoops(QMediaPlayer.Loops.Infinite)
+            self._sink.videoFrameChanged.connect(self._new_frame)
+        except Exception:
+            self.canvas_player = None
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(250)
         self.refresh()
+
+    def _new_frame(self, f):
+        img = f.toImage() if f is not None and f.isValid() else None
+        if img is not None and not img.isNull():
+            self.frame = img
+            self.update()
+
+    def _set_canvas(self, path):
+        if path == self._canvas or self.canvas_player is None:
+            return
+        self._canvas = path
+        self.frame = None
+        if path:
+            from PyQt6.QtCore import QUrl
+            import os as _os
+            self.canvas_player.setSource(QUrl.fromLocalFile(_os.path.abspath(path)))
+            self.canvas_player.play()
+        else:
+            self.canvas_player.stop()
+        self.update()
 
     def refresh(self):
         from .main_window import load_pixmap
@@ -265,14 +299,28 @@ class FullScreenView(QWidget):
             self.cover.setPixmap(rounded(self.art, 280, 6))
             self.colour = dominant_colour(self.art)
             self.update()
+        canvas = getattr(w, "_canvas_now", None) if song is not None and w.user_data.canvas_enabled else None
+        self._set_canvas(canvas)
         self.controls.refresh()
 
     def paintEvent(self, e):
         p = QPainter(self)
-        g = QLinearGradient(0, 0, 0, self.height())
-        g.setColorAt(0, self.colour.lighter(120))
-        g.setColorAt(1, QColor("#000000"))
-        p.fillRect(self.rect(), g)
+        if self.frame is not None:
+            from PyQt6.QtGui import QPixmap as _Pm
+            pm = _Pm.fromImage(self.frame).scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                                 Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((self.width() - pm.width()) // 2, (self.height() - pm.height()) // 2, pm)
+            g = QLinearGradient(0, 0, 0, self.height())
+            g.setColorAt(0, QColor(0, 0, 0, 40))
+            g.setColorAt(0.45, QColor(0, 0, 0, 70))
+            g.setColorAt(0.75, QColor(0, 0, 0, 165))
+            g.setColorAt(1, QColor(0, 0, 0, 230))                  # dark at the bottom so the words stay readable
+            p.fillRect(self.rect(), g)
+        else:
+            g = QLinearGradient(0, 0, 0, self.height())
+            g.setColorAt(0, self.colour.lighter(120))
+            g.setColorAt(1, QColor("#000000"))
+            p.fillRect(self.rect(), g)
         p.end()
 
     def keyPressEvent(self, e):
@@ -286,6 +334,8 @@ class FullScreenView(QWidget):
 
     def closeEvent(self, e):
         self.timer.stop()
+        if self.canvas_player is not None:
+            self.canvas_player.stop()
         if getattr(self.win, "full_screen_view", None) is self:
             self.win.full_screen_view = None
         super().closeEvent(e)

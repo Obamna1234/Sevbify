@@ -238,6 +238,16 @@ class NowPlayingPanel(QWidget):
             self._show_artwork()
         self.set_playing(playing)
 
+    def set_canvas(self, canvas_path, playing=True):
+        """A Canvas that arrived after the song started (cut from its music video in the background)."""
+        if not canvas_path or self.video_player is None or self.song is None:
+            return
+        self.video_player.setSource(QUrl.fromLocalFile(os.path.abspath(canvas_path)))
+        self.visual.setCurrentWidget(self.video)
+        self.video.setFixedHeight(int(max(self.width() - 20, 280) * 1.25))   # the clip's middle, tall like Spotify's
+        if playing and not self.isHidden():
+            self.video_player.play()
+
     def _show_artwork(self):
         if self.video_player is not None:
             self.video_player.stop()

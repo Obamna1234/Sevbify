@@ -61,6 +61,18 @@ def spotify_whole_playlist():
     return f"{len(res['tracks'])} songs read (more than Spotify's 100 for a link)"
 
 
+def canvas_from_music_video():
+    """Settings → Canvas from music videos: an openly licensed song's official video, cut to a small silent loop."""
+    import tempfile
+    from core import canvas_loops, downloader
+    d = tempfile.mkdtemp()
+    p = canvas_loops.get(d, "Kevin MacLeod", "Monkeys Spinning Monkeys", downloader.engine().search_youtube_candidates, 125)
+    assert p, "no clip"
+    size = os.path.getsize(p)
+    assert 10_000 < size < 4_000_000, size
+    return f"{size / 1_048_576:.1f} MB clip"
+
+
 def bandcamp():
     from core import downloader
     e = downloader.engine()
@@ -195,6 +207,7 @@ check("Podcasts (Apple directory + feed)", podcasts)
 check("Lyrics (LRCLIB)", lyrics)
 check("Support the artist (MusicBrainz)", support_links)
 check("song.link (Share; now wants a key, Share uses search links)", song_link, info_only=True)
+check("Canvas from a music video (YouTube)", canvas_from_music_video)
 check("yt-dlp", ytdlp_current)
 
 summary = os.environ.get("GITHUB_STEP_SUMMARY")
