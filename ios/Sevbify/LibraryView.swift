@@ -32,28 +32,26 @@ struct LibraryView: View {
                     row(icon: AnyView(C.card.overlay(Image(systemName: "arrow.down.circle").foregroundColor(C.green))),
                         title: "Downloads", subtitle: downloads.active > 0 ? "\(downloads.active) waiting or downloading" : "Finished") { nav.go(.downloads) }
                 }
-                ForEach(lib.playlists.filter { (filter.isEmpty || $0.name.lowercased().contains(filter.lowercased()))
+                let shown = lib.playlists.filter { (filter.isEmpty || $0.name.lowercased().contains(filter.lowercased()))
                         && (!downloadedOnly || (!$0.tracks.isEmpty && $0.tracks.allSatisfy({ lib.isDownloaded($0) }))) }
-                        .sorted { $0.pinned && !$1.pinned }) { pl in
-                    Button { nav.go(.playlist(pl.id)) } label: {
+                        .sorted { $0.pinned && !$1.pinned }
+                // Playlist folders, like Spotify's (and the PC's and Android's): tap a folder to open or close it.
+                let folders = Array(Set(shown.map(\.folder).filter { !$0.isEmpty })).sorted { $0.lowercased() < $1.lowercased() }
+                ForEach(folders, id: \.self) { f in
+                    DisclosureGroup {
+                        ForEach(shown.filter { $0.folder == f }) { pl in playlistRow(pl) }
+                    } label: {
                         HStack(spacing: 12) {
-                            PlaylistCover(playlist: pl, size: 64)
+                            C.card.frame(width: 64, height: 64).cornerRadius(4)
+                                .overlay(Image(systemName: "folder.fill").font(.title2).foregroundColor(C.dim))
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(pl.name).lineLimit(1)
-                                HStack(spacing: 4) {
-                                    if pl.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundColor(C.green) }
-                                    if !pl.tracks.isEmpty && pl.tracks.allSatisfy({ lib.isDownloaded($0) }) {
-                                        Image(systemName: "arrow.down.circle.fill").font(.caption2).foregroundColor(C.green)
-                                    }
-                                    Text("Playlist • \(pl.tracks.count) songs").font(.caption).foregroundColor(C.dim)
-                                }
+                                Text(f).lineLimit(1)
+                                Text("Folder • \(shown.filter { $0.folder == f }.count) playlists").font(.caption).foregroundColor(C.dim)
                             }
                         }
-                    }.buttonStyle(.plain)
-                    .swipeActions {
-                        Button(role: .destructive) { lib.delete(pl.id) } label: { Label("Delete", systemImage: "trash") }
-                    }
+                    }.tint(C.dim)
                 }
+                ForEach(shown.filter { $0.folder.isEmpty }) { pl in playlistRow(pl) }
             }
             .listRowBackground(C.bg)
             .listRowSeparator(.hidden)
@@ -95,6 +93,28 @@ struct LibraryView: View {
         }
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { lib.addFolder(url) }
+        }
+    }
+
+    @ViewBuilder
+    private func playlistRow(_ pl: Playlist) -> some View {
+        Button { nav.go(.playlist(pl.id)) } label: {
+            HStack(spacing: 12) {
+                PlaylistCover(playlist: pl, size: 64)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(pl.name).lineLimit(1)
+                    HStack(spacing: 4) {
+                        if pl.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundColor(C.green) }
+                        if !pl.tracks.isEmpty && pl.tracks.allSatisfy({ lib.isDownloaded($0) }) {
+                            Image(systemName: "arrow.down.circle.fill").font(.caption2).foregroundColor(C.green)
+                        }
+                        Text("Playlist • \(pl.tracks.count) songs").font(.caption).foregroundColor(C.dim)
+                    }
+                }
+            }
+        }.buttonStyle(.plain)
+        .swipeActions {
+            Button(role: .destructive) { lib.delete(pl.id) } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
@@ -200,6 +220,8 @@ struct PlaylistPage: View {
     @State private var newDescription = ""
     @State private var picking = false
     @State private var picked: PhotosPickerItem?
+    @State private var foldering = false
+    @State private var folderName = ""
 
     var body: some View {
         Group {
@@ -213,6 +235,13 @@ struct PlaylistPage: View {
                                 Label(pl.description.isEmpty ? "Add description" : "Edit description", systemImage: "text.alignleft")
                             }
                             Button { picking = true } label: { Label("Choose cover picture", systemImage: "photo") }
+                            Menu {
+                                ForEach(Array(Set(lib.playlists.map(\.folder).filter { !$0.isEmpty })).sorted(), id: \.self) { f in
+                                    Button(f) { lib.update(id) { $0.folder = f } }.disabled(f == pl.folder)
+                                }
+                                Button { folderName = ""; foldering = true } label: { Label("New folder…", systemImage: "folder.badge.plus") }
+                                if !pl.folder.isEmpty { Button("Remove from folder") { lib.update(id) { $0.folder = "" } } }
+                            } label: { Label("Move to folder", systemImage: "folder") }
                             if pl.coverUrl.hasPrefix("cover:") {
                                 Button { removeCover(pl) } label: { Label("Remove cover picture", systemImage: "photo.badge.minus") }
                             }
@@ -235,6 +264,14 @@ struct PlaylistPage: View {
         .alert("Rename playlist", isPresented: $renaming) {
             TextField("Name", text: $newName)
             Button("Save") { if !newName.trimmingCharacters(in: .whitespaces).isEmpty { lib.update(id) { $0.name = newName } } }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("New folder", isPresented: $foldering) {
+            TextField("Folder name", text: $folderName)
+            Button("Move here") {
+                let f = String(folderName.trimmingCharacters(in: .whitespaces).prefix(100))
+                if !f.isEmpty { lib.update(id) { $0.folder = f } }
+            }
             Button("Cancel", role: .cancel) {}
         }
         .alert("Description", isPresented: $describing) {

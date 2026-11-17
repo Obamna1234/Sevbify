@@ -13,8 +13,27 @@ struct NowPlayingView: View {
     @State private var lyrics = false
 
     var body: some View {
+        GeometryReader { geo in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    main.frame(height: geo.size.height)
+                    // Scroll down, like Spotify's: lyrics, about the artist, credits and what's next.
+                    if let t = player.current, !t.isItem { NowPlayingCards(track: t, openLyrics: { lyrics = true }) }
+                }
+            }
+        }
+        .foregroundColor(.white)
+        .background(
+            LinearGradient(colors: [Color(red: 0.25, green: 0.2, blue: 0.25), C.bg], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea())
+        .sheet(isPresented: $showQueue) { QueueView() }
+        .fullScreenCover(isPresented: $lyrics) { LyricsView() }
+        .sheet(isPresented: $menu) { if let t = player.current { TrackMenu(track: t).presentationDetents([.medium, .large]) } }
+    }
+
+    private var main: some View {
         let t = player.current
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             HStack {
                 Button { dismiss() } label: { Image(systemName: "chevron.down").font(.title3).frame(width: 44, height: 44) }
                     .accessibilityLabel("Close")
@@ -110,15 +129,9 @@ struct NowPlayingView: View {
                 Button { showQueue = true } label: { Image(systemName: "list.bullet") }.accessibilityLabel("Queue")
             }.font(.title3).padding(.horizontal, 24).padding(.vertical, 16)
         }
-        .foregroundColor(.white)
-        .background(
-            LinearGradient(colors: [Color(red: 0.25, green: 0.2, blue: 0.25), C.bg], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea())
-        .sheet(isPresented: $showQueue) { QueueView() }
-        .fullScreenCover(isPresented: $lyrics) { LyricsView() }
-        .sheet(isPresented: $menu) { if let t { TrackMenu(track: t).presentationDetents([.medium, .large]) } }
     }
 }
+
 
 /// AirPlay / Bluetooth speakers and headphones (Apple's own picker, like Spotify's Connect button).
 /// Spotify's progress bar: a thin 4 pt line (white played part on a grey track) with a small white dot, a bit
@@ -295,6 +308,103 @@ struct LyricsView: View {
         if lines.isEmpty { plain = (o["plain"] as? String ?? "").components(separatedBy: "\n") }
         if lines.isEmpty && plain.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty }) {
             plain = []; state = "No lyrics found for this song."
+        }
+    }
+}
+
+/// The cards under Now Playing (like Spotify's): Lyrics, About the artist, Credits and Next in queue.
+struct NowPlayingCards: View {
+    let track: Track
+    let openLyrics: () -> Void
+    @EnvironmentObject var player: Player
+    @EnvironmentObject var nav: Nav
+    @State private var lyricLines: [String] = []
+    @State private var artist: [String: Any] = [:]
+    @State private var credits: [[String: Any]] = []
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if !lyricLines.isEmpty {
+                card("Lyrics", colour: Color(red: 0.42, green: 0.32, blue: 0.36)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(lyricLines.prefix(6).enumerated()), id: \.offset) { _, l in Text(l).font(.title3.bold()) }
+                        Button("Show lyrics") { openLyrics() }.buttonStyle(.bordered).tint(.white).padding(.top, 6)
+                    }
+                }
+            }
+            if !artist.isEmpty {
+                card("About the artist") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let p = artist["picture_url"] as? String, !p.isEmpty {
+                            Cover(url: p, size: 300, corner: 8).frame(maxWidth: .infinity)
+                        }
+                        Text(artist["name"] as? String ?? track.artist).font(.headline)
+                        if let fans = artist["fans"] as? Int, fans > 0 {
+                            Text("\(fans.formatted()) fans on Deezer").font(.caption).foregroundColor(C.dim)
+                        }
+                        if let bio = artist["bio"] as? String, !bio.isEmpty { Text(bio).font(.subheadline).lineLimit(5) }
+                        Button("Open artist page") { nav.go(.artist(track.artist)) }.buttonStyle(.bordered).tint(.white)
+                    }
+                }
+            }
+            if !credits.isEmpty {
+                card("Credits") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(credits.prefix(6).enumerated()), id: \.offset) { _, r in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(r["name"] as? String ?? "")
+                                Text((r["roles"] as? [String] ?? []).joined(separator: ", ")).font(.caption).foregroundColor(C.dim)
+                            }
+                        }
+                    }
+                }
+            }
+            let next = Array((player.userQueue + player.upcoming).prefix(3))
+            if !next.isEmpty {
+                card("Next in queue") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(next) { t in
+                            HStack {
+                                Cover(url: t.art, size: 44)
+                                VStack(alignment: .leading) {
+                                    Text(t.title).lineLimit(1)
+                                    Text(t.artist).font(.caption).foregroundColor(C.dim).lineLimit(1)
+                                }
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { player.jump(to: t) }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16).padding(.bottom, 32)
+        .task(id: track.matchKey) { await load() }
+    }
+
+    private func card<Content: View>(_ title: String, colour: Color = C.card, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.headline)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 10).fill(colour))
+    }
+
+    private func load() async {
+        lyricLines = []; artist = [:]; credits = []
+        guard Library.shared.settings.online else { return }
+        if let o = try? await Bridge.object("lyrics", [track.artist, track.title, track.album, track.durationMs]), !o.isEmpty {
+            let synced = (o["lines"] as? [[Any]] ?? []).compactMap { $0.count >= 2 ? String(describing: $0[1]) : nil }
+            let lines = synced.isEmpty ? (o["plain"] as? String ?? "").components(separatedBy: "\n") : synced
+            lyricLines = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        }
+        if !track.artist.isEmpty, track.artist != "Unknown Artist" {
+            let card = (try? await Bridge.object("artist_card", [track.artist])) ?? [:]
+            artist = card.count > 1 ? card : [:]
+            credits = (try? await Bridge.list("credits", [track.artist, track.title])) ?? []
         }
     }
 }
