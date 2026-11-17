@@ -107,6 +107,11 @@ class Deezer:
         local = fresh(find(f"{genre_name} {country_name}", 20))[:12] if country_name else []
         return {"featured": featured, "popular": popular, "moods": moods, "local": local}
 
+    def search_playlists(self, query, limit=5):
+        """Public Deezer playlists matching a name (for mood mixes)."""
+        data = self._get("/search/playlist", {"q": query, "limit": limit}, ttl=12 * 3600)
+        return [p for p in data.get("data", []) if isinstance(p, dict) and p.get("id")]
+
     def playlist_tracks(self, playlist_id, limit=100):
         data = self._get(f"/playlist/{playlist_id}/tracks", {"limit": limit}, ttl=6 * 3600)
         return [self.track_from(d) for d in data.get("data", []) if d.get("readable", True)]

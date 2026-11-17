@@ -156,3 +156,78 @@ def release_radar(online, listens, today=None, size=30, days=14):
         if len(out) >= size:
             break
     return out[:size]
+
+
+MOODS = (("chill", "Chill"), ("happy", "Happy"), ("energetic", "Energy"), ("focus", "Focus"), ("sad", "Melancholy"))
+
+
+def daylist(online, listens, now=None, size=40):
+    """Spotify's daylist: a mix for this part of the day, from what you usually play around this hour (last 90
+    days), topped up with songs like those. {"title", "subtitle", "tracks"} or None. Changes through the day."""
+    import time as _t
+    now = now or _t.time()
+    lt = _t.localtime(now)
+    part = ("early morning" if lt.tm_hour < 7 else "morning" if lt.tm_hour < 12 else "afternoon" if lt.tm_hour < 17
+            else "evening" if lt.tm_hour < 22 else "late night")
+    day = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")[lt.tm_wday]
+    near = []
+    for row in listens:
+        if not (isinstance(row, (list, tuple)) and len(row) >= 3 and isinstance(row[2], (int, float))):
+            continue
+        if now - row[2] > 90 * 86400:
+            continue
+        h = _t.localtime(row[2]).tm_hour
+        if min(abs(h - lt.tm_hour), 24 - abs(h - lt.tm_hour)) <= 2:
+            near.append(row)
+    if len(near) < 3:
+        return None
+    from collections import Counter
+    favs = [a for a, _n in Counter(r[0] for r in near if r[0] and r[0] != "Unknown Artist").most_common(3)]
+    rng = random.Random(int(now // 3600))
+    tracks, seen = [], set()
+    for fav in favs:
+        try:
+            got = online.radio(fav, "", limit=size // max(1, len(favs)) + 5, rng=rng)
+        except Exception:
+            continue
+        for t in got:
+            k = (_norm(t.artist), _norm(t.title))
+            if k not in seen:
+                seen.add(k)
+                tracks.append(t)
+    rng.shuffle(tracks)
+    if len(tracks) < 10:
+        return None
+    return {"title": f"daylist · {day} {part}", "subtitle": "For this time of day: " + ", ".join(favs),
+            "tracks": tracks[:size]}
+
+
+def mood_mix(online, mood, listens, size=40):
+    """A mood mix (Chill, Happy, Energy, Focus, Melancholy) leaning towards artists you play: Deezer's mood
+    playlists searched by name, mixed with songs like your favourites. {"title", "subtitle", "tracks"} or None."""
+    label = dict(MOODS).get(mood, mood.title())
+    try:
+        found = online.deezer.search_playlists(f"{label} mix", limit=3)
+    except Exception:
+        found = []
+    tracks = []
+    for pl in found[:2]:
+        try:
+            tracks += online.deezer.playlist_tracks(pl.get("id"))[: size // 2]
+        except Exception:
+            pass
+    favs = top_artists(listens, days=90, n=2)
+    for fav in favs:
+        try:
+            tracks += online.radio(fav, "", limit=10)
+        except Exception:
+            pass
+    seen, out = set(), []
+    for t in tracks:
+        k = (_norm(t.artist), _norm(t.title))
+        if k not in seen:
+            seen.add(k)
+            out.append(t)
+    random.Random(hash(mood) & 0xFFFF).shuffle(out)
+    return {"title": f"{label} Mix", "subtitle": f"{label} songs, with a little of what you love",
+            "tracks": out[:size]} if len(out) >= 10 else None

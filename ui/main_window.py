@@ -2503,7 +2503,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         if not self.online_enabled or len(self.user_data.listens) < 5:
             return []
         data = getattr(self, "_mfy", None)
-        key = (discovery.week_seed(), discovery.day_seed(), discovery.radar_seed(), len(self.user_data.listens) // 50)
+        key = (discovery.week_seed(), discovery.day_seed(), discovery.radar_seed(), len(self.user_data.listens) // 50,
+               int(__import__("time").time() // (3 * 3600)))          # daylist changes through the day
         if data is None or data.get("key") != key:
             if not getattr(self, "_mfy_busy", False):
                 self._mfy_busy = True
@@ -2529,6 +2530,19 @@ class MainWindow(ShowsMixin, QMainWindow):
                             out["lists"].append((m["title"], m["subtitle"], m["tracks"]))
                     except Exception:
                         pass
+                    try:
+                        dl = discovery.daylist(self.online, listens)
+                        if dl:
+                            out["lists"].insert(0, (dl["title"], dl["subtitle"], dl["tracks"]))
+                    except Exception:
+                        pass
+                    for mood, _label in discovery.MOODS[:3]:
+                        try:
+                            mm = discovery.mood_mix(self.online, mood, listens)
+                            if mm:
+                                out["lists"].append((mm["title"], mm["subtitle"], mm["tracks"]))
+                        except Exception:
+                            pass
                     return out
 
                 def done(out):

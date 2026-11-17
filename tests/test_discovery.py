@@ -82,3 +82,32 @@ def test_nothing_is_recorded_in_a_private_session(window):
     window.apply_settings({"private_session": False})
     window.play_song(window.songs[1])
     assert window.user_data.listens[-1][:2] == ["Perturbator", window.songs[1].title]
+
+
+def test_daylist_follows_the_time_of_day_and_mood_mixes():
+    import time
+    from core import discovery
+    from core.online.models import OnlineTrack
+
+    class Online:
+        class deezer:
+            @staticmethod
+            def search_playlists(q, limit=5):
+                return [{"id": 1}]
+
+            @staticmethod
+            def playlist_tracks(pid, limit=100):
+                return [OnlineTrack(f"Calm {i}", f"Band {i}") for i in range(15)]
+
+        @staticmethod
+        def radio(artist, title="", limit=60, rng=None):
+            return [OnlineTrack(f"{artist} like {i}", f"Other {i}") for i in range(limit)]
+    now = time.mktime((2026, 11, 17, 20, 0, 0, 0, 0, -1))           # a Tuesday evening
+    evening = [["Kevin MacLeod", "Sneaky Snitch", now - 86400 + 60 * i] for i in range(5)]
+    morning = [["Jahzzar", "Siesta", now - 86400 - 12 * 3600]] * 5
+    dl = discovery.daylist(Online, evening + morning, now=now)
+    assert dl["title"] == "daylist · Tuesday evening" and "Kevin MacLeod" in dl["subtitle"]
+    assert all("Jahzzar" not in t.title for t in dl["tracks"])          # what you play at this hour
+    assert discovery.daylist(Online, morning, now=now) is None
+    mm = discovery.mood_mix(Online, "chill", evening)
+    assert mm["title"] == "Chill Mix" and len(mm["tracks"]) >= 10
