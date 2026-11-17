@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Online features (search, streaming, downloads, podcasts). Nothing is sent when Sevbify is offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -16,6 +17,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- In-app updates: open Android's installer for a new Sevbify downloaded from its own GitHub release. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Only when you scan a computer's pairing QR code (Settings → Your computer). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Only to see whether Android Auto is installed (to show how to let it list Sevbify). -->
     <queries>
@@ -64,6 +68,13 @@
                 <data android:scheme="content" android:mimeType="application/ogg" />
                 <data android:scheme="file" android:mimeType="application/ogg" />
             </intent-filter>
+            <!-- A computer's pairing QR code, scanned with the phone's camera app (Sevbify asks before pairing). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sevbify" android:host="pair" />
+            </intent-filter>
             <!-- "Share ▸ Sevbify" on an audio file. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -72,6 +83,12 @@
                 <data android:mimeType="application/ogg" />
             </intent-filter>
         </activity>
+
+        <!-- The QR scanner (zxing-android-embedded): any orientation. -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="fullSensor"
+            tools:replace="screenOrientation" />
 
         <service
             android:name=".PlaybackService"

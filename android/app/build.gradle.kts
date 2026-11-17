@@ -151,4 +151,6 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.google.guava:guava:33.3.1-android")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")   // the pairing QR scanner (Apache 2.0)
+    implementation("com.google.zxing:core:3.5.3")
 }

@@ -254,6 +254,71 @@ def main():
             else "Settings → Playback didn't open"
     run("Open Settings", settings, needs=["App opens"])
 
+    def pair_with_computer():
+        """The real thing both ways: this computer runs Sevbify's pairing listener (core/pairing.py), the phone opens
+        its QR link (as the camera app would), taps Pair, then receives a song the computer sends and accepts it."""
+        import subprocess
+        import tempfile
+        import threading
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        try:
+            from core import pairing as pr
+        except Exception as e:
+            return "fail", f"the computer side couldn't start: {e}"
+        selftest = [l for l in ui.adb("logcat", "-d").decode(errors="replace").splitlines() if "pair self-test" in l]
+        if selftest and "FAILED" in selftest[-1]:
+            return "fail", "the phone's crypto doesn't match the computer's test values"
+
+        class Ev:
+            paired, sent = [], []
+            done = threading.Event()
+
+            def on_paired(self, dev, name):
+                self.paired.append(name)
+
+            def on_sent(self, sess, oid, ok):
+                self.sent.append(ok)
+                self.done.set()
+        ev = Ev()
+        base = tempfile.mkdtemp()
+        srv = pr.PairServer(os.path.join(base, "data"), os.path.join(base, "music"), "CI computer", "test", ev)
+        srv.start()
+        try:
+            info = pr.parse_pair_link(srv.open_pairing())
+            link = pr.pair_link(["10.0.2.2"], srv.port, info["code"], srv.store.pc_id, "CI computer")
+            back_to_home()
+            ui.sh(f"am start -a android.intent.action.VIEW -d '{link}' {PKG}")
+            time.sleep(4)
+            if not ui.tap("Pair", tries=4):
+                return "fail", "no 'Pair with CI computer?' question after opening the QR link"
+            end = time.time() + 40
+            while time.time() < end and not (ev.paired and srv.connected()):
+                time.sleep(1)
+            if not ev.paired:
+                return "fail", "the phone didn't pair (nothing reached the computer)"
+            if not srv.connected():
+                return "fail", f"paired as {ev.paired[0]} but the phone didn't stay connected"
+            song = os.path.join(base, "CI tone.mp3")
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "sine=f=440:d=5", "-metadata",
+                            "title=CI tone", "-metadata", "artist=Sevbify CI", song], check=True, timeout=60)
+            srv.connected()[0].send_paths([song], "CI")
+            time.sleep(4)
+            ui.shot("pair_receive_question", wait=0.5)
+            time.sleep(1.5)                       # Accept is enabled after a second
+            if not ui.tap("Accept", tries=4):
+                return "fail", "no 'Receive music?' question on the phone"
+            if not ev.done.wait(60) or ev.sent[-1] is not True:
+                return "fail", "the song didn't arrive"
+            time.sleep(3)
+            files = ui.sh("ls -R /sdcard/Music/Sevbify")
+            if "CI tone.mp3" not in files:
+                return "fail", "sent, but the file isn't in Music/Sevbify: " + files[-300:]
+            return "pass", f"paired as “{ev.paired[0]}” over the network, received “CI tone.mp3” in Music/Sevbify " \
+                           f"({'self-test ok' if selftest else 'no self-test line'})"
+        finally:
+            srv.stop()
+    run("Pair with a computer and receive a song", pair_with_computer, needs=["App opens"])
+
     log = ui.adb("logcat", "-d").decode(errors="replace")
     crashes = log.count("FATAL EXCEPTION") + log.count("ANR in " + PKG)
     steps.append({"step": "No crashes", "status": "pass" if crashes == 0 else "fail",

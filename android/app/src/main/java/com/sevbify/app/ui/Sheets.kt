@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Cancel
@@ -128,6 +129,10 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             SheetItem(Icons.Filled.Share, tr("Share")) { close(); Nav.shareFor = t }
+            if (com.sevbify.app.PairLink.connected && t.localUri.isNotEmpty())
+                SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}") {
+                    close(); com.sevbify.app.PairLink.send(listOf(t))
+                }
         }
     }
 }
@@ -146,6 +151,11 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
             }
             HorizontalDivider(color = C.Highlight)
             SheetItem(Icons.AutoMirrored.Filled.QueueMusic, tr("Add to queue")) { close(); pl.tracks.forEach { Player.addToQueue(it) } }
+            if (com.sevbify.app.PairLink.connected) {
+                val mine = pl.tracks.mapNotNull { t -> if (t.localUri.isNotEmpty()) t else Library.localFor(t) }
+                SheetItem(Icons.Filled.Computer, "Send to ${com.sevbify.app.PairLink.computer?.name ?: "computer"}",
+                          enabled = mine.isNotEmpty()) { close(); com.sevbify.app.PairLink.send(mine, pl.name) }
+            }
             SheetItem(Icons.Filled.Edit, tr("Edit details")) { close(); askName(pl.name) { Library.rename(pl, it) } }
             SheetItem(Icons.Filled.Delete, tr("Delete playlist")) {
                 close()

@@ -38,6 +38,11 @@ class MainActivity : ComponentActivity() {
             arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         askMusic.launch(wanted)
+        // A paired computer: stay connected while Sevbify runs (same Wi-Fi only).
+        PairLink.init(this)
+        PairLink.onReceived = { rescan(cloud = false) }
+        PairLink.start()
+        android.util.Log.i("Sevbify", "pair self-test: ${if (PairCrypto.selfTest()) "ok" else "FAILED"}")
         handleIncoming(intent)
     }
 
@@ -105,7 +110,13 @@ class MainActivity : ComponentActivity() {
         intent ?: return
         when (intent.action) {
             // "Open with ▸ Sevbify" on an audio file in a file manager.
-            Intent.ACTION_VIEW -> intent.data?.let { playUri(it) }
+            Intent.ACTION_VIEW -> intent.data?.let { uri ->
+                if (uri.scheme == "sevbify") {
+                    // A pairing QR code scanned with the phone's camera: ask first ("Pair with <computer>?").
+                    val code = PairLink.parse(uri.toString())
+                    if (code != null) { PairLink.pendingCode = code } else com.sevbify.app.ui.Nav.say("That pairing code isn't valid")
+                } else playUri(uri)
+            }
             Intent.ACTION_SEND -> {
                 val type = intent.type.orEmpty()
                 if (type.startsWith("audio") || type == "application/ogg") {
