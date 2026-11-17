@@ -34,7 +34,7 @@ def source(version, ipa_path, notes):
         "apps": [{
             "name": "Sevbify",
             "bundleIdentifier": BUNDLE_ID,
-            "developerName": "Obamna1234",
+            "developerName": "Sevbify",
             "subtitle": "Your music, podcasts and audiobooks. No account, no ads, no tracking.",
             "localizedDescription": ("Sevbify plays your own music and streams songs you don't have yet, with "
                                      "podcasts, audiobooks, radios and lyrics. Nothing you do is sold or tracked."),
