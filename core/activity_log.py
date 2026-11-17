@@ -22,6 +22,8 @@ _lock = threading.Lock()
 _path = [""]
 
 _URL = re.compile(r"([a-z][a-z0-9+.-]*)://[^\s\"')]+", re.I)
+_BARE_QUERY = re.compile(r"(\b[\w-]+(?:\.[\w-]+)+\.[A-Za-z]{2,}(?::\d+)?/[^\s?\"']*)\?[^\s\"')]+")
+_SECRET_PARAM = re.compile(r"(?i)\b(api_?key|key|token|access_token|sig|signature|auth|password|pass|secret)=[^&\s\"')]+")
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _private = [False]
 # While Private Session is on, these say what was played/searched, so only the kind of event is kept.
@@ -60,7 +62,10 @@ def _short(text):
             host = ""
         parts = host.split(".")
         return f"[{'.'.join(parts[-2:]) if len(parts) >= 2 else host} link]"
-    return _EMAIL.sub("[email]", _URL.sub(site, str(text)))          # never an email address
+    text = _EMAIL.sub("[email]", _URL.sub(site, str(text)))          # never an email address
+    # Links written without "https://" (as some error messages print them): no query string (keys, tokens).
+    text = _BARE_QUERY.sub(r"\1?…", text)
+    return _SECRET_PARAM.sub(r"\1=…", text)
 
 
 def log(kind, text):
@@ -97,7 +102,7 @@ def report(dest):
         text = _short(text)
         for f in sorted(forms, key=len, reverse=True):            # any case, either slash
             text = _re.sub(_re.escape(f), "~", text, flags=_re.IGNORECASE)
-        if user and len(user) >= 3 and user.lower() not in ("root", "user", "admin", "home", "users"):
+        if user and len(user) >= 3 and user.lower() not in ("root", "user", "admin", "home", "users", "files", "documents", "data"):
             text = _re.sub(r"(?i)(?<![A-Za-z0-9])" + _re.escape(user) + r"(?![A-Za-z0-9])", "<user>", text)
         return text
     fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)

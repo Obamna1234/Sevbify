@@ -298,7 +298,7 @@ struct PlaylistPage: View {
                 let dir = Library.support.appendingPathComponent("covers")
                 try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                 if let old = lib.playlist(id)?.coverUrl, old.hasPrefix("cover:") {
-                    try? FileManager.default.removeItem(at: dir.appendingPathComponent(String(old.dropFirst(6))))
+                    try? FileManager.default.removeItem(at: dir.appendingPathComponent(String(old.dropFirst(6)).replacingOccurrences(of: "/", with: "")))
                 }
                 let name = "\(id)-\(Int(Date().timeIntervalSince1970)).jpg"
                 do {
@@ -358,9 +358,36 @@ struct ImportView: View {
     @State private var askingName = false
     @State private var pendingName = ""
     @State private var pendingTracks: [Track] = []
+    @State private var mergeInto: Playlist?
+    @State private var mergeAdd: [Track] = []
+    @State private var mergeAll: [Track] = []
     @ObservedObject private var checker = ImportChecker.shared
 
     var body: some View {
+        importForm
+            .alert("Add to “\(mergeInto?.name ?? "")”?", isPresented: Binding(get: { mergeInto != nil }, set: { if !$0 { mergeInto = nil } })) {
+                Button("Add \(mergeAdd.count) songs") {
+                    if let same = mergeInto {
+                        lib.update(same.id) { $0.tracks.append(contentsOf: mergeAdd) }
+                        player.status = "Added \(mergeAdd.count) songs to “\(same.name)”"
+                        nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(same.id))
+                    }
+                    mergeInto = nil
+                }
+                Button("Keep separate") {
+                    if let same = mergeInto {
+                        let pl = lib.newPlaylist(same.name, tracks: mergeAll)
+                        nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(pl.id))
+                    }
+                    mergeInto = nil
+                }
+                Button("Cancel", role: .cancel) { mergeInto = nil }
+            } message: {
+                Text("This shared playlist has \(mergeAdd.count) songs you don't have in that playlist.")
+            }
+    }
+
+    private var importForm: some View {
         Form {
             Section {
                 TextField("https://open.spotify.com/playlist/…", text: $link).textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -450,18 +477,20 @@ struct ImportView: View {
                                                                 Listens.json()])
                 let tracks = (o["tracks"] as? [[String: Any]] ?? []).map(Track.init(dict:))
                 // A shared playlist with the name of one you have: add the songs you don't have yet.
-                if o["shared"] as? String == "playlist", let same = lib.playlists.first(where: { $0.name == o["name"] as? String }) {
+                // (Never into Liked Songs; and you're asked first, so a link opened from a website can't add songs by itself.)
+                if o["shared"] as? String == "playlist",
+                   let same = lib.playlists.first(where: { $0.name == o["name"] as? String && $0.origin != "liked" }) {
                     let have = Set(same.tracks.map(\.matchKey))
                     let add = tracks.filter { !have.contains($0.matchKey) }
-                    lib.update(same.id) { $0.tracks.append(contentsOf: add) }
-                    player.status = add.isEmpty ? "You already have every song in “\(same.name)”" : "Added \(add.count) songs to “\(same.name)”"
-                    nav.library = NavigationPath(); nav.tab = .library; nav.library.append(Route.playlist(same.id))
                     busy = false
+                    if add.isEmpty { player.status = "You already have every song in “\(same.name)”"; return }
+                    mergeAdd = add; mergeAll = tracks; mergeInto = same
                     return
                 }
                 var pl = lib.newPlaylist(o["name"] as? String ?? "Imported playlist", tracks: tracks,
                                          origin: o["origin"] as? String ?? "spotify")
-                pl.coverUrl = o["cover_url"] as? String ?? ""
+                let cover = o["cover_url"] as? String ?? ""
+                pl.coverUrl = cover.hasPrefix("https://") ? cover : ""
                 lib.update(pl.id) { $0.coverUrl = pl.coverUrl }
                 player.status = "Imported “\(pl.name)”: \(tracks.count) songs" + ((o["truncated"] as? Bool ?? false) ? " (Spotify shares 100 per link)" : "")
                 nav.library = NavigationPath()

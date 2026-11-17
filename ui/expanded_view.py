@@ -185,6 +185,7 @@ class ExpandedView(QWidget):
 
         bar = QHBoxLayout()
         self.title = QLabel("")
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.title.setStyleSheet("color: white; font-size: 15px; font-weight: 700;")
         bar.addWidget(self.title, 1)
         self.b_art = _tool(icons.disc(), "Show album art", lambda: self.set_mode("art"), True)
@@ -223,8 +224,10 @@ class ExpandedView(QWidget):
         v.addWidget(self.visual, 1)
 
         self.song_title = QLabel("")
+        self.song_title.setTextFormat(Qt.TextFormat.PlainText)
         self.song_title.setStyleSheet("color: white; font-size: 28px; font-weight: 800;")
         self.song_artist = QLabel("")
+        self.song_artist.setTextFormat(Qt.TextFormat.PlainText)
         self.song_artist.setStyleSheet("color: #d0d0d0; font-size: 16px;")
         v.addWidget(self.song_title)
         v.addWidget(self.song_artist)

@@ -121,7 +121,10 @@ class MainActivity : ComponentActivity() {
                     val code = PairLink.parse(uri.toString())
                     if (code != null) { PairLink.pendingCode = code } else com.sevbify.app.ui.Nav.say("That pairing code isn't valid")
                 } else if (uri.scheme == "file" && (uri.path ?: "").let { p ->
-                        p.startsWith(applicationInfo.dataDir) || p.contains("/data/data/") || p.contains("/Android/data/$packageName") }) {
+                        // the real path too (no "..", no links), so /sdcard/../data/... is refused as well
+                        val real = runCatching { java.io.File(p).canonicalPath }.getOrDefault(p)
+                        p.contains("/../") || listOf(p, real).any { x -> x.startsWith(applicationInfo.dataDir) ||
+                            x.contains("/data/data/") || x.contains("/data/user/") || x.contains("/Android/data/$packageName") } }) {
                     // Another app asking Sevbify to open one of Sevbify's own private files: never.
                 } else playUri(uri)
             }

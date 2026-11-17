@@ -1738,6 +1738,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         info.addWidget(self.artist_info)
         # Small status line for errors and confirmations.
         self.status_label = QLabel("")
+        self.status_label.setTextFormat(Qt.TextFormat.PlainText)     # names from shared links / Jam: never markup
         self.status_label.setMinimumWidth(0)
         self.status_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.status_label.hide()

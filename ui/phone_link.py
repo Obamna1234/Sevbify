@@ -130,6 +130,8 @@ class PhoneLink(QObject):
         if self.server is None or not getattr(self.win.user_data, "phone_remote", True):
             return
         st = self.state()
+        if getattr(self.win, "private_session", False):     # Private Session: controls only, not what's playing
+            st.update(title="Private Session", artist="", source="", next=[])
         key = (st["title"], st["artist"], st["playing"], st["volume"], st["pos"] // 5000, tuple(st["next"]))
         if key == self._last_state:
             return
@@ -161,8 +163,10 @@ class PhoneLink(QObject):
             # Jam: a song added to the queue here, as if you'd picked it (it streams like any search result).
             from core.online.models import OnlineTrack
             from core.online.remote_song import RemoteSong
+            from core.share_playlist import clean_text
             s = args["song"]
-            t = OnlineTrack(title=s["title"], artist=s["artist"], album=s["album"], duration_ms=s["duration_ms"],
+            t = OnlineTrack(title=clean_text(s["title"], 300), artist=clean_text(s["artist"], 200),
+                            album=clean_text(s["album"], 200), duration_ms=s["duration_ms"],
                             source=s["source"], page_url=s["page_url"])
             w.add_to_queue(RemoteSong(t))
             w.show_status(f"{getattr(sess, 'name', 'A phone')} added “{s['title']}” to the queue", kind="info",

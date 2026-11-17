@@ -95,9 +95,14 @@ object CanvasLoop {
             val buf = ByteBuffer.allocate(4 * 1024 * 1024)
             val info = MediaCodec.BufferInfo()
             var first = -1L
+            var written = 0L
+            var samples = 0
             while (true) {
                 val size = ex.readSampleData(buf, 0)
                 if (size < 0) break
+                written += size; samples++
+                // Never more than 8 MB or 2000 frames, even if the stream's timestamps don't move on.
+                if (written > 8_000_000 || samples > 2000) { muxer.stop(); part.delete(); return false }
                 val time = ex.sampleTime
                 if (first < 0) first = time
                 if (time - first > CLIP_US) break

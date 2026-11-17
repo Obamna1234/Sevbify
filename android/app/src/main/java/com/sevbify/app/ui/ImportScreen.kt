@@ -40,6 +40,23 @@ fun ImportScreen(start: String) {
     var link by remember { mutableStateOf(if (isSongs) "" else start) }
     var songs by remember { mutableStateOf(if (isSongs) start else "") }
     var busy by remember { mutableStateOf(false) }
+    var mergeAsk by remember { mutableStateOf<Triple<com.sevbify.app.Playlist, List<com.sevbify.app.Track>, List<com.sevbify.app.Track>>?>(null) }
+    mergeAsk?.let { (same, add, all) ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { mergeAsk = null },
+            title = { Text("Add to “${same.name}”?") },
+            text = { Text("This shared playlist has ${add.size} song${if (add.size == 1) "" else "s"} you don't have in “${same.name}”. " +
+                          "Add them, or keep it as a separate playlist.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = {
+                mergeAsk = null; same.tracks.addAll(add); Library.changed()
+                Nav.back(); Nav.go(Screen.PlaylistPage(same.id)); Nav.say("Added ${add.size} songs to “${same.name}”")
+            }) { Text("Add ${add.size} songs") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = {
+                mergeAsk = null
+                val pl = Library.newPlaylist(same.name, all); Library.changed()
+                Nav.back(); Nav.go(Screen.PlaylistPage(pl.id))
+            }) { Text("Keep separate") } })
+    }
     val scope = rememberCoroutineScope()
     Column(Modifier.statusBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -76,20 +93,19 @@ fun ImportScreen(start: String) {
                                        Library.listensJson())
                     val tracks = o.getJSONArray("tracks").tracks()
                     // A shared playlist with the name of one you have: merge (add the songs you don't have).
+                    // (Never into Liked Songs; and you're asked first, so a link opened from a website can't add
+                    // songs to your playlist by itself.)
                     val same = if (o.optString("shared") == "playlist")
-                        Library.playlists.firstOrNull { it.name == o.optString("name") } else null
+                        Library.playlists.firstOrNull { it.name == o.optString("name") && it.origin != "liked" } else null
                     if (same != null) {
                         val have = same.tracks.map { it.matchKey }.toSet()
                         val add = tracks.filter { it.matchKey !in have }
-                        same.tracks.addAll(add)
-                        Library.changed()
-                        Nav.back(); Nav.go(Screen.PlaylistPage(same.id))
-                        Nav.say(if (add.isEmpty()) "You already have every song in “${same.name}”"
-                                else "Added ${add.size} songs to “${same.name}”")
+                        if (add.isEmpty()) { Nav.say("You already have every song in “${same.name}”"); return@launch }
+                        mergeAsk = Triple(same, add, tracks)
                         return@launch
                     }
                     val pl = Library.newPlaylist(o.optString("name", "Imported playlist"), tracks)
-                    pl.coverUrl = o.optString("cover_url")
+                    pl.coverUrl = o.optString("cover_url").takeIf { it.startsWith("https://") } ?: ""
                     pl.origin = o.optString("origin", "spotify")
                     Library.changed()
                     Nav.back()

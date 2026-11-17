@@ -318,8 +318,8 @@ jobs:
         env:
           # The signing key is only handed to builds of main (releases are made from main), never to other branches
           # or to pushed tags (a tag can point at any commit).
-          KEYSTORE_B64: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
-          SEVBIFY_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          KEYSTORE_B64: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          SEVBIFY_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
         run: |
           # The release signing key comes from the repository's secrets (never stored in the code).
           if [ -n "$KEYSTORE_B64" ] && [ -n "$SEVBIFY_KEYSTORE_PASSWORD" ]; then
@@ -489,7 +489,7 @@ jobs:
     # no third-party code: it downloads the screenshots and pushes them.
     name: iPhone screenshots
     needs: iphone
-    if: always() && needs.iphone.result != 'skipped'
+    if: always() && needs.iphone.result != 'skipped' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: write

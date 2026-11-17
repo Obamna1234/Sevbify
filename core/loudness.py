@@ -33,10 +33,14 @@ def measure(location, ffmpeg, headers=None, seconds=SECONDS, timeout=60):
     if "://" in str(location):
         if not str(location).startswith(("https://", "http://")):
             return None                               # only web streams and plain files
-        hdr = "".join(f"{k}: {v}\r\n" for k, v in (headers or {}).items() if k and v and "\n" not in f"{k}{v}")
+        hdr = "".join(f"{k}: {v}\r\n" for k, v in (headers or {}).items()
+                      if k and v and "\n" not in f"{k}{v}" and "\r" not in f"{k}{v}")
         if hdr:
             cmd += ["-headers", hdr]
         cmd += ["-protocol_whitelist", "https,http,tls,tcp,crypto"]
+    else:
+        cmd += ["-protocol_whitelist", "file"]
+        location = "file:" + str(location)          # a plain file (never "concat:", "subfile:", ...)
     cmd += ["-t", str(int(seconds)), "-i", str(location), "-vn", "-sn", "-af", "ebur128", "-f", "null", "-"]
     try:
         kw = {}

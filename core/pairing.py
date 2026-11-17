@@ -28,6 +28,7 @@ Files go one at a time per direction: after {"t": "file"} only that file's data 
 {"t": "file_end"}; a second "file" while one is open breaks the connection. An offer id is 1-40 characters
 [A-Za-z0-9_-] and is never reused on a connection.
 """
+import collections
 import hashlib
 import ipaddress
 import json
@@ -750,8 +751,20 @@ class Session:
                 return
             now = time.time()
             with self.lock:
-                self.remote_times = [x for x in getattr(self, "remote_times", []) if now - x < 10] + [now]
-                flood = len(self.remote_times) > REMOTE_PER_10S
+                # Only commands that were carried out count (a fixed-size list), so a flood costs nothing; far too
+                # many in a row closes the connection.
+                times = self.__dict__.setdefault("remote_times", collections.deque(maxlen=REMOTE_PER_10S))
+                while times and now - times[0] >= 10:
+                    times.popleft()
+                flood = len(times) >= REMOTE_PER_10S
+                if flood:
+                    self.remote_dropped = getattr(self, "remote_dropped", 0) + 1
+                else:
+                    times.append(now)
+                    self.remote_dropped = 0
+            if flood and self.remote_dropped > 2000:
+                self.close() if hasattr(self, "close") else self.link.close()
+                return
             if not flood:
                 self._event("on_remote", cmd, args)
         # anything else: a newer version's message; ignored

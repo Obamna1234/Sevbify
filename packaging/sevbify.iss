@@ -14,6 +14,8 @@ AppPublisher=Sevbify
 DefaultDirName={localappdata}\Programs\Sevbify
 DefaultGroupName=Sevbify
 DisableProgramGroupPage=yes
+; Always Sevbify's own folder: the uninstaller removes that folder, so it must never be one you chose (e.g. Music).
+DisableDirPage=yes
 PrivilegesRequired=lowest
 OutputDir=..
 OutputBaseFilename=Sevbify-Windows-Setup
@@ -45,12 +47,34 @@ Type: filesandordirs; Name: "{app}"
 Type: filesandordirs; Name: "{app}.sevbify-previous"
 
 [Code]
+{ Your data folder, without "Received music" (songs sent from your phone are kept, like downloaded songs). }
+procedure DeleteDataKeepingMusic(const Dir: String);
+var
+  F: TFindRec;
+begin
+  if FindFirst(Dir + '\*', F) then
+  try
+    repeat
+      if (F.Name <> '.') and (F.Name <> '..') and (CompareText(F.Name, 'Received music') <> 0) then
+      begin
+        if F.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
+          DelTree(Dir + '\' + F.Name, True, True, True)
+        else
+          DeleteFile(Dir + '\' + F.Name);
+      end;
+    until not FindNext(F);
+  finally
+    FindClose(F);
+  end;
+  RemoveDir(Dir);   { only if it's now empty }
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then
     if MsgBox('Also delete your Sevbify data (playlists, settings, podcasts you follow)?' #13#10#13#10 +
               'Choose No to keep it, so it''s all still there if you install Sevbify again. ' +
-              'Songs you downloaded stay in your music folders either way.',
+              'Songs you downloaded, and songs your phone sent (Received music), are kept either way.',
               mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
-      DelTree(ExpandConstant('{userappdata}\Sevbify'), True, True, True);
+      DeleteDataKeepingMusic(ExpandConstant('{userappdata}\Sevbify'));
 end;

@@ -15,6 +15,7 @@ Only works for the packaged app; running from source just opens the release page
 """
 import hashlib
 import os
+import re
 import shutil
 import stat
 import sys
@@ -67,7 +68,11 @@ def looks_like_sevbify(target, platform=None, exe_name=None):
                # what the release build puts next to the program (Windows: README, CHANGELOG; Linux: also the
                # menu entry, its installer and icon)
                "readme.md", "changelog.md", "sevbify.desktop", "install.sh", "sevbify.png"}
-    return all(n.lower() in allowed for n in os.listdir(target))
+    def ok(n):
+        n = n.lower()
+        # The Windows installer's own uninstaller (unins000.exe / .dat, kept across updates).
+        return n in allowed or (platform.startswith("win") and re.fullmatch(r"unins\d{3}\.(exe|dat|msg)", n) is not None)
+    return all(ok(n) for n in os.listdir(target))
 
 
 def launch_detached(cmd):
@@ -303,6 +308,8 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
             f'  move "{old}" "{target}" >NUL',
             "  goto copy",
             ")",
+            # Installed with Sevbify-Windows-Setup.exe: the uninstaller stays with the app.
+            f'for %%f in ("{old}\\unins*.exe" "{old}\\unins*.dat" "{old}\\unins*.msg") do copy /y "%%f" "{target}\\" >NUL',
             # Keep the version just replaced as the previous one (one copy; an older one is removed).
             f'if exist "{prev}" rmdir /s /q "{prev}"',
             f'move "{old}" "{prev}" >NUL',
@@ -355,7 +362,9 @@ def restart_command(new_app, target, pid, script_dir, platform=None, exe_name=No
         start = f"open {_q(target)}"
     else:
         start = f"( {_q(os.path.join(target, exe_name or 'Sevbify'))} >/dev/null 2>&1 & )"
-    stop = f"pkill -f -- {_q(target.rstrip('/') + '/')} 2>/dev/null; sleep 2"
+    # pkill reads a regular expression: the folder's name is escaped so "(x86)", "." or "+" in it match literally.
+    pattern = "".join("\\" + ch if ch in "\\.^$|?*+()[]{}" else ch for ch in target.rstrip("/") + "/")
+    stop = f"pkill -f -- {_q(pattern)} 2>/dev/null; sleep 2"
     body = f"""#!/bin/sh
 # Sevbify updater: wait for Sevbify to close, swap in the new version, open it again (and, after an update,
 # put the previous version back if the new one doesn't open).

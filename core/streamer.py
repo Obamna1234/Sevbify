@@ -405,10 +405,14 @@ def _find(line, key, duration_ms, source, extract):
     raise NoFullSong("not found on Bandcamp, YouTube or SoundCloud" + (f" ({why})" if why else ""))
 
 
+_searched = set()        # SoundCloud pages that Sevbify's own search returned (this session)
+
+
 def remember_page(artist, title, source_name, page):
     """A song picked straight from a site's own search (e.g. "On SoundCloud" in Search): play / download exactly
-    that page instead of searching for the song again."""
-    if not _page_ok(source_name, page):
+    that page instead of searching for the song again. Only pages Sevbify's own search found are remembered: a
+    shared playlist or a Jam song names its page itself, and must never decide what a song name plays."""
+    if not _page_ok(source_name, page) or page not in _searched:
         return False
     line = downloader.song_line(artist, title)
     with _lock:
@@ -448,6 +452,10 @@ def search_soundcloud(query, limit=10):
             artist, title = m.group(1), m.group(2)
         thumbs = entry.get("thumbnails") or []
         cover = (thumbs[-1].get("url") if thumbs and isinstance(thumbs[-1], dict) else "") or entry.get("thumbnail") or ""
+        with _lock:
+            if len(_searched) > 5000:
+                _searched.clear()
+            _searched.add(url)
         out.append(OnlineTrack(title=title.strip(), artist=artist.strip() or "SoundCloud", duration_ms=int(secs * 1000),
                                cover_url=cover if str(cover).startswith("https://") else "", source="soundcloud",
                                page_url=url))

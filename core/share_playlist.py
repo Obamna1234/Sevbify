@@ -38,6 +38,8 @@ def clean_text(s, limit):
     """Plain, visible text: NFC, no control / format (invisible, right-to-left override) characters."""
     s = unicodedata.normalize("NFC", str(s or ""))
     s = "".join(ch for ch in s if unicodedata.category(ch) not in ("Cc", "Cf", "Co", "Cs") or ch == " ")
+    # Never markup: a "<b>" or "&lt;" in a friend's playlist name stays plain text wherever it's shown.
+    s = re.sub(r"<(?=[A-Za-z/!?])", "\u2039", s).replace("&", "\uff06") if re.search(r"<[A-Za-z/!?]|&[#A-Za-z0-9]+;", s) else s
     return " ".join(s.split())[:limit]
 
 
@@ -136,7 +138,7 @@ def read(text):
     elif text.startswith("{"):
         try:
             obj = json.loads(text)
-        except ValueError:
+        except (ValueError, RecursionError):
             raise ShareError("That file isn't a Sevbify playlist.")
         if not isinstance(obj, dict) or obj.get("sevbify") != 1:
             raise ShareError("That file isn't a Sevbify playlist.")
@@ -165,12 +167,13 @@ def merge(mine, theirs):
     """What merging their copy into yours would do: {"add": [their songs you don't have, in their order],
     "missing": [your songs their copy doesn't have], "same": n}. Nothing of yours is removed unless you choose."""
     have = {_key(getattr(s, "artist", ""), getattr(s, "title", "")) for s in mine}
-    theirs_keys = set()
+    theirs_keys, added = set(), set()
     add = []
     for s in theirs:
         k = _key(s.get("artist"), s.get("title"))
         theirs_keys.add(k)
-        if k not in have and k not in {_key(a["artist"], a["title"]) for a in add}:
+        if k not in have and k not in added:
+            added.add(k)
             add.append(s)
     missing = [s for s in mine if _key(getattr(s, "artist", ""), getattr(s, "title", "")) not in theirs_keys]
     return {"add": add, "missing": missing, "same": len(theirs) - len(add)}
