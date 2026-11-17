@@ -94,6 +94,7 @@ class StoredPlaylist:
     cover: str = ""              # custom cover picture
     origin: str = ""             # where it came from: "" made in Sevbify | "spotify" | "apple" | "deezer" | "jamendo" | "file"
     description: str = ""        # Edit details → Description (up to 300 characters, shown under the name)
+    pinned: bool = False         # Pin playlist: kept at the top of Your Library
 
 
 @dataclass
@@ -323,7 +324,8 @@ class Storage:
                  **({"last_played": round(p.last_played, 3)} if p.last_played else {}),
                  **({"cover": to_stored_path(p.cover)} if p.cover else {}),
                  **({"origin": p.origin} if getattr(p, "origin", "") else {}),
-                 **({"description": p.description[:300]} if getattr(p, "description", "") else {})}
+                 **({"description": p.description[:300]} if getattr(p, "description", "") else {}),
+                 **({"pinned": True} if getattr(p, "pinned", False) else {})}
                 for p in data.playlists
             ],
             "recent": [to_stored_path(t) for t in data.recent],
@@ -542,7 +544,8 @@ class Storage:
                                             from_stored_path(str(cover)) if cover else "",
                                             origin if (origin in ("spotify", "apple", "deezer", "jamendo", "youtube", "file", "link", "liked")
                                                       or re.fullmatch(r"server:[0-9a-f]{12}", origin)) else "",
-                                            str(item.get("description") or "")[:300] if isinstance(item.get("description"), str) else ""))
+                                            str(item.get("description") or "")[:300] if isinstance(item.get("description"), str) else "",
+                                            item.get("pinned") is True))
         data.playlists = playlists
         return data
 

@@ -714,6 +714,7 @@ class MainWindow(ShowsMixin, QMainWindow):
             pl.custom_cover = stored.cover
             pl.origin = getattr(stored, "origin", "")
             pl.description = getattr(stored, "description", "")
+            pl.pinned = bool(getattr(stored, "pinned", False))
             for entry in stored.tracks:
                 if isinstance(entry, dict):
                     # A song added from Radio/Search that isn't downloaded yet.
@@ -770,7 +771,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             self.user_data.playlists = [
                 StoredPlaylist(p.name, [{"pending": s.track.to_dict()} if getattr(s, "is_remote", False)
                                         else s.file_path for s in p.songs], p.folder, p.created, p.last_played,
-                               p.custom_cover, getattr(p, "origin", ""), getattr(p, "description", ""))
+                               p.custom_cover, getattr(p, "origin", ""), getattr(p, "description", ""),
+                               bool(getattr(p, "pinned", False)))
                 for p in self.playlists
             ]
             self.user_data.recent = [s.file_path for s in self.pq.recent if s.file_path]
@@ -4225,6 +4227,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._add_send_to_phone(menu, playlist.songs, title=playlist.name)
         menu.addSeparator()
         menu.addAction("✎  Edit details").triggered.connect(lambda: self.edit_playlist_details(playlist))
+        menu.addAction("📌  Unpin playlist" if getattr(playlist, "pinned", False) else "📌  Pin playlist").triggered.connect(
+            lambda: self.pin_playlist(playlist, not getattr(playlist, "pinned", False)))
         menu.addAction("⊖  Delete").triggered.connect(lambda: self._confirm_delete_playlist(playlist))
         pending = [x for x in playlist.songs if getattr(x, "is_remote", False)]
         dl = menu.addAction(f"⬇  Download {len(pending)} song{'s' if len(pending) != 1 else ''}" if pending
@@ -4259,6 +4263,12 @@ class MainWindow(ShowsMixin, QMainWindow):
         share.addAction("Copy song list (Artist - Title)").triggered.connect(
             lambda: QApplication.clipboard().setText("\n".join(f"{x.artist} - {x.title}" for x in playlist.songs)))
         return menu
+
+    def pin_playlist(self, playlist, on=True):
+        playlist.pinned = bool(on)
+        self.schedule_save()
+        self._refresh_library_panel()
+        self.show_status("Pinned to the top of Your Library" if on else "Unpinned", kind="info", timeout_ms=3000)
 
     def _playlist_context_menu(self, playlist, global_pos):
         self.build_playlist_menu(playlist).exec(global_pos)

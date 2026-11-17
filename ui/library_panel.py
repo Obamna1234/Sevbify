@@ -658,6 +658,11 @@ class LibraryPanel(QFrame):
         if liked and chip in (None, "playlists", "downloaded") and match(liked[0].name) \
                 and (chip != "downloaded" or self.is_downloaded(liked[0])):
             out.append(self._pl_entry(liked[0], 0))
+        pinned = [p for p in st["playlists"] if getattr(p, "pinned", False) and getattr(p, "origin", "") != "liked"]
+        if chip in (None, "playlists", "downloaded"):
+            for pl in pinned:
+                if match(pl.name) and (chip != "downloaded" or self.is_downloaded(pl)):
+                    out.append(self._pl_entry(pl, 0))
         if chip in (None, "playlists", "downloaded") and match("Your Songs"):
             out.append(dict(kind="songs", title="Your Songs", subtitle=f"Library • {n(st['n_songs'], 'song')}",
                             obj=None, indent=0))
@@ -665,7 +670,7 @@ class LibraryPanel(QFrame):
             out.append(dict(kind="saved", title="To download",
                             subtitle=f"Not downloaded yet • {n(st['n_saved'], 'song')}", obj=None, indent=0))
 
-        playlists = [p for p in st["playlists"] if getattr(p, "origin", "") != "liked"]
+        playlists = [p for p in st["playlists"] if getattr(p, "origin", "") != "liked" and not getattr(p, "pinned", False)]
         if chip == "downloaded":
             playlists = [p for p in playlists if self.is_downloaded(p)]
         pl_recent = lambda p: p.last_played
@@ -728,7 +733,8 @@ class LibraryPanel(QFrame):
     @staticmethod
     def _pl_entry(pl, indent):
         n = len(pl.songs)
-        return dict(kind="playlist", title=pl.name, subtitle=f"Playlist • {n} song{'s' if n != 1 else ''}",
+        pin = "📌 " if getattr(pl, "pinned", False) else ""
+        return dict(kind="playlist", title=pl.name, subtitle=f"{pin}Playlist • {n} song{'s' if n != 1 else ''}",
                     obj=pl, indent=indent)
 
     # --- view ---------------------------------------------------------------------------------------

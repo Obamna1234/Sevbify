@@ -195,6 +195,7 @@ class Playlist:
         self.last_played = last_played          # for "Recents" sorting (played or opened)
         self.origin = ""                        # "" made in Sevbify, or imported: spotify / apple / youtube / file
         self.description = ""                   # Edit details → Description (shown under the name)
+        self.pinned = False                     # Pin playlist: kept at the top of Your Library
 
     def add_song(self, song: Song):
         self.songs.append(song)
