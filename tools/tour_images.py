@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # picture -> (screenshot name, is a dialog)
 DESKTOP = {"search.jpg": ("search", False), "save.jpg": ("save-picker", False), "import.jpg": ("import", True),
-           "radio.jpg": ("radio", False), "podcast.jpg": ("podcast", False), "pair.jpg": ("pair", True),
+           "radio.jpg": ("preview-feed", False), "podcast.jpg": ("podcast", False), "pair.jpg": ("pair", True),
            "support.jpg": ("support", True), "mini.jpg": ("mini-player", True),
            "private.jpg": ("private-session", False), "settings.jpg": ("settings", False)}
 ANDROID = {"search.jpg": "search_results", "save.jpg": "your_songs_menu", "import.jpg": "import_result",

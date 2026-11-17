@@ -194,7 +194,7 @@ def made_for_you():
     shot("discover-weekly")
 
 
-def radio():
+def radio():          # not run: a radio mixes in similar artists, whose music isn't openly licensed
     songs = state.get("songs") or []
     w.start_radio(songs[0])
     pump(40)
@@ -323,7 +323,7 @@ def mini():
 
 for name, fn in [("home", home), ("search", search), ("play", play), ("artist", artist), ("album", album),
                  ("queue", queue), ("liked", liked), ("save picker", save_picker), ("made for you", made_for_you),
-                 ("radio", radio), ("preview feed", preview_feed), ("podcast", podcast),
+                 ("preview feed", preview_feed), ("podcast", podcast),
                  ("full screen", lyrics_or_full), ("mini player", mini), ("private", private), ("zoom", zoom),
                  ("settings", settings), ("import", import_dialog), ("pair", pair_dialog),
                  ("support", support_dialog)]:
