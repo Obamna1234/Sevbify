@@ -100,7 +100,9 @@ def test_a_paired_phone_controls_the_music_and_adds_to_the_queue(window, qapp, t
     sess.link.send_json({"t": "remote", "cmd": "volume", "v": 37})
     assert _wait(qapp, lambda: w.volume_slider.value() == 37, 10)
     sess.link.send_json({"t": "remote", "cmd": "queue_add", "song": {"title": "Siesta", "artist": "Jahzzar"}})
-    assert _wait(qapp, lambda: any(s.title == "Siesta" for s in w.pq.user_queue), 10)
+    # (The test songs are 1 second long, so the added song may already be playing by the time we look.)
+    assert _wait(qapp, lambda: any(s.title == "Siesta" for s in w.pq.user_queue)
+                 or getattr(w.current_song, "title", "") == "Siesta", 10)
     sess.link.send_json({"t": "remote", "cmd": "format_disk"})             # not a command: ignored
     w.apply_settings({"phone_remote": False})                                # switched off in Settings
     sess.link.send_json({"t": "remote", "cmd": "volume", "v": 80})
