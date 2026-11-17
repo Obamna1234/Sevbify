@@ -179,8 +179,8 @@ object PairLink {
 
     private const val FILE = "paired_computer.json"
     private val AUDIO = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav", "wma", "aiff", "aif", "alac", "ape", "mka", "webm")
-    private val EXTRA = mapOf("jpg" to 30L shl 20, "jpeg" to 30L shl 20, "png" to 30L shl 20, "lrc" to 1L shl 20,
-                              "m3u" to 1L shl 20, "m3u8" to 1L shl 20)
+    private val EXTRA = mapOf("jpg" to (30L shl 20), "jpeg" to (30L shl 20), "png" to (30L shl 20), "lrc" to (1L shl 20),
+                              "m3u" to (1L shl 20), "m3u8" to (1L shl 20))
     private val RESERVED = setOf("con", "prn", "aux", "nul", "conin$", "conout$", "clock$") +
         (("0123456789¹²³").flatMap { listOf("com$it", "lpt$it") })
     private const val MAX_FILE = 4L shl 30
@@ -534,7 +534,7 @@ object PairLink {
             started.add(i)
             index = i; got = 0
             hash = MessageDigest.getInstance("SHA-256")
-            tmp = try { File.createTempFile("pair", ".part", File(app.cacheDir, "incoming").apply { mkdirs() }) } catch (_: Exception) { null }
+            tmp = try { File.createTempFile("pair", ".part", File(PairLink.app.cacheDir, "incoming").apply { mkdirs() }) } catch (_: Exception) { null }
             out = try { tmp?.let { FileOutputStream(it) } } catch (_: Exception) { null }
         }
 
@@ -564,7 +564,7 @@ object PairLink {
             return try {
                 if (Build.VERSION.SDK_INT >= 29) {
                     val ext = name.substringAfterLast('.', "").lowercase()
-                    val audio = ext in AUDIO
+                    val audio = ext in PairLink.AUDIO
                     val collection = if (audio) MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                                      else MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                     val values = ContentValues().apply {
@@ -573,7 +573,7 @@ object PairLink {
                             "${Environment.DIRECTORY_MUSIC}/Sevbify/$folder" + if (dir.isNotEmpty()) "/$dir" else "")
                         put(MediaStore.MediaColumns.IS_PENDING, 1)
                     }
-                    val resolver = app.contentResolver
+                    val resolver = PairLink.app.contentResolver
                     val uri = resolver.insert(collection, values) ?: return false
                     try {
                         resolver.openOutputStream(uri)?.use { o -> file.inputStream().use { it.copyTo(o) } }
@@ -582,7 +582,7 @@ object PairLink {
                         true
                     } catch (e: Exception) { resolver.delete(uri, null, null); false }
                 } else {
-                    val base = File(app.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "$folder/$dir").apply { mkdirs() }
+                    val base = File(PairLink.app.getExternalFilesDir(Environment.DIRECTORY_MUSIC), "$folder/$dir").apply { mkdirs() }
                     var target = File(base, name); var n = 2
                     while (target.exists()) { target = File(base, name.substringBeforeLast('.') + " ($n)." + name.substringAfterLast('.')); n++ }
                     file.copyTo(target); true
