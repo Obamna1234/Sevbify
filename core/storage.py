@@ -159,6 +159,7 @@ class UserData:
     hidden_songs: List[dict] = field(default_factory=list)       # core/hidden.py
     hidden_artists: List[dict] = field(default_factory=list)
     hide_note_seen: bool = False                                 # "You can bring it back in Settings" shown once
+    taste_excluded: List[str] = field(default_factory=list)      # "artist|title" keys left out of mixes and Wrapped
     recent_searches: List[str] = field(default_factory=list)  # Search ▸ Recent searches (newest first, max 30)
     save_for_later: Dict[str, list] = field(default_factory=dict)  # genre -> [song dicts]
     shows: List[dict] = field(default_factory=list)       # followed podcasts / YouTube channels (Show dicts)
@@ -319,6 +320,7 @@ class Storage:
             "listens": [list(x) for x in data.listens[-5000:]],
             "hidden_songs": list(data.hidden_songs), "hidden_artists": list(data.hidden_artists),
             "hide_note_seen": bool(data.hide_note_seen),
+            "taste_excluded": list(data.taste_excluded)[-2000:],
             "recent_searches": list(data.recent_searches[:30]),
             "save_for_later": data.save_for_later,
             "shows": data.shows,
@@ -471,6 +473,7 @@ class Storage:
         data.hidden_artists = _hidden._clean(raw.get("hidden_artists") if isinstance(raw.get("hidden_artists"), list) else [],
                                              "artist")
         data.hide_note_seen = bool(raw.get("hide_note_seen", False))
+        data.taste_excluded = [str(k)[:500] for k in (raw.get("taste_excluded") or []) if isinstance(k, str)][-2000:]
         data.recent_searches = [str(q)[:200] for q in raw.get("recent_searches", []) or [] if str(q).strip()][:30]
         data.shows = [d for d in raw.get("shows", []) or [] if isinstance(d, dict) and (d.get("feed_url") or d.get("apple_id"))]
         data.books = [d for d in raw.get("books", []) or [] if isinstance(d, dict) and d.get("identifier")]

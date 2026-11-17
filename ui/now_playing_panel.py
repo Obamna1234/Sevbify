@@ -94,6 +94,7 @@ class AnimatedArtwork(QWidget):
 
 class NowPlayingPanel(QWidget):
     close_requested = pyqtSignal()
+    expand_requested = pyqtSignal()
     go_to_artist_radio = pyqtSignal()
 
     def __init__(self, pixmap_loader, parent=None):
@@ -115,6 +116,17 @@ class NowPlayingPanel(QWidget):
         self.source_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.source_label.setStyleSheet("color: white; font-size: 15px; font-weight: bold;")
         head.addWidget(self.source_label, 1)
+        from . import icons as _icons
+        expand = QPushButton()
+        expand.setIcon(_icons.expand())
+        expand.setToolTip("Expand Now playing view")
+        expand.setFixedSize(28, 28)
+        expand.setCursor(Qt.CursorShape.PointingHandCursor)
+        expand.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 14px; }"
+                             "QPushButton:hover { background: rgba(255,255,255,0.1); }")
+        expand.clicked.connect(self.expand_requested.emit)
+        self.expand_button = expand
+        head.addWidget(expand)
         close = QPushButton("✕")
         close.setFixedSize(28, 28)
         close.setCursor(Qt.CursorShape.PointingHandCursor)

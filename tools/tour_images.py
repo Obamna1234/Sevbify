@@ -14,7 +14,7 @@ import sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # picture -> (screenshot name, is a dialog)
-DESKTOP = {"search.jpg": ("search", False), "save.jpg": ("save-picker", False), "import.jpg": ("import", True),
+DESKTOP = {"search.jpg": ("search", False), "save.jpg": ("save-picker-popup", True), "expanded.jpg": ("expanded", False), "import.jpg": ("import", True),
            "radio.jpg": ("preview-feed", False), "podcast.jpg": ("podcast", False), "pair.jpg": ("pair", True),
            "support.jpg": ("support", True), "mini.jpg": ("mini-player", True),
            "private.jpg": ("private-session", False), "settings.jpg": ("settings", False)}

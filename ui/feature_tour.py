@@ -20,10 +20,13 @@ PAGES = [
      "away, full length; no account needed."),
     ("save.jpg", "Save with one click",
      "Click ⊕ next to a song to save it to Liked Songs, or pick any playlist. The green tick shows where it's saved."),
+    ("expanded.jpg", "Now playing, bigger",
+     "The ⤢ button in Now playing opens it over the whole window: the cover tilts as your mouse moves, the Canvas "
+     "video plays wide, or the artist's picture fills the background, with credits and what's next."),
     ("import.jpg", "Bring your Spotify playlists",
      "Your Library → + → Import a playlist, and paste a link from Spotify, Apple Music or Deezer. More than 100 songs? "
-     "In Spotify click a song, press Ctrl+A then Ctrl+C, and paste them in the second box. Your Spotify account is "
-     "never signed in to."),
+     "In Spotify click a song, press Ctrl+A then Ctrl+C, and paste them in the second box, or turn on Settings → "
+     "Read whole Spotify playlists. Your Spotify account is never signed in to."),
     ("radio.jpg", "Radio and previews",
      "Right-click any song → Go to song radio for an endless mix like it. Or scroll through quick previews of songs "
      "and save the ones you like."),

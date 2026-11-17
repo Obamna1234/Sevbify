@@ -139,6 +139,16 @@ def play():
     shot("now-playing")
 
 
+def expanded():
+    w.open_expanded_view()
+    pump(6)
+    ev = w.expanded_view
+    ev.cover._rx, ev.cover._ry = 3.0, -6.0          # tilted, as when the mouse is over it
+    ev.cover.update()
+    shot("expanded")
+    w.close_expanded_view()
+
+
 def artist():
     w.show_web_artist("Kevin MacLeod")
     pump(20)
@@ -321,7 +331,7 @@ def mini():
     w.resize(W, H)
 
 
-for name, fn in [("home", home), ("search", search), ("play", play), ("artist", artist), ("album", album),
+for name, fn in [("home", home), ("search", search), ("play", play), ("expanded", expanded), ("artist", artist), ("album", album),
                  ("queue", queue), ("liked", liked), ("save picker", save_picker), ("made for you", made_for_you),
                  ("preview feed", preview_feed), ("podcast", podcast),
                  ("full screen", lyrics_or_full), ("mini player", mini), ("private", private), ("zoom", zoom),

@@ -482,7 +482,17 @@ class MainWindow(ShowsMixin, QMainWindow):
         self.right_panel.addWidget(self.queue_panel)
         self.now_playing_panel = NowPlayingPanel(load_pixmap)
         self.now_playing_panel.close_requested.connect(lambda: self.set_right_panel(""))
+        self.now_playing_panel.expand_requested.connect(self.open_expanded_view)
         self.right_panel.addWidget(self.now_playing_panel)
+        from .expanded_view import ExpandedView
+        self.expanded_view = ExpandedView()                  # Spotify's expanded Now playing view (hidden until opened)
+        self.expanded_view.hide()
+        self.expanded_view.collapse_requested.connect(self.close_expanded_view)
+        self.expanded_view.full_screen_requested.connect(lambda: (self.close_expanded_view(), self.open_full_screen()))
+        self.expanded_view.lyrics_requested.connect(lambda: (self.close_expanded_view(), self.lyrics_btn.click()))
+        self.expanded_view.menu_requested.connect(self._expanded_menu)
+        self.expanded_view.mode_changed.connect(lambda m: setattr(self.user_data, "expanded_mode", m))
+        self.top_layout.addWidget(self.expanded_view, 1)
         self._artist_cards = {}          # artist name -> card dict (this session)
         self._online_hooks = [self._refresh_artist_card]
 
@@ -2494,7 +2504,7 @@ class MainWindow(ShowsMixin, QMainWindow):
         if data is None or data.get("key") != key:
             if not getattr(self, "_mfy_busy", False):
                 self._mfy_busy = True
-                listens = [list(x) for x in self.user_data.listens]
+                listens = self.taste_listens()
                 known = {(discovery._norm(s.artist), discovery._norm(s.title)) for s in self.songs}
 
                 def work():
@@ -5681,6 +5691,106 @@ class MainWindow(ShowsMixin, QMainWindow):
                   else None)
         self.now_playing_panel.set_song(song, self.pq.source_name, canvas_path=canvas, playing=True)
         self._refresh_artist_card()
+        if self.expanded_view.isVisible():
+            self._fill_expanded_view()
+
+    # --- Expanded Now playing view ------------------------------------------------------------------------
+    def open_expanded_view(self):
+        self._expanded_restore = (self.library_panel.isVisible(), self.right_panel.isVisible())
+        for w in (self.library_panel, self.center_panel, self.right_panel):
+            w.hide()
+        self.expanded_view.mode = getattr(self.user_data, "expanded_mode", "art") or "art"
+        self.expanded_view.show()
+        self._fill_expanded_view()
+
+    def close_expanded_view(self):
+        if not self.expanded_view.isVisible():
+            return
+        self.expanded_view.hide()
+        if self.expanded_view.video_player is not None:
+            self.expanded_view.video_player.stop()
+        lib, right = getattr(self, "_expanded_restore", (True, True))
+        self.library_panel.setVisible(lib)
+        self.center_panel.show()
+        self.right_panel.setVisible(right)
+
+    def _fill_expanded_view(self):
+        ev = self.expanded_view
+        song = self.current_song
+        canvas = (find_canvas(song, self.storage.data_dir)
+                  if song is not None and self.user_data.canvas_enabled else None)
+        cover = getattr(self.now_playing_panel.artwork, "_pixmap", None)
+        ev.set_song(song, cover, canvas_path=canvas, has_lyrics=bool(getattr(self, "_lyrics_available", False)))
+
+        def later(s=song):                       # the cover and lyrics check often finish a moment later
+            if self.current_song is s and ev.isVisible():
+                pm = getattr(self.now_playing_panel.artwork, "_pixmap", None)
+                if pm is not None and not pm.isNull():
+                    from .expanded_view import dominant_colour
+                    ev.cover.set_pixmap(pm)
+                    ev.backdrop.colour = dominant_colour(pm)
+                    ev.backdrop.update()
+                ev.b_lyrics.setEnabled(bool(getattr(self, "_lyrics_available", False)))
+        QTimer.singleShot(900, later)
+        QTimer.singleShot(3000, later)
+        up_user, up_ctx = self.pq.upcoming(1)
+        ev.set_next((up_user or up_ctx or [None])[0])
+        if song is None:
+            return
+        card = self._artist_cards.get(song.artist) or {}
+        about = " · ".join(x for x in (card.get("listeners_text") or card.get("fans_text") or "", ) if x)
+        bio = (card.get("bio") or "").strip()
+        ev.set_artist(None, (bio[:400] + ("…" if len(bio) > 400 else "")) or about or song.artist)
+        url = card.get("picture_url")
+        if url and self.online_enabled:
+            self.online_call(self.net.get_image, url,
+                             on_done=lambda path, s=song: (self.current_song is s and ev.isVisible()
+                                                           and ev.set_artist(QPixmap(path), ev.about_text.text())))
+        if self.online_enabled:
+            from core import credits
+            self.online_call(credits.for_song, self.net, song.artist, song.title,
+                             on_done=lambda people, s=song: self.current_song is s and ev.set_credits(people),
+                             on_error=lambda _e: ev.set_credits([]))
+        else:
+            ev.set_credits([])
+
+    def _expanded_menu(self, button):
+        song = self.current_song
+        if song is None:
+            return
+        menu = self.build_song_menu(song, queue=self.pq.items, source=self.pq.source_name)
+        menu.addSeparator()
+        if self.is_taste_excluded(song):
+            menu.addAction("◎  Include in your taste profile").triggered.connect(
+                lambda: self.set_taste_excluded(song, False))
+        else:
+            menu.addAction("◎  Exclude from your taste profile").triggered.connect(
+                lambda: self.set_taste_excluded(song, True))
+        self._add_sleep_timer_menu(menu)
+        menu.addAction("ⓘ  View credits").triggered.connect(lambda: self.show_credits(song))
+        menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
+
+    def show_credits(self, song):
+        """Song credits (MusicBrainz, core/credits.py) in a small card."""
+        from core import credits
+        from .support_dialog import SupportDialog
+        d = SupportDialog(self, f"Credits: {song.title}", song.artist)
+        d.status.setText("Looking up credits…")
+
+        def show(people):
+            d.status.setText("\n".join(f"{p['name']} · {', '.join(p['roles'])}" for p in people)
+                             or "No credits found for this song.")
+            d.status.setTextFormat(Qt.TextFormat.PlainText)
+        if self.online_enabled:
+            self.online_call(credits.for_song, self.net, song.artist, song.title, on_done=show,
+                             on_error=lambda _e: show([]))
+        else:
+            show([])
+        if getattr(self, "_auto_answer_dialogs", None) is not None:      # tests
+            d.show()
+            return d
+        d.exec()
+        return d
 
     def _refresh_artist_card(self):
         """Fill 'About the artist' for the current song (online, cached per artist)."""
@@ -6448,6 +6558,28 @@ class MainWindow(ShowsMixin, QMainWindow):
         if self.user_data.explicit_ok:
             return list(tracks)
         return [t for t in tracks if not getattr(t, "explicit", False)]
+
+    # --- Exclude from your taste profile (like Spotify): left out of Made for you and Wrapped -------------------
+    def taste_listens(self):
+        from core.hidden import song_key
+        excluded = set(self.user_data.taste_excluded)
+        return [list(x) for x in self.user_data.listens if song_key(x[0], x[1]) not in excluded]
+
+    def is_taste_excluded(self, song):
+        from core.hidden import song_key
+        return song_key(song.artist, song.title) in set(self.user_data.taste_excluded)
+
+    def set_taste_excluded(self, song, on=True):
+        from core.hidden import song_key
+        key = song_key(song.artist, song.title)
+        ex = [k for k in self.user_data.taste_excluded if k != key]
+        if on:
+            ex.append(key)
+        self.user_data.taste_excluded = ex[-2000:]
+        self._mfy = None                                 # mixes are worked out again without it
+        self.save_now()
+        self.show_status(f"“{song.title}” won't shape your mixes or Wrapped" if on
+                         else f"“{song.title}” counts towards your mixes again", kind="info", timeout_ms=5000)
 
     # --- Hide song / Don't play this artist ---------------------------------------------------------------
     def hide_song(self, song, on=True):
