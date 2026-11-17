@@ -55,11 +55,23 @@ FAQ = [
         ("How do I update Sevbify?",
          "Settings → About and updates → Check for Sevbify updates. It also checks once a day by itself."),
         ("How do I uninstall it?",
-         "Sevbify is portable: delete its folder. Your playlists and settings are in its data folder "
-         "(Help → Open Sevbify's data folder); delete that too to remove everything."),
+         "Installed with Sevbify-Windows-Setup.exe: Windows Settings → Apps → Sevbify → Uninstall (it asks whether "
+         "to keep your playlists and settings). Mac: drag Sevbify from Applications to the Bin. Otherwise (the .zip "
+         "or Linux): delete its folder. Your playlists and settings are in its data folder (Help → Open Sevbify's "
+         "data folder); delete that too to remove everything."),
         ("Can a song have a looping video behind it?",
-         "Yes: add your own short video to a song with its ••• menu → Canvas video (turn Canvas on in Settings). "
-         "Sevbify never asks for any streaming-service sign-in."),
+         "Yes: Canvas. When a song has an official music video, a silent 8-second loop of it plays behind Now "
+         "Playing by itself (Settings → Canvas to turn it off or set a storage limit). You can also add your own "
+         "video with a song's ••• menu → Canvas video. Sevbify never asks for any streaming-service sign-in."),
+        ("How do I share a playlist with a friend, or make a Blend?",
+         "A playlist's ••• menu → Share with a friend makes a link (or a small .sevbify file) you send however you "
+         "like; they paste it in Import a playlist and can add it or merge it into theirs. File → Blend makes a "
+         "taste link to swap with a friend for a playlist for both of you. Nothing is uploaded anywhere: the link "
+         "is the playlist."),
+        ("A source (YouTube, Spotify…) stopped working",
+         "Sometimes a website changes something and Sevbify's way of reading it stops working until an update "
+         "fixes it (usually within days). Sevbify says so when it notices. Settings → About and updates → Check "
+         "for Sevbify updates. Help → Save a problem report… makes a text file you can look at (nothing is sent)."),
         ("How do I pair my phone?",
          "On the computer: Settings → Your phone → Pair a phone. On the phone: Settings → Your computer → Pair with "
          "a computer, and scan the code. Both need to be on the same Wi-Fi. If the computer asks whether Sevbify may "
