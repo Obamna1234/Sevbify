@@ -173,7 +173,14 @@ def main():
         shot("tour", 1)
         tap("Next", tries=1)
         shot("tour_2", 1)
-        tap("Skip", tries=2)
+        # Close it whichever page it's on ("Skip" on the others, "Done" on the last), so it isn't in every
+        # screenshot after this one.
+        for _ in range(12):
+            names = [nd[0] for nd in nodes()]
+            if "Don't show this again" not in names:
+                break
+            if not tap("Skip", tries=1) and not tap("Done", tries=1):
+                tap("Next", tries=1)
     shot("home", 4)
 
     def podcasts_chip():
@@ -378,7 +385,7 @@ def main():
         hide_keyboard()
         tap("Podcasts", below=300, tries=2)
         shot("podcast_search_bad_friends", 8)
-    step("podcast_search_order", podcast_search_order)
+    # (No screenshot of podcast search results: show covers are often photos of real people.)
 
     def audiobook_open():
         tap("Home")
