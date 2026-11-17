@@ -5250,6 +5250,8 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         def done(res):
             alog("stream", f"\"{song.title}\" found on {res.get('source')} {res.get('timings') or ''}")
+            from core import source_status
+            source_status.worked(str(res.get("source") or ""))
             if not still_wanted():
                 return
             if res.get("duration_ms") and not song.duration:
@@ -5272,7 +5274,11 @@ class MainWindow(ShowsMixin, QMainWindow):
             if not still_wanted():
                 return
             self._track_handled = True                # skip it; never swap in the 30-second clip
+            from core import source_status
+            note = source_status.failed(f"{self.user_data.download_source} {err}")
             self._handle_failed_track("full song not found")
+            if note:
+                self.show_status(f"⚠ {note}", 15000)
 
         self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
                          self.user_data.download_source, on_done=done, on_error=failed, lane="songs", priority=10)

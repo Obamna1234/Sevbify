@@ -6,9 +6,14 @@ name: Build & test
 # Releases: when the VERSION file holds a version that has no release yet (and the push is to main),
 # a green build publishes it as a GitHub Release tagged v<VERSION>, with RELEASE_NOTES.md as its text.
 # Pushing a tag like v5.0 by hand does the same.
+# Once a month it also builds and tests main on every system (Windows, macOS, Linux, Android, iPhone) on its own,
+# so a change at YouTube, Apple, Google or in a library shows up as a red build before anyone notices in the app.
+# That monthly run never publishes anything.
 on:
   push:
   workflow_dispatch:
+  schedule:
+    - cron: "41 20 3 * *"        # the 4th of each month, early morning in Perth
 
 # Read-only by default; only the Release job can publish.
 permissions:
@@ -33,7 +38,7 @@ jobs:
         run: |
           V=$(tr -d '[:space:]' < VERSION)
           APPLE=false
-          if [ "$EVENT" = "workflow_dispatch" ]; then APPLE=true; fi
+          if [ "$EVENT" = "workflow_dispatch" ] || [ "$EVENT" = "schedule" ]; then APPLE=true; fi
           if [ "$REF" = "refs/heads/main" ] && [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then APPLE=true; fi
           case "$MSG" in *"[apple]"*) APPLE=true ;; esac
           M='{"include":[{"name":"Windows","os":"windows-latest"},{"name":"Linux","os":"ubuntu-22.04"}'
@@ -483,7 +488,7 @@ jobs:
     if: >-
       always() && needs.build.result == 'success' && needs.android.result == 'success' &&
       (needs.iphone.result == 'success' || needs.iphone.result == 'skipped') &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' && github.event_name != 'schedule'
     permissions:
       contents: write
     runs-on: ubuntu-latest

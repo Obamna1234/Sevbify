@@ -32,22 +32,39 @@ def _readable(exc):
     return text.replace("ERROR: ", "")[:300]
 
 
-def _fail(exc):
+def _fail(exc, name=""):
+    error = _readable(exc)
     try:
-        from core import activity_log
-        activity_log.log("error", _readable(exc))
+        from core import activity_log, source_status
+        activity_log.log("error", f"{name}: {error}" if name else error)
+        note = source_status.failed(f"{_SOURCE_OF.get(name, '')} {exc}")
+        if note:
+            error = f"{error}\n\n{note}"
     except Exception:
         pass
-    return json.dumps({"ok": False, "error": _readable(exc),
+    return json.dumps({"ok": False, "error": error,
                        "trace": traceback.format_exc()[-1500:]}, ensure_ascii=False)
+
+
+# Which outside service a bridge call mostly depends on (for the "isn't working right now" note).
+_SOURCE_OF = {"resolve": "youtube", "youtube_stream": "youtube", "youtube_video": "youtube", "download_song": "youtube",
+              "download_youtube": "youtube", "search": "deezer", "radio": "deezer", "genres": "deezer",
+              "import_link": "", "top_shows": "itunes.apple", "search_podcasts": "itunes.apple"}
 
 
 def _call(fn):
     def wrapped(*args):
         try:
-            return _ok(fn(*args))
+            value = fn(*args)
         except Exception as exc:          # every error goes back to Kotlin as text, never a crash
-            return _fail(exc)
+            return _fail(exc, fn.__name__)
+        if _SOURCE_OF.get(fn.__name__):
+            try:
+                from core import source_status
+                source_status.worked(_SOURCE_OF[fn.__name__])
+            except Exception:
+                pass
+        return _ok(value)
     wrapped.__name__ = fn.__name__
     return wrapped
 
