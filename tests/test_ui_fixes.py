@@ -637,7 +637,10 @@ def test_scroll_through_previews_of_a_playlist(window, qapp):
     window.pl_feed_btn.click()
     feed = window._preview_feed
     assert feed is not None and feed.isVisible() and feed.title.text() == window.songs[0].title
-    assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing(), 15)
+    # Started playing (the 1-second test songs can already have ended, or moved the feed on, on a slow machine)
+    import vlc
+    assert wait_until(qapp, lambda: feed.player.get_time() > 0 or feed.player.is_playing() or feed.index != 0
+                      or feed.player.get_state() in (vlc.State.Ended, vlc.State.Playing), 15)
     feed.timer.timeout.disconnect()          # the 1-second test songs would end and move on by themselves
     feed.go(-feed.index)
     start = feed.index
