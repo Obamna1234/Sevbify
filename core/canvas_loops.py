@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 
+STILL_BYTES = 150_000          # an 8-second clip smaller than this is a still picture, not a video
 CLIP_SECONDS = 8
 DEFAULT_LIMIT_MB = 200
 _lock = threading.Lock()
@@ -124,7 +125,8 @@ def cut_clip(url, out_path, duration_s=0, ytdlp=None, ffmpeg=None):
                         "-crf", "28", "-pix_fmt", "yuv420p", "-movflags", "+faststart", part],
                        check=True, timeout=180, capture_output=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if os.path.getsize(part) < 10_000:
+        # A still picture (a visualiser, the cover art on screen) re-encodes to almost nothing: that isn't a Canvas.
+        if os.path.getsize(part) < STILL_BYTES:
             raise RuntimeError("the clip came out empty")
         os.replace(part, out_path)
         return out_path

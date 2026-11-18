@@ -1,6 +1,13 @@
 """'Support the artist': only the artist's own links, https, matched through the song; podcasts' own funding link."""
-from core import support
+import pytest
+
+from core import sevby_engine, support
 from core.podcasts import parse_feed
+
+
+@pytest.fixture(autouse=True)
+def no_bandcamp_search(monkeypatch):
+    monkeypatch.setattr(sevby_engine, "search_bandcamp", lambda q, use_api=True: {"found": False})
 
 
 class FakeNet:
@@ -81,3 +88,20 @@ def test_support_card_on_the_desktop(window, qapp):
 def test_lookalike_sites_are_shown_as_they_really_are():
     assert support.domain("https://bаndcamp.com/x").startswith("xn--")
     assert support.domain("https://www.bandcamp.com/") == "bandcamp.com"
+
+
+def test_the_artists_own_bandcamp_is_found_by_exact_name():
+    def search(q):
+        assert q == "Earmake - I'm the Law"
+        return {"found": True, "band_name": "Earmake", "name": "I'm The Law",
+                "url": "https://earmake.bandcamp.com/track/im-the-law-3?from=search"}
+    links = support.for_song(FakeNet(), "Earmake", "I'm the Law", "https://www.youtube.com/watch?v=x", "youtube",
+                             search=search)
+    assert links[0] == {"label": "Buy this on Bandcamp", "url": "https://earmake.bandcamp.com/track/im-the-law-3",
+                        "site": "earmake.bandcamp.com"}
+    assert links[1]["url"] == "https://earmake.bandcamp.com"
+    # A near match (another artist, or another song) is never used.
+    for hit in ({"found": True, "band_name": "Earmaker", "name": "I'm the Law", "url": "https://x.bandcamp.com/track/a"},
+                {"found": True, "band_name": "Earmake", "name": "I'm the Lawyer", "url": "https://earmake.bandcamp.com/track/b"},
+                {"found": True, "band_name": "Earmake", "name": "I'm the Law", "url": "https://evil.example/track/a"}):
+        assert support.for_song(FakeNet(), "Earmake", "I'm the Law", search=lambda q, h=hit: h) == []

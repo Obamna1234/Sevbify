@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -424,7 +425,7 @@ fun SettingsPageScreen(key: String) {
         }
         item {
             OutlinedButton(onClick = { Tour.showAgain() }, modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text(tr("Feature tour"), color = C.Text)
+                Text(tr("How to use Sevbify"), color = C.Text)
             }
         }
         item { DebugLogRow() }
@@ -554,7 +555,31 @@ private fun EqualiserSection() {
                 levels.clear(); levels.addAll(com.sevbify.app.Eq.levels())
                 Library.changed()
             }
-            EqBands(levels, s) { preset = it }
+            // The sliders open in their own window, so scrolling Settings can never move them by accident.
+            var editing by remember { mutableStateOf(false) }
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { editing = true }) { Text(tr("Adjust bands"), color = C.Text) }
+                OutlinedButton(onClick = {
+                    preset = ""; s.eqPreset = ""
+                    s.eqBands = MutableList(com.sevbify.app.Eq.bands.size) { 0 }
+                    com.sevbify.app.Eq.apply()
+                    levels.clear(); levels.addAll(s.eqBands)
+                    Library.changed(); Nav.say("Equaliser reset to flat")
+                }) { Text(tr("Reset"), color = C.Text) }
+            }
+            if (editing) androidx.compose.material3.AlertDialog(
+                onDismissRequest = { editing = false; Library.changed() },
+                confirmButton = { TextButton(onClick = { editing = false; Library.changed() }) { Text(tr("Done"), color = C.Green) } },
+                dismissButton = {
+                    TextButton(onClick = {
+                        preset = ""; s.eqPreset = ""
+                        s.eqBands = MutableList(com.sevbify.app.Eq.bands.size) { 0 }
+                        com.sevbify.app.Eq.apply(); levels.clear(); levels.addAll(s.eqBands)
+                    }) { Text(tr("Reset"), color = C.Text) }
+                },
+                title = { Text(tr("Equaliser")) },
+                text = { Column { EqBands(levels, s) { preset = it } } },
+                containerColor = C.Elevated)
         }
         var level by remember { mutableStateOf(s.levelOn) }
         Toggle(tr("Volume levelling"), if (com.sevbify.app.Eq.levelAvailable) "Plays songs at a similar loudness."
@@ -631,16 +656,28 @@ private fun Toggle(name: String, desc: String, value: Boolean, onChange: (Boolea
 @Composable
 private fun DebugLogRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val save = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
+        // The app's own scope, not this row's: coming back from the file picker can close this part of the screen,
+        // which used to cancel the save and leave an empty file.
+        com.sevbify.app.SevbifyApp.instance.scope.launch {
+            val app = com.sevbify.app.SevbifyApp.instance
+            val tmp = java.io.File(app.cacheDir, "sevbify-debug-log.txt")
+            val problem = try { com.sevbify.app.Bridge.call("problem_report", tmp.absolutePath); null }
+                          catch (e: Exception) { e.message ?: e.toString() }
             try {
-                val tmp = java.io.File(ctx.cacheDir, "sevbify-debug-log.txt")
-                com.sevbify.app.Bridge.call("problem_report", tmp.absolutePath)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    ctx.contentResolver.openOutputStream(uri)?.use { out -> tmp.inputStream().use { it.copyTo(out) } }
+                    app.contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                        val head = "Sevbify ${runCatching { app.packageManager.getPackageInfo(app.packageName, 0).versionName }.getOrNull() ?: ""} " +
+                            "on Android ${android.os.Build.VERSION.RELEASE} (${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL})\n" +
+                            (if (problem != null) "The full log couldn't be made: $problem\n" else "") + "\n"
+                        out.write(head.toByteArray())
+                        if (problem == null && tmp.exists()) tmp.inputStream().use { it.copyTo(out) }
+                        else app.filesDir.resolve("core/crash.txt").takeIf { it.exists() }?.let { f ->
+                            out.write("===== crash.txt =====\n".toByteArray()); f.inputStream().use { it.copyTo(out) }
+                        }
+                    } ?: throw java.io.IOException("the file couldn't be opened")
                     tmp.delete()
                 }
                 Nav.say("Debug log saved")

@@ -50,47 +50,22 @@ import com.sevbify.app.Library
 import kotlinx.coroutines.launch
 
 /** Spotify's swipe between filter chips (Home: All / Music / Podcasts / Audiobooks; Your Library's filters):
- *  the page follows your finger, and letting go past a quarter of the screen moves to the next or previous chip.
- *  Tapping a chip slides the new page in from that side too. Rows that scroll sideways keep their own swipes. */
+ *  a real pager, so the next page follows your finger beside this one (no blank gap or flicker), a quick flick is
+ *  enough, and tapping a chip slides across to it. Rows that scroll sideways keep their own swipes first. */
 @Composable
 fun SwipePages(index: Int, count: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier,
-               content: @Composable () -> Unit) {
-    val scope = rememberCoroutineScope()
-    val offset = remember { Animatable(0f) }
-    var width by remember { mutableIntStateOf(1) }
-    var shown by remember { mutableIntStateOf(index) }
-    var swiped by remember { mutableStateOf(false) }
-    LaunchedEffect(index) {
-        if (index == shown) return@LaunchedEffect
-        val dir = if (index > shown) 1 else -1
-        shown = index
-        offset.snapTo(dir * width * (if (swiped) 1f else 0.3f))
-        swiped = false
-        offset.animateTo(0f, tween(220))
+               content: @Composable (Int) -> Unit) {
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = index) { count }
+    // A chip was tapped: slide to it.
+    LaunchedEffect(index) { if (pager.currentPage != index && !pager.isScrollInProgress) pager.animateScrollToPage(index) }
+    // A swipe settled on another page: select its chip.
+    val now by androidx.compose.runtime.rememberUpdatedState(index)
+    val change by androidx.compose.runtime.rememberUpdatedState(onChange)
+    LaunchedEffect(pager) {
+        androidx.compose.runtime.snapshotFlow { pager.settledPage }.collect { if (it != now) change(it) }
     }
-    Box(modifier.onSizeChanged { width = it.width.coerceAtLeast(1) }
-            .pointerInput(count) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        val v = offset.value
-                        val target = if (v < -width / 4f) shown + 1 else if (v > width / 4f) shown - 1 else shown
-                        scope.launch {
-                            if (target != shown && target in 0 until count) {
-                                offset.animateTo(if (target > shown) -width.toFloat() else width.toFloat(), tween(160))
-                                swiped = true
-                                onChange(target)
-                            } else offset.animateTo(0f, tween(180))
-                        }
-                    },
-                    onDragCancel = { scope.launch { offset.animateTo(0f) } },
-                ) { change, drag ->
-                    change.consume()
-                    val atEdge = (shown == 0 && offset.value + drag > 0) || (shown == count - 1 && offset.value + drag < 0)
-                    scope.launch { offset.snapTo(offset.value + if (atEdge) drag / 3f else drag) }
-                }
-            }
-            .graphicsLayer { translationX = offset.value; alpha = 1f - (kotlin.math.abs(offset.value) / width) * 0.5f }) {
-        content()
+    androidx.compose.foundation.pager.HorizontalPager(pager, modifier, key = { it }, verticalAlignment = Alignment.Top) { page ->
+        Box(Modifier.fillMaxSize().background(C.Bg)) { content(page) }
     }
 }
 

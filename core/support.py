@@ -2,8 +2,9 @@
 that can be trusted.
 
 Where the links come from, most direct first; nothing is ever guessed from a web search or an ad:
-1. The Bandcamp page the song itself was found on (the artist's or label's own Bandcamp store: digital, and often
-   vinyl / CD / merch; most of the money goes to the artist).
+1. The Bandcamp page the song itself was found on, or Bandcamp's own search when it has this exact title by an
+   artist of exactly this name (the artist's or label's own Bandcamp store: digital, and often vinyl / CD / merch;
+   most of the money goes to the artist).
 2. MusicBrainz, the open music encyclopedia, for the artist's links of the kinds it marks as the artist's own:
    "official homepage", "bandcamp", "purchase for download", "purchase for mail-order". The artist is matched through
    the song (a recording with this title by this artist), so a different artist with the same name isn't used.
@@ -110,12 +111,37 @@ def artist_links(net, artist, title=""):
     return out
 
 
-def for_song(net, artist, title, page_url="", source=""):
-    """Where to support this song's artist: its own Bandcamp page first, then the artist's own links."""
+def bandcamp_by_name(artist, title, search=None):
+    """The song on Bandcamp, when Bandcamp's own search has a track with exactly this title by an artist of exactly
+    this name (the artist's own Bandcamp page, e.g. earmake.bandcamp.com/track/im-the-law-3). "" otherwise: a
+    near match is never used."""
+    if not artist or not title or artist == "Unknown Artist":
+        return ""
+    if search is None:
+        from core import sevby_engine
+        search = sevby_engine.search_bandcamp
+    try:
+        hit = search(f"{artist} - {title}") or {}
+    except Exception:
+        return ""
+    if not hit.get("found"):
+        return ""
+    if _norm(hit.get("band_name")) != _norm(artist) or _norm(hit.get("name")) != _norm(title):
+        return ""
+    return bandcamp_page(str(hit.get("url") or "").split("?")[0])
+
+
+def for_song(net, artist, title, page_url="", source="", search=None):
+    """Where to support this song's artist: its own Bandcamp page first (the one it was found on, or Bandcamp's
+    search for exactly this artist and title), then the artist's own links from MusicBrainz."""
     out = []
     bc = bandcamp_page(page_url) if source in ("bandcamp", "Bandcamp", "") or "bandcamp.com" in str(page_url) else ""
+    if not bc:
+        bc = bandcamp_by_name(artist, title, search)
     if bc:
         out.append({"label": "Buy this on Bandcamp", "url": bc, "site": domain(bc)})
+        store = bc.split("/track/")[0].split("/album/")[0]
+        out.append({"label": "The artist's Bandcamp (music and merch)", "url": store, "site": domain(store)})
     try:
         for link in artist_links(net, artist, title):
             same_store = bc and link["site"] == domain(bc) and link["label"] == KINDS["bandcamp"]

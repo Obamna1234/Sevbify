@@ -70,10 +70,21 @@ fun Cover(url: String?, size: Dp, shape: Shape = RoundedCornerShape(4.dp), modif
         return
     }
     val context = androidx.compose.ui.platform.LocalContext.current
-    val request = remember(url) { coil.request.ImageRequest.Builder(context).data(url).crossfade(200).build() }
+    // Skipping quickly back and forth can cut a cover's download short; that used to leave the "no cover" note
+    // showing until the screen was redrawn. Now a failed cover is tried again (twice, a moment apart) before giving up.
+    var attempt by remember(url) { androidx.compose.runtime.mutableIntStateOf(0) }
+    val request = remember(url, attempt) {
+        coil.request.ImageRequest.Builder(context).data(url).crossfade(if (attempt == 0) 200 else 0)
+            .memoryCacheKey(url).diskCacheKey(url).build()
+    }
     SubcomposeAsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = box,
                          loading = { Box(Modifier.fillMaxSize().background(C.Card)) },
-                         error = { Placeholder(Modifier.fillMaxSize(), size) })
+                         error = {
+                             if (attempt < 2) {
+                                 Box(Modifier.fillMaxSize().background(C.Card))
+                                 androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(400L * (attempt + 1)); attempt++ }
+                             } else Placeholder(Modifier.fillMaxSize(), size)
+                         })
 }
 
 @Composable

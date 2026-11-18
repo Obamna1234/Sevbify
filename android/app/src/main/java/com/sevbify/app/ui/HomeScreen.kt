@@ -101,7 +101,8 @@ fun HomeScreen() {
         SettingsBadge()
         chips.forEach { (k, l) -> Chip(l, chip == k) { chip = if (chip == k) "all" else k } }
     }
-    SwipePages(chips.indexOfFirst { it.first == chip }.coerceAtLeast(0), chips.size, { chip = chips[it].first }) {
+    SwipePages(chips.indexOfFirst { it.first == chip }.coerceAtLeast(0), chips.size, { chip = chips[it].first }) { page ->
+    val chip = chips[page].first
     LazyColumn {
         if (chip == "podcasts" || chip == "audiobooks") {
             item { ShowsHomePart(chip, topShows) }

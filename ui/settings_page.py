@@ -445,7 +445,7 @@ class SettingsPage(QWidget):
         row.addStretch()
         v.addLayout(row)
         self.controls["check_updates"] = check
-        tour = QPushButton("Feature tour")
+        tour = QPushButton("How to use Sevbify")
         tour.setToolTip("Shows what Sevbify can do, with pictures")
         tour.clicked.connect(self.tour_requested.emit)
         row.insertWidget(1, tour)

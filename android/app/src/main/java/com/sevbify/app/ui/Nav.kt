@@ -53,6 +53,7 @@ object Nav {
     var renameTitle by mutableStateOf("Name")
     var renameButton by mutableStateOf("Save")
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
+    var savedIn by mutableStateOf<Track?>(null)                // Spotify's "Saved in": tick the playlists a song is in
     var toast by mutableStateOf("")
     var shareFor by mutableStateOf<Track?>(null)               // the share sheet
     var hideNoteOpen by mutableStateOf(false)
@@ -87,3 +88,20 @@ object Nav {
     }
     fun say(text: String) { toast = text }
 }
+
+
+/** Spotify's ⊕ / ✓: the first tap saves the song to Liked Songs; once saved, the tap opens "Saved in", where you
+ *  tick or untick Liked Songs and any of your playlists. */
+fun saveTap(t: Track) {
+    if (t.isItem) {                         // podcast episode / audiobook chapter: Your Episodes
+        val on = !com.sevbify.app.Library.isSavedEpisode(t)
+        com.sevbify.app.Library.saveEpisode(t, on)
+        Nav.say(if (on) "Saved to Your Episodes" else "Removed from Your Episodes"); return
+    }
+    if (!com.sevbify.app.Library.isLiked(t) && com.sevbify.app.Library.playlists.none { pl -> pl.origin != "liked" && pl.tracks.any { it.matchKey == t.matchKey } }) {
+        com.sevbify.app.Library.toggleLike(t); Nav.say("Added to Liked Songs")
+    } else Nav.savedIn = t
+}
+
+/** Saved anywhere (Liked Songs or a playlist of yours): the button shows a green ✓. */
+fun isSaved(t: Track): Boolean = if (t.isItem) com.sevbify.app.Library.isSavedEpisode(t) else com.sevbify.app.Library.playlists.any { pl -> pl.tracks.any { it.matchKey == t.matchKey } }

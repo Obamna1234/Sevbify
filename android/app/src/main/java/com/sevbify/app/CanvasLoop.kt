@@ -27,6 +27,7 @@ import java.security.MessageDigest
  *  - Off in Settings → Playback → Canvas: nothing is looked up. */
 object CanvasLoop {
     var current by mutableStateOf<File?>(null)          // the clip for the song playing now (null: show the cover)
+    var showCover by mutableStateOf(false)               // you chose "Cover" in Now Playing (until you choose Canvas again)
     private var player: ExoPlayer? = null
     private val busy = mutableSetOf<String>()
     private const val CLIP_US = 8_000_000L
@@ -57,12 +58,14 @@ object CanvasLoop {
         // Phone almost full: no new loops (the ones already kept still play). Under 500 MB free.
         if (runCatching { c.cacheDir.usableSpace }.getOrDefault(0L) < 500L * 1024 * 1024) return
         val k = key(t.artist, t.title)
+        if (k in noLoop) return                           // looked already: no music video, or only a still picture
         if (!busy.add(k)) return
         SevbifyApp.instance.scope.launch {
             try {
                 val src = Bridge.call("canvas_source", t.artist, t.title, t.durationMs) as? org.json.JSONObject ?: return@launch
                 val out = File(cacheDir(c), "$k.mp4")
                 val ok = withContext(Dispatchers.IO) { cut(src, out) }
+                if (!ok) noLoop.add(k)
                 if (ok) {
                     trim(c, s.canvasCacheMb)
                     if (Library.offline.containsKey(t.matchKey)) keep(c, t)
@@ -73,6 +76,9 @@ object CanvasLoop {
             } finally { busy.remove(k) }
         }
     }
+
+    /** Songs looked up this session that have no usable Canvas (not asked again until Sevbify restarts). */
+    private val noLoop = java.util.Collections.synchronizedSet(HashSet<String>())
 
     /** Copy the first ~8 s from `start` of the video-only stream into an MP4, without re-encoding. */
     private fun cut(src: org.json.JSONObject, out: File): Boolean {
@@ -114,7 +120,9 @@ object CanvasLoop {
                 ex.advance()
             }
             muxer.stop()
-            if (part.length() < 10_000 || part.length() > 8_000_000) { part.delete(); return false }
+            // A "video" that's really a still picture (a visualiser, the cover art on screen) compresses to almost
+            // nothing: under ~200 KB for 8 s. That isn't a Canvas, it's just the artwork again, so the cover stays.
+            if (part.length() < 200_000 || part.length() > 8_000_000) { part.delete(); return false }
             return part.renameTo(out)
         } catch (e: Exception) {
             Log.w("Sevbify", "canvas cut: ${e.message}")

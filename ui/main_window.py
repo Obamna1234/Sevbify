@@ -1568,7 +1568,7 @@ class MainWindow(ShowsMixin, QMainWindow):
 
         h = sub("Help")
         act(h, "Help and questions (FAQ)", lambda: __import__("ui.help_faq", fromlist=["x"]).show(self), "F1")
-        act(h, "Feature tour", lambda: self.show_feature_tour(again=True))
+        act(h, "How to use Sevbify", lambda: self.show_feature_tour(again=True))
         act(h, "About Sevbify", self.show_about)
         act(h, "Open Sevbify's data folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.storage.data_dir)))
         log = os.path.join(self.storage.data_dir, "error.log")

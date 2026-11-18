@@ -179,7 +179,7 @@ def main():
             names = [nd[0] for nd in nodes()]
             if "Don't show this again" not in names:
                 break
-            if not tap("Skip", tries=1) and not tap("Done", tries=1):
+            if not tap("Skip", tries=1) and not tap("Start listening", tries=1):
                 tap("Next", tries=1)
     shot("home", 4)
 

@@ -118,7 +118,8 @@ fun LibraryScreen() {
                 }
             }
     }
-    SwipePages(chipKeys.indexOf(chip).coerceAtLeast(0), chipKeys.size, { chip = chipKeys[it] }) {
+    SwipePages(chipKeys.indexOf(chip).coerceAtLeast(0), chipKeys.size, { chip = chipKeys[it] }) { page ->
+    val chip = chipKeys[page]
     LazyColumn {
         val showYourSongs = (chip == "" || chip == "playlists" || chip == "downloaded") && (q.isEmpty() || "your songs".contains(q))
         val showToDownload = (chip == "") && (q.isEmpty() || "to download".contains(q))

@@ -18,7 +18,7 @@ def test_tour_pages_and_never_again(window, qapp):
     assert not d.back.isEnabled() and d.next.text() == "Next" and d.again.isChecked()
     for _ in range(len(d.pages) - 1):
         d.next.click()
-    assert d.next.text() == "Done" and not d.skip.isVisible()
+    assert d.next.text() == "Start listening" and not d.skip.isVisible()
     assert d.done_with_tour()
     d.reject()
     window.user_data.tour_seen = True

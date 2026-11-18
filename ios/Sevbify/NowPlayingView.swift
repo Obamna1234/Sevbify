@@ -11,6 +11,8 @@ struct NowPlayingView: View {
     @State private var showQueue = false
     @State private var menu = false
     @State private var lyrics = false
+    @State private var savedIn: Track?
+    private var canvasOn: Bool { canvas.current != nil && !canvas.showCover }
 
     var body: some View {
         GeometryReader { geo in
@@ -24,11 +26,35 @@ struct NowPlayingView: View {
         }
         .foregroundColor(.white)
         .background(
-            LinearGradient(colors: [Color(red: 0.25, green: 0.2, blue: 0.25), C.bg], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea())
+            ZStack {
+                LinearGradient(colors: [Color(red: 0.25, green: 0.2, blue: 0.25), C.bg], startPoint: .top, endPoint: .bottom)
+                // Canvas, like Spotify's: the loop fills the whole player behind everything, darker at the top and
+                // bottom so the words and buttons stay readable; the cover moves next to the song's name.
+                if canvasOn {
+                    GeometryReader { g in CanvasLoopView().frame(width: g.size.width, height: g.size.height).clipped() }
+                    LinearGradient(stops: [.init(color: .black.opacity(0.6), location: 0), .init(color: .clear, location: 0.18),
+                                           .init(color: .clear, location: 0.5), .init(color: .black.opacity(0.8), location: 0.72),
+                                           .init(color: .black.opacity(0.93), location: 1)], startPoint: .top, endPoint: .bottom)
+                }
+            }.ignoresSafeArea())
+        .sheet(item: $savedIn) { SavedInView(track: $0).environmentObject(lib) }
         .sheet(isPresented: $showQueue) { QueueView() }
         .fullScreenCover(isPresented: $lyrics) { LyricsView() }
         .sheet(isPresented: $menu) { if let t = player.current { TrackMenu(track: t).presentationDetents([.medium, .large]) } }
+    }
+
+    /// Canvas or the cover: a small switch whenever this song has a Canvas loop.
+    private var canvasSwitch: some View {
+        HStack(spacing: 2) {
+            ForEach([false, true], id: \.self) { cover in
+                let on = canvas.showCover == cover
+                Button { canvas.showCover = cover } label: {
+                    Text(cover ? "Cover" : "Canvas").font(.subheadline.weight(.semibold))
+                        .foregroundColor(on ? .black : .white).padding(.horizontal, 16).padding(.vertical, 6)
+                        .background(Capsule().fill(on ? Color.white : Color.clear))
+                }.buttonStyle(.plain).disabled(on)
+            }
+        }.padding(3).background(Capsule().fill(Color.black.opacity(0.35)))
     }
 
     private var main: some View {
@@ -50,19 +76,17 @@ struct NowPlayingView: View {
             Spacer(minLength: 12)
             GeometryReader { g in
                 let side = min(g.size.width - 48, g.size.height)
-                Group {
-                    if canvas.current != nil {
-                        CanvasLoopView().frame(width: side * 0.75, height: side).clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        Cover(url: t?.art ?? "", size: side, corner: 8)
-                    }
+                VStack(spacing: 16) {
+                    if !canvasOn { Spacer(minLength: 0); Cover(url: t?.art ?? "", size: side - (canvas.current != nil ? 48 : 0), corner: 8).shadow(radius: 20) }
+                    Spacer(minLength: 0)
+                    if canvas.current != nil { canvasSwitch }
                 }
-                .shadow(radius: 20)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Spacer(minLength: 12)
 
-            HStack {
+            HStack(spacing: 12) {
+                if canvasOn, let t { Cover(url: t.art, size: 48, corner: 4) }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(t?.title ?? "").font(.title2.bold()).lineLimit(1)
                     Button { if let a = t?.artist { nav.go(.artist(a)) } } label: {
@@ -70,6 +94,13 @@ struct NowPlayingView: View {
                     }.buttonStyle(.plain)
                 }
                 Spacer()
+                if let t {
+                    let saved = SaveButton.isSaved(t)
+                    Button { if SaveButton.tap(t) { savedIn = t } } label: {
+                        Image(systemName: saved ? "checkmark.circle.fill" : "plus.circle").font(.title2)
+                            .foregroundColor(saved ? C.green : .white)
+                    }.accessibilityLabel(saved ? "Saved in…" : (t.isItem ? "Save to Your Episodes" : "Add to Liked Songs"))
+                }
                 if let t, !t.isItem {
                     if lib.isDownloaded(t) {
                         Image(systemName: "arrow.down.circle.fill").font(.title2).foregroundColor(C.green)
@@ -185,6 +216,15 @@ struct RoutePicker: UIViewRepresentable {
 struct QueueView: View {
     @EnvironmentObject var player: Player
     @Environment(\.dismiss) var dismiss
+    @State private var timer = false
+
+    private func qButton(_ icon: String, _ label: String, _ on: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) { Image(systemName: icon); Text(label).font(.caption2) }
+                .foregroundColor(on ? C.green : .white).frame(maxWidth: .infinity).padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.13)))
+        }.buttonStyle(.plain)
+    }
     var body: some View {
         NavigationStack {
             List {
@@ -197,13 +237,26 @@ struct QueueView: View {
                             .onDelete { player.userQueue.remove(atOffsets: $0) }
                     }
                 }
-                Section("Next from: \(player.sourceName)") {
+                Section((player.shuffle ? "Shuffling from: " : "Next from: ") + player.sourceName) {
                     ForEach(player.upcoming.prefix(100)) { t in QueueRow(track: t).onTapGesture { player.jump(to: t) } }
                 }
             }
             .listStyle(.plain).scrollContentBackground(.hidden).background(C.elevated)
             .navigationTitle("Queue").navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("Done") { dismiss() } }
+            // Spotify's queue: Shuffle, Repeat and the sleep Timer along the bottom.
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 10) {
+                    qButton(player.smartShuffle ? "sparkles" : "shuffle", player.smartShuffle ? "Smart Shuffle" : "Shuffle", player.shuffle) { player.toggleShuffle() }
+                    qButton(player.repeatMode == "one" ? "repeat.1" : "repeat", "Repeat", player.repeatMode != "off") { player.cycleRepeat() }
+                    qButton("moon.zzz", "Timer", player.sleepAt != nil || player.sleepAtEnd) { timer = true }
+                }.padding(.horizontal, 16).padding(.vertical, 10).background(C.elevated)
+            }
+            .confirmationDialog("Sleep timer", isPresented: $timer) {
+                ForEach([5, 15, 30, 45, 60], id: \.self) { m in Button("\(m) minutes") { player.setSleep(minutes: m) } }
+                Button("End of this song") { player.setSleep(minutes: -1) }
+                if player.sleepAt != nil || player.sleepAtEnd { Button("Turn off timer", role: .destructive) { player.setSleep(minutes: nil) } }
+            }
         }
     }
 }

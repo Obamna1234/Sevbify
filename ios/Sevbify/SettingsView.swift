@@ -96,7 +96,7 @@ struct SettingsView: View {
             Section("About") {
                 LabeledContent("Sevbify", value: Bundle.main.object(forInfoDictionaryKey: "SevbifyVersion") as? String ?? "")
                 LabeledContent("Python", value: python)
-                Button("Feature tour") { Tour.shared.showAgain() }.foregroundColor(C.green)
+                Button("How to use Sevbify") { Tour.shared.showAgain() }.foregroundColor(C.green)
                 Button("Save debug log (.txt)") {
                     Task {
                         let f = FileManager.default.temporaryDirectory.appendingPathComponent("sevbify-debug-log.txt")

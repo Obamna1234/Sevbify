@@ -58,6 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -84,8 +86,17 @@ fun NowPlayingScreen() {
     // Like Spotify: the player fills the screen; scroll down for the lyrics preview.
     LazyColumn(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colour, Color(0xFF121212))))
                    .statusBarsPadding().navigationBarsPadding()) {
+    val canvasOn = com.sevbify.app.CanvasLoop.current != null && !Player.videoMode && !com.sevbify.app.CanvasLoop.showCover
     item {
-    Column(Modifier.fillParentMaxHeight().padding(horizontal = 20.dp)) {
+    // Canvas, like Spotify's: the loop fills the whole player behind everything, darker at the top and bottom so the
+    // words and buttons stay readable, and the cover moves next to the song's name.
+    Box(Modifier.fillParentMaxHeight().fillMaxWidth()) {
+    if (canvasOn) {
+        CanvasView(Modifier.matchParentSize())
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(
+            0f to Color(0x99000000), 0.18f to Color.Transparent, 0.5f to Color.Transparent, 0.72f to Color(0xCC000000), 1f to Color(0xEE000000))))
+    }
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { Nav.nowPlayingOpen = false }) { Icon(Icons.Filled.KeyboardArrowDown, "Close", Modifier.size(32.dp), tint = C.Text) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -117,13 +128,16 @@ fun NowPlayingScreen() {
                          (v.height.takeIf { it > 0 }?.let { " Playing ${it}p." } ?: "") },
                      style = MaterialTheme.typography.bodySmall.copy(color = if (v.error.isNotEmpty()) C.Red else C.Sub),
                      textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-            } else if (com.sevbify.app.CanvasLoop.current != null) {
-                CanvasView(Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(8.dp)))   // tall, like Spotify's
-            } else {
+            } else if (!canvasOn) {
                 Cover(t.art, 340.dp, RoundedCornerShape(8.dp), Modifier.aspectRatio(1f))
+            }
+            if (com.sevbify.app.CanvasLoop.current != null && !Player.videoMode) {
+                if (canvasOn) Spacer(Modifier.weight(1f))
+                CanvasCoverSwitch(Modifier.padding(top = 16.dp))
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (canvasOn) { Cover(t.art, 48.dp, RoundedCornerShape(4.dp)); Spacer(Modifier.size(12.dp)) }
             Column(Modifier.weight(1f)) {
                 Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
                 Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge.copy(color = C.Sub),
@@ -137,8 +151,10 @@ fun NowPlayingScreen() {
                          if (have) "Downloaded" else "Download", tint = if (have) C.Green else C.Sub, modifier = Modifier.size(28.dp))
                 }
             }
-            IconButton(onClick = { Nav.addTo = listOf(t) }) {
-                Icon(Icons.Filled.AddCircleOutline, "Add to playlist", tint = C.Sub, modifier = Modifier.size(28.dp))
+            val saved = isSaved(t)
+            IconButton(onClick = { saveTap(t) }) {
+                Icon(if (saved) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline, if (saved) "Saved in…" else "Add to Liked Songs",
+                     tint = if (saved) C.Green else C.Sub, modifier = Modifier.size(28.dp))
             }
         }
         val d = Player.duration.coerceAtLeast(1)
@@ -188,38 +204,84 @@ fun NowPlayingScreen() {
         }
     }
     }
+    }
     item { LyricsCard(t) }
     item { Gap(24.dp) }
     }
     if (Nav.queueOpen) QueueSheet()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Canvas or the cover: a small switch under the picture whenever this song has a Canvas loop. */
 @Composable
-private fun QueueSheet() {
-    ModalBottomSheet(onDismissRequest = { Nav.queueOpen = false }, containerColor = C.Elevated,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        LazyColumn(Modifier.navigationBarsPadding()) {
-            item { Text(tr("Queue"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 16.dp)) }
-            Player.current?.let { cur ->
-                item { SectionTitle(tr("Now playing")) }
-                item { TrackRow(cur, onClick = {}, onMore = { Nav.songMenu = SongMenu(cur) }) }
+private fun CanvasCoverSwitch(modifier: Modifier = Modifier) {
+    val cover = com.sevbify.app.CanvasLoop.showCover
+    Row(modifier.clip(RoundedCornerShape(50)).background(Color(0x55000000)).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        listOf(false to "Canvas", true to "Cover").forEach { (isCover, label) ->
+            val on = cover == isCover
+            Box(Modifier.clip(RoundedCornerShape(50)).background(if (on) Color.White else Color.Transparent)
+                    .clickable(enabled = !on) { com.sevbify.app.CanvasLoop.showCover = isCover }
+                    .padding(horizontal = 16.dp, vertical = 6.dp)) {
+                Text(tr(label), color = if (on) Color.Black else C.Text, style = MaterialTheme.typography.labelLarge)
             }
-            if (Player.userQueue.isNotEmpty()) {
-                item { SectionTitle(tr("Next in queue")) }
-                itemsIndexed(Player.userQueue.toList()) { i, t ->
-                    TrackRow(t, onClick = {}, onMore = { Player.removeFromQueue(i) })
-                }
-            }
-            val rest = Player.context.drop(Player.index + 1)
-            if (rest.isNotEmpty()) {
-                item { SectionTitle("Next from: ${Player.sourceName}") }
-                itemsIndexed(rest.take(100)) { i, t ->
-                    TrackRow(t, onClick = { Player.jumpTo(Player.index + 1 + i) }, onMore = { Nav.songMenu = SongMenu(t) })
-                }
-            }
-            item { Gap(24.dp) }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QueueSheet() {
+    // Spotify's queue: what's playing and from where, what's next, and Shuffle / Repeat / Timer along the bottom.
+    ModalBottomSheet(onDismissRequest = { Nav.queueOpen = false }, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            LazyColumn(Modifier.fillMaxWidth().padding(bottom = 76.dp)) {
+                item {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        Text(tr("Queue"), style = MaterialTheme.typography.titleLarge)
+                        val from = Player.sourceName.ifEmpty { "Sevbify" }
+                        val where = if (AudioOutput.kind != "speaker") " · ${AudioOutput.name}" else ""
+                        Text("Playing from $from$where", style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                             overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Player.current?.let { cur ->
+                    item { SectionTitle(tr("Now playing")) }
+                    item { TrackRow(cur, onClick = {}, onMore = { Nav.songMenu = SongMenu(cur) }) }
+                }
+                if (Player.userQueue.isNotEmpty()) {
+                    item { SectionTitle(tr("Next in queue")) }
+                    itemsIndexed(Player.userQueue.toList()) { i, t ->
+                        TrackRow(t, onClick = {}, onMore = { Player.removeFromQueue(i) })
+                    }
+                }
+                val rest = Player.context.drop(Player.index + 1)
+                if (rest.isNotEmpty()) {
+                    item { SectionTitle((if (Player.shuffle) "Shuffling from: " else "Next from: ") + Player.sourceName) }
+                    itemsIndexed(rest.take(100)) { i, t ->
+                        TrackRow(t, onClick = { Player.jumpTo(Player.index + 1 + i) }, onMore = { Nav.songMenu = SongMenu(t) })
+                    }
+                }
+                item { Gap(24.dp) }
+            }
+            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(C.Elevated).padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QueueButton(if (Player.smartShuffle) Icons.Filled.AutoAwesome else Icons.Filled.Shuffle,
+                            if (Player.smartShuffle) "Smart Shuffle" else "Shuffle", Player.shuffle, Modifier.weight(1f)) { Player.toggleShuffle() }
+                QueueButton(if (Player.repeat == "one") Icons.Filled.RepeatOne else Icons.Filled.Repeat, "Repeat",
+                            Player.repeat != "off", Modifier.weight(1f)) { Player.cycleRepeat() }
+                QueueButton(Icons.Filled.Timer, "Timer", Player.sleepAt != null || Player.sleepAtEnd, Modifier.weight(1f)) { Nav.sleepOpen = true }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QueueButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, on: Boolean,
+                        modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x22FFFFFF)).clickable(onClick = onClick).padding(vertical = 8.dp),
+           horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, label, tint = if (on) C.Green else C.Text)
+        Text(tr(label), style = MaterialTheme.typography.labelSmall, color = if (on) C.Green else C.Text)
+    }
+}

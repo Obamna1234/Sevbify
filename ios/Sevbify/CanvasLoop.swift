@@ -10,6 +10,7 @@ import SwiftUI
 final class CanvasLoop: ObservableObject {
     static let shared = CanvasLoop()
     @Published var current: URL?
+    @Published var showCover = false          // you chose "Cover" in Now Playing (until you choose Canvas again)
     @AppStorage("sevbify.canvas.on") var on = true
     @AppStorage("sevbify.canvas.limit") var limitMb = 200
     @AppStorage("sevbify.canvas.keep") var keepDownloads = true
@@ -94,7 +95,7 @@ final class CanvasLoop: ObservableObject {
         await export.export()
         guard export.status == .completed,
               let size = (try? FileManager.default.attributesOfItem(atPath: part.path)[.size]) as? Int,
-              size > 10_000, size < 8_000_000 else {
+              size > 200_000, size < 8_000_000 else {        // under ~200 KB for 8 s: a still picture, not a Canvas
             try? FileManager.default.removeItem(at: part)
             return false
         }

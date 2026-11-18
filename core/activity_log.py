@@ -92,7 +92,8 @@ def report(dest):
     """One file with the activity log (older parts first) and the error log, to send when something goes wrong."""
     base = _path[0]
     folder = os.path.dirname(base)
-    parts = [f"{base}.{i}" for i in range(KEEP, 0, -1)] + [base, os.path.join(folder, "error.log")]
+    parts = [f"{base}.{i}" for i in range(KEEP, 0, -1)] + [base, os.path.join(folder, "error.log"),
+             os.path.join(folder, "crash.txt")]          # Android: written by the app if it ever crashes
     home = os.path.expanduser("~")
     user = os.path.basename(home.rstrip("\\/")) if home else ""
     import re as _re

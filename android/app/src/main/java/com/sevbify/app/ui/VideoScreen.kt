@@ -355,11 +355,12 @@ private fun SmallButton(icon: androidx.compose.ui.graphics.vector.ImageVector, l
 fun CanvasView(modifier: Modifier) {
     val context = LocalContext.current
     AndroidView(
-        factory = { PlayerView(it).apply {
-            player = com.sevbify.app.CanvasLoop.player(context); useController = false
-            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-        } },
+        factory = {
+            (android.view.LayoutInflater.from(it).inflate(com.sevbify.app.R.layout.canvas_view, null) as PlayerView).apply {
+                player = com.sevbify.app.CanvasLoop.player(context)
+                clipChildren = true; clipToOutline = true
+            }
+        },
         modifier = modifier,
     )
 }

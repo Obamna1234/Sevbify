@@ -14,6 +14,7 @@ class SevbifyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        recordCrashes()
         I18n.load(this)
         Library.load(this)
         MusicServers.load(this)
@@ -26,6 +27,25 @@ class SevbifyApp : Application() {
             try { Bridge.call("warm") } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
             autoUpdateYtdlp()
             try { Updater.check() } catch (_: Exception) { /* offline: try again tomorrow */ }
+        }
+    }
+
+    /** If the app ever crashes, write what went wrong (the error and where in Sevbify's code, nothing about you) to
+     *  crash.txt next to the debug log, so "Save debug log" includes it after you reopen the app. */
+    private fun recordCrashes() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            try {
+                val dir = filesDir.resolve("core").also { it.mkdirs() }
+                val text = "${java.time.Instant.now()}  Sevbify ${packageManager.getPackageInfo(packageName, 0).versionName} " +
+                    "on Android ${android.os.Build.VERSION.RELEASE} (${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}), " +
+                    "thread ${thread.name}\n${android.util.Log.getStackTraceString(error).take(20_000)}\n"
+                java.io.File(dir, "crash.txt").let { f ->
+                    val old = if (f.exists()) f.readText().takeLast(40_000) else ""
+                    f.writeText(old + text)
+                }
+            } catch (_: Throwable) { }
+            previous?.uncaughtException(thread, error)
         }
     }
 

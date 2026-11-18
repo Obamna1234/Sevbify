@@ -230,6 +230,7 @@ struct EqualiserSection: View {
                         Text("\(Int(eq.gains[i])) dB").font(.caption).frame(width: 44)
                     }
                 }
+                Button("Reset to flat") { eq.choose("Flat") }.foregroundColor(C.green)
             }
             Text("Shapes the sound on this iPhone. Turning it on or off takes effect from the next song; preset and slider changes apply straight away.")
                 .font(.caption).foregroundColor(C.dim)

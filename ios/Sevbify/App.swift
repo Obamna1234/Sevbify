@@ -232,6 +232,7 @@ struct MiniPlayer: View {
     @EnvironmentObject var player: Player
     @EnvironmentObject var nav: Nav
     @EnvironmentObject var lib: Library
+    @State private var savedIn: Track?
     var body: some View {
         if let t = player.current {
             VStack(spacing: 0) {
@@ -243,11 +244,11 @@ struct MiniPlayer: View {
                     }
                     Spacer()
                     if !t.isItem {
-                        let liked = lib.isLiked(t)
-                        Button { lib.toggleLike(t) } label: {
+                        let liked = SaveButton.isSaved(t)
+                        Button { if SaveButton.tap(t) { savedIn = t } } label: {
                             Image(systemName: liked ? "checkmark.circle.fill" : "plus.circle").font(.title3)
                                 .foregroundColor(liked ? C.green : .white).frame(width: 40, height: 40)
-                        }.buttonStyle(.plain).accessibilityLabel(liked ? "Remove from Liked Songs" : "Add to Liked Songs")
+                        }.buttonStyle(.plain).accessibilityLabel(liked ? "Saved in…" : "Add to Liked Songs")
                     }
                     if player.loading { ProgressView().frame(width: 40, height: 40) }
                     else {
@@ -264,6 +265,7 @@ struct MiniPlayer: View {
             .padding(.horizontal, 8).padding(.bottom, 4)
             .contentShape(Rectangle())
             .onTapGesture { nav.nowPlaying = true }
+            .sheet(item: $savedIn) { SavedInView(track: $0).environmentObject(lib) }
         }
     }
 }

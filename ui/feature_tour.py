@@ -106,8 +106,26 @@ class FeatureTour(_Card):
         self.next.clicked.connect(lambda: self.accept() if self.index >= len(self.pages) - 1 else self.go(self.index + 1))
         self.go(0)
 
+    def _fade_in(self):
+        """A short fade as the page changes, so Next and Back feel smooth."""
+        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect
+        for w in (self.picture, self.title, self.text):
+            eff = QGraphicsOpacityEffect(w)
+            w.setGraphicsEffect(eff)
+            a = QPropertyAnimation(eff, b"opacity", w)
+            a.setDuration(220)
+            a.setStartValue(0.0)
+            a.setEndValue(1.0)
+            a.setEasingCurve(QEasingCurve.Type.OutCubic)
+            a.finished.connect(lambda w=w: w.setGraphicsEffect(None))
+            a.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+
     def go(self, i):
+        before = getattr(self, "index", 0)
         self.index = max(0, min(i, len(self.pages) - 1))
+        if self.index != before:
+            self._fade_in()
         name, title, text = self.pages[self.index]
         pm = QPixmap(os.path.join(HERE, name))
         if pm.isNull():
@@ -125,7 +143,7 @@ class FeatureTour(_Card):
         last = self.index == len(self.pages) - 1
         self.back.setEnabled(self.index > 0)
         self.skip.setVisible(not last)
-        self.next.setText("Done" if last else "Next")
+        self.next.setText("Start listening" if last else "Next")
 
     def keyPressEvent(self, e):
         if e.key() in (Qt.Key.Key_Right, Qt.Key.Key_PageDown):

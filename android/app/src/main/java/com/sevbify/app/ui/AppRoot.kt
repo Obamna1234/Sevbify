@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -93,35 +95,48 @@ fun AppRoot() {
             val drawerW = maxWidth * 0.82f
             val drawerPx = with(density) { drawerW.toPx() }
             val scope = androidx.compose.runtime.rememberCoroutineScope()
-            val open = remember { androidx.compose.animation.core.Animatable(0f) }
+            // How far open the menu is (0 = closed, 1 = open). Your finger moves it directly (no per-move animations
+            // queued behind each other, which made it stutter and sometimes stop half open); letting go glides it
+            // the rest of the way with your swipe's speed, and a quick flick is enough either way.
+            var pos by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
             var dragging by remember { mutableStateOf(false) }
-            LaunchedEffect(Nav.drawerOpen) {
-                if (!dragging) open.animateTo(if (Nav.drawerOpen) 1f else 0f, androidx.compose.animation.core.tween(260))
+            val job = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+            val flick = with(density) { 500.dp.toPx() }
+            fun glide(to: Float, velocity: Float = 0f) {
+                job[0]?.cancel()
+                job[0] = scope.launch {
+                    androidx.compose.animation.core.animate(pos, to, velocity / drawerPx,
+                        androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 500f)) { v, _ -> pos = v }
+                }
             }
-            fun dragBy(d: Float) { dragging = true; scope.launch { open.snapTo((open.value + d / drawerPx).coerceIn(0f, 1f)) } }
-            fun settle() {
+            LaunchedEffect(Nav.drawerOpen) { if (!dragging) glide(if (Nav.drawerOpen) 1f else 0f) }
+            val drag = androidx.compose.foundation.gestures.rememberDraggableState { d ->
+                job[0]?.cancel(); dragging = true
+                pos = (pos + d / drawerPx).coerceIn(0f, 1f)
+            }
+            fun settle(velocity: Float) {
                 dragging = false
-                val o = open.value >= 0.4f
+                val o = if (kotlin.math.abs(velocity) > flick) velocity > 0 else pos >= 0.5f
                 if (Nav.drawerOpen != o) Nav.drawerOpen = o
-                scope.launch { open.animateTo(if (o) 1f else 0f, androidx.compose.animation.core.tween(200)) }
+                glide(if (o) 1f else 0f, velocity)
             }
-            if (open.value > 0f) {
-                ProfileDrawer(Modifier.width(drawerW).graphicsLayer { translationX = -(1f - open.value) * drawerPx * 0.35f })
+            fun Modifier.dragMenu() = this.draggable(drag, androidx.compose.foundation.gestures.Orientation.Horizontal,
+                onDragStopped = { v -> settle(v) })
+            if (pos > 0f) {
+                ProfileDrawer(Modifier.width(drawerW).graphicsLayer { translationX = -(1f - pos) * drawerPx * 0.35f })
             }
-            Column(Modifier.fillMaxSize().graphicsLayer { translationX = open.value * drawerPx }) {
+            Column(Modifier.fillMaxSize().graphicsLayer { translationX = pos * drawerPx }) {
                 Box(Modifier.weight(1f).fillMaxWidth().background(C.Bg)) { Pages() }
                 BottomArea()
             }
-            if (open.value > 0f) {
-                Box(Modifier.fillMaxSize().graphicsLayer { translationX = open.value * drawerPx }
-                        .background(Color.Black.copy(alpha = 0.45f * open.value))
+            if (pos > 0f) {
+                Box(Modifier.fillMaxSize().graphicsLayer { translationX = pos * drawerPx }
+                        .background(Color.Black.copy(alpha = 0.45f * pos))
                         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                    indication = null) { Nav.drawerOpen = false }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures(onDragEnd = { settle() }, onDragCancel = { settle() }) { c, d -> c.consume(); dragBy(d) }
-                        })
+                        .dragMenu())
             } else if (Nav.stack.size == 1 && !Nav.nowPlayingOpen) {
-                DrawerEdge(onDrag = { dragBy(it) }, onEnd = { settle() })
+                Box(Modifier.width(20.dp).fillMaxHeight().dragMenu())       // swipe right from the left edge
             }
         }
         AnimatedVisibility(Nav.nowPlayingOpen, enter = slideInVertically { it }, exit = slideOutVertically { it }) {
@@ -246,10 +261,10 @@ private fun MiniPlayer() {
                 Icon(Icons.Filled.Devices, "Connect to a device", tint = if (AudioOutput.kind != "speaker") C.Green else C.Text)
             }
             if (!t.isItem) {
-                val liked = Library.changes.let { Library.isLiked(t) }
-                IconButton(onClick = { Nav.say(if (Library.toggleLike(t)) "Added to Liked Songs" else "Removed from Liked Songs") }) {
+                val liked = Library.changes.let { isSaved(t) }
+                IconButton(onClick = { saveTap(t) }) {
                     Icon(if (liked) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
-                         if (liked) "Remove from Liked Songs" else "Add to Liked Songs", tint = if (liked) C.Green else C.Text)
+                         if (liked) "Saved in…" else "Add to Liked Songs", tint = if (liked) C.Green else C.Text)
                 }
             }
             IconButton(onClick = { Player.playPause() }) {
@@ -268,14 +283,19 @@ private fun Dialogs() {
     Player.noticeFor?.let {
         AlertDialog(
             onDismissRequest = { Player.acceptNotice(false) },
-            title = { Text(tr("Play full songs?")) },
+            title = { Text(tr("Full songs, free")) },
             text = {
-                Text(tr("Songs you don't have yet can stream in full from Bandcamp or YouTube (found by Sevbify, nothing ") +
-                     "is signed in to). Streaming YouTube without its own player and ads goes against YouTube's terms. " +
-                     "Songs you have on your phone always play from your files.")
+                Text(tr("Sevbify plays every song in full by finding it on Bandcamp or YouTube. No account, nothing to sign in to.") +
+                     "\n\nOne thing to know: YouTube's terms ask people to listen in its own app, so it's your choice. " +
+                     "You can change it any time in Settings. Songs on your phone always play from your files.")
             },
-            confirmButton = { TextButton(onClick = { Player.acceptNotice(true) }) { Text(tr("Play full songs")) } },
-            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text(tr("Not now")) } },
+            confirmButton = {
+                androidx.compose.material3.Button(onClick = { Player.acceptNotice(true) },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = androidx.compose.ui.graphics.Color.Black)) {
+                    Text(tr("Play full songs"))
+                }
+            },
+            dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text(tr("Previews only"), color = C.Text) } },
             containerColor = C.Elevated,
         )
     }

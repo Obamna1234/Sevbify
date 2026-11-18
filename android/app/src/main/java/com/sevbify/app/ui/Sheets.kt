@@ -15,6 +15,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -73,6 +79,7 @@ fun Sheets() {
     Nav.playlistMenu?.let { PlaylistMenuSheet(it) }
     Nav.folderMenu?.let { FolderMenuSheet(it) }
     Nav.addTo?.let { AddToSheet(it) }
+    Nav.savedIn?.let { SavedInSheet(it) }
     Nav.previewFor?.let { PreviewDialog(it) }
 }
 
@@ -302,6 +309,91 @@ private fun FolderMenuSheet(folder: String) {
                                      { Library.deleteFolder(folder) })
             }
         }
+    }
+}
+
+/** Spotify's "Saved in": Liked Songs and your playlists, each with ⊕ / ✓ for this song. Ticks only change when you
+ *  tap Done (Cancel or swiping the sheet away leaves everything as it was). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SavedInSheet(t: Track) {
+    val close = { Nav.savedIn = null }
+    val all = Library.playlists.toList()
+    val start = remember(t) { all.filter { pl -> pl.tracks.any { it.matchKey == t.matchKey } }.map { it.id }.toSet() }
+    var ticked by remember(t) { mutableStateOf(start + (if (Library.liked == null) setOf("__liked") else emptySet())) }
+    var find by remember { mutableStateOf("") }
+    fun done() {
+        val liked = Library.liked
+        val likeNow = if (liked == null) "__liked" in ticked else liked.id in ticked
+        if (likeNow != Library.isLiked(t)) Library.toggleLike(t)
+        for (pl in Library.playlists.toList()) {
+            if (pl.origin == "liked") continue
+            val was = pl.id in start; val now = pl.id in ticked
+            if (now && !was) pl.tracks.add(t)
+            if (was && !now) pl.tracks.removeAll { it.matchKey == t.matchKey }
+        }
+        Library.changed()
+        val n = ticked.size
+        Nav.say(if (n == 0) "Removed from your library" else "Saved in $n ${if (n == 1) "place" else "places"}")
+        close()
+    }
+    ModalBottomSheet(onDismissRequest = close, containerColor = C.Elevated,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            LazyColumn(Modifier.fillMaxWidth().padding(bottom = 72.dp)) {
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.TextButton(onClick = close) { Text(tr("Cancel"), color = C.Text) }
+                        Spacer(Modifier.weight(1f))
+                        androidx.compose.material3.TextButton(onClick = {
+                            val pl = Library.newPlaylist(tracks = listOf(t)); ticked = ticked + pl.id
+                            Nav.say("Added to ${pl.name}")
+                        }) { Text(tr("New playlist"), color = C.Green) }
+                    }
+                    Text(tr("Saved in"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                }
+                val liked = Library.liked
+                item {
+                    val key = liked?.id ?: "__liked"
+                    SavedRow(liked, tr("Liked Songs"), "${liked?.tracks?.size ?: 0} songs", key in ticked) {
+                        ticked = if (key in ticked) ticked - key else ticked + key
+                    }
+                }
+                item {
+                    androidx.compose.material3.OutlinedTextField(find, { find = it }, singleLine = true,
+                        placeholder = { Text(tr("Find playlist")) },
+                        leadingIcon = { Icon(Icons.Filled.Search, null) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+                val q = find.trim().lowercase()
+                items(Library.playlists.filter { it.origin != "liked" && (q.isEmpty() || q in it.name.lowercase()) }, key = { it.id }) { pl ->
+                    SavedRow(pl, pl.name, "${pl.tracks.size} songs", pl.id in ticked) {
+                        ticked = if (pl.id in ticked) ticked - pl.id else ticked + pl.id
+                    }
+                }
+            }
+            androidx.compose.material3.Button(onClick = { done() },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = Color.Black),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)) { Text(tr("Done")) }
+        }
+    }
+}
+
+@Composable
+private fun SavedRow(pl: com.sevbify.app.Playlist?, name: String, sub: String, on: Boolean, onToggle: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (pl != null) PlaylistCover(pl, 48.dp)
+        else Box(Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF5038A0)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Favorite, null, tint = Color.White)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            Text(sub, style = MaterialTheme.typography.bodySmall)
+        }
+        Icon(if (on) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline, if (on) "Saved here" else "Not saved here",
+             tint = if (on) C.Green else C.Sub, modifier = Modifier.size(26.dp))
     }
 }
 
