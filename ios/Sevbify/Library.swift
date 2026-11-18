@@ -13,7 +13,7 @@ struct Settings: Codable {
     var showPlaylistOrigin = false
     var lastfmKey = ""
     var jamendoId = ""
-    var noticeAccepted = false
+    var noticeAccepted = true          // no first-run sheet any more: full songs from the start
     var lastAppCheck: Double = 0          // last daily check for a new Sevbify
     var updateAsked = ""                  // newest version already offered (asked once per version)
     var tourSeen = false                  // the feature tour was closed with "Don't show this again"
@@ -31,7 +31,7 @@ struct Settings: Codable {
         online = b(.online, true); streamFull = b(.streamFull, true); source = s(.source, "Bandcamp + YouTube")
         autoplay = b(.autoplay, true); explicitOk = b(.explicitOk, true); songQuality = s(.songQuality, "best")
         shuffle = b(.shuffle, false); repeatMode = s(.repeatMode, "off"); showPlaylistOrigin = b(.showPlaylistOrigin, false)
-        lastfmKey = s(.lastfmKey, ""); jamendoId = s(.jamendoId, ""); noticeAccepted = b(.noticeAccepted, false)
+        lastfmKey = s(.lastfmKey, ""); jamendoId = s(.jamendoId, ""); noticeAccepted = true
         lastAppCheck = (try? c.decode(Double.self, forKey: .lastAppCheck)) ?? 0; updateAsked = s(.updateAsked, "")
         tourSeen = b(.tourSeen, false); spotifyFull = b(.spotifyFull, false)
     }

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -141,6 +142,9 @@ private fun SongMenuSheet(m: SongMenu) {
                 }
             }
             SheetItem(Icons.AutoMirrored.Filled.QueueMusic, tr("Add to queue")) { close(); Player.addToQueue(t); Nav.say(tr("Added to queue")) }
+            if (!t.isItem && !t.isLocal && Library.localFor(t) == null) {
+                SheetItem(Icons.Filled.PlayArrow, tr("Preview (30 s)")) { close(); Nav.previewFor = t }
+            }
             if (!t.isItem) {
                 val have = Library.localFor(t) != null
                 val st = Downloads.stateOf(t)

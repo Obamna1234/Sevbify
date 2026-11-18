@@ -5132,18 +5132,14 @@ class MainWindow(ShowsMixin, QMainWindow):
                 self._handle_failed_track("online features are switched off")
                 return
             if not song.track.stream_url:
-                # Always the full song: a 30-second clip only plays when you pick Preview from the song's menu.
-                if not self._accept_online_notice():
-                    self.player.stop()
-                    self._track_handled = True
-                    self._handle_failed_track("full songs need the streaming notice accepted")
-                    return
+                # Always the full song, with no pop-up first: a 30-second clip only plays when you pick Preview
+                # from the song's menu. (Downloading still shows its one-time note.)
                 self._stream_full_song(song)
                 return
         elif not song.exists:
             # The downloaded file was moved or deleted: play the song online instead (like a song you haven't
             # downloaded yet), and it's ready to download again.
-            if self.online_enabled and song.artist and song.artist != "Unknown Artist" and self._accept_online_notice():
+            if self.online_enabled and song.artist and song.artist != "Unknown Artist":
                 self._stream_full_song(song)
                 return
             self.player.stop()

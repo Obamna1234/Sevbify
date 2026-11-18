@@ -282,12 +282,6 @@ fun SettingsPageScreen(key: String) {
                    "next song.",
                    s.audioCache) { s.audioCache = it; Library.changed() }
         }
-        item {
-            Toggle(tr("Play 30-second previews"),
-                   "For songs you don't have yet, play a short preview instead of streaming the full song. " +
-                   "Your own and downloaded songs always play in full. Off = full songs (default).",
-                   !s.streamFull) { s.streamFull = !it; Library.changed() }
-        }
         }
         "offline" -> {
         item { Toggle(tr("Data saver"), "Smaller song downloads and 360p video podcasts.", dataSaverOn()) { setDataSaver(it) } }

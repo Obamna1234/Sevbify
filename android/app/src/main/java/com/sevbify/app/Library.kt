@@ -21,7 +21,7 @@ data class Settings(
     var downloadOnWifiOnly: Boolean = false,
     var musicFolders: MutableList<String> = mutableListOf("Music"),
     var cloudFolders: MutableList<String> = mutableListOf(),   // folders picked in Android's file picker (SD card, cloud apps)
-    var onlineNoticeAccepted: Boolean = false,
+    var onlineNoticeAccepted: Boolean = true,       // no more first-play prompt: full songs from the start
     var shuffle: Boolean = false,
     var repeat: String = "off",
     var lastfmKey: String = "",
@@ -86,7 +86,7 @@ data class Settings(
         fun fromJson(o: JSONObject?): Settings {
             val s = Settings()
             if (o == null) return s
-            s.online = o.optBoolean("online", true); s.streamFull = o.optBoolean("stream_full", true)
+            s.online = o.optBoolean("online", true); s.streamFull = true   // always full songs; a song's menu has Preview (30 s)
             s.source = o.optString("source", s.source); s.autoplay = o.optBoolean("autoplay", true)
             s.explicitOk = o.optBoolean("explicit_ok", true); s.downloadOnWifiOnly = o.optBoolean("wifi_only")
             o.optJSONArray("music_folders")?.let { a ->
@@ -96,7 +96,7 @@ data class Settings(
                 s.cloudFolders = (0 until a.length()).map { a.getString(it) }
                     .filter { it.startsWith("content://") }.toMutableList()
             }
-            s.onlineNoticeAccepted = o.optBoolean("notice"); s.shuffle = o.optBoolean("shuffle")
+            s.onlineNoticeAccepted = true; s.shuffle = o.optBoolean("shuffle")
             s.repeat = o.optString("repeat", "off"); s.lastfmKey = o.optString("lastfm"); s.jamendoId = o.optString("jamendo_id")
             s.libraryView = o.optString("library_view", "list"); s.librarySort = o.optString("library_sort", "recents")
             s.songQuality = o.optString("song_quality", "best").takeIf { it in listOf("best", "small") } ?: "best"
