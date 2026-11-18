@@ -16,8 +16,9 @@ def test_play_song_does_not_block(window, qapp):
     window.play_song(window.songs[0])
     elapsed = time.perf_counter() - start
     assert elapsed < 0.5, f"play_song blocked the UI for {elapsed:.2f}s"
-    assert wait_until(qapp, lambda: window._reached_playing)
-    assert window.play_btn.property("state") == "pause"
+    # Checked while it plays (the test song is about a second long, so a slow machine can reach its end before
+    # a single look afterwards): the button shows Pause once it's playing.
+    assert wait_until(qapp, lambda: window._reached_playing and window.play_btn.property("state") == "pause")
 
 
 def test_track_end_advances_exactly_once(window, qapp):
