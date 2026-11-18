@@ -304,7 +304,7 @@ struct TrackMenu: View {
         } message: {
             Text("It won't play by itself any more: playlists, albums, radio and mixes skip it. You can still play it by picking it yourself. Changed your mind? Settings → Hidden songs and artists lists everything you've hidden, with a switch to bring each one back.")
         }
-        .sheet(isPresented: $previewing) { PreviewView(track: track) }
+        .sheet(isPresented: $previewing) { PreviewView(track: track, onFull: { dismiss() }).environmentObject(lib) }
     }
 
     private func item(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {

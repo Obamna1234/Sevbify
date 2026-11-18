@@ -294,6 +294,12 @@ object Player {
 
     fun addToQueue(t: Track) { userQueue.add(t); upcomingChanged() }
 
+    /** Preview → Play full song: this song now (in full); the one you were playing stays as the song before it. */
+    fun playFullNow(t: Track) {
+        if (current == null || controller == null) { play(t); return }
+        userQueue.add(0, t); upcomingChanged(); advance(auto = false)
+    }
+
     fun removeFromQueue(i: Int) { if (i in userQueue.indices) { userQueue.removeAt(i); upcomingChanged() } }
 
     fun playPause() {

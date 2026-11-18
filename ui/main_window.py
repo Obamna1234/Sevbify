@@ -5500,7 +5500,8 @@ class MainWindow(ShowsMixin, QMainWindow):
             if not u:
                 self.show_status("No preview for this song", kind="info", timeout_ms=4000)
                 return
-            if self.player.get_state() == vlc.State.Playing:
+            was_playing = self.player.get_state() == vlc.State.Playing
+            if was_playing:
                 self.play_pause_song()
             from .preview_dialog import PreviewDialog
             old = getattr(self, "_preview_window", None)
@@ -5509,9 +5510,34 @@ class MainWindow(ShowsMixin, QMainWindow):
                     old.close()
                 except RuntimeError:
                     pass
-            self._preview_window = PreviewDialog(self, self.vlc_instance, u, song.title, song.artist,
-                                                 cover=load_pixmap(song.album_cover_path))
-            self._preview_window.show()
+            def full():
+                if self.current_song is not None and self.queue:
+                    self.pq.user_queue.insert(0, song)        # your song stays as the one before it
+                    self._queue_changed()
+                    self.next_song()
+                else:
+                    self.play_song(song, [song])
+
+            def save(button):
+                if not self.is_saved(song):
+                    self.toggle_like(song)
+                else:
+                    self.open_save_picker(song, button.mapToGlobal(button.rect().bottomLeft()))
+                return self.is_saved(song)
+
+            dlg = PreviewDialog(self, self.vlc_instance, u, song.title, song.artist,
+                                cover=load_pixmap(song.album_cover_path), on_full=full,
+                                on_queue=lambda: self.add_to_queue(song), on_save=save,
+                                saved=self.is_saved(song), resume_note=was_playing)
+
+            def closed(_=None):
+                # Close: your song carries on where it paused (not after Play full song, which plays that instead).
+                if was_playing and not dlg.full_chosen and self.player.get_state() != vlc.State.Playing \
+                        and not getattr(self, "_shut_down", False):
+                    self.play_pause_song()
+            dlg.destroyed.connect(closed)
+            self._preview_window = dlg
+            dlg.show()
 
         if url:
             show(url)

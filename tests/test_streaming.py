@@ -466,3 +466,32 @@ def test_soundcloud_album_songs_come_in_order_with_their_pages(monkeypatch):
     assert all(t.artist == "Abyssic Hate" and t.source == "soundcloud" for t in tracks)
     assert tracks[0].cover_url == album["cover"] and tracks[0].duration_ms == 280000
     assert streamer.soundcloud_album_tracks({"url": "https://soundcloud.com/rob/likes", "artist": "x"}) == []
+
+
+def test_preview_card_restart_queue_full_and_resume(window, qapp, tmp_path):
+    """Preview (30 s): it's plainly a preview, Restart / Add to queue work, Close carries on with your song and
+    Play full song plays the whole song next (your song stays as the one before it)."""
+    preview = tmp_path / "p.wav"
+    make_wav(preview, 3.0)
+    song = remote("Short", "Preview", preview=str(preview))
+    from ui.preview_dialog import PreviewDialog
+    queued = []
+    full = []
+    dlg = PreviewDialog(window, window.vlc_instance, str(preview), "Short", "Preview",
+                        on_full=lambda: full.append(1), on_queue=lambda: queued.append(1), resume_note=True)
+    dlg.show()
+    from PyQt6.QtWidgets import QLabel, QPushButton
+    texts = [w.text() for w in dlg.findChildren(QLabel)]
+    assert "30-SECOND PREVIEW" in texts and "Close and your song carries on where it was" in texts
+    buttons = {b.text().strip(): b for b in dlg.findChildren(QPushButton)}
+    buttons["Add to queue"].click()
+    assert queued == [1]
+    buttons["Restart"].click()
+    dlg.slider.setValue(1500)
+    dlg._seek()
+    buttons["Play full song"].click()
+    assert full == [1] and dlg.full_chosen
+    window._preview_window = None
+    window.preview_song(song)
+    assert wait_until(qapp, lambda: window._preview_window is not None and window._preview_window is not dlg)
+    window._preview_window.close()
