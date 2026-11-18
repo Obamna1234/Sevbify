@@ -18,7 +18,12 @@ MODES = [
 
 STYLE = (f"QDialog {{ background: #121212; }} QLabel {{ color: #ffffff; background: transparent; }}"
          f" QRadioButton, QCheckBox {{ color: #ffffff; font-size: 14px; font-weight: 600; spacing: 10px; }}"
-         " QRadioButton::indicator, QCheckBox::indicator { width: 16px; height: 16px; }"
+         " QRadioButton::indicator { width: 14px; height: 14px; border-radius: 9px; border: 2px solid #b3b3b3;"
+         " background: transparent; }"
+         " QRadioButton::indicator:checked { border: 2px solid #1ed760; background: qradialgradient(cx:0.5, cy:0.5,"
+         " radius:0.5, fx:0.5, fy:0.5, stop:0 #1ed760, stop:0.55 #1ed760, stop:0.6 transparent); }"
+         " QCheckBox::indicator { width: 16px; height: 16px; border-radius: 3px; border: 2px solid #b3b3b3; }"
+         " QCheckBox::indicator:checked { background: #1ed760; border-color: #1ed760; }"
          " QProgressBar { background: #3e3e3e; border: none; border-radius: 2px; height: 4px; }"
          " QProgressBar::chunk { background: #1ed760; border-radius: 2px; }")
 
@@ -30,7 +35,7 @@ class FlowDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Flow")
         self.setStyleSheet(STYLE)
-        self.setMinimumWidth(460)
+        self.setFixedWidth(520)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(24, 22, 24, 20)
         lay.setSpacing(10)
@@ -42,7 +47,10 @@ class FlowDialog(QDialog):
                        f"playlist, “{playlist_name} · Flow”: your playlist stays exactly as it is, and you can drag "
                        "songs around in the new one.")
         intro.setWordWrap(True)
+        intro.setFixedWidth(472)                     # a fixed width lets word-wrapped text take its full height
         intro.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 13px;")
+        intro.ensurePolished()
+        intro.setMinimumHeight(intro.heightForWidth(472))
         lay.addWidget(intro)
 
         self.group = QButtonGroup(self)
@@ -60,7 +68,10 @@ class FlowDialog(QDialog):
             b.addWidget(r)
             why = QLabel(text)
             why.setWordWrap(True)
+            why.setFixedWidth(420)
             why.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 12px; padding-left: 26px;")
+            why.ensurePolished()
+            why.setMinimumHeight(why.heightForWidth(420))
             b.addWidget(why)
             lay.addWidget(box)
 
