@@ -126,4 +126,13 @@ def test_flow_this_playlist_makes_a_new_playlist_and_leaves_the_original(window,
     new = next(p for p in window.playlists if p.name == "Mixed · Flow")
     assert pl.songs == before                                       # the original is untouched
     assert sorted(id(s) for s in new.songs) == sorted(id(s) for s in before)
-    assert "Smooth order" in new.description
+    assert "Energy to calm order" in new.description           # the default
+
+
+def test_mix_spreads_calm_and_energetic_through_the_playlist():
+    many = [song(f"Ar{i}", f"T{i}", g) for i, g in enumerate(["Ambient", "Jazz", "Rock", "Metal", "Pop", "House"] * 4)]
+    feats = feats_for(many)
+    e = [feats[i]["energy"] for i in fo.order(many, feats, "mix", artists_apart=False, seed=1)]
+    half = len(e) // 2
+    assert abs(sum(e[:half]) / half - sum(e[half:]) / (len(e) - half)) < 0.15     # no calm half / loud half
+    assert fo.order(many, feats, "mix", seed=1) == fo.order(many, feats, "mix", seed=1)

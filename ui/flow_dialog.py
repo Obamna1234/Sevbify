@@ -9,10 +9,11 @@ from PyQt6.QtCore import Qt
 from . import theme
 
 MODES = [
-    ("smooth", "Smooth", "Every song leads gently into the next; genres blend instead of jumping."),
+    ("wind_down", "Energy to calm", "Big, exciting songs first, then the middle ones, ending calm. (Default)"),
+    ("build", "Calm to energy", "Starts calm and builds up to the big, exciting songs: good for workouts or getting ready."),
     ("waves", "Waves", "Builds up, eases off, builds up again: hot, cold, hot, cold."),
-    ("build", "Build up", "Starts calm and gets more intense: good for workouts or getting ready."),
-    ("wind_down", "Wind down", "Starts intense and gets calmer: good for evenings or sleep."),
+    ("smooth", "Smooth", "Every song leads gently into the next; genres blend instead of jumping."),
+    ("mix", "Mix it up", "A bit of everything: calm, energetic and in-between songs spread through, shuffled."),
     ("genre", "Grouped by genre", "All the synthwave together, then the rock and so on, each smooth inside."),
 ]
 

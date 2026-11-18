@@ -6,10 +6,11 @@ and sub-genre (synthwave vs darkwave vs chillwave, soft rock vs metal...) and cl
 "slowed", "remix"...). Songs Deezer doesn't know are placed by their genre and title alone, so nothing is dropped.
 
 Orders ("modes"):
-  smooth     every song leads gently into the next; genres blend instead of jumping (default)
+  wind_down  big energy first, then the middle, ending calm (default)
+  build      calm first, building up to big energy
   waves      builds up, eases off, builds up again (hot, cold, hot, cold)
-  build      calm to intense
-  wind_down  intense to calm
+  smooth     every song leads gently into the next; genres blend instead of jumping
+  mix        a bit of everything: calm, energetic and in-between songs spread through the playlist, shuffled
   genre      grouped by family, smooth inside each group, the groups in an order that flows too
 Options: keep the same artist apart (never twice in a row), start calm or start energetic.
 
@@ -21,7 +22,7 @@ import os
 import re
 import threading
 
-MODES = ("smooth", "waves", "build", "wind_down", "genre")
+MODES = ("wind_down", "build", "waves", "smooth", "mix", "genre")
 VERSION = 1
 
 # (words in a genre name, family, how intense that style usually is 0..1). The first match wins, so the more
@@ -273,6 +274,28 @@ def _waves(idx, feats, start_high=False, wave=8):
     return out
 
 
+def _mix(idx, feats, seed=None):
+    """A bit of everything: songs split into calm / middle / energetic thirds (shuffled inside each), then dealt
+    out in turn so every stretch of the playlist has some of each, never two big jumps in a row."""
+    import random
+    rnd = random.Random(seed)
+    ordered = sorted(idx, key=lambda i: (feats[i]["energy"], i))
+    n = len(ordered)
+    thirds = [ordered[:n // 3], ordered[n // 3: 2 * n // 3], ordered[2 * n // 3:]]
+    for t in thirds:
+        rnd.shuffle(t)
+    pattern = [1, 2, 1, 0]                      # middle, energetic, middle, calm, ... (gentle steps)
+    out, k = [], rnd.randrange(len(pattern))
+    while any(thirds):
+        want = pattern[k % len(pattern)]
+        k += 1
+        for pick in (want, 1, 2, 0):
+            if thirds[pick]:
+                out.append(thirds[pick].pop())
+                break
+    return out
+
+
 def _grouped(idx, feats, start_high=False):
     groups = {}
     for i in idx:
@@ -301,7 +324,7 @@ def _artists_apart(order, tracks):
     return out
 
 
-def order(tracks, feats, mode="smooth", artists_apart=True, start="calm"):
+def order(tracks, feats, mode="wind_down", artists_apart=True, start="calm", seed=None):
     """The new order as a list of indexes into tracks (every song once)."""
     idx = list(range(len(tracks)))
     if len(idx) < 3:
@@ -315,6 +338,8 @@ def order(tracks, feats, mode="smooth", artists_apart=True, start="calm"):
         out = _sorted_smooth(idx, feats, descending=True)
     elif mode == "genre":
         out = _grouped(idx, feats, high)
+    elif mode == "mix":
+        out = _mix(idx, feats, seed)
     else:
         out = _chain(idx, feats, high)
     if artists_apart:
@@ -336,5 +361,5 @@ def summary(feats, order_idx):
     return " → ".join(flat)
 
 
-MODE_NAMES = {"smooth": "Smooth", "waves": "Waves", "build": "Build up", "wind_down": "Wind down",
-              "genre": "Grouped by genre"}
+MODE_NAMES = {"wind_down": "Energy to calm", "build": "Calm to energy", "waves": "Waves", "smooth": "Smooth",
+              "mix": "Mix it up", "genre": "Grouped by genre"}

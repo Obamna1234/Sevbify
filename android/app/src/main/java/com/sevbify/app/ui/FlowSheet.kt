@@ -50,10 +50,11 @@ import org.json.JSONArray
 
 /** The ways Flow can order a playlist (the same as the computer's; the ordering is core/flow_order.py). */
 private val FLOW_MODES = listOf(
-    Triple("smooth", "Smooth", "Every song leads gently into the next; genres blend instead of jumping."),
+    Triple("wind_down", "Energy to calm", "Big, exciting songs first, then the middle ones, ending calm. (Default)"),
+    Triple("build", "Calm to energy", "Starts calm and builds up to the big, exciting songs: good for workouts or getting ready."),
     Triple("waves", "Waves", "Builds up, eases off, builds up again: hot, cold, hot, cold."),
-    Triple("build", "Build up", "Starts calm and gets more intense: good for workouts or getting ready."),
-    Triple("wind_down", "Wind down", "Starts intense and gets calmer: good for evenings or sleep."),
+    Triple("smooth", "Smooth", "Every song leads gently into the next; genres blend instead of jumping."),
+    Triple("mix", "Mix it up", "A bit of everything: calm, energetic and in-between songs spread through, shuffled."),
     Triple("genre", "Grouped by genre", "All the synthwave together, then the rock and so on, each smooth inside."),
 )
 
@@ -62,7 +63,7 @@ private val FLOW_MODES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlowSheet(pl: Playlist) {
-    var mode by remember { mutableStateOf("smooth") }
+    var mode by remember { mutableStateOf("wind_down") }
     var apart by remember { mutableStateOf(true) }
     var energetic by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
