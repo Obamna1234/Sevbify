@@ -38,7 +38,8 @@ def source_of(text):
 
 def note(source):
     return (f"{source} doesn't seem to be working with Sevbify right now. It may have changed something on its "
-            f"side; an update usually fixes this within days (Settings → About → Check for updates).")
+            f"side; an update usually fixes this within days (Settings → About → Check for updates). Your own "
+            f"music files and downloaded songs still play as normal.")
 
 
 def failed(text, now=None):

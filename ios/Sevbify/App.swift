@@ -75,6 +75,7 @@ struct RootView: View {
     @EnvironmentObject var player: Player
     @EnvironmentObject var lib: Library
     @ObservedObject private var tour = Tour.shared
+    @ObservedObject private var engineFix = EngineFix.shared
 
     @GestureState private var drag: CGFloat = 0
 
@@ -133,6 +134,14 @@ struct RootView: View {
         .fullScreenCover(isPresented: $nav.nowPlaying) { NowPlayingView() }
         .overlay(alignment: .top) { Toast() }
         .sheet(isPresented: Binding(get: { !lib.settings.noticeAccepted }, set: { _ in })) { FirstRunNotice() }
+        // YouTube / SoundCloud stopped working: what Sevbify found when it checked for a fix.
+        .alert(engineFix.result?["title"] as? String ?? "", isPresented: $engineFix.showing) {
+            Button("OK", role: .cancel) { engineFix.result = nil }
+        } message: {
+            Text(((engineFix.result?["text"] as? String) ?? "")
+                 .replacingOccurrences(of: "Restart Sevbify to use it.",
+                                       with: "Close Sevbify (swipe it away) and open it again to use it."))
+        }
         .fullScreenCover(isPresented: Binding(get: { tour.open && lib.settings.noticeAccepted && !nav.nowPlaying },
                                               set: { if !$0 { tour.open = false } })) { FeatureTourView() }
         .onChange(of: lib.settings.noticeAccepted) { ok in

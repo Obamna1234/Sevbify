@@ -66,6 +66,7 @@ enum Bridge {
         else { throw Failure(message: "Unreadable answer from Python") }
         if obj["ok"] as? Bool == true { return obj["value"] ?? NSNull() }
         let msg = obj["error"] as? String ?? "Something went wrong"
+        if obj["engine_check"] as? Bool == true { Task { @MainActor in EngineFix.shared.listen() } }
         #if DEBUG   // test builds only: errors can hold song names or addresses
         if let trace = obj["trace"] as? String { NSLog("Sevbify %@ failed: %@\n%@", name, msg, trace) }
         #endif
@@ -98,5 +99,27 @@ enum Bridge {
     static func json(_ value: Any) -> String {
         guard let d = try? JSONSerialization.data(withJSONObject: value, options: []) else { return "{}" }
         return String(data: d, encoding: .utf8) ?? "{}"
+    }
+}
+
+
+/// YouTube or SoundCloud kept failing, so the core is checking for a newer yt-dlp (core/engine_fix.py). When it's
+/// done, an alert says what happened: a fix was downloaded (close and reopen Sevbify to use it; iPhone apps can't
+/// restart themselves), or there's nothing newer yet. Either way your own files and downloads still play.
+@MainActor
+final class EngineFix: ObservableObject {
+    static let shared = EngineFix()
+    @Published var result: [String: Any]?
+    var showing: Bool {
+        get { result != nil }
+        set { if !newValue { result = nil } }
+    }
+
+    nonisolated func listen() {
+        Task.detached {
+            if let r = try? await Bridge.object("engine_fix_result"), !r.isEmpty {
+                await MainActor.run { EngineFix.shared.result = r }
+            }
+        }
     }
 }

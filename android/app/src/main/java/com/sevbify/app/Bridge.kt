@@ -8,8 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /** Thrown when the shared core reports a problem (no internet, nothing found...). The message is readable. */
 class CoreError(message: String) : Exception(message)
@@ -50,6 +53,7 @@ object Bridge {
                 // Test builds only: errors can hold song names or addresses, so the released app logs nothing.
                 if (SevbifyApp.debuggable)
                     android.util.Log.w("Sevbify", "$name failed: ${res.optString("error")}\n${res.optString("trace").takeLast(800)}")
+                if (res.optBoolean("engine_check")) EngineFix.await()
                 throw CoreError(res.optString("error", "Something went wrong"))
             }
             if (res.isNull("value")) null else res.get("value")
@@ -61,5 +65,26 @@ object Bridge {
 
     suspend fun tracks(name: String, vararg args: Any?): List<Track> = arr(name, *args).let { a ->
         (0 until a.length()).map { Track.fromJson(a.getJSONObject(it)) }
+    }
+}
+
+
+/** YouTube or SoundCloud kept failing, so the core is checking for a newer yt-dlp (core/engine_fix.py). When it's
+ *  done, a dialog says what happened: a fix was downloaded (Restart now), or there's nothing newer yet. */
+object EngineFix {
+    var result by androidx.compose.runtime.mutableStateOf<JSONObject?>(null)
+
+    fun await() {
+        SevbifyApp.instance.scope.launch {
+            try { (Bridge.call("engine_fix_result") as? JSONObject)?.let { result = it } }
+            catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+        }
+    }
+
+    /** Start Sevbify again so the new yt-dlp is used. */
+    fun restart(context: android.content.Context) {
+        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
+        context.startActivity(android.content.Intent.makeRestartActivityTask(launch.component))
+        Runtime.getRuntime().exit(0)
     }
 }

@@ -5386,9 +5386,36 @@ class MainWindow(ShowsMixin, QMainWindow):
             self._handle_failed_track("full song not found")
             if note:
                 self.show_status(f"⚠ {note}", 15000)
+                self._check_engine_fix(source_status.source_of(f"{self.user_data.download_source} {err}"))
 
         self.online_call(streamer.find_full_song, song.artist, song.title, song.duration,
                          self.user_data.download_source, on_done=done, on_error=failed, lane="songs", priority=10)
+
+    def _check_engine_fix(self, source):
+        """YouTube or SoundCloud keep failing: look for a newer yt-dlp now (core/engine_fix.py) and say what was
+        found: a fix (Restart now) or nothing newer yet. Either way your own files and downloads still play."""
+        from core import engine_fix
+        if not engine_fix.start_if_due(source):
+            return
+
+        def show(r):
+            if not r or getattr(self, "_shut_down", False):
+                return
+            box = QMessageBox(self)
+            box.setWindowTitle("Sevbify")
+            box.setIcon(QMessageBox.Icon.Information)
+            box.setText(r["title"])
+            box.setInformativeText(r["text"])
+            if r.get("fixed"):
+                now = box.addButton("Restart now", QMessageBox.ButtonRole.AcceptRole)
+                box.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+                box.exec()
+                if box.clickedButton() is now:
+                    self.restart_app()
+            else:
+                box.addButton(QMessageBox.StandardButton.Ok)
+                box.exec()
+        run_async(self, lambda: engine_fix.wait(120), on_done=show, lane="default")
 
     def _needs_lookup(self, song):
         """Would this song have to be found online before it can play (a song you haven't downloaded, or one

@@ -34,22 +34,27 @@ def _readable(exc):
 
 def _fail(exc, name=""):
     error = _readable(exc)
+    checking = False
     try:
-        from core import activity_log, source_status
+        from core import activity_log, source_status, engine_fix
         activity_log.log("error", f"{name}: {error}" if name else error)
         note = source_status.failed(f"{_SOURCE_OF.get(name, '')} {exc}")
         if note:
             error = f"{error}\n\n{note}"
+            # YouTube / SoundCloud keep failing: look for a newer yt-dlp now; the app asks engine_fix_result()
+            # and tells you what happened.
+            checking = engine_fix.start_if_due(source_status.source_of(f"{_SOURCE_OF.get(name, '')} {exc}"))
     except Exception:
         pass
-    return json.dumps({"ok": False, "error": error,
+    return json.dumps({"ok": False, "error": error, "engine_check": checking,
                        "trace": traceback.format_exc()[-1500:]}, ensure_ascii=False)
 
 
 # Which outside service a bridge call mostly depends on (for the "isn't working right now" note).
 _SOURCE_OF = {"resolve": "youtube", "youtube_stream": "youtube", "youtube_video": "youtube", "download_song": "youtube",
               "download_youtube": "youtube", "search": "deezer", "radio": "deezer", "genres": "deezer",
-              "import_link": "", "top_shows": "itunes.apple", "search_podcasts": "itunes.apple"}
+              "import_link": "", "top_shows": "itunes.apple", "search_podcasts": "itunes.apple",
+              "search_soundcloud": "soundcloud"}
 
 
 def _call(fn):
@@ -762,6 +767,14 @@ def update_ytdlp():
     from core import updates
     changed, message = updates.update_ytdlp()
     return {"changed": changed, "message": message}
+
+
+@_call
+def engine_fix_result():
+    """After a failure that started a check for a newer yt-dlp: {"title", "text", "fixed", "source"} once it's
+    done (waits up to 2 minutes), or None."""
+    from core import engine_fix
+    return engine_fix.wait(120)
 
 
 @_call

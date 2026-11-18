@@ -50,6 +50,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -296,6 +298,23 @@ private fun Dialogs() {
                 }
             },
             dismissButton = { TextButton(onClick = { Player.acceptNotice(false) }) { Text(tr("Previews only"), color = C.Text) } },
+            containerColor = C.Elevated,
+        )
+    }
+    com.sevbify.app.EngineFix.result?.let { r ->
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val fixed = r.optBoolean("fixed")
+        AlertDialog(
+            onDismissRequest = { com.sevbify.app.EngineFix.result = null },
+            title = { Text(r.optString("title")) },
+            text = { Text(r.optString("text")) },
+            confirmButton = {
+                if (fixed) Button(onClick = { com.sevbify.app.EngineFix.restart(ctx) },
+                                  colors = ButtonDefaults.buttonColors(containerColor = C.Green, contentColor = Color.Black)) {
+                    Text(tr("Restart now"))
+                } else TextButton(onClick = { com.sevbify.app.EngineFix.result = null }) { Text(tr("OK"), color = C.Text) }
+            },
+            dismissButton = { if (fixed) TextButton(onClick = { com.sevbify.app.EngineFix.result = null }) { Text(tr("Later"), color = C.Text) } },
             containerColor = C.Elevated,
         )
     }
