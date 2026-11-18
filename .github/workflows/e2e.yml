@@ -217,8 +217,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          V=$(tr -d '[:space:]' < VERSION)
-          TAG=$(gh api "repos/$REPO/releases?per_page=10" --jq "[.[]|select(.tag_name != \"v$V\" and .draft == false)][0].tag_name")
+          # The newest published release (a version being released now isn't published yet, so this is the one
+          # people are updating from).
+          TAG=$(gh api "repos/$REPO/releases?per_page=10" --jq '[.[]|select(.draft == false)][0].tag_name')
           echo "Updating from $TAG"
           gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[]|select(.name=="Sevbify-Android.apk")|.browser_download_url' \
             | xargs -r -n1 curl -sSfL -o previous.apk || true
@@ -237,18 +238,7 @@ jobs:
           profile: pixel_7
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            adb wait-for-device; sleep 30
-            mkdir -p android-journey
-            if [ -f previous.apk ]; then
-              adb install -g previous.apk && python3 tools/android_upgrade.py before android-journey || true
-              adb install -r -g "$(ls Sevbify-Android*.apk | head -1)" && python3 tools/android_upgrade.py after android-journey || true
-              adb uninstall com.obamna1234.sevbify || true      # the journey below starts from a fresh install
-            fi
-            adb install -r -g "$(ls Sevbify-Android*.apk | head -1)" || { sleep 20; adb install -r -g "$(ls Sevbify-Android*.apk | head -1)"; }
-            adb shell pm grant com.obamna1234.sevbify android.permission.POST_NOTIFICATIONS || true
-            adb logcat -G 16M || true
-            python3 tools/android_journey.py android-journey || true
+          script: bash tools/android_e2e.sh
       - name: Results
         if: always()
         run: |
