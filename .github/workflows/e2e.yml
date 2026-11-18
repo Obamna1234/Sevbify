@@ -293,6 +293,7 @@ jobs:
     # release...). Anything red, and nothing is published.
     name: Release
     needs: [pick, desktop, android]
+    environment: release              # UPDATE_SIGNING_KEY lives there; only main may use it
     if: >-
       needs.pick.result == 'success' && needs.desktop.result == 'success' && needs.android.result == 'success' &&
       needs.pick.outputs.build_ok == 'true' && needs.pick.outputs.branch == 'main'

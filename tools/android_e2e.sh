@@ -8,7 +8,11 @@ APK="$(ls Sevbify-Android*.apk | head -1)"
 PKG=com.obamna1234.sevbify
 adb wait-for-device; sleep 30
 mkdir -p android-journey
-if [ -f previous.apk ]; then
+if [ -f previous.apk ] && [[ "$APK" == *debug-signed* ]]; then
+  # A build of a branch other than main is signed with a throwaway debug key, so Android won't install it over the
+  # released app (different key). The update check runs on main builds, which are the ones released.
+  python3 -c "import json; json.dump({'step': 'Update from the last release keeps your library', 'status': 'skipped', 'detail': 'this build is debug-signed (not main), so it can\'t update the released app; checked on main builds'}, open('android-journey/upgrade.json', 'w'))"
+elif [ -f previous.apk ]; then
   if adb install -g previous.apk; then
     python3 tools/android_upgrade.py before android-journey || true
     if adb install -r -g "$APK"; then
