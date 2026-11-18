@@ -1,0 +1,36 @@
+{
+  "name": "Sevbify",
+  "identifier": "com.obamna1234.sevbify.source",
+  "subtitle": "A private, ad-free music player.",
+  "website": "https://github.com/Obamna1234/Sevbify",
+  "iconURL": "https://raw.githubusercontent.com/Obamna1234/Sevbify/main/assets/branding/sevbify_icon_512.png",
+  "tintColor": "1ed760",
+  "apps": [
+    {
+      "name": "Sevbify",
+      "bundleIdentifier": "com.obamna1234.sevbify",
+      "developerName": "Sevbify",
+      "subtitle": "Your music, podcasts and audiobooks. No account, no ads, no tracking.",
+      "localizedDescription": "Sevbify plays your own music and streams songs you don't have yet, with podcasts, audiobooks, radios and lyrics. Nothing you do is sold or tracked.",
+      "iconURL": "https://raw.githubusercontent.com/Obamna1234/Sevbify/main/assets/branding/sevbify_icon_512.png",
+      "tintColor": "1ed760",
+      "category": "entertainment",
+      "versions": [
+        {
+          "version": "5.0.0",
+          "buildVersion": "48",
+          "date": "2026-11-18T04:09:02Z",
+          "localizedDescription": "Sevbify 5.0.0-beta.48\n\n## What's new in beta.48\n\n> **Windows and Linux: please download this update by hand once** (from this page). Beta.47's updater can't install\n> it by itself; from beta.48 on, updates install automatically again. macOS, Android and iPhone update as usual.\n\nEverything below is on Windows, macOS, Linux, Android and iPhone unless it says otherwise.\n\n**Listening**\n- **Canvas:** when a song has an official music video, a silent 8-second loop of it plays behind Now Playing (and\n  wide in full screen on the computer). Kept with downloaded songs so it works offline; storage limit in Settings.\n- **Expanded Now Playing** on the computer, like Spotify's: tilting cover, Canvas, artist picture, lyrics, About the\n  artist, Credits and Next in queue, with the full ••• menu.\n- **Full-screen lyrics** on phones (now on iPhone too), following the song; tap a line to jump there.\n- **Smart Shuffle**, **daylist** and **mood mixes**, **Discover Weekly**, **Release Radar** and **Daily Mixes** on\n  every device, worked out on your device from what you play.\n- **Recommended songs** under your playlists, and a **What's new** bell for new episodes and new releases.\n- **Sleep timer** everywhere, including \"end of this episode\"; **playback speed** for podcasts and audiobooks.\n- **Crossfade / gapless** on phones, **equaliser** with presets on phones, **volume levelling** (now really works on\n  the computer) and **mono audio**.\n- **Hide song / Don't play this artist**, with a list in Settings to bring them back.\n- **Your Wrapped:** your listening stats, worked out on your device.\n\n**Your library**\n- **Liked Songs** on phones (⊕ in the mini player), **Your Episodes** (save episodes for later), **mark as played**.\n- **Pin playlists**, **Downloaded** filter, **playlist folders**, **custom cover pictures and descriptions**.\n- **Smart downloads** (off until you turn it on): songs you keep playing are downloaded for you; Wi-Fi only on phones.\n- **Whole Spotify playlists** (optional, Settings): reads all of a public playlist, not just the first 100 songs.\n  No Spotify account is used.\n- **Podcasts on iPhone:** top shows, search, show pages, follow, continue where you stopped.\n- **SoundCloud** results in phone search, like the computer.\n\n**Together, without any server**\n- **Share a playlist** as a link or a small file you send however you like; your friend can add it or merge it\n  into theirs (collaborative playlists). **Blend:** swap \"taste\" links to make a playlist for both of you. Nothing\n  is uploaded anywhere: the link is the playlist.\n- **Remote control and Jam:** a paired phone shows what the computer is playing, controls it, and adds songs to its\n  queue (your own Wi-Fi only, encrypted; switch it off in Settings).\n\n**Everything else**\n- **Windows installer** (Sevbify-Windows-Setup.exe) with an uninstaller, and a **macOS disk image**.\n- **Going back:** if an update won't start, the computer goes back to the version before by itself (and Settings\n  has \"Go back to the previous version\").\n- **Feature tour** on first start (Help → Feature tour any time), an **Android home-screen widget**, Like and ±15 s\n  on the iPhone lock screen.\n- **Debug log** you can save as a text file (links shortened, no email addresses; nothing is sent), and a plain note\n  when YouTube or another source stops working for a while (an update usually fixes it).\n- Pair your phone with your computer, Support the artist, instant zoom, smooth scrolling, Help → FAQ, and many\n  smaller fixes.\n\nTested automatically on Windows, macOS, Ubuntu, an Android emulator and an iPhone simulator.\n\n## Install\n\n**Windows**\n1. Under **Assets** below, download **Sevbify-Windows-Setup.exe** and open it. If Windows says \"Windows protected\n   your PC\", click **More info** → **Run anyway** (the app isn't signed yet). No admin password is needed.\n2. To remove it later: Settings → Apps → Sevbify → Uninstall (it asks whether to keep your playlists and settings).\n   Prefer no installer? **Sevbify-Windows.zip** still wor",
+          "downloadURL": "https://github.com/Obamna1234/Sevbify/releases/download/v5.0.0-beta.48/Sevbify-iOS.ipa",
+          "size": 25722915,
+          "minOSVersion": "16.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      }
+    }
+  ],
+  "news": []
+}
