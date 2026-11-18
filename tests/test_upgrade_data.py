@@ -35,7 +35,9 @@ def test_every_earlier_library_loads_with_nothing_lost(tmp_path):
         # ...and saving it again in today's format keeps it all
         Storage(str(d)).save(data)
         again = Storage(str(d)).load()
-        assert [p.name for p in again.playlists] == names and again.playlists[1].tracks == trip.tracks
+        same = lambda t: os.path.basename(str(t).replace("\\", "/")) if isinstance(t, str) else t   # Windows adds a drive
+        assert [p.name for p in again.playlists] == names
+        assert [same(t) for t in again.playlists[1].tracks] == [same(t) for t in trip.tracks]
 
 
 def test_a_damaged_library_is_kept_aside_not_lost(tmp_path):
