@@ -351,9 +351,9 @@ jobs:
       - name: Key rotation (original key for Android 8, new key for Android 9+)
         env:
           OLD_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          NEWKEY_B64: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_NEWKEY_BASE64 || '' }}
-          NEW_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_NEWKEY_PASSWORD || '' }}
-          NEW_KEY_ALIAS: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.ANDROID_NEWKEY_ALIAS || '' }}
+          NEWKEY_B64: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.SEVBIFY_NEWKEY_BASE64 || '' }}
+          NEW_KEYSTORE_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.SEVBIFY_NEWKEY_PASSWORD || '' }}
+          NEW_KEY_ALIAS: ${{ github.ref == 'refs/heads/main' && github.event_name != 'schedule' && secrets.SEVBIFY_NEWKEY_ALIAS || '' }}
         run: |
           if [ -f "$RUNNER_TEMP/debug-signed" ] || [ -z "$NEWKEY_B64" ] || [ -z "$NEW_KEYSTORE_PASSWORD" ]; then
             echo "Key rotation: no new key set (or a debug build) - the APK keeps the key it was built with."
