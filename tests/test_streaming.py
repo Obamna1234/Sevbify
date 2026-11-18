@@ -483,10 +483,10 @@ def test_preview_card_restart_queue_full_and_resume(window, qapp, tmp_path):
     from PyQt6.QtWidgets import QLabel, QPushButton
     texts = [w.text() for w in dlg.findChildren(QLabel)]
     assert "30-SECOND PREVIEW" in texts and "Close and your song carries on where it was" in texts
-    buttons = {b.text().strip(): b for b in dlg.findChildren(QPushButton)}
+    buttons = {(b.text().strip() or b.toolTip()): b for b in dlg.findChildren(QPushButton)}
     buttons["Add to queue"].click()
     assert queued == [1]
-    buttons["Restart"].click()
+    buttons["Back to 0:00"].click()
     dlg.slider.setValue(1500)
     dlg._seek()
     buttons["Play full song"].click()

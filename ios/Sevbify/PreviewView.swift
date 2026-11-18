@@ -115,7 +115,11 @@ struct PreviewView: View {
 
     private func side(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) { Image(systemName: icon).font(.title2); Text(label).font(.caption2).foregroundColor(C.dim) }
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 18, weight: .semibold)).frame(width: 44, height: 44)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                Text(label).font(.caption2).foregroundColor(C.dim)
+            }
                 .frame(width: 84)
         }.buttonStyle(.plain).accessibilityLabel(label)
     }

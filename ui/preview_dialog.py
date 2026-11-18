@@ -28,16 +28,68 @@ SLIDER = ("QSlider::groove:horizontal { background: #5a5a5a; height: 4px; border
 COVER = 328
 
 
-def _side_button(icon, text):
-    b = QPushButton(text)
-    b.setIcon(icon)
-    b.setIconSize(QSize(20, 20))
+def _ring_icon(kind, size=40):
+    """Spotify-style round outline button face: a white ring with a restart arrow, a queue mark or a plus."""
+    from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor, QIcon, QPainterPath
+    from PyQt6.QtCore import QRectF, QPointF
+    scale = 2
+    pm = QPixmap(size * scale, size * scale)
+    pm.fill(Qt.GlobalColor.transparent)
+    pm.setDevicePixelRatio(scale)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    colour = QColor(theme.SUBDUED) if kind == "plus" else QColor("#ffffff")
+    pen = QPen(colour, 2)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    p.setPen(pen)
+    p.drawEllipse(QRectF(1.5, 1.5, size - 3, size - 3))
+    c = size / 2
+    if kind == "plus":
+        p.drawLine(QPointF(c, c - size * 0.22), QPointF(c, c + size * 0.22))
+        p.drawLine(QPointF(c - size * 0.22, c), QPointF(c + size * 0.22, c))
+    elif kind == "restart":
+        r = size * 0.2
+        p.drawArc(QRectF(c - r, c - r, 2 * r, 2 * r), 100 * 16, 290 * 16)
+        path = QPainterPath(QPointF(c - r * 0.35, c - r - 3.5))
+        path.lineTo(QPointF(c + r * 0.25, c - r))
+        path.lineTo(QPointF(c - r * 0.35, c - r + 3.5))
+        p.drawPath(path)
+    else:                                                     # queue: three lines, the last with a play mark
+        x0, x1 = c - size * 0.2, c + size * 0.2
+        for i, y in enumerate((c - size * 0.13, c, c + size * 0.13)):
+            p.drawLine(QPointF(x0, y), QPointF(x1 if i < 2 else c, y))
+        tri = QPainterPath(QPointF(c + size * 0.06, c + size * 0.06))
+        tri.lineTo(QPointF(x1 + 1, c + size * 0.13))
+        tri.lineTo(QPointF(c + size * 0.06, c + size * 0.2))
+        tri.closeSubpath()
+        p.fillPath(tri, colour)
+    p.end()
+    return QIcon(pm)
+
+
+def _side_button(kind, text):
+    """A round outline button with a small label under it (Restart / Add to queue)."""
+    from PyQt6.QtWidgets import QWidget
+    box = QWidget()
+    lay = QVBoxLayout(box)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.setSpacing(4)
+    b = QPushButton()
+    b.setIcon(_ring_icon(kind, 40))
+    b.setIconSize(QSize(40, 40))
+    b.setFixedSize(44, 44)
+    b.setToolTip(text)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
-    b.setFixedWidth(110)
-    b.setStyleSheet(f"QPushButton {{ border: none; background: transparent; color: {theme.SUBDUED}; font-size: 12px;"
-                    " padding: 6px; border-radius: 6px; } QPushButton:hover { background: rgba(255,255,255,0.08);"
-                    " color: #ffffff; }")
-    return b
+    b.setStyleSheet("QPushButton { border: none; background: transparent; border-radius: 22px; }"
+                    " QPushButton:hover { background: rgba(255,255,255,0.08); }")
+    lbl = QLabel(text)
+    lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    lbl.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 11px;")
+    lay.addWidget(b, 0, Qt.AlignmentFlag.AlignHCenter)
+    lay.addWidget(lbl)
+    box.setFixedWidth(96)
+    box.button = b
+    return box
 
 
 class PreviewDialog(QDialog):
@@ -70,8 +122,8 @@ class PreviewDialog(QDialog):
 
         top = QHBoxLayout()
         badge = QLabel("30-SECOND PREVIEW")
-        badge.setStyleSheet("background: #1ed760; color: #000000; font-size: 11px; font-weight: 800;"
-                            " letter-spacing: 1px; padding: 4px 10px; border-radius: 11px;")
+        badge.setStyleSheet("color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: 2px;"
+                            " border-left: 3px solid #1ed760; padding-left: 8px;")
         top.addWidget(badge)
         top.addStretch(1)
         close = QPushButton()
@@ -103,7 +155,7 @@ class PreviewDialog(QDialog):
         texts = QVBoxLayout()
         texts.setSpacing(2)
         name = QLabel(title or "Unknown song")
-        name.setStyleSheet("font-size: 20px; font-weight: 700;")
+        name.setStyleSheet("font-size: 22px; font-weight: 800;")
         who = QLabel(artist or "")
         who.setStyleSheet(f"color: {theme.SUBDUED}; font-size: 14px;")
         texts.addWidget(name)
@@ -111,7 +163,7 @@ class PreviewDialog(QDialog):
         names.addLayout(texts, 1)
         self.save_btn = QPushButton()
         self.save_btn.setFixedSize(36, 36)
-        self.save_btn.setIconSize(QSize(26, 26))
+        self.save_btn.setIconSize(QSize(30, 30))
         self.save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.save_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
         self._set_saved(saved)
@@ -139,21 +191,19 @@ class PreviewDialog(QDialog):
         lay.addLayout(times)
 
         controls = QHBoxLayout()
-        restart = _side_button(icons.repeat("#ffffff", 20),
-                               "Restart")
-        restart.setToolTip("Back to 0:00")
-        restart.clicked.connect(self.restart)
+        restart = _side_button("restart", "Restart")
+        restart.button.setToolTip("Back to 0:00")
+        restart.button.clicked.connect(self.restart)
         self.button = QPushButton()
-        self.button.setFixedSize(60, 60)
-        self.button.setIconSize(QSize(24, 24))
+        self.button.setFixedSize(62, 62)
+        self.button.setIconSize(QSize(26, 26))
         self.button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.button.setStyleSheet("QPushButton { background: #ffffff; border: none; border-radius: 30px; }"
+        self.button.setStyleSheet("QPushButton { background: #ffffff; border: none; border-radius: 31px; }"
                                   " QPushButton:hover { background: #f0f0f0; }")
         self.button.clicked.connect(self.toggle)
-        queue = _side_button(icons.queue("#ffffff", 20),
-                             "Add to queue")
+        queue = _side_button("queue", "Add to queue")
         if on_queue is not None:
-            queue.clicked.connect(on_queue)
+            queue.button.clicked.connect(on_queue)
         controls.addWidget(restart)
         controls.addStretch(1)
         controls.addWidget(self.button)
@@ -167,13 +217,15 @@ class PreviewDialog(QDialog):
         full.setIcon(icons.play("#000000", 14))
         full.setCursor(Qt.CursorShape.PointingHandCursor)
         full.setStyleSheet("QPushButton { background: #1ed760; color: #000000; font-weight: 700; font-size: 14px;"
-                           " border: none; border-radius: 22px; padding: 12px; } QPushButton:hover { background: #3be477; }")
+                           " border: none; border-radius: 23px; } QPushButton:hover { background: #3be477; }")
+        full.setFixedHeight(46)
         full.clicked.connect(self.play_full)
         shut = QPushButton("Close")
         shut.setCursor(Qt.CursorShape.PointingHandCursor)
         shut.setStyleSheet("QPushButton { background: transparent; color: #ffffff; font-size: 14px;"
-                           " border: 1px solid #777777; border-radius: 22px; padding: 12px; }"
+                           " border: 1px solid #8a8a8a; border-radius: 23px; }"
                            " QPushButton:hover { border-color: #ffffff; }")
+        shut.setFixedHeight(46)
         shut.clicked.connect(self.close)
         buttons.addWidget(full, 1)
         buttons.addWidget(shut, 1)
@@ -196,7 +248,7 @@ class PreviewDialog(QDialog):
             self.move(g.center().x() - self.width() // 2, g.center().y() - self.height() // 2)
 
     def _set_saved(self, saved):
-        self.save_btn.setIcon(icons.check("#1ed760", 26) if saved else icons.plus(theme.SUBDUED, 26))
+        self.save_btn.setIcon(icons.check("#1ed760", 26) if saved else _ring_icon("plus", 30))
         self.save_btn.setToolTip("Saved in…" if saved else "Add to Liked Songs")
 
     def restart(self):

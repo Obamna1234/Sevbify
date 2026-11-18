@@ -2,6 +2,7 @@ package com.sevbify.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -184,7 +185,9 @@ fun PreviewDialog(t: Track) {
 private fun PreviewSide(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     Column(Modifier.width(84.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
            horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, tr(label), tint = C.Text, modifier = Modifier.size(26.dp))
+        Box(Modifier.size(44.dp).border(2.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, tr(label), tint = C.Text, modifier = Modifier.size(22.dp))
+        }
         Text(tr(label), style = MaterialTheme.typography.labelSmall, color = C.Sub)
     }
 }
