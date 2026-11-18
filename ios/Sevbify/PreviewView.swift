@@ -135,7 +135,7 @@ struct PreviewView: View {
         player.pause()
         var link = track.previewUrl
         if link.isEmpty { link = (try? await Bridge.call("preview_url", [track.artist, track.title])) as? String ?? "" }
-        guard !link.isEmpty, let url = URL(string: link) else { missing = true; return }
+        guard link.hasPrefix("https://"), let url = URL(string: link) else { missing = true; return }   // secure links only
         clip.replaceCurrentItem(with: AVPlayerItem(url: url))
         clip.play()
     }

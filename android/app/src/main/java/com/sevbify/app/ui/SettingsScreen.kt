@@ -665,11 +665,12 @@ private fun DebugLogRow() {
                     app.contentResolver.openOutputStream(uri, "wt")?.use { out ->
                         val head = "Sevbify ${runCatching { app.packageManager.getPackageInfo(app.packageName, 0).versionName }.getOrNull() ?: ""} " +
                             "on Android ${android.os.Build.VERSION.RELEASE} (${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL})\n" +
-                            (if (problem != null) "The full log couldn't be made: $problem\n" else "") + "\n"
+                            (if (problem != null) "The full log couldn't be made: ${tidyLog(problem)}\n" else "") + "\n"
                         out.write(head.toByteArray())
                         if (problem == null && tmp.exists()) tmp.inputStream().use { it.copyTo(out) }
                         else app.filesDir.resolve("core/crash.txt").takeIf { it.exists() }?.let { f ->
-                            out.write("===== crash.txt =====\n".toByteArray()); f.inputStream().use { it.copyTo(out) }
+                            // Without the full report's tidying, tidy it here: no link details, emails or file paths.
+                            out.write(("===== crash.txt =====\n" + tidyLog(f.readText().takeLast(60_000))).toByteArray())
                         }
                     } ?: throw java.io.IOException("the file couldn't be opened")
                     tmp.delete()
@@ -688,3 +689,12 @@ private fun DebugLogRow() {
              modifier = Modifier.padding(top = 6.dp))
     }
 }
+
+
+/** For the debug log's fallback copy (when the full report can't be made): links lose everything after the address
+ *  (signatures, tokens), emails and your folders' names are hidden. */
+internal fun tidyLog(text: String): String = text
+    .replace(Regex("""(https?://[^\s/?#]+)[^\s]*"""), "$1/…")
+    .replace(Regex("""content://[^\s]+"""), "content://…")
+    .replace(Regex("""[\w.+-]+@[\w-]+(\.[\w-]+)+"""), "(email)")
+    .replace(Regex("""/storage/emulated/\d+/[^\s:]+"""), "/storage/…")

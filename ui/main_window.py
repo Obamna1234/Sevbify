@@ -992,6 +992,9 @@ class MainWindow(ShowsMixin, QMainWindow):
         songs = list(playlist.songs)
         if len(songs) < 3:
             return
+        if len(songs) > flow_order.MAX_SONGS:
+            self.show_status(f"⚠ Sort by energy works on playlists of up to {flow_order.MAX_SONGS} songs.")
+            return
         dlg = FlowDialog(self, playlist.name, len(songs))
         if dlg.exec() != FlowDialog.DialogCode.Accepted:
             return
@@ -5562,7 +5565,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         def show(u):
             if getattr(self, "_shut_down", False):
                 return
-            if not u:
+            # Only a secure web link (or a clip already on this computer) is played.
+            if not u or not (str(u).startswith("https://") or os.path.isfile(str(u))):
                 self.show_status("No preview for this song", kind="info", timeout_ms=4000)
                 return
             was_playing = self.player.get_state() == vlc.State.Playing

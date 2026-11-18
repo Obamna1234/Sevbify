@@ -88,6 +88,7 @@ fun PreviewDialog(t: Track) {
             }
             if (url.isEmpty()) { missing = true; return@LaunchedEffect }
         }
+        if (!url.startsWith("https://")) { missing = true; return@LaunchedEffect }   // only a secure web link plays
         exo.setMediaItem(MediaItem.fromUri(url))
         exo.prepare()
         exo.play()

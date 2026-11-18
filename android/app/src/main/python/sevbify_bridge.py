@@ -805,9 +805,10 @@ def flow_features(tracks_json):
 def flow_order(tracks_json, feats_json, mode="smooth", artists_apart=True, start="calm"):
     """The new order (indexes into the songs) plus a short description for the new playlist."""
     from core import flow_order as fo
-    tracks = [t if isinstance(t, dict) else {} for t in json.loads(tracks_json or "[]")][:10000]
+    tracks = [t if isinstance(t, dict) else {} for t in json.loads(tracks_json or "[]")]
     feats = json.loads(feats_json or "[]")
-    if len(feats) != len(tracks) or mode not in fo.MODES:
-        raise ValueError("Flow needs every song's details")
+    if mode not in fo.MODES or not isinstance(feats, list):
+        raise ValueError("Sort by energy needs every song's details")
+    # (fo.order checks every song's details and the playlist size)
     order = fo.order(tracks, feats, mode, bool(artists_apart), "energetic" if start == "energetic" else "calm")
     return {"order": order, "summary": fo.summary(feats, order), "mode_name": fo.MODE_NAMES[mode]}

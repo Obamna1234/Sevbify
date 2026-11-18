@@ -132,6 +132,10 @@ def cut_clip(url, out_path, duration_s=0, ytdlp=None, ffmpeg=None):
         return out_path
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+        try:
+            os.remove(out_path + ".part.mp4")              # a rejected or broken clip leaves nothing behind
+        except OSError:
+            pass
 
 
 def get(data_dir, artist, title, search, duration_s=0, limit_mb=DEFAULT_LIMIT_MB, cut=cut_clip):

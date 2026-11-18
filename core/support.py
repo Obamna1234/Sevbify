@@ -124,7 +124,7 @@ def bandcamp_by_name(artist, title, search=None):
         hit = search(f"{artist} - {title}") or {}
     except Exception:
         return ""
-    if not hit.get("found"):
+    if not hit.get("found") or hit.get("guessed"):      # only Bandcamp's own search, never a guessed address
         return ""
     if _norm(hit.get("band_name")) != _norm(artist) or _norm(hit.get("name")) != _norm(title):
         return ""
@@ -136,19 +136,30 @@ def for_song(net, artist, title, page_url="", source="", search=None):
     search for exactly this artist and title), then the artist's own links from MusicBrainz."""
     out = []
     bc = bandcamp_page(page_url) if source in ("bandcamp", "Bandcamp", "") or "bandcamp.com" in str(page_url) else ""
+    by_search = False
     if not bc:
         bc = bandcamp_by_name(artist, title, search)
-    if bc:
-        out.append({"label": "Buy this on Bandcamp", "url": bc, "site": domain(bc)})
-        store = bc.split("/track/")[0].split("/album/")[0]
-        out.append({"label": "The artist's Bandcamp (music and merch)", "url": store, "site": domain(store)})
+        by_search = bool(bc)
     try:
-        for link in artist_links(net, artist, title):
-            same_store = bc and link["site"] == domain(bc) and link["label"] == KINDS["bandcamp"]
-            if not same_store and link["url"].rstrip("/") not in {o["url"].rstrip("/") for o in out}:
-                out.append(link)
+        links = artist_links(net, artist, title)
     except Exception:
-        pass                                              # offline / MusicBrainz busy: what we have
+        links = []                                        # offline / MusicBrainz busy: what we have
+    official = {l["site"] for l in links if l["label"] == KINDS["bandcamp"]}
+    if by_search and official and domain(bc) not in official:
+        bc = ""            # MusicBrainz lists a different Bandcamp for this artist: that one's theirs, not this one
+    if bc:
+        # Found only by Bandcamp's search (anyone can name a Bandcamp page after a famous artist): said plainly,
+        # unless MusicBrainz confirms it's the artist's own store.
+        unconfirmed = by_search and domain(bc) not in official
+        out.append({"label": "On Bandcamp (found by search)" if unconfirmed else "Buy this on Bandcamp",
+                    "url": bc, "site": domain(bc)})
+        if not unconfirmed:
+            store = bc.split("/track/")[0].split("/album/")[0]
+            out.append({"label": "The artist's Bandcamp (music and merch)", "url": store, "site": domain(store)})
+    for link in links:
+        same_store = bc and link["site"] == domain(bc) and link["label"] == KINDS["bandcamp"]
+        if not same_store and link["url"].rstrip("/") not in {o["url"].rstrip("/") for o in out}:
+            out.append(link)
     return out[:5]
 
 

@@ -136,3 +136,34 @@ def test_mix_spreads_calm_and_energetic_through_the_playlist():
     half = len(e) // 2
     assert abs(sum(e[:half]) / half - sum(e[half:]) / (len(e) - half)) < 0.15     # no calm half / loud half
     assert fo.order(many, feats, "mix", seed=1) == fo.order(many, feats, "mix", seed=1)
+
+
+def test_damaged_details_file_is_ignored_and_limits_hold(tmp_path):
+    import json, pytest
+    path = tmp_path / "flow_features.json"
+    for bad in ('{"version": 1, "songs": []}', '{"version": 1, "songs": {"a|b": "x", "c|d": {"family": "rock"}}}',
+                '[1, 2]', 'not json'):
+        path.write_text(bad)
+        store = fo.FeatureStore(str(path))
+        assert store.items == {}
+        assert fo.features(song("A", "B", "Rock"), None, store, online=False)["family"] == "rock"   # still works
+    long = fo.features(song("A", "B", "x" * 5000), online=False)
+    assert len(long["genre"]) <= 100
+    feats = feats_for(SONGS)
+    with pytest.raises(ValueError):
+        fo.order(SONGS, feats[:-1])                                   # every song needs its details
+    with pytest.raises(ValueError):
+        fo.order(SONGS, feats[:-1] + [{"energy": "high"}])
+    many = [song("Same", f"T{i}") for i in range(fo.MAX_SONGS + 1)]
+    with pytest.raises(ValueError):
+        fo.order(many, [{"energy": 0.5, "family": "other", "genre": ""}] * len(many))
+
+
+def test_two_thousand_songs_sort_quickly():
+    import time
+    many = [song("Same", f"T{i}", "Rock") for i in range(fo.MAX_SONGS)]
+    feats = [{"energy": 0.5, "family": "rock", "genre": "Rock"}] * len(many)
+    t = time.time()
+    for mode in ("wind_down", "build", "mix"):
+        assert len(fo.order(many, feats, mode)) == len(many)
+    assert time.time() - t < 20

@@ -22,6 +22,7 @@ import os
 import re
 import threading
 
+MAX_SONGS = 2000           # Sort by energy works on playlists up to this size (bigger: the first 2000 are sorted)
 MODES = ("wind_down", "build", "waves", "smooth", "mix", "genre")
 VERSION = 1
 
@@ -118,6 +119,13 @@ def key_of(t):
 
 
 # --- looking songs up -----------------------------------------------------------------------------------------
+def valid(f):
+    """A song's details as Sevbify writes them (anything else, e.g. from a damaged file, is ignored)."""
+    return (isinstance(f, dict) and isinstance(f.get("energy"), (int, float)) and 0 <= f["energy"] <= 1
+            and isinstance(f.get("family"), str) and len(f["family"]) <= 40
+            and isinstance(f.get("genre", ""), str) and len(f.get("genre", "")) <= 100)
+
+
 class FeatureStore:
     """What's been learned about songs (energy, family, genre, bpm), kept between runs."""
 
@@ -127,7 +135,9 @@ class FeatureStore:
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            self.items = data.get("songs", {}) if data.get("version") == VERSION else {}
+            items = data.get("songs", {}) if isinstance(data, dict) and data.get("version") == VERSION else {}
+            self.items = {k: v for k, v in (items.items() if isinstance(items, dict) else [])
+                          if isinstance(k, str) and valid(v)}       # a damaged entry is just looked up again
         except (OSError, ValueError, AttributeError):
             self.items = {}
 
@@ -180,7 +190,7 @@ def features(t, deezer=None, store=None, online=True):
         hit = store.get(k)
         if hit and (hit.get("known") or not online):
             return hit
-    genre, bpm, gain, known = str(t.get("genre", "") or ""), 0.0, None, False
+    genre, bpm, gain, known = str(t.get("genre", "") or "")[:100], 0.0, None, False
     if online and deezer is not None:
         try:
             d = _deezer_track(deezer, t)
@@ -190,7 +200,7 @@ def features(t, deezer=None, store=None, online=True):
                 gain = d.get("gain")
                 album = d.get("album") or {}
                 if not genre and album.get("id"):
-                    genre = deezer.album_genre(album["id"]) or ""
+                    genre = str(deezer.album_genre(album["id"]) or "")[:100]
         except Exception:
             pass                                               # offline / not found: genre and title only
     family, prior = style_of(genre, t.get("title", ""), t.get("album", ""))
@@ -326,6 +336,10 @@ def _artists_apart(order, tracks):
 
 def order(tracks, feats, mode="wind_down", artists_apart=True, start="calm", seed=None):
     """The new order as a list of indexes into tracks (every song once)."""
+    if len(tracks) != len(feats) or not all(valid(f) for f in feats):
+        raise ValueError("every song needs its details")
+    if len(tracks) > MAX_SONGS:
+        raise ValueError(f"Sort by energy works on playlists of up to {MAX_SONGS} songs")
     idx = list(range(len(tracks)))
     if len(idx) < 3:
         return idx

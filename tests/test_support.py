@@ -97,9 +97,28 @@ def test_the_artists_own_bandcamp_is_found_by_exact_name():
                 "url": "https://earmake.bandcamp.com/track/im-the-law-3?from=search"}
     links = support.for_song(FakeNet(), "Earmake", "I'm the Law", "https://www.youtube.com/watch?v=x", "youtube",
                              search=search)
+    # MusicBrainz doesn't know this artist's Bandcamp: offered, but plainly as a search result (anyone can name a
+    # Bandcamp page after an artist), and not called "the artist's Bandcamp".
+    assert links == [{"label": "On Bandcamp (found by search)", "url": "https://earmake.bandcamp.com/track/im-the-law-3",
+                      "site": "earmake.bandcamp.com"}]
+    # MusicBrainz confirms it's the artist's own store: "Buy this", plus the store.
+    support._cache.clear()
+    mb = FakeNet(recordings=[{"title": "I'm the Law", "artist-credit": [{"artist": {"id": "e", "name": "Earmake"}}]}],
+                 rels=[rel("bandcamp", "https://earmake.bandcamp.com/")])
+    links = support.for_song(mb, "Earmake", "I'm the Law", search=search)
     assert links[0] == {"label": "Buy this on Bandcamp", "url": "https://earmake.bandcamp.com/track/im-the-law-3",
                         "site": "earmake.bandcamp.com"}
     assert links[1]["url"] == "https://earmake.bandcamp.com"
+    # MusicBrainz lists a different Bandcamp for the artist: the search hit (an impostor) is dropped.
+    support._cache.clear()
+    other = FakeNet(recordings=[{"title": "I'm the Law", "artist-credit": [{"artist": {"id": "e", "name": "Earmake"}}]}],
+                    rels=[rel("bandcamp", "https://realearmake.bandcamp.com/")])
+    urls = [l["url"] for l in support.for_song(other, "Earmake", "I'm the Law", search=search)]
+    assert not any("//earmake.bandcamp.com" in u for u in urls) and "https://realearmake.bandcamp.com/" in urls
+    # A guessed address (not from Bandcamp's own search) is never used.
+    support._cache.clear()
+    guessed = dict(search("Earmake - I'm the Law"), guessed=True)
+    assert support.for_song(FakeNet(), "Earmake", "I'm the Law", search=lambda q: guessed) == []
     # A near match (another artist, or another song) is never used.
     for hit in ({"found": True, "band_name": "Earmaker", "name": "I'm the Law", "url": "https://x.bandcamp.com/track/a"},
                 {"found": True, "band_name": "Earmake", "name": "I'm the Lawyer", "url": "https://earmake.bandcamp.com/track/b"},
