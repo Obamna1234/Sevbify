@@ -1,0 +1,10 @@
+2026-11-18 20:01:51.912 Sevbify[14521:44421] Sevbify canvas_source failed: YouTube is blocking this connection for now (try again later or on another network)
+/Library/Developer/CoreSimulator/Devices/98A0BFA3-CEC3-4FD6-9916-5A2149774DBF/data/Containers/Bundle/Application/3F73E750-0E10-4CE3-8F71-7F3164CC0A56/Sevbify.app/app_packages/yt_dlp/YoutubeDL.py", line 1746, in wrapper
+    self.report_error(str(e), e.format_traceback())
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/98A0BFA3-CEC3-4FD6-9916-5A2149774DBF/data/Containers/Bundle/Application/3F73E750-0E10-4CE3-8F71-7F3164CC0A56/Sevbify.app/app_packages/yt_dlp/YoutubeDL.py", line 1162, in report_error
+    self.trouble(f'{self._format_err("ERROR:", self.Styles.ERROR)} {message}', *args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/runner/Library/Developer/CoreSimulator/Devices/98A0BFA3-CEC3-4FD6-9916-5A2149774DBF/data/Containers/Bundle/Application/3F73E750-0E10-4CE3-8F71-7F3164CC0A56/Sevbify.app/app_packages/yt_dlp/YoutubeDL.py", line 1100, in trouble
+    raise DownloadError(message, exc_info if exc_info and exc_info[0] else sys.exc_info())
+yt_dlp.utils.DownloadError: ERROR: [youtube] Eaj-V2KIxRk: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies

@@ -1,0 +1,22 @@
+{
+  "equaliser_self_test" : "FAILED",
+  "full_song" : "Bandcamp https:\/\/bandcamp.com\/stream_redirect?enc",
+  "genres" : 27,
+  "local_songs" : 0,
+  "pair_self_test" : "ok",
+  "python_info" : {
+    "machine" : "arm64",
+    "platform" : "ios",
+    "python" : "3.13.18",
+    "yt_dlp" : "2026.10.26"
+  },
+  "python_start" : "ok",
+  "radio" : 10,
+  "search" : [
+    "Chris Zabriskie - I Am a Man Who Will Fight for Your Honor",
+    "Chris Zabriskie - The Temperature of the Air On the Bow of the Kaleetan",
+    "Chris Zabriskie - Prelude No. 16",
+    "Chris Zabriskie - Prelude No. 7",
+    "Chris Zabriskie - The Dark Glow of the Mountains"
+  ]
+}
