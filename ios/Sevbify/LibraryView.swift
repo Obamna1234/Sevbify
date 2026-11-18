@@ -231,7 +231,7 @@ struct PlaylistPage: View {
                           kind: pl.description.isEmpty ? "Playlist" : pl.description, playlist: pl)
                     .toolbar {
                         Menu {
-                            Button { flowing = true } label: { Label("Flow this playlist…", systemImage: "water.waves") }
+                            Button { flowing = true } label: { Label("Sort by energy…", systemImage: "water.waves") }
                                 .disabled(pl.tracks.count < 3)
                             Button { newName = pl.name; renaming = true } label: { Label("Rename", systemImage: "pencil") }
                             Button { newDescription = pl.description; describing = true } label: {

@@ -149,6 +149,6 @@ def test_bridge_flow(bridge):
     feats = call(bridge, "flow_features", json.dumps(songs[:3])) + call(bridge, "flow_features", json.dumps(songs[3:]))
     assert len(feats) == 6 and all("energy" in f for f in feats)
     out = call(bridge, "flow_order", json.dumps(songs), json.dumps(feats), "build", True, "calm")
-    assert sorted(out["order"]) == list(range(6)) and out["mode_name"] == "Calm to energy"
+    assert sorted(out["order"]) == list(range(6)) and out["mode_name"] == "Calm → Ramping up → Energetic"
     assert songs[out["order"][0]]["genre"] == "Ambient" and songs[out["order"][-1]]["genre"] == "Metal"
     assert os.path.exists(os.path.join(os.environ["SEVBIFY_DATA_DIR"], "flow_features.json"))

@@ -361,5 +361,12 @@ def summary(feats, order_idx):
     return " → ".join(flat)
 
 
-MODE_NAMES = {"wind_down": "Energy to calm", "build": "Calm to energy", "waves": "Waves", "smooth": "Smooth",
-              "mix": "Mix it up", "genre": "Grouped by genre"}
+MODE_NAMES = {"wind_down": "Energetic → Easing down → Calm", "build": "Calm → Ramping up → Energetic",
+              "mix": "Mixed energies throughout", "waves": "Waves", "smooth": "Smooth", "genre": "Grouped by genre"}
+
+# What the new playlist is called: "<playlist> · <this>".
+SHORT_NAMES = {"wind_down": "Energetic to calm", "build": "Calm to energetic", "mix": "Mixed energies",
+               "waves": "Waves", "smooth": "Smooth", "genre": "By genre"}
+
+# The three shown in Sort by energy (the others stay available to the code and tests).
+SHOWN = ("wind_down", "build", "mix")

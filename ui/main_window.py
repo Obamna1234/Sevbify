@@ -985,8 +985,8 @@ class MainWindow(ShowsMixin, QMainWindow):
         return pl
 
     def flow_playlist(self, playlist):
-        """Playlist ••• → Flow this playlist…: the same songs in a nice listening order, as a new playlist
-        ("<name> · Flow"). The original isn't touched. See core/flow_order.py."""
+        """Playlist ••• → Sort by energy…: the same songs ordered by how energetic they are, as a new playlist
+        ("<name> · Energetic to calm" etc.). The original isn't touched. See core/flow_order.py."""
         from .flow_dialog import FlowDialog
         from core import flow_order
         songs = list(playlist.songs)
@@ -1019,28 +1019,28 @@ class MainWindow(ShowsMixin, QMainWindow):
         timer = QTimer(self)
         timer.setInterval(400)
         timer.timeout.connect(lambda: self.show_status(
-            f"Flow: listening to {done[0]} of {len(tracks)} songs…", kind="info", timeout_ms=2000))
+            f"Sorting by energy: {done[0]} of {len(tracks)} songs…", kind="info", timeout_ms=2000))
         timer.start()
 
         def finished(result):
             timer.stop()
             feats, new_order = result
-            base = f"{playlist.name} · Flow"
+            base = f"{playlist.name} · {flow_order.SHORT_NAMES.get(mode, 'Sorted')}"
             name, n = base, 2
             while self._name_taken(name):
                 name, n = f"{base} {n}", n + 1
             pl = self.create_playlist(name, [songs[i] for i in new_order])
             if pl is None:
                 return
-            pl.description = (f"{flow_order.MODE_NAMES.get(mode, 'Flow')} order of “{playlist.name}”: "
-                              f"{flow_order.summary(feats, new_order)}. Drag songs to change it.")
+            pl.description = (f"“{playlist.name}” sorted by energy: {flow_order.MODE_NAMES.get(mode, '')}. "
+                              "Drag songs to change it.")
             self._playlists_changed()
             self.show_playlist(pl)
             self.show_status(f"Made “{name}”. Your original playlist wasn't changed.", kind="info", timeout_ms=5000)
 
         def failed(err):
             timer.stop()
-            self.show_status(f"⚠ Flow didn't work: {err}")
+            self.show_status(f"⚠ Sorting by energy didn't work: {err}")
 
         run_async(self, work, on_done=finished, on_error=failed, lane="default")
 
@@ -4345,9 +4345,9 @@ class MainWindow(ShowsMixin, QMainWindow):
                        "them again.")
         loc.setEnabled(waiting > 0)
         loc.triggered.connect(lambda: self.locate_playlist_songs(playlist))
-        flow = menu.addAction("〰  Flow this playlist…")
-        flow.setToolTip("A new playlist with these songs in a nice listening order (calm to intense, waves, "
-                        "by genre…). This playlist isn't changed.")
+        flow = menu.addAction("〰  Sort by energy…")
+        flow.setToolTip("Makes a copy of this playlist with the songs arranged by energy (energetic to calm, calm "
+                        "to energetic, or mixed). This playlist isn't changed.")
         flow.setEnabled(len(playlist.songs) >= 3)
         flow.triggered.connect(lambda: self.flow_playlist(playlist))
         menu.addSeparator()

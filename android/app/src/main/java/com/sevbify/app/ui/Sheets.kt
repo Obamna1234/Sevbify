@@ -256,7 +256,7 @@ private fun PlaylistMenuSheet(pl: com.sevbify.app.Playlist) {
                     } catch (e: Exception) { Nav.say("⚠ Couldn't make the link: ${e.message}") }
                 }
             }
-            SheetItem(Icons.Filled.Waves, tr("Flow this playlist…"), enabled = pl.tracks.size >= 3) { close(); Nav.flowFor = pl }
+            SheetItem(Icons.Filled.Waves, tr("Sort by energy…"), enabled = pl.tracks.size >= 3) { close(); Nav.flowFor = pl }
             SheetItem(Icons.Filled.Edit, tr("Edit details")) { close(); askName(pl.name) { Library.rename(pl, it) } }
             SheetItem(Icons.Filled.Edit, if (pl.description.isEmpty()) "Add description" else "Edit description") {
                 close(); askName(pl.description, "Description") { pl.description = it.trim().take(300); Library.changed() }

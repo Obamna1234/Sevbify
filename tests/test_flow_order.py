@@ -119,14 +119,14 @@ def test_flow_this_playlist_makes_a_new_playlist_and_leaves_the_original(window,
     window.playlists.append(pl)
     before = list(pl.songs)
     menu = window.build_playlist_menu(pl)
-    assert any("Flow this playlist" in a.text() for a in menu.actions())
+    assert any("Sort by energy" in a.text() for a in menu.actions())
     monkeypatch.setattr(FlowDialog, "exec", lambda self: FlowDialog.DialogCode.Accepted)
     window.flow_playlist(pl)
-    assert wait_until(qapp, lambda: any(p.name == "Mixed · Flow" for p in window.playlists))
-    new = next(p for p in window.playlists if p.name == "Mixed · Flow")
+    assert wait_until(qapp, lambda: any(p.name == "Mixed · Energetic to calm" for p in window.playlists))
+    new = next(p for p in window.playlists if p.name == "Mixed · Energetic to calm")
     assert pl.songs == before                                       # the original is untouched
     assert sorted(id(s) for s in new.songs) == sorted(id(s) for s in before)
-    assert "Energy to calm order" in new.description           # the default
+    assert "Energetic → Easing down → Calm" in new.description   # the default
 
 
 def test_mix_spreads_calm_and_energetic_through_the_playlist():
