@@ -1,0 +1,54 @@
+{
+ "info": {
+  "system": "Windows 2025Server (10.0.26100)",
+  "python": "3.12.10",
+  "frozen": true,
+  "seconds": 13,
+  "yt_dlp": "2026.10.26"
+ },
+ "steps": [
+  {
+   "step": "App opens again",
+   "status": "pass",
+   "detail": "window open, 1 songs in the library",
+   "seconds": 0.0,
+   "screenshot": "01-app-opens-again.png"
+  },
+  {
+   "step": "Everything is still there after a restart",
+   "status": "pass",
+   "detail": "playlists ['Journey playlist', 'Journey mine'], podcasts ['NPR News Now'], 1 songs in the library",
+   "seconds": 0.0,
+   "screenshot": "02-everything-is-still-there-after-a-restart.png"
+  },
+  {
+   "step": "Play the downloaded song",
+   "status": "pass",
+   "detail": "Chris Zabriskie - Candlepower: position moved 5849 ms in 6 s",
+   "seconds": 6.1,
+   "screenshot": "03-play-the-downloaded-song.png"
+  },
+  {
+   "step": "Play the downloaded episode",
+   "status": "pass",
+   "detail": "\u201c4pm ET, November 18 | The latest headlines from NPR\u201d: position moved 5567 ms in 6 s; played from the downloaded file",
+   "seconds": 6.1,
+   "screenshot": "04-play-the-downloaded-episode.png"
+  },
+  {
+   "step": "A deleted song is remembered and can be downloaded again",
+   "status": "pass",
+   "detail": "shown as \u201cCandlepower   \u2b07\u201d (missing), remembered as Chris Zabriskie - Candlepower, Download again queued 1",
+   "seconds": 0.2,
+   "screenshot": "05-a-deleted-song-is-remembered-and-can-be-downloaded-again.png"
+  },
+  {
+   "step": "No windows flashing up",
+   "status": "pass",
+   "detail": "none",
+   "seconds": null,
+   "screenshot": ""
+  }
+ ],
+ "dialogs": []
+}

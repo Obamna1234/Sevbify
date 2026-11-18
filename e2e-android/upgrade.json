@@ -1,0 +1,1 @@
+{"step": "Update from the last release keeps your library", "status": "skipped", "detail": "this build is debug-signed (not main), so it can't update the released app; checked on main builds"}

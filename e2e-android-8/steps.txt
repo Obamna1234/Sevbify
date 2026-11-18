@@ -1,0 +1,88 @@
+tap 'Skip' at 129,2180
+screenshot android-journey/01_app_opens.png
+[journey] PASS     App opens: on screen: Settings, All, Music, Podcasts, Audiobooks, ♪, Your Songs, Popular right now, Dracula (with JENNIE), Tame Impala, Choosin' Texas, Ella Langley, Boston, STELLA LEFTY, Welcome to Sevbify. Search for a song, make a playlist with Create (+), or import one from Spotify under Your Library. Songs on your phone show up in Your Songs., Home, Home, Search, Search, Your Library, Your Library, Create, Create
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+!! couldn't find 'Clear'
+tap 'What do you want to listen to?' at 456,276
+tap first song 'Candlepower'
+!! couldn't find 'Play full songs'
+screenshot android-journey/02_stream_a_song_bandcamp.png
+[journey] PASS     Stream a song (Bandcamp): playing “Candlepower, Chris Zabriskie, Divider”, position moved 6004 ms in 6 s
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+tap 'Clear' at 984,147
+!! couldn't find 'What do you want to listen to?'
+tap first song 'Monkeys Spinning Monkeys'
+!! couldn't find 'Play full songs'
+screenshot android-journey/03_stream_a_song_youtube.png
+[journey] PASS     Stream a song (YouTube): playing “Monkeys Spinning Monkeys, Kevin MacLeod, Monkeys Spinning Monkeys”, position moved 6070 ms in 6 s
+screenshot android-journey/04_pause_and_resume.png
+[journey] PASS     Pause and resume: paused: state=2, held=True; resumed: playing “Monkeys Spinning Monkeys, Kevin MacLeod, Monkeys Spinning Monkeys”, position moved 3062 ms in 4 s
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+tap 'Clear' at 984,147
+!! couldn't find 'What do you want to listen to?'
+tap 'Preview (30 s)' at 291,835
+screenshot android-journey/05_preview_card.png
+tap 'Close' at 844,432
+screenshot android-journey/06_preview_a_song_30_s.png
+[journey] PASS     Preview a song (30 s): card shown, your song paused (state 2) and carried on after Close (state 3)
+tap 'Home' at 135,2178
+tap 'Add to Liked Songs' at 854,2037
+tap 'Saved in…' at 854,2050
+screenshot android-journey/07_saved_in.png
+tap 'Done' at 540,1429
+screenshot android-journey/08_saved_in_like_spotify_s.png
+[journey] PASS     Saved in (like Spotify's ✓): ⊕ saved it to Liked Songs; ✓ opened Saved in with Liked Songs ticked; Done closed it
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+tap 'Clear' at 984,147
+!! couldn't find 'What do you want to listen to?'
+tap 'Add to playlist' at 293,561
+tap 'New playlist' at 273,2037
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+tap 'Clear' at 984,147
+!! couldn't find 'What do you want to listen to?'
+tap 'Add to playlist' at 293,561
+tap 'My Playlist #2' at 340,2001
+tap 'Home' at 135,2178
+tap 'Search' at 405,2178
+tap 'Clear' at 984,147
+!! couldn't find 'What do you want to listen to?'
+tap 'Add to playlist' at 293,561
+tap 'My Playlist #2' at 340,2001
+tap 'Home' at 135,2178
+tap 'Your Library' at 675,2178
+tap 'My Playlist #2' at 371,1233
+tap 'More' at 210,1048
+tap 'Sort by energy…' at 309,899
+screenshot android-journey/09_sort_by_energy.png
+tap 'Create sorted playlist' at 540,2062
+tap 'Home' at 135,2178
+tap 'Your Library' at 675,2178
+screenshot android-journey/10_sort_by_energy_a_sorted_copy.png
+[journey] PASS     Sort by energy (a sorted copy): made “My Playlist #2 · Energetic to calm”; “My Playlist #2” is still in Your Library
+tap 'Home' at 135,2178
+open now playing via 'Monkeys Spinning Monkeys (feat. Kevin MacLeod) ((DnB Remix))'
+screenshot android-journey/11_canvas_cover_switch.png
+[journey] BLOCKED  Canvas / Cover switch: this song has no Canvas loop (no music video found within a minute)
+tap 'Home' at 135,2178
+tap 'Podcasts' at 589,158
+tap 'Play' at 969,667
+screenshot android-journey/12_play_a_podcast_episode.png
+[journey] PASS     Play a podcast episode: The Daily: playing “How Stable Is the A.I. Industry? We’re About to Find Out., The Daily, The Daily”, position moved 5775 ms in 6 s
+tap 'Home' at 135,2178
+tap 'Home' at 135,2178
+tap 'Settings' at 84,158
+tap 'Settings and privacy' at 338,1051
+tap 'Playback' at 234,897
+screenshot android-journey/13_open_settings.png
+[journey] PASS     Open Settings: Settings → Playback shown
+tap 'Home' at 135,2178
+tap 'Pair' at 821,1418
+screenshot android-journey/14_pair_receive_question.png
+tap 'Accept' at 773,1396
+screenshot android-journey/15_pair_with_a_computer_and_receive_a_song.png
+[journey] PASS     Pair with a computer and receive a song: paired as “Android SDK built for x86_64” over the network, received “CI tone.wav” in Music/Sevbify (no self-test line)

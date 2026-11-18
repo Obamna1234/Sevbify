@@ -1,0 +1,117 @@
+{
+ "info": {
+  "system": "Windows 2025Server (10.0.26100)",
+  "python": "3.12.10",
+  "frozen": true,
+  "seconds": 72,
+  "yt_dlp": "2026.10.26"
+ },
+ "steps": [
+  {
+   "step": "App opens",
+   "status": "pass",
+   "detail": "window open, 0 songs in the library",
+   "seconds": 0.0,
+   "screenshot": "01-app-opens.png"
+  },
+  {
+   "step": "Search the web",
+   "status": "pass",
+   "detail": "1 results, first: Chris Zabriskie - Candlepower",
+   "seconds": 1.0,
+   "screenshot": "02-search-the-web.png"
+  },
+  {
+   "step": "Stream a song (Bandcamp)",
+   "status": "blocked",
+   "detail": "Bandcamp refused this computer (ERROR: [Bandcamp] candlepower: Got client challenge webpage response with chrome-152:windows-10; please report this issue on  https://github.com/yt-dlp/yt-dlp/i); played from SoundCloud instead",
+   "seconds": 19.7,
+   "screenshot": "03-stream-a-song--bandcamp.png"
+  },
+  {
+   "step": "Stream a song (YouTube)",
+   "status": "blocked",
+   "detail": "YouTube refused this computer (ERROR: [youtube] LrM_Y39Gmhk: Sign in to confirm you\u2019re not a bot. This helps protect our community. Use --cookies-from-browser or --cookies for the authenticat); played from SoundCloud instead",
+   "seconds": 16.5,
+   "screenshot": "04-stream-a-song--youtube.png"
+  },
+  {
+   "step": "Pause, resume and seek",
+   "status": "pass",
+   "detail": "pause held, resumed, seek to 1:00 worked",
+   "seconds": 3.5,
+   "screenshot": "05-pause--resume-and-seek.png"
+  },
+  {
+   "step": "Make a playlist",
+   "status": "pass",
+   "detail": "playlist \u201cJourney playlist\u201d with 1 song(s)",
+   "seconds": 0.0,
+   "screenshot": "06-make-a-playlist.png"
+  },
+  {
+   "step": "Download a song",
+   "status": "pass",
+   "detail": "Chris Zabriskie - Candlepower.mp3 (5314 KB) in D:\\a\\Sevbify\\Sevbify\\report\\downloads",
+   "seconds": 5.2,
+   "screenshot": "07-download-a-song.png"
+  },
+  {
+   "step": "Find, follow and play a podcast",
+   "status": "pass",
+   "detail": "NPR News Now: 4 episodes, followed: True, latest episode: position moved 5849 ms in 6 s",
+   "seconds": 9.8,
+   "screenshot": "08-find--follow-and-play-a-podcast.png"
+  },
+  {
+   "step": "Podcast filter, search and sort",
+   "status": "pass",
+   "detail": "4 episodes; in progress: 1; '4pm' finds 1; oldest-first sort: True",
+   "seconds": 2.2,
+   "screenshot": "09-podcast-filter--search-and-sort.png"
+  },
+  {
+   "step": "Download a podcast episode",
+   "status": "pass",
+   "detail": "\u201c4pm ET, November 18 | The latest headlines from NPR\u201d saved as 2026-11-18 - 4pm ET, November 18  The latest headlines from NPR.opus (1525 KB), in the Podcasts folder: True",
+   "seconds": 6.6,
+   "screenshot": "10-download-a-podcast-episode.png"
+  },
+  {
+   "step": "Your own music plays",
+   "status": "pass",
+   "detail": "Chris Zabriskie - Candlepower: position moved 4899 ms in 5 s",
+   "seconds": 5.5,
+   "screenshot": "11-your-own-music-plays.png"
+  },
+  {
+   "step": "Open Settings",
+   "status": "pass",
+   "detail": "settings page shown",
+   "seconds": 0.5,
+   "screenshot": "12-open-settings.png"
+  },
+  {
+   "step": "Zoom instantly",
+   "status": "pass",
+   "detail": "zoomed live to 110% (pixel ratio 1.1) and back; window size kept",
+   "seconds": 0.2,
+   "screenshot": "13-zoom-instantly.png"
+  },
+  {
+   "step": "Activity log is written",
+   "status": "pass",
+   "detail": "48 lines, links shortened: True",
+   "seconds": 0.0,
+   "screenshot": "14-activity-log-is-written.png"
+  },
+  {
+   "step": "No windows flashing up",
+   "status": "pass",
+   "detail": "none",
+   "seconds": null,
+   "screenshot": ""
+  }
+ ],
+ "dialogs": []
+}

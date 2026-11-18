@@ -1,0 +1,69 @@
+{
+ "steps": [
+  {
+   "step": "Update from the last release keeps your library",
+   "status": "skipped",
+   "detail": "this build is debug-signed (not main), so it can't update the released app; checked on main builds"
+  },
+  {
+   "step": "App opens",
+   "status": "pass",
+   "detail": "on screen: Settings, All, Music, Podcasts, Audiobooks, \u266a, Your Songs, Popular right now, Dracula (with JENNIE), Tame Impala, Choosin' Texas, Ella Langley, Boston, STELLA LEFTY, Welcome to Sevbify. Search for a song, make a playlist with Create (+), or import one from Spotify under Your Library. Songs on your phone show up in Your Songs., Home, Home, Search, Search, Your Library, Your Library, Create, Create"
+  },
+  {
+   "step": "Stream a song (Bandcamp)",
+   "status": "pass",
+   "detail": "playing \u201cCandlepower, Chris Zabriskie, Divider\u201d, position moved 6002 ms in 6 s"
+  },
+  {
+   "step": "Stream a song (YouTube)",
+   "status": "pass",
+   "detail": "playing \u201cMonkeys Spinning Monkeys, Kevin MacLeod, Monkeys Spinning Monkeys\u201d, position moved 6060 ms in 6 s"
+  },
+  {
+   "step": "Pause and resume",
+   "status": "pass",
+   "detail": "paused: state=2, held=True; resumed: playing \u201cMonkeys Spinning Monkeys, Kevin MacLeod, Monkeys Spinning Monkeys\u201d, position moved 6100 ms in 4 s"
+  },
+  {
+   "step": "Preview a song (30 s)",
+   "status": "pass",
+   "detail": "card shown, your song paused (state 2) and carried on after Close (state 3)"
+  },
+  {
+   "step": "Saved in (like Spotify's \u2713)",
+   "status": "pass",
+   "detail": "\u2295 saved it to Liked Songs; \u2713 opened Saved in with Liked Songs ticked; Done closed it"
+  },
+  {
+   "step": "Sort by energy (a sorted copy)",
+   "status": "pass",
+   "detail": "made \u201cMy Playlist #2 \u00b7 Energetic to calm\u201d; \u201cMy Playlist #2\u201d is still in Your Library"
+  },
+  {
+   "step": "Canvas / Cover switch",
+   "status": "blocked",
+   "detail": "this song has no Canvas loop (no music video found within a minute)"
+  },
+  {
+   "step": "Play a podcast episode",
+   "status": "pass",
+   "detail": "The Daily: playing \u201cHow Stable Is the A.I. Industry? We\u2019re About to Find Out., The Daily, The Daily\u201d, position moved 5972 ms in 6 s"
+  },
+  {
+   "step": "Open Settings",
+   "status": "pass",
+   "detail": "Settings \u2192 Playback shown"
+  },
+  {
+   "step": "Pair with a computer and receive a song",
+   "status": "pass",
+   "detail": "paired as \u201csdk_gphone64_x86_64\u201d over the network, received \u201cCI tone.wav\u201d in Music/Sevbify (no self-test line)"
+  },
+  {
+   "step": "No crashes",
+   "status": "pass",
+   "detail": "0 crash(es) / not-responding in the log"
+  }
+ ]
+}

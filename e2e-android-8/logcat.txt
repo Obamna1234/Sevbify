@@ -1,0 +1,300 @@
+--------- beginning of main
+11-18 22:06:43.993  9565  9565 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:06:44.045  9565  9565 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:06:44.071  9565  9565 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:06:45.120  9565  9565 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:06:45.158  9565  9565 W AccessibilityNodeInfoDumper: Fetch time: 41ms
+11-18 22:06:45.165  9565  9565 D AndroidRuntime: Shutting down VM
+11-18 22:06:45.328  9577  9577 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:06:45.367  9577  9577 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:06:45.384  9577  9577 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:06:45.388  9577  9577 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=118.0, y[0]=817.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=657935, downTime=657935, deviceId=0, source=0x1002 }
+11-18 22:06:45.394  9577  9577 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=118.0, y[0]=817.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=657935, downTime=657935, deviceId=0, source=0x1002 }
+11-18 22:06:45.397  9577  9577 D AndroidRuntime: Shutting down VM
+11-18 22:06:45.552  1382  5527 W audio_hw_generic: Hardware backing HAL too slow, could only write 0 of 720 frames
+11-18 22:06:45.921  4833  4833 I zygote64: Deoptimizing void S2.o.k(S2.f) due to JIT inline cache
+11-18 22:06:46.156  4833  9512 I zygote64: Deoptimizing java.lang.Object S2.g.invoke() due to JIT inline cache
+11-18 22:06:46.156  4833  9512 I zygote64: Deoptimizing long H4.B.u(H4.g, long) due to JIT inline cache
+11-18 22:06:46.166  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 544768
+11-18 22:06:56.601  9598  9598 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:06:56.667  9598  9598 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:06:56.688  9598  9598 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:06:57.748  9598  9598 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:06:57.749  1542  1568 D AudioFlinger: mixer(0xf2b838c0) throttle end: throttle time(5)
+11-18 22:06:57.791  9598  9598 W AccessibilityNodeInfoDumper: Fetch time: 60ms
+--------- beginning of system
+11-18 22:06:57.793  1674  3859 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@4ed03e9
+11-18 22:06:57.806  9598  9598 D AndroidRuntime: Shutting down VM
+11-18 22:06:57.994  9610  9610 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:06:58.039  9610  9610 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:06:58.056  9610  9610 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:06:58.058  9610  9610 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=969.0, y[0]=667.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=670608, downTime=670608, deviceId=0, source=0x1002 }
+11-18 22:06:58.063  9610  9610 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=969.0, y[0]=667.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=670608, downTime=670608, deviceId=0, source=0x1002 }
+11-18 22:06:58.065  4833  4833 I zygote64: Deoptimizing boolean Q3.g.equals(java.lang.Object) due to JIT inline cache
+11-18 22:06:58.065  4833  4833 I zygote64: Deoptimizing int Q3.b.size() due to JIT inline cache
+11-18 22:06:58.065  4833  4833 I zygote64: Deoptimizing int Y.u.size() due to JIT inline cache
+11-18 22:06:58.066  4833  4833 I zygote64: Deoptimizing java.lang.Object Y.u.get(int) due to JIT inline cache
+11-18 22:06:58.069  9610  9610 D AndroidRuntime: Shutting down VM
+11-18 22:06:58.072  4833  4833 I zygote64: Deoptimizing l4.F l4.d0.P(boolean, l4.Z) due to JIT inline cache
+11-18 22:06:58.072  4833  4833 I zygote64: Deoptimizing T3.i Q2.a.B(T3.g, T3.h) due to JIT inline cache
+11-18 22:06:58.152  1382  5527 W audio_hw_generic: Hardware backing HAL too slow, could only write 0 of 720 frames
+11-18 22:06:58.282  1674  1674 D ZenLog  : disable_effects: 0|com.obamna1234.sevbify|1001|null|10077,booleanState
+11-18 22:06:58.327  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 45056
+11-18 22:06:58.401  1674  1686 I zygote64: NativeAllocBackground concurrent copying GC freed 11119(885KB) AllocSpace objects, 14(280KB) LOS objects, 41% free, 8MB/14MB, paused 17.982ms total 109.593ms
+11-18 22:06:58.427  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 7843840
+11-18 22:06:58.480  4833  4844 I zygote64: NativeAllocBackground concurrent copying GC freed 38902(1959KB) AllocSpace objects, 5(232KB) LOS objects, 34% free, 11MB/17MB, paused 27.877ms total 321.938ms
+11-18 22:06:59.411  4833  4833 I zygote64: Deoptimizing void l4.D.run() due to JIT inline cache
+11-18 22:06:59.456  1389  1406 D hwcomposer: hw_composer sent 40 syncs in 60s
+11-18 22:06:59.763  4833  4833 I zygote64: Deoptimizing java.util.List Q3.n.v0(int, java.util.List) due to JIT inline cache
+11-18 22:06:59.763  4833  4833 I zygote64: Deoptimizing void com.sevbify.app.Library.saveNow() due to JIT inline cache
+11-18 22:07:00.006  1674  1701 E memtrack: Couldn't load memtrack module
+11-18 22:07:00.006  1674  1701 W android.os.Debug: failed to get memory consumption info: -1
+11-18 22:07:01.160  1382  1382 W audio_hw_generic: Not supplying enough data to HAL, expected position 19738163 , only wrote 14709600
+11-18 22:07:01.394  1396  1396 I boot-pipe: done populating /dev/random
+11-18 22:07:04.995  4833  4833 I zygote64: Deoptimizing boolean w1.f0.p() due to JIT inline cache
+11-18 22:07:04.995  4833  4833 I zygote64: Deoptimizing void F2.c0.w(F2.O1, F2.O1, java.lang.Integer, java.lang.Integer, java.lang.Integer, java.lang.Integer) due to JIT inline cache
+11-18 22:07:04.996  4833  4833 I zygote64: Deoptimizing w1.F F2.O1.s() due to JIT inline cache
+11-18 22:07:04.998  4833  4833 I zygote64: Deoptimizing w1.c0 O1.v.f(int, w1.c0, boolean) due to JIT inline cache
+11-18 22:07:04.998  4833  4833 I zygote64: Deoptimizing w1.c0 E1.n0.g(java.lang.Object, w1.c0) due to JIT inline cache
+11-18 22:07:04.998  4833  4833 I zygote64: Deoptimizing int O1.v.b(java.lang.Object) due to JIT inline cache
+11-18 22:07:05.009  4833  4858 I zygote64: Deoptimizing w1.c0 E1.n0.g(java.lang.Object, w1.c0) due to JIT inline cache
+11-18 22:07:05.079  4833  5499 I zygote64: Deoptimizing int B1.p.read(byte[], int, int) due to JIT inline cache
+11-18 22:07:05.394  4833  4844 I zygote64: NativeAllocBackground concurrent copying GC freed 13193(1133KB) AllocSpace objects, 24(1260KB) LOS objects, 34% free, 11MB/17MB, paused 3.542ms total 246.685ms
+11-18 22:07:05.857  4833  5503 W OkHttpClient: A connection to https://dts.podtrac.com/ was leaked. Did you forget to close a response body?
+11-18 22:07:05.857  4833  5503 W OkHttpClient: A connection to https://pdst.fm/ was leaked. Did you forget to close a response body?
+11-18 22:07:06.890  4833  4858 I zygote64: Deoptimizing long O1.u.m() due to JIT inline cache
+11-18 22:07:06.901  4833  4858 I zygote64: Deoptimizing boolean E1.N.r(E1.T) due to JIT inline cache
+11-18 22:07:06.901  4833  4858 I zygote64: Deoptimizing void O1.u.s(long) due to JIT inline cache
+11-18 22:07:06.901  4833  4858 I zygote64: Deoptimizing void O1.u.r(long) due to JIT inline cache
+11-18 22:07:06.901  4833  4858 I zygote64: Deoptimizing int E1.f.x(E.v, D1.g, int) due to JIT inline cache
+11-18 22:07:06.903  4833  4858 I zygote64: Deoptimizing void E1.B.run() due to JIT inline cache
+11-18 22:07:07.050  4833  9697 I OMXClient: Treble IOmx obtained
+11-18 22:07:07.053  1584  1609 I OMXMaster: makeComponentInstance(OMX.google.mp3.decoder) in omx@1.0-service process
+11-18 22:07:07.096  1584  1609 E OMXNodeInstance: setConfig(0xe6c21020:google.mp3.decoder, ConfigPriority(0x6f800002)) ERROR: Undefined(0x80001001)
+11-18 22:07:07.097  4833  9697 I ACodec  : codec does not support config priority (err -2147483648)
+11-18 22:07:07.097  1584  1870 E OMXNodeInstance: getConfig(0xe6c21020:google.mp3.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: Undefined(0x80001001)
+11-18 22:07:07.128  1865  1881 I zygote64: NativeAllocBackground concurrent copying GC freed 8570(506KB) AllocSpace objects, 6(540KB) LOS objects, 49% free, 5MB/10MB, paused 2.752ms total 153.731ms
+11-18 22:07:07.228  1381  1381 W /system/bin/hw/android.hidl.allocator@1.0-service: ashmem_create_region(8192) returning hidl_memory(0x7c818602c2f0, 8192)
+11-18 22:07:07.229  1381  1381 I chatty  : uid=1000(system) allocator@1.0-s identical 2 lines
+11-18 22:07:07.230  1381  1381 W /system/bin/hw/android.hidl.allocator@1.0-service: ashmem_create_region(8192) returning hidl_memory(0x7c818602c2f0, 8192)
+11-18 22:07:07.235  1674  1686 I zygote64: NativeAllocBackground concurrent copying GC freed 2380(259KB) AllocSpace objects, 2(40KB) LOS objects, 41% free, 8MB/14MB, paused 1.593ms total 282.115ms
+11-18 22:07:07.238  1381  1381 W /system/bin/hw/android.hidl.allocator@1.0-service: ashmem_create_region(9216) returning hidl_memory(0x7c818602c2f0, 9216)
+11-18 22:07:07.238  1381  1381 I chatty  : uid=1000(system) allocator@1.0-s identical 2 lines
+11-18 22:07:07.239  1381  1381 W /system/bin/hw/android.hidl.allocator@1.0-service: ashmem_create_region(9216) returning hidl_memory(0x7c818602c2f0, 9216)
+11-18 22:07:07.243  4833  4858 I zygote64: Deoptimizing boolean O1.u.isLoading() due to JIT inline cache
+11-18 22:07:07.284  1542  4720 W AudioFlinger: createTrack_l(): mismatch between requested flags (00000008) and output flags (00000006)
+11-18 22:07:07.285  4833  4858 D AudioTrack: Client defaulted notificationFrames to 3675 for frameCount 11025
+11-18 22:07:07.300  1382  5527 W audio_hw_generic: Not supplying enough data to HAL, expected position 14709641 , only wrote 14709600
+11-18 22:07:07.385  4833  4844 I zygote64: NativeAllocBackground concurrent copying GC freed 22500(1016KB) AllocSpace objects, 2(56KB) LOS objects, 34% free, 11MB/17MB, paused 6.010ms total 440.852ms
+11-18 22:07:07.459  1865  1881 I zygote64: NativeAllocBackground concurrent copying GC freed 731(100KB) AllocSpace objects, 0(0B) LOS objects, 50% free, 5MB/11MB, paused 2.440ms total 184.268ms
+11-18 22:07:07.519  1674  1686 I zygote64: NativeAllocBackground concurrent copying GC freed 2055(172KB) AllocSpace objects, 0(0B) LOS objects, 41% free, 8MB/14MB, paused 2.781ms total 142.844ms
+11-18 22:07:15.165  1542  1568 D AudioFlinger: mixer(0xf2b838c0) throttle end: throttle time(4)
+11-18 22:07:16.657  9738  9738 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:16.713  9738  9738 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:16.735  9738  9738 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:17.782  9738  9738 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:07:17.872  9738  9738 W AccessibilityNodeInfoDumper: Fetch time: 95ms
+11-18 22:07:07.299  1674  1674 I chatty  : uid=1000 system_server identical 5 lines
+11-18 22:07:07.393  1674  1674 D ZenLog  : disable_effects: 0|com.obamna1234.sevbify|1001|null|10077,booleanState
+11-18 22:07:17.872  1674  2556 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@38192b
+11-18 22:07:17.878  9738  9738 D AndroidRuntime: Shutting down VM
+11-18 22:07:17.940  1398  2056 E SurfaceFlinger: ro.sf.lcd_density must be defined as a build property
+11-18 22:07:17.952  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 10371072
+11-18 22:07:17.954  9752  9752 D         : HostConnection::get() New Host Connection established 0x726fdaa2f780, tid 9752
+11-18 22:07:18.729  9757  9757 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:18.773  9757  9757 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:18.794  9757  9757 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:19.859  9757  9757 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:07:19.901  9757  9757 W AccessibilityNodeInfoDumper: Fetch time: 54ms
+11-18 22:07:19.902  1674  3572 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@d384721
+11-18 22:07:19.906  9757  9757 D AndroidRuntime: Shutting down VM
+11-18 22:07:20.146  9771  9771 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:20.200  9771  9771 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:20.218  9771  9771 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:21.260  9771  9771 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:07:21.296  9771  9771 W AccessibilityNodeInfoDumper: Fetch time: 39ms
+11-18 22:07:21.303  1674  2556 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@f9d1d07
+11-18 22:07:21.311  9771  9771 D AndroidRuntime: Shutting down VM
+11-18 22:07:21.615  9792  9792 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:21.660  9792  9792 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:21.683  9792  9792 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:22.766  9792  9792 W AccessibilityNodeInfoDumper: Fetch time: 47ms
+11-18 22:07:22.767  1674  2003 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@b31345d
+11-18 22:07:22.773  9792  9792 D AndroidRuntime: Shutting down VM
+11-18 22:07:22.965  9804  9804 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:23.028  9804  9804 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:23.094  9804  9804 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:23.097  9804  9804 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=695645, downTime=695645, deviceId=0, source=0x1002 }
+11-18 22:07:23.103  9804  9804 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=695645, downTime=695645, deviceId=0, source=0x1002 }
+11-18 22:07:23.114  9804  9804 D AndroidRuntime: Shutting down VM
+11-18 22:07:23.213  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 544768
+11-18 22:07:23.260  4833  4844 I zygote64: NativeAllocBackground concurrent copying GC freed 7763(415KB) AllocSpace objects, 12(308KB) LOS objects, 32% free, 12MB/18MB, paused 7.905ms total 118.169ms
+11-18 22:07:23.463  9816  9816 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:23.572  9816  9816 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:23.603  9816  9816 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:24.828  9816  9816 W AccessibilityNodeInfoDumper: Fetch time: 71ms
+11-18 22:07:24.830  1674  3379 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@16482a3
+11-18 22:07:24.846  9816  9816 D AndroidRuntime: Shutting down VM
+11-18 22:07:25.069  9828  9828 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:25.116  9828  9828 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:25.132  9828  9828 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:25.135  9828  9828 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=697684, downTime=697684, deviceId=0, source=0x1002 }
+11-18 22:07:25.140  9828  9828 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=697684, downTime=697684, deviceId=0, source=0x1002 }
+11-18 22:07:25.143  9828  9828 D AndroidRuntime: Shutting down VM
+11-18 22:07:25.382  9840  9840 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:25.430  9840  9840 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:25.450  9840  9840 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:26.536  9840  9840 W AccessibilityNodeInfoDumper: Fetch time: 42ms
+11-18 22:07:26.537  1674  5966 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@dd1b959
+11-18 22:07:26.561  9840  9840 D AndroidRuntime: Shutting down VM
+11-18 22:07:26.737  9853  9853 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:26.806  9853  9853 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:26.830  9853  9853 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:26.831  9853  9853 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=84.0, y[0]=158.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=699381, downTime=699381, deviceId=0, source=0x1002 }
+11-18 22:07:26.837  9853  9853 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=84.0, y[0]=158.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=699381, downTime=699381, deviceId=0, source=0x1002 }
+11-18 22:07:26.841  9853  9853 D AndroidRuntime: Shutting down VM
+11-18 22:07:26.847  9853  9861 W app_process: Thread attaching while runtime is shutting down: Binder:9853_1
+11-18 22:07:26.847  9853  9861 I AndroidRuntime: NOTE: attach of thread 'Binder:9853_1' failed
+11-18 22:07:27.158  9865  9865 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:27.223  9865  9865 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:27.241  9865  9865 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:28.269  9865  9865 W AccessibilityNodeInfoDumper: Fetch time: 6ms
+11-18 22:07:28.270  1674  5966 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@4b2a5ff
+11-18 22:07:28.281  9865  9865 D AndroidRuntime: Shutting down VM
+11-18 22:07:28.488  9877  9877 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:28.525  9877  9877 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:28.545  9877  9877 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:28.546  9877  9877 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=338.0, y[0]=1051.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=701096, downTime=701096, deviceId=0, source=0x1002 }
+11-18 22:07:28.551  9877  9877 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=338.0, y[0]=1051.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=701096, downTime=701096, deviceId=0, source=0x1002 }
+11-18 22:07:28.554  9877  9877 D AndroidRuntime: Shutting down VM
+11-18 22:07:28.561  4833  4833 I zygote64: Deoptimizing a0.q a0.a.c(O.m, a0.q) due to JIT inline cache
+11-18 22:07:28.567  4833  4833 I zygote64: Deoptimizing void z0.m.H0(z0.Z) due to JIT same target
+11-18 22:07:28.567  4833  4833 I zygote64: Deoptimizing void z0.m.y0() due to JIT same target
+11-18 22:07:28.567  4833  4833 I zygote64: Deoptimizing void z0.m.E0() due to JIT same target
+11-18 22:07:28.567  4833  4833 I zygote64: Deoptimizing x0.I v.t.c(x0.J, java.util.List, long) due to JIT inline cache
+11-18 22:07:28.805  9889  9889 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:28.854  9889  9889 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:28.896  9889  9889 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:29.910  4833  4833 I zygote64: Deoptimizing void q.k.I(G0.v) due to JIT inline cache
+11-18 22:07:29.986  9889  9889 W AccessibilityNodeInfoDumper: Fetch time: 46ms
+11-18 22:07:29.987  1674  3379 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@25b9215
+11-18 22:07:29.993  9889  9889 D AndroidRuntime: Shutting down VM
+11-18 22:07:30.226  9902  9902 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:30.265  9902  9902 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:30.285  9902  9902 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:30.290  9902  9902 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=234.0, y[0]=897.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=702836, downTime=702836, deviceId=0, source=0x1002 }
+11-18 22:07:30.296  9902  9902 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=234.0, y[0]=897.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=702836, downTime=702836, deviceId=0, source=0x1002 }
+11-18 22:07:30.306  9902  9902 D AndroidRuntime: Shutting down VM
+11-18 22:07:30.572  9915  9915 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:30.611  9915  9915 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:30.628  9915  9915 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:31.704  9915  9915 W AccessibilityNodeInfoDumper: Fetch time: 42ms
+11-18 22:07:31.705  1674  3572 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@c95a31b
+11-18 22:07:31.717  9915  9915 D AndroidRuntime: Shutting down VM
+11-18 22:07:32.910  9929  9929 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:32.953  9929  9929 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:33.006  9929  9929 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:34.051  9929  9929 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:07:34.098  9929  9929 W AccessibilityNodeInfoDumper: Fetch time: 51ms
+11-18 22:07:34.100  1674  3688 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@e703a91
+11-18 22:07:34.114  9929  9929 D AndroidRuntime: Shutting down VM
+11-18 22:07:34.180  1398  1757 E SurfaceFlinger: ro.sf.lcd_density must be defined as a build property
+11-18 22:07:34.191  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 10371072
+11-18 22:07:34.193  9943  9943 D         : HostConnection::get() New Host Connection established 0x78b0e642f780, tid 9943
+11-18 22:07:34.885  9951  9951 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:34.927  9951  9951 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:34.955  9951  9951 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:36.057  9951  9951 W AccessibilityNodeInfoDumper: Fetch time: 45ms
+11-18 22:07:36.057  1674  3688 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@4e155f7
+11-18 22:07:36.063  9951  9951 D AndroidRuntime: Shutting down VM
+11-18 22:07:36.264  9965  9965 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:36.335  9965  9965 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:36.352  9965  9965 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:37.412  1542  1568 D AudioFlinger: mixer(0xf2b838c0) throttle end: throttle time(2)
+11-18 22:07:37.435  9965  9965 W AccessibilityNodeInfoDumper: Fetch time: 47ms
+11-18 22:07:37.436  1674  5966 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@64ceecd
+11-18 22:07:37.445  9965  9965 D AndroidRuntime: Shutting down VM
+11-18 22:07:37.700  9986  9986 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:37.784  9986  9986 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:37.804  9986  9986 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:38.918  9986  9986 W AccessibilityNodeInfoDumper: Fetch time: 56ms
+11-18 22:07:38.918  1674  3572 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@8cb5a93
+11-18 22:07:38.928  9986  9986 D AndroidRuntime: Shutting down VM
+11-18 22:07:39.151  9998  9998 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:39.188  9998  9998 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:39.210  9998  9998 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:39.220  9998  9998 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=711761, downTime=711761, deviceId=0, source=0x1002 }
+11-18 22:07:39.230  9998  9998 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=135.0, y[0]=2178.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=711761, downTime=711761, deviceId=0, source=0x1002 }
+11-18 22:07:39.239  9998  9998 D AndroidRuntime: Shutting down VM
+11-18 22:07:39.310  1674  3572 I ActivityManager: START u0 {act=android.intent.action.VIEW dat=sevbify://pair?v=1&a=10.0.2.2&p=28123&s=Zt-i2lFeRIIAQYtxC9M_gNuKv2bLKshwpo7aQ7LKafU&id=c641f849ddd72b6c&n=CI+computer flg=0x10000000 pkg=com.obamna1234.sevbify cmp=com.obamna1234.sevbify/com.sevbify.app.MainActivity} from uid 2000
+11-18 22:07:39.504  4833  4833 I zygote64: Deoptimizing a0.q L.x2.c(a0.q, h0.P, long, q.v, float) due to JIT inline cache
+11-18 22:07:39.591  1398  1398 D SurfaceFlinger: duplicate layer name: changing com.obamna1234.sevbify/com.sevbify.app.MainActivity to com.obamna1234.sevbify/com.sevbify.app.MainActivity#1
+11-18 22:07:39.594  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 3698688
+11-18 22:07:39.596  1388  1388 I chatty  : uid=1000(system) allocator@2.0-s identical 1 line
+11-18 22:07:39.597  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 3698688
+11-18 22:07:39.626  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:39.657  4833  4854 I chatty  : uid=10077(u0_a77) RenderThread identical 1 line
+11-18 22:07:39.729  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:39.730  1542  1568 D AudioFlinger: mixer(0xf2b838c0) throttle end: throttle time(5)
+11-18 22:07:39.875  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:43.523 10015 10015 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:43.560 10015 10015 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:43.583 10015 10015 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:44.618  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:44.635  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:44.638 10015 10015 W AccessibilityNodeInfoDumper: Fetch time: 12ms
+11-18 22:07:44.643  1674  5966 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@603ea01
+11-18 22:07:44.734 10015 10015 D AndroidRuntime: Shutting down VM
+11-18 22:07:44.934 10027 10027 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:44.991 10027 10027 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:45.006 10027 10027 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:45.008 10027 10027 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=821.0, y[0]=1418.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=717557, downTime=717557, deviceId=0, source=0x1002 }
+11-18 22:07:45.011 10027 10027 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=821.0, y[0]=1418.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=717557, downTime=717557, deviceId=0, source=0x1002 }
+11-18 22:07:45.013 10027 10027 D AndroidRuntime: Shutting down VM
+11-18 22:07:46.084  4833  4833 I zygote64: Deoptimizing void Q3.n.k0(java.lang.Iterable, java.lang.StringBuilder, java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence, int, java.lang.CharSequence, kotlin.jvm.functions.Function1) due to JIT inline cache
+11-18 22:07:46.092  4833  4833 I zygote64: Deoptimizing void p.m.<init>(p.q0, java.lang.Object, p.r, long, long, boolean) due to JIT inline cache
+11-18 22:07:46.092  4833  4833 I zygote64: Deoptimizing java.lang.Object A0.s.invoke() due to JIT inline cache
+11-18 22:07:46.099  1398  1398 D SurfaceFlinger: duplicate layer name: changing com.obamna1234.sevbify/com.sevbify.app.MainActivity to com.obamna1234.sevbify/com.sevbify.app.MainActivity#1
+11-18 22:07:46.103  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 3522560
+11-18 22:07:46.105  1388  1388 I chatty  : uid=1000(system) allocator@2.0-s identical 1 line
+11-18 22:07:46.106  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 3522560
+11-18 22:07:46.120  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:47.120  4833  4854 I chatty  : uid=10077(u0_a77) RenderThread identical 2 lines
+11-18 22:07:47.185  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:50.779 10042 10042 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:50.834 10042 10042 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:50.852 10042 10042 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:51.886  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:51.898 10042 10042 W AccessibilityNodeInfoDumper: Fetch time: 5ms
+11-18 22:07:51.898  1674  5966 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@c500e83
+11-18 22:07:51.942 10042 10042 D AndroidRuntime: Shutting down VM
+11-18 22:07:51.974  4833  4854 D EGL_emulation: eglMakeCurrent: 0x7b45a943fd20: ver 3 0 (tinfo 0x7b45a940d720)
+11-18 22:07:52.061  1382  5527 W audio_hw_generic: Not supplying enough data to HAL, expected position 16858142 , only wrote 16858080
+11-18 22:07:52.062  1382  5527 W audio_hw_generic: Not supplying enough data to HAL, expected position 16858105 , only wrote 16858080
+11-18 22:07:52.105  1398  1757 E SurfaceFlinger: ro.sf.lcd_density must be defined as a build property
+11-18 22:07:52.107  1382  5527 W audio_hw_generic: Hardware backing HAL too slow, could only write 0 of 720 frames
+11-18 22:07:52.115  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 10371072
+11-18 22:07:52.121 10057 10057 D         : HostConnection::get() New Host Connection established 0x7ed2af62f780, tid 10057
+11-18 22:07:54.185 10062 10062 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:54.293 10062 10062 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:54.320 10062 10062 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:07:55.347 10062 10062 W AccessibilityNodeInfoDumper: Fetch time: 3ms
+11-18 22:07:55.348  1674  3688 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@e52d839
+11-18 22:07:55.371 10062 10062 D AndroidRuntime: Shutting down VM
+11-18 22:07:55.594 10074 10074 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:07:55.633 10074 10074 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:07:55.653 10074 10074 D AndroidRuntime: Calling main entry com.android.commands.input.Input
+11-18 22:07:55.656 10074 10074 I Input   : injectMotionEvent: MotionEvent { action=ACTION_DOWN, actionButton=0, id[0]=0, x[0]=773.0, y[0]=1396.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=728204, downTime=728204, deviceId=0, source=0x1002 }
+11-18 22:07:55.663 10074 10074 I Input   : injectMotionEvent: MotionEvent { action=ACTION_UP, actionButton=0, id[0]=0, x[0]=773.0, y[0]=1396.0, toolType[0]=TOOL_TYPE_UNKNOWN, buttonState=0, metaState=0, flags=0x0, edgeFlags=0x0, pointerCount=1, historySize=0, eventTime=728204, downTime=728204, deviceId=0, source=0x1002 }
+11-18 22:07:55.701 10074 10074 D AndroidRuntime: Shutting down VM
+11-18 22:08:00.054 10102 10102 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-18 22:08:00.173 10102 10102 W app_process: Unexpected CPU variant for X86 using defaults: x86_64
+11-18 22:08:00.202 10102 10102 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-18 22:08:01.242 10102 10102 I app_process: Deoptimizing java.lang.String com.android.uiautomator.core.AccessibilityNodeInfoDumper.stripInvalidXMLChars(java.lang.CharSequence) due to JIT inline cache
+11-18 22:08:01.281 10102 10102 W AccessibilityNodeInfoDumper: Fetch time: 43ms
+11-18 22:08:01.282  1674  3572 W WindowManager: removeWindowToken: Attempted to remove non-existing token: android.os.Binder@27fbef5
+11-18 22:08:01.293 10102 10102 D AndroidRuntime: Shutting down VM
+11-18 22:08:01.381  1398  2070 E SurfaceFlinger: ro.sf.lcd_density must be defined as a build property
+11-18 22:08:01.390  1388  1388 D gralloc_ranchu: gralloc_alloc: Creating ashmem region of size 10371072
+11-18 22:08:01.392 10116 10116 D         : HostConnection::get() New Host Connection established 0x772f20a2f780, tid 10116
+11-18 22:08:01.395  1396  1396 I boot-pipe: done populating /dev/random
