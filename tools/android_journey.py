@@ -36,7 +36,8 @@ def session():
             continue
         if not ours:
             continue
-        m = re.search(r"PlaybackState \{state=\w+\((\d+)\), position=(-?\d+)", line)
+        # Android 9+: "state=PLAYING(3)"; Android 8: "state=3"
+        m = re.search(r"PlaybackState \{state=(?:\w+\()?(\d+)\)?, position=(-?\d+)", line)
         if m and state is None:
             state, pos = m.group(1), int(m.group(2))
         d = re.search(r"description=(.*)", line)
@@ -481,7 +482,7 @@ def main():
             if not ev.done.wait(60) or ev.sent[-1] is not True:
                 return "fail", "the song didn't arrive"
             time.sleep(3)
-            files = ui.sh("ls -R /sdcard/Music/Sevbify")
+            files = ui.sh("ls -R /sdcard/Music/Sevbify") + ui.sh(f"ls -R /sdcard/Android/data/{PKG}/files/Music")   # Android 8: the app's own folder
             if "CI tone.wav" not in files:
                 return "fail", "sent, but the file isn't in Music/Sevbify: " + files[-300:]
             return "pass", f"paired as “{ev.paired[0]}” over the network, received “CI tone.wav” in Music/Sevbify " \
