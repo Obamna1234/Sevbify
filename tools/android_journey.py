@@ -354,6 +354,9 @@ def main():
         Not every song has a Canvas (it needs a music video), so no loop within a minute is “blocked”, not a fail."""
         back_to_home()
         if session()[0] != "3":
+            ui.sh("input keyevent 126")                 # carry on with the song (an earlier step may have paused it)
+            time.sleep(4)
+        if session()[0] != "3":
             return "blocked", "nothing playing"
         ui.open_now_playing()
         end = time.time() + 60
