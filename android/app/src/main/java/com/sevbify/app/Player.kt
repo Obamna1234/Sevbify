@@ -427,9 +427,12 @@ object Player {
     fun adFreeAllowed(t: Track): Boolean {
         val s = Library.settings
         return t.source == "podcast" && s.adFreePodcasts && s.online && s.onlineNoticeAccepted &&
+            t.itemKey !in adFreeStalled &&
             !((Library.resume[t.itemKey] ?: 0L) > 30_000 && t.itemKey !in Library.adFree) &&
             (Library.adFreeMiss[t.artist] ?: 0) < 3          // this show has had no YouTube version 3 times: don't keep waiting
     }
+
+    private val adFreeStalled = java.util.Collections.synchronizedSet(mutableSetOf<String>())   // this session only
 
     /** Watching rather than listening: kept for the next episode (Next, or when one finishes), like YouTube. */
     var preferVideo by mutableStateOf(false)
@@ -741,6 +744,20 @@ object Player {
                 controller?.run {
                     setMediaItem(item); prepare()
                     if (!videoMode) { playWhenReady = true; play() }   // being watched: the sound comes with the video
+                }
+                // Ad-free podcast version: if YouTube's copy doesn't really get going (a slow or refused connection), carry
+                // on with the podcast's own recording instead of loading forever. Only for this episode, this time.
+                if (note.contains("ad-free")) launch {
+                    delay(14_000)
+                    val c = controller
+                    if (current === t && c != null && c.currentMediaItem?.mediaId == t.matchKey && !videoMode &&
+                        c.playWhenReady && c.currentPosition < 3_000) {
+                        diagLog("ad-free version stalled (${stateName(c.playbackState)}, at ${c.currentPosition} ms): using the feed")
+                        adFreeStalled.add(t.itemKey)
+                        Library.adFree.remove(t.itemKey)
+                        status = "The ad-free version was slow, so this plays the podcast's own recording"
+                        start()
+                    }
                 }
                 // If it still hasn't started a while later, say why in the Playback status log (state, how much is loaded).
                 launch {

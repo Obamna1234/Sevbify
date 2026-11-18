@@ -609,6 +609,22 @@ class ShowsMixin:
                 if self.current_song is s:
                     self._set_now_playing_text(s.title, s.artist, "Podcast · ad-free (YouTube version)")
                     self._play_media(res[0], res[1])
+                    QTimer.singleShot(14000, lambda: stalled(s))
+
+            def stalled(s):
+                # YouTube's copy didn't really get going (a slow or refused connection): carry on with the podcast's
+                # own recording instead of loading forever.
+                if self.current_song is not s or getattr(self, "_shut_down", False) \
+                        or not getattr(self, "is_playing", True):           # you paused it: leave it alone
+                    return
+                try:
+                    at = self.player.get_time()
+                except Exception:
+                    at = 0
+                if at is None or at < 3000:
+                    alog("podcast", f"\"{s.title}\": ad-free version stalled at {at} ms, playing the feed")
+                    self._set_now_playing_text(s.title, s.artist, kind)
+                    self._play_media(s.track.stream_url)
 
             def feed(_err, s=song):
                 alog("podcast", f"\"{s.title}\": no ad-free version ({_err}), playing the feed")
