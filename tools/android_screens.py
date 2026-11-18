@@ -150,6 +150,26 @@ def tap_first_song():
     return True
 
 
+def song_rows():
+    """The song rows under the "Songs" heading of the search results: [(title, x, y)]."""
+    found = nodes()
+    heads = [nd for nd in found if nd[0] == "Songs" and nd[4] > 400]
+    if not heads:
+        return []
+    y0 = heads[-1][4] + 60
+    return [(nd[0], nd[2], nd[3]) for nd in found if nd[0] and nd[4] > y0 and nd[0] not in ("Songs", "More")]
+
+
+def long_press(x, y, ms=900):
+    sh(f"input swipe {x} {y} {x} {y} {ms}")
+    time.sleep(1.5)
+
+
+def texts():
+    """Every text and description on screen, as one lower-case string (for "is X showing?")."""
+    return " | ".join(f"{n[0]} {n[1]}" for n in nodes()).lower()
+
+
 def open_now_playing():
     w, h = screen_size()
     found = nodes()

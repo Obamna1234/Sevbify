@@ -172,6 +172,12 @@ def stream(query, must_contain):
 
 
 def main():
+    # "Update from the last release keeps your library" (tools/android_upgrade.py ran before this, if it could)
+    try:
+        steps.append(json.load(open(os.path.join(OUT, "upgrade.json"))))
+        print(f"[journey] {steps[-1]['status'].upper():8} {steps[-1]['step']}: {steps[-1]['detail']}")
+    except (OSError, ValueError):
+        pass
     # Don't let other apps' "isn't responding" boxes cover the screen (Android's own setting for this).
     ui.sh("settings put global hide_error_dialogs 1")
     ui.clear_anr()
@@ -225,6 +231,147 @@ def main():
         held = s2 == "2" and abs(p2 - p1) < 500
         return ("pass" if held and ok else "fail"), f"paused: state={s2}, held={held}; resumed: {how}"
     run("Pause and resume", pause_resume, needs=[playing])
+
+    # --- The newer screens: checked by tapping through them like a person, every build ---------------------------
+    def song_menu(query, i=0):
+        """Search, then long-press the i-th song row: the song's menu (Add to playlist, Preview…)."""
+        if not search(query):
+            return None
+        ui.hide_keyboard()
+        end = time.time() + 40
+        rows = []
+        while time.time() < end and len(rows) <= i:
+            rows = ui.song_rows()
+            time.sleep(2)
+        if len(rows) <= i:
+            return None
+        title, x, y = rows[i]
+        ui.long_press(x, y)
+        return title
+
+    def preview():
+        """Song menu → Preview (30 s): your song pauses, the card says it's a preview, Close carries on."""
+        s0, _, _ = session()
+        if not song_menu("kevin macleod"):
+            return "fail", "couldn't open a song's menu from Search"
+        if not ui.tap("Preview (30 s)", tries=3):
+            return "fail", "no Preview (30 s) in the song menu"
+        time.sleep(4)
+        shown = ui.texts()
+        ui.shot("preview_card", wait=0.5)
+        if "30-second preview" not in shown or "play full song" not in shown:
+            return "fail", "the preview card didn't show (no “30-SECOND PREVIEW” / “Play full song”)"
+        if "there's no preview" in shown:
+            return "blocked", "the song had no preview clip online (Deezer)"
+        s1, _, _ = session()
+        if s0 == "3" and s1 == "3":
+            return "fail", "your song kept playing under the preview"
+        ui.tap("Close", tries=3)
+        time.sleep(3)
+        s2, _, _ = session()
+        if s0 == "3" and s2 != "3":
+            return "fail", f"Close didn't carry on with your song (state={s2})"
+        return "pass", f"card shown, your song paused (state {s1}) and carried on after Close (state {s2})"
+    run("Preview a song (30 s)", preview, needs=[playing])
+
+    def saved_in():
+        """The ⊕ in the mini player: first tap saves to Liked Songs, the next opens "Saved in" with Liked Songs ticked."""
+        back_to_home()
+        if not ui.tap("Add to Liked Songs", tries=3):
+            if not ui.tap("Saved in…", tries=1):
+                return "fail", "no ⊕ (Add to Liked Songs) in the mini player"
+        else:
+            time.sleep(2)
+            if not ui.tap("Saved in…", tries=3):
+                return "fail", "after ⊕ the button didn't turn into ✓ (Saved in…)"
+        time.sleep(2)
+        shown = ui.texts()
+        ui.shot("saved_in", wait=0.5)
+        if "saved in" not in shown or "liked songs" not in shown or "saved here" not in shown:
+            return "fail", "the Saved in sheet didn't show Liked Songs ticked"
+        if not ui.tap("Done", tries=3):
+            return "fail", "no Done button"
+        return "pass", "⊕ saved it to Liked Songs; ✓ opened Saved in with Liked Songs ticked; Done closed it"
+    run("Saved in (like Spotify's ✓)", saved_in, needs=[playing])
+
+    def sort_by_energy():
+        """Make a playlist of three songs (song menu → Add to playlist), then ••• → Sort by energy… → a sorted copy;
+        the original playlist is still there, unchanged."""
+        made = ""
+        for i in range(3):
+            if not song_menu("kevin macleod", i):
+                return "fail", f"couldn't open song {i + 1}'s menu"
+            if not ui.tap("Add to playlist", tries=3):
+                return "fail", "no Add to playlist in the song menu"
+            time.sleep(1.5)
+            if not made:
+                if not ui.tap("New playlist", tries=3):
+                    return "fail", "no New playlist"
+                time.sleep(2)
+                names = [n[0] for n in ui.nodes() if n[0].startswith("Added to ")]
+                made = names[0].removeprefix("Added to ") if names else ""
+                if not made:                                  # the note went too fast: find it in Your Library later
+                    made = "My Playlist"
+            else:
+                if not ui.tap(made, exact=made != "My Playlist", tries=3):
+                    return "fail", f"“{made}” wasn't in Add to playlist"
+            time.sleep(1.5)
+        back_to_home()
+        ui.tap("Your Library", tries=3)
+        time.sleep(2)
+        if not ui.tap(made, exact=made != "My Playlist", tries=3):
+            return "fail", f"“{made}” isn't in Your Library"
+        time.sleep(2)
+        title = next((n[0] for n in ui.nodes() if n[0].startswith("My Playlist")), made)
+        if not ui.tap("More", tries=3):
+            return "fail", "no ••• on the playlist"
+        if not ui.tap("Sort by energy…", tries=3):
+            return "fail", "no Sort by energy… in the playlist menu"
+        time.sleep(2)
+        shown = ui.texts()
+        ui.shot("sort_by_energy", wait=0.5)
+        for want in ("makes a copy of this playlist", "energetic → easing down → calm", "calm → ramping up → energetic",
+                     "mixed energies throughout", "create sorted playlist"):
+            if want not in shown:
+                return "fail", f"the Sort by energy sheet is missing “{want}”"
+        ui.tap("Create sorted playlist", tries=3)
+        end = time.time() + 120
+        while time.time() < end and f"{title} · energetic to calm".lower() not in ui.texts():
+            time.sleep(3)
+        if f"{title} · energetic to calm".lower() not in ui.texts():
+            return "fail", f"no “{title} · Energetic to calm” playlist after 2 minutes"
+        back_to_home()
+        ui.tap("Your Library", tries=3)
+        time.sleep(2)
+        lib = ui.texts()
+        if title.lower() not in lib.replace(f"{title} · energetic to calm".lower(), ""):
+            return "fail", "the original playlist is gone from Your Library"
+        return "pass", f"made “{title} · Energetic to calm”; “{title}” is still in Your Library"
+    run("Sort by energy (a sorted copy)", sort_by_energy, needs=["App opens"])
+
+    def canvas_switch():
+        """Now Playing: the Canvas / Cover switch shows when a song has a Canvas loop, and Cover brings the art back.
+        Not every song has a Canvas (it needs a music video), so no loop within a minute is “blocked”, not a fail."""
+        back_to_home()
+        if session()[0] != "3":
+            return "blocked", "nothing playing"
+        ui.open_now_playing()
+        end = time.time() + 60
+        while time.time() < end and "canvas" not in ui.texts():
+            time.sleep(4)
+        if "canvas" not in ui.texts():
+            ui.back()
+            return "blocked", "this song has no Canvas loop (no music video found within a minute)"
+        ui.shot("canvas", wait=0.5)
+        if not ui.tap("Cover", tries=2):
+            ui.back()
+            return "fail", "Canvas showed but there's no Cover switch"
+        time.sleep(1.5)
+        ok = "cover" in ui.texts()
+        ui.tap("Canvas", tries=2)
+        ui.back()
+        return ("pass" if ok else "fail"), "Canvas loop playing; Cover / Canvas switch works"
+    run("Canvas / Cover switch", canvas_switch, needs=[playing])
 
     def podcast():
         """Open a show from Home → Podcasts and play its latest episode. The list is live (today's charts), so a

@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "settings": {
+    "volume": 63,
+    "muted": false,
+    "music_folders": [
+      "/music/test-folder"
+    ],
+    "shuffle": true,
+    "repeat": "all",
+    "right_panel": "nowplaying",
+    "right_panel_width": 340,
+    "online_enabled": true,
+    "lastfm_api_key": "",
+    "jamendo_client_id": "",
+    "download_source": "Bandcamp + YouTube",
+    "download_notice_accepted": true,
+    "tour_seen": true,
+    "spotify_full": false,
+    "phone_remote": true,
+    "whats_new_seen": 0.0,
+    "stream_full": true,
+    "download_folder": "",
+    "use_browser_cookies": false,
+    "download_quality": "best",
+    "audiobook_quality": "standard",
+    "video_quality": "auto",
+    "lyrics_enabled": true,
+    "show_playlist_origin": false,
+    "skip_sponsors": true,
+    "ad_free_podcasts": true,
+    "audio_device": "",
+    "playlist_files": true,
+    "folders": [
+      "Trips"
+    ],
+    "library_sort": "recents",
+    "library_view": "list",
+    "library_collapsed": false,
+    "explicit_ok": true,
+    "autoplay": true,
+    "fade_seconds": 0,
+    "normalize": false,
+    "mono": false,
+    "speed": 1.0,
+    "smart_downloads": false,
+    "smart_dl_day": "",
+    "eq_enabled": false,
+    "eq_preset": "Flat",
+    "eq_bands": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "np_on_play": true,
+    "notify_track": false,
+    "canvas_enabled": true,
+    "canvas_auto": true,
+    "canvas_cache_mb": 200,
+    "canvas_keep_downloads": true,
+    "phone_link": true,
+    "zoom": 100,
+    "startup": "no",
+    "close_to_tray": false,
+    "proxy_mode": "auto",
+    "proxy_url": "",
+    "hw_accel": true,
+    "language": "",
+    "save_space": true,
+    "auto_update_check": true,
+    "last_update_check": 0.0,
+    "update_asked": "",
+    "disabled_folders": []
+  },
+  "playlists": [
+    {
+      "name": "Liked Songs",
+      "tracks": [
+        {
+          "pending": {
+            "title": "Candlepower",
+            "artist": "Chris Zabriskie",
+            "album": "Divider",
+            "duration": 210
+          }
+        }
+      ],
+      "created": 1700000000.0,
+      "origin": "liked"
+    },
+    {
+      "name": "Road trip",
+      "tracks": [
+        "/music/test-folder/01 - first.wav",
+        {
+          "pending": {
+            "title": "Candlepower",
+            "artist": "Chris Zabriskie",
+            "album": "Divider",
+            "duration": 210
+          }
+        }
+      ],
+      "folder": "Trips",
+      "created": 1700000100.0,
+      "last_played": 1700000200.0,
+      "description": "Made in v48",
+      "pinned": true
+    },
+    {
+      "name": "Imported",
+      "tracks": [
+        {
+          "pending": {
+            "title": "Candlepower",
+            "artist": "Chris Zabriskie",
+            "album": "Divider",
+            "duration": 210
+          }
+        }
+      ],
+      "created": 1700000300.0,
+      "origin": "spotify"
+    }
+  ],
+  "recent": [],
+  "listens": [],
+  "hidden_songs": [],
+  "hidden_artists": [],
+  "hide_note_seen": false,
+  "taste_excluded": [],
+  "recent_searches": [],
+  "save_for_later": {},
+  "shows": [],
+  "books": [],
+  "resume": {},
+  "finished": [],
+  "saved_episodes": [],
+  "loudness": {},
+  "offline": {},
+  "offline_info": {},
+  "song_info": {}
+}

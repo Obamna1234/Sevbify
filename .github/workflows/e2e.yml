@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: e2e
-  cancel-in-progress: true
+  cancel-in-progress: false      # never stop a run that may be about to publish a release
 
 jobs:
   pick:
@@ -35,6 +35,9 @@ jobs:
     outputs:
       run_id: ${{ steps.r.outputs.run_id }}
       artifacts: ${{ steps.r.outputs.artifacts }}
+      sha: ${{ steps.r.outputs.sha }}
+      branch: ${{ steps.r.outputs.branch }}
+      build_ok: ${{ steps.r.outputs.build_ok }}
     steps:
       - id: r
         env:
@@ -48,6 +51,7 @@ jobs:
             ID=$(gh api "repos/$REPO/actions/workflows/build.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].id')
           fi
           echo "run_id=$ID" >> "$GITHUB_OUTPUT"
+          gh api "repos/$REPO/actions/runs/$ID" --jq '"sha=\(.head_sha)\nbranch=\(.head_branch)\nbuild_ok=\(.conclusion == "success")"' >> "$GITHUB_OUTPUT"
           A=$(gh api "repos/$REPO/actions/runs/$ID/artifacts?per_page=100" --jq '[.artifacts[]|select(.expired|not)|.name]|join(",")')
           echo "artifacts=$A" >> "$GITHUB_OUTPUT"
           echo "Checking build run $ID (artifacts: $A)"
@@ -181,11 +185,19 @@ jobs:
           if [ "$N" != "0" ]; then echo "::error title=${{ matrix.name }}::$N step(s) failed. See the summary."; exit 1; fi
 
   android:
-    name: Android (emulator)
+    name: ${{ matrix.name }}
     needs: pick
     if: contains(needs.pick.outputs.artifacts, 'Sevbify-Android')
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # A recent Android, plus updating from the last release over the top (your library must survive).
+          - { name: "Android (emulator)", api: 34, report: e2e-android, upgrade: true }
+          # The oldest Android Sevbify supports (minSdk 26 = Android 8): older phones are checked too.
+          - { name: "Android 8 (oldest supported)", api: 26, report: e2e-android-8, upgrade: false }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -199,6 +211,18 @@ jobs:
         run: |
           awk '/^pycryptodomex==/{f=1;print;next} f&&/^    --hash/{print;next} {f=0}' requirements-lock.txt > /tmp/pc.txt
           python3 -m pip install --break-system-packages --require-hashes --no-deps -r /tmp/pc.txt
+      - name: The last release's Android app (to check updating from it keeps your library)
+        if: matrix.upgrade
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          TAG=$(gh api "repos/$REPO/releases?per_page=10" --jq "[.[]|select(.tag_name != \"v$V\" and .draft == false)][0].tag_name")
+          echo "Updating from $TAG"
+          gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[]|select(.name=="Sevbify-Android.apk")|.browser_download_url' \
+            | xargs -r -n1 curl -sSfL -o previous.apk || true
+          ls -la previous.apk 2>/dev/null || echo "No previous Android release to update from"
       - name: Enable KVM (fast emulator)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -207,7 +231,7 @@ jobs:
       - name: Use the app on an emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_7
@@ -215,6 +239,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             adb wait-for-device; sleep 30
+            mkdir -p android-journey
+            if [ -f previous.apk ]; then
+              adb install -g previous.apk && python3 tools/android_upgrade.py before android-journey || true
+              adb install -r -g "$(ls Sevbify-Android*.apk | head -1)" && python3 tools/android_upgrade.py after android-journey || true
+              adb uninstall com.obamna1234.sevbify || true      # the journey below starts from a fresh install
+            fi
             adb install -r -g "$(ls Sevbify-Android*.apk | head -1)" || { sleep 20; adb install -r -g "$(ls Sevbify-Android*.apk | head -1)"; }
             adb shell pm grant com.obamna1234.sevbify android.permission.POST_NOTIFICATIONS || true
             adb logcat -G 16M || true
@@ -223,12 +253,12 @@ jobs:
         if: always()
         run: |
           cat android-journey/journey.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null \
-            || echo "### Android: the check didn't finish" >> "$GITHUB_STEP_SUMMARY"
+            || echo "### ${{ matrix.name }}: the check didn't finish" >> "$GITHUB_STEP_SUMMARY"
           cat android-journey/journey.md 2>/dev/null || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: e2e-android
+          name: ${{ matrix.report }}
           path: android-journey
           retention-days: 14
       - name: Pass or fail
@@ -266,3 +296,101 @@ jobs:
           git add -A && git commit -qm "End-to-end reports for build $RUN_ID"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
             push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:e2e-reports || echo "::error title=e2e-reports::push failed"
+
+  release:
+    # A new VERSION is only published when its build passed on every system AND every end-to-end test above
+    # passed on what that build made (install, search, stream, podcasts, the new screens, updating from the last
+    # release...). Anything red, and nothing is published.
+    name: Release
+    needs: [pick, desktop, android]
+    if: >-
+      needs.pick.result == 'success' && needs.desktop.result == 'success' && needs.android.result == 'success' &&
+      needs.pick.outputs.build_ok == 'true' && needs.pick.outputs.branch == 'main'
+    permissions:
+      contents: write
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.pick.outputs.sha }}
+      - name: Is this a new version to release?
+        id: version
+        run: |
+          V=$(tr -d '[:space:]' < VERSION)
+          # Only a plain version (5.0.0 or 5.0.0-beta.23) can name a release.
+          if ! printf '%s' "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$'; then
+            echo "::error title=Release::VERSION isn't a plain version number"; exit 1
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ -z "$(git ls-remote --tags origin "refs/tags/v$V")" ]; then echo "release=true" >> "$GITHUB_OUTPUT";
+          else echo "release=false" >> "$GITHUB_OUTPUT"; fi
+      # Only the app builds (Sevbify-*), never screenshots or test reports from jobs that run outside tools.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: steps.version.outputs.release == 'true'
+        with:
+          path: artifacts
+          pattern: Sevbify-*
+          merge-multiple: true
+          run-id: ${{ needs.pick.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Every download is there, and nothing else (the Android one needs the signing-key secrets)
+        if: steps.version.outputs.release == 'true'
+        run: |
+          ls -la artifacts
+          extra=$(cd artifacts && ls -A | grep -vxE 'Sevbify-(Windows|macOS)\.zip|Sevbify-Linux\.tar\.gz|Sevbify-Android\.apk|Sevbify-iOS\.ipa|Sevbify-Windows-Setup\.exe|Sevbify-Mac\.dmg' || true)
+          if [ -n "$extra" ]; then echo "::error title=Release::unexpected files: $extra"; exit 1; fi
+          if [ ! -f artifacts/Sevbify-Android.apk ]; then
+            echo "::error title=Release::No release-signed Android app: add the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD secrets."
+            exit 1
+          fi
+      # Signed updates (core/update_sign.py): the computer app only installs files signed with this key. The key
+      # is a GitHub secret (and the owner's offline backup), never in the code. No key, no release.
+      - name: Sign the downloads for the in-app updater
+        if: steps.version.outputs.release == 'true'
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          # Only pycryptodomex, pinned with the same hashes as the app (requirements-lock.txt).
+          python3 - <<'PY'
+          import re
+          text = open("requirements-lock.txt").read()
+          m = re.search(r"^pycryptodomex==[^\n]*(?:\n +--hash=[^\n]*)*", text, re.M)
+          open("/tmp/crypto-req.txt", "w").write(m.group(0).rstrip(" \\\n") + "\n")
+          PY
+          python3 -m venv /tmp/signenv
+          /tmp/signenv/bin/pip install --quiet --require-hashes -r /tmp/crypto-req.txt
+          /tmp/signenv/bin/python tools/sign_release.py "v$V" artifacts
+      - name: Publish release (new VERSION or a pushed tag)
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ format('v{0}', steps.version.outputs.version) }}
+          target_commitish: ${{ needs.pick.outputs.sha }}
+          name: Sevbify ${{ format('v{0}', steps.version.outputs.version) }}
+          body_path: RELEASE_NOTES.md
+          # Versions with a dash (5.0.0-beta.1) are test versions: marked "Pre-release".
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: |
+            artifacts/Sevbify-*.zip
+            artifacts/Sevbify-*.tar.gz
+            artifacts/Sevbify-*.exe
+            artifacts/Sevbify-*.dmg
+            artifacts/Sevbify-*.apk
+            artifacts/Sevbify-*.ipa
+            artifacts/Sevbify-update-signatures.json
+      - name: Update the AltStore / SideStore source (iPhone updates)
+        if: (steps.version.outputs.release == 'true') && hashFiles('artifacts/Sevbify-iOS.ipa') != ''
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p /tmp/alt
+          python3 tools/altstore_source.py "$V" artifacts/Sevbify-iOS.ipa RELEASE_NOTES.md /tmp/alt/source.json
+          cd /tmp/alt
+          git init -q -b altstore
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "AltStore source for $V"
+          AUTH=$(git -C "$GITHUB_WORKSPACE" config --get http.https://github.com/.extraheader || true)
+          git -c http.https://github.com/.extraheader="$AUTH" push -qf "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:altstore \
+            || echo "::warning title=AltStore source::push failed"
