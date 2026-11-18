@@ -53,6 +53,7 @@ object Nav {
     var renameTitle by mutableStateOf("Name")
     var renameButton by mutableStateOf("Save")
     var addTo by mutableStateOf<List<Track>?>(null)            // "Add to playlist" picker
+    var flowFor by mutableStateOf<com.sevbify.app.Playlist?>(null)   // Flow this playlist… (choose how it flows)
     var savedIn by mutableStateOf<Track?>(null)                // Spotify's "Saved in": tick the playlists a song is in
     var toast by mutableStateOf("")
     var shareFor by mutableStateOf<Track?>(null)               // the share sheet

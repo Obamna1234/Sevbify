@@ -984,6 +984,66 @@ class MainWindow(ShowsMixin, QMainWindow):
         self._playlists_changed()
         return pl
 
+    def flow_playlist(self, playlist):
+        """Playlist ••• → Flow this playlist…: the same songs in a nice listening order, as a new playlist
+        ("<name> · Flow"). The original isn't touched. See core/flow_order.py."""
+        from .flow_dialog import FlowDialog
+        from core import flow_order
+        songs = list(playlist.songs)
+        if len(songs) < 3:
+            return
+        dlg = FlowDialog(self, playlist.name, len(songs))
+        if dlg.exec() != FlowDialog.DialogCode.Accepted:
+            return
+        mode, apart, start = dlg.choice()
+
+        def info(x):
+            t = getattr(x, "track", None)
+            return {"artist": x.artist, "title": x.title, "album": "" if x.album == "Unknown Album" else x.album,
+                    "genre": getattr(t, "genre", "") or getattr(x, "genre", "") or "",
+                    "source": getattr(t, "source", "") or "", "source_id": getattr(t, "source_id", "") or ""}
+        tracks = [info(x) for x in songs]
+        online = bool(self.online_enabled)
+        deezer = self.online.deezer if online else None
+        store = flow_order.FeatureStore(os.path.join(self.storage.data_dir, "flow_features.json"))
+        done = [0]
+
+        def work():
+            feats = []
+            for t in tracks:
+                feats.append(flow_order.features(t, deezer, store, online))
+                done[0] += 1
+            store.save()
+            return feats, flow_order.order(tracks, feats, mode, apart, start)
+
+        timer = QTimer(self)
+        timer.setInterval(400)
+        timer.timeout.connect(lambda: self.show_status(
+            f"Flow: listening to {done[0]} of {len(tracks)} songs…", kind="info", timeout_ms=2000))
+        timer.start()
+
+        def finished(result):
+            timer.stop()
+            feats, new_order = result
+            base = f"{playlist.name} · Flow"
+            name, n = base, 2
+            while self._name_taken(name):
+                name, n = f"{base} {n}", n + 1
+            pl = self.create_playlist(name, [songs[i] for i in new_order])
+            if pl is None:
+                return
+            pl.description = (f"{flow_order.MODE_NAMES.get(mode, 'Flow')} order of “{playlist.name}”: "
+                              f"{flow_order.summary(feats, new_order)}. Drag songs to change it.")
+            self._playlists_changed()
+            self.show_playlist(pl)
+            self.show_status(f"Made “{name}”. Your original playlist wasn't changed.", kind="info", timeout_ms=5000)
+
+        def failed(err):
+            timer.stop()
+            self.show_status(f"⚠ Flow didn't work: {err}")
+
+        run_async(self, work, on_done=finished, on_error=failed, lane="default")
+
     def rename_playlist(self, playlist, new_name: str) -> bool:
         if getattr(playlist, "origin", "") == "liked":
             self.show_status("Liked Songs keeps its name.", kind="info", timeout_ms=3000)
@@ -4285,6 +4345,11 @@ class MainWindow(ShowsMixin, QMainWindow):
                        "them again.")
         loc.setEnabled(waiting > 0)
         loc.triggered.connect(lambda: self.locate_playlist_songs(playlist))
+        flow = menu.addAction("〰  Flow this playlist…")
+        flow.setToolTip("A new playlist with these songs in a nice listening order (calm to intense, waves, "
+                        "by genre…). This playlist isn't changed.")
+        flow.setEnabled(len(playlist.songs) >= 3)
+        flow.triggered.connect(lambda: self.flow_playlist(playlist))
         menu.addSeparator()
         menu.addAction("♫  Create playlist").triggered.connect(lambda: self.new_playlist())
         menu.addAction("＋  Create folder").triggered.connect(lambda: self.create_folder())

@@ -222,6 +222,7 @@ struct PlaylistPage: View {
     @State private var picked: PhotosPickerItem?
     @State private var foldering = false
     @State private var folderName = ""
+    @State private var flowing = false
 
     var body: some View {
         Group {
@@ -230,6 +231,8 @@ struct PlaylistPage: View {
                           kind: pl.description.isEmpty ? "Playlist" : pl.description, playlist: pl)
                     .toolbar {
                         Menu {
+                            Button { flowing = true } label: { Label("Flow this playlist…", systemImage: "water.waves") }
+                                .disabled(pl.tracks.count < 3)
                             Button { newName = pl.name; renaming = true } label: { Label("Rename", systemImage: "pencil") }
                             Button { newDescription = pl.description; describing = true } label: {
                                 Label(pl.description.isEmpty ? "Add description" : "Edit description", systemImage: "text.alignleft")
@@ -257,6 +260,7 @@ struct PlaylistPage: View {
                         } label: { Image(systemName: "ellipsis") }
                     }
                     .onAppear { lib.update(id) { $0.lastPlayed = Date().timeIntervalSince1970 } }
+                    .sheet(isPresented: $flowing) { FlowView(playlist: pl).environmentObject(lib).environmentObject(nav) }
             } else {
                 Text("This playlist was deleted.").foregroundColor(C.dim)
             }

@@ -775,3 +775,39 @@ def ytdlp_info():
 def image(url):
     """Local file for a picture (downloaded once, then from the cache)."""
     return _net().cached_image(url) or _net().get_image(url) or ""
+
+
+# --- Flow: a playlist in a nice listening order (core/flow_order.py, the same as the computer) ----------------------
+def _flow_store():
+    from core import flow_order
+    st = _state.get("flow_store")
+    if st is None:
+        st = flow_order.FeatureStore(os.path.join(os.environ.get("SEVBIFY_DATA_DIR", "."), "flow_features.json"))
+        _state["flow_store"] = st
+    return st
+
+
+@_call
+def flow_features(tracks_json):
+    """Each song's feel ({"energy", "family", "genre", "bpm", "known"}), for a few songs at a time so the app
+    can show progress. Remembered between runs (flow_features.json), so the next Flow is instant."""
+    from core import flow_order
+    tracks = [t for t in json.loads(tracks_json or "[]") if isinstance(t, dict)][:200]
+    online = bool(_state["online_on"]) and _state["music"] is not None
+    deezer = _state["music"].deezer if online else None
+    store = _flow_store()
+    out = [flow_order.features(t, deezer, store, online) for t in tracks]
+    store.save()
+    return out
+
+
+@_call
+def flow_order(tracks_json, feats_json, mode="smooth", artists_apart=True, start="calm"):
+    """The new order (indexes into the songs) plus a short description for the new playlist."""
+    from core import flow_order as fo
+    tracks = [t if isinstance(t, dict) else {} for t in json.loads(tracks_json or "[]")][:10000]
+    feats = json.loads(feats_json or "[]")
+    if len(feats) != len(tracks) or mode not in fo.MODES:
+        raise ValueError("Flow needs every song's details")
+    order = fo.order(tracks, feats, mode, bool(artists_apart), "energetic" if start == "energetic" else "calm")
+    return {"order": order, "summary": fo.summary(feats, order), "mode_name": fo.MODE_NAMES[mode]}

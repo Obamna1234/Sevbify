@@ -139,3 +139,16 @@ def test_bridge_credits(bridge, monkeypatch):
     from core import credits as C
     monkeypatch.setattr(C, "for_song", lambda net, a, t: [{"name": "Jahzzar", "roles": ["performer", "composer"]}])
     assert call(bridge, "credits", "Jahzzar", "Siesta")[0]["roles"] == ["performer", "composer"]
+
+
+def test_bridge_flow(bridge):
+    """Flow on the phones: features a few songs at a time, then the order and a description."""
+    bridge._state["online_on"] = False                            # genre and title only here
+    songs = [{"artist": f"A{i}", "title": f"T{i}", "genre": g}
+             for i, g in enumerate(["Metal", "Ambient", "Jazz", "Rock", "Chillwave", "Synthwave"])]
+    feats = call(bridge, "flow_features", json.dumps(songs[:3])) + call(bridge, "flow_features", json.dumps(songs[3:]))
+    assert len(feats) == 6 and all("energy" in f for f in feats)
+    out = call(bridge, "flow_order", json.dumps(songs), json.dumps(feats), "build", True, "calm")
+    assert sorted(out["order"]) == list(range(6)) and out["mode_name"] == "Build up"
+    assert songs[out["order"][0]]["genre"] == "Ambient" and songs[out["order"][-1]]["genre"] == "Metal"
+    assert os.path.exists(os.path.join(os.environ["SEVBIFY_DATA_DIR"], "flow_features.json"))
