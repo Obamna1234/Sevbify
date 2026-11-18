@@ -57,6 +57,15 @@ def _make_tagged_wav(path, artist_title, seconds=20):
 
 class Journey:
     def __init__(self, window, out_dir):
+        # If the app ever stops responding during the journey, print where every thread is stuck (every 5 minutes
+        # of no progress), so a freeze on a test computer can be diagnosed instead of just timing out.
+        try:
+            import faulthandler
+            import sys as _sys
+            faulthandler.dump_traceback_later(300, repeat=True, file=_sys.stderr)
+            self._watchdog = faulthandler
+        except Exception:
+            self._watchdog = None
         self.w = window
         self.app = QApplication.instance()
         self.out = out_dir
@@ -133,6 +142,10 @@ class Journey:
             self.record(name, "skipped", "needs: " + ", ".join(needs), shot="")
             return
         t0 = time.time()
+        if getattr(self, "_watchdog", None):                 # a new step = progress: restart the 5-minute clock
+            import sys as _sys
+            self._watchdog.dump_traceback_later(300, repeat=True, file=_sys.stderr)
+        print(f"[journey] starting {name}", flush=True)
         try:
             status, detail = fn()
         except Exception:
