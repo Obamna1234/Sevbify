@@ -19,7 +19,7 @@ mkdir -p "$work/apks"
 "$signer" sign --ks "$work/old.jks" --ks-key-alias old --ks-pass env:OLD_KEYSTORE_PASSWORD --out "$work/apks/app.apk" "$apk_in"
 OLD_KEYSTORE="$work/old.jks" OLD_KEY_ALIAS=old NEW_KEYSTORE="$work/new.jks" NEW_KEY_ALIAS=new LINEAGE_OUT="$work/lineage" \
   bash "$(dirname "$0")/sign-rotated.sh" "$work/apks"
-certs() { "$signer" verify --print-certs "$@" "$work/apks/app.apk" | awk -F': ' '/certificate SHA-256 digest/{print $2}' | sort -u; }
+certs() { "$signer" verify --print-certs "$@" "$work/apks/app.apk" | awk '/certificate SHA-256 digest/{print tolower($NF)}' | sort -u; }
 android8=$(certs --min-sdk-version 26 --max-sdk-version 27)
 android9=$(certs --min-sdk-version 28)
 lineage=$("$signer" lineage --in "$work/lineage" --print-certs -v)
